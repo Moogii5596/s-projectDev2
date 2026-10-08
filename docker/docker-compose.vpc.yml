@@ -1,0 +1,73 @@
+# ============================================================
+# S Project — Enterprise VPC (Tier 2) — нэг байгууллагын тусдаа stack
+# ADR-001 · Runbook: docs/07_Tech_Stack_and_Environment/03_Enterprise_VPC_Deployment.md
+# ============================================================
+# Ажиллуулах (repo root-оос):
+#   cp docker/.env.vpc.example docker/.env.vpc   # утгуудыг бөглөнө
+#   docker compose -p s-vpc-<slug> --env-file docker/.env.vpc -f docker/docker-compose.vpc.yml up -d --build
+#
+# Энэ stack: Redis + Backend (NestJS) + Shell (nginx).
+# Supabase (Postgres + Auth) нь ХАРИЛЦАГЧИЙН ТУСДАА instance байна (self-hosted эсвэл
+# тусдаа Supabase project) — shared SaaS-ийн DB-г ХЭЗЭЭ Ч заахгүй.
+# `-p s-vpc-<slug>` → container/volume нэр харилцагч бүрт тусдаа.
+# ============================================================
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Порт гадагш нээхгүй — зөвхөн дотоод сүлжээ
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # ADR-001: нэг deploy = нэг tenant (Host header-ээс үл хамаарна)
+      DEPLOYMENT_MODE: dedicated
+      DEDICATED_TENANT_SLUG: ${DEDICATED_TENANT_SLUG:?DEDICATED_TENANT_SLUG тохируулна уу}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL тохируулна уу}
+      DIRECT_URL: ${DIRECT_URL:?DIRECT_URL тохируулна уу}
+      SUPABASE_URL: ${SUPABASE_URL:?SUPABASE_URL тохируулна уу}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:?SUPABASE_ANON_KEY тохируулна уу}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY тохируулна уу}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET тохируулна уу}
+      REDIS_URL: redis://redis:6379
+      NODE_CLUSTER_WORKERS: ${NODE_CLUSTER_WORKERS:-2}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  shell:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.shell
+      args:
+        VITE_SUPABASE_URL: ${SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+    restart: unless-stopped
+    ports:
+      - "${SHELL_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  redis_data:

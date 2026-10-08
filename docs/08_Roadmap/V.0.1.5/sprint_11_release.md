@@ -12,22 +12,17 @@
 
 > ⚠️ **АНХААР:** E2E тест бичихийн ӨМНӨ `META чеклист` (`lessons_learned.md`-ийн сүүлийн хэсэг) дандаа дагах!
 
-### Алхам 11.1.1 — schema-isolation.e2e.spec.ts
+### Алхам 11.1.1 — dedicated-mode (ADR-001 — schema-isolation spec-ийг орлосон)
 
-- [ ] `apps/e2e/src/specs/schema-isolation.e2e.spec.ts`:
+- [ ] Backend-ийг `DEPLOYMENT_MODE=dedicated DEDICATED_TENANT_SLUG=test-tenant`-ээр асааж smoke тест:
 
 ```typescript
-test.describe('Schema Isolation E2E', () => {
-  test('Enterprise tenant upgrade → schema бүтэц зөв', async ({ page }) => {
-    // Admin login → tenant detail → Upgrade to Enterprise товч
-    // Schema health endpoint шалгах
-    // GET /admin/tenants/:id/schema-health → { status: 'healthy', tables: [...] }
+test.describe('Dedicated deployment mode', () => {
+  test('Өөр Host header-тэй ч тохируулсан tenant-ийн өгөгдөл харагдана', async ({ request }) => {
+    // Host: erp.customer.mn → GET /api/v1/requisitions → 200, test-tenant-ийн MR
   });
-
-  test('Enterprise tenant MR-г shared tenant харж чадахгүй', async ({ browser }) => {
-    // Enterprise user + Shared user хоёр тусдаа context
-    // Enterprise user MR үүсгэх
-    // Shared user тэр MR-г GET хийхэд 404 буцааж байна уу
+  test('DEDICATED_TENANT_SLUG дутуу → backend эхлэхгүй', async () => {
+    // process spawn → exit code != 0, "DEDICATED_TENANT_SLUG" алдааны мессеж
   });
 });
 ```
@@ -98,8 +93,8 @@ test.describe('Module Integration E2E', () => {
 ## [v0.1.5] — YYYY-MM-DD — Tier 2: Enterprise VPC ✅
 
 ### Нэмэгдсэн
-- **Schema-per-Tenant Isolation:** Enterprise tenant бүрт тусдаа PostgreSQL schema
-  — `provision_tenant_schema()`, `SchemaRouterService.withSchema()`, automatic provisioning trigger
+- **Enterprise VPC (ADR-001):** `DEPLOYMENT_MODE=dedicated` + `DEDICATED_TENANT_SLUG`,
+  `docker/docker-compose.vpc.yml`, bootstrap SQL, runbook (schema-per-tenant цуцлагдсан)
 - **Advanced Approval Workflow:** Amount-based routing (1M/10M threshold),
   Delegation (орлогч), SLA deadline + escalation (15 минут scheduler),
   Workflow definition admin UI, SLA analytics endpoint
@@ -118,7 +113,7 @@ test.describe('Module Integration E2E', () => {
 
 ### Шинэчлэгдсэн
 - `workflow_definitions.steps_config` → amount_rules + escalation_enabled + delegation_enabled
-- `TenantContextInterceptor` → `SchemaRouterService` нэгтгэсэн
+- Sprint 6 schema-per-tenant код + migration буцаагдсан (`20261008001_revert_schema_per_tenant.sql`)
 - `MaterialRequisitionService.submit()` → budget check + amount-based routing
 
 ### Засагдсан
@@ -127,9 +122,9 @@ test.describe('Module Integration E2E', () => {
 ### Тест
 - Vitest unit тест: 80%+ coverage (шинэ модулиудад)
 - Supertest integration тест: endpoint бүр
-- Schema isolation leakage тест: 100% pass
+- Deployment mode тест: dedicated/shared guard + env validation
 - Cross-module chain integration тест: 20+ тест
-- E2E (Playwright): schema isolation, advanced workflow, modules
+- E2E (Playwright): dedicated mode, advanced workflow, modules
 - Load test: 100 concurrent, p99 < 500ms
 ```
 
@@ -188,6 +183,7 @@ services:
 
 ```env
 # v0.1.5-д нэмэгдсэн
+DEPLOYMENT_MODE=shared          # ADR-001 (✅ нэмэгдсэн 2026-10-08)
 NODE_CLUSTER_WORKERS=4
 THROTTLE_TTL_SHORT=1000
 THROTTLE_LIMIT_SHORT=10

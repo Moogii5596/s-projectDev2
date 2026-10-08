@@ -64,6 +64,7 @@
 ### 02 — Системийн архитектур
 - `01_Core_API_Gateway_ReverseProxy_Spec.md` — API Gateway
 - `ARCH-05_UI_UX_Architecture_Spec.md` — Frontend архитектур
+- `ADR-001_Tenant_Isolation.md` — **Tenant тусгаарлалтын шийдвэр** (RLS + Enterprise VPC dedicated deploy) ✨
 
 ### 03 — Өгөгдлийн загвар ба аюулгүй байдал
 - `01_PostgreSQL_MultiTenant_RLS_Spec.md` — RLS policy
@@ -80,6 +81,8 @@
 
 ### 07 — Технологийн стек
 - `01_Tech_Stack_Decision.md`
+- `03_Enterprise_VPC_Deployment.md` — Enterprise VPC (`DEPLOYMENT_MODE=dedicated`) байршуулах runbook ✨
+- `02_Local_Supabase_Docker_Windows.md` — Supabase + Redis-г Docker дээр асаах, port, `.env`, Windows алдаанууд
 
 ### 08 — Хөгжүүлэлтийн төлөвлөгөө
 - `01_Development_Roadmap.md`

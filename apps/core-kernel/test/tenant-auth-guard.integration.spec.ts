@@ -27,6 +27,7 @@
  *   ✗ Token байхгүй              → 401
  *   ✗ Хүчингүй токен             → 401
  *   ✗ Буруу tenant (Host header) → 403
+ *   ✗ Өөр tenant-ийн Host (гишүүн биш) → 403  [SEC-001]
  *   ✓ Хүчинтэй токен + зөв tenant → 200
  * ============================================================
  */
@@ -41,35 +42,33 @@ import { PrismaClient, TierType, UserRole } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from '../src/app/app.module';
 import { REDIS_CLIENT } from '../src/db/redis.module';
+import { createRedisMock } from './helpers/redis-mock';
 import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { AuthService } from '../src/auth/auth.service';
 import { AuthController } from '../src/auth/auth.controller';
 
-// ── Redis mock — ioredis interface-ийн хамгийн бага хэрэгцээтэй хэсэг ──
-const redisMock = {
-  get: async (_key: string) => null,   // Cache miss → always fall through to DB
-  setex: async () => 'OK',
-  del: async () => 1,
-  on: () => redisMock,                 // event listener (connect/error) mock
-  quit: async () => 'OK',
-  disconnect: () => undefined,
-};
+// ── Redis mock — нийтлэг helper [TEST-003] (апп-ын бүх Redis командтай) ──
+const redisMock = createRedisMock();
 
 const TEST_SLUG = process.env.DEV_TENANT_SLUG ?? 'test-tenant';
 const TEST_EMAIL = `guard-test-${Date.now()}@example.com`;
 const TEST_PASSWORD = 'Test1234!';
+// SEC-001: тест хэрэглэгч гишүүн БИШ өөр tenant (DB-д бодитоор байна)
+const OTHER_SLUG = `sec001-other-${Date.now()}`;
 
 let app: NestFastifyApplication;
 let prismaAdmin: PrismaClient;
 let accessToken: string;
 let testAuthUserId: string;  // afterAll cleanup-д ашиглах
 let testTenantId: string;    // upsert-ийн буцаасан ID — mock-д шууд ашиглах
+let otherTenantId: string;   // SEC-001
 
 // getTenantId патчийн функц — TEST_SLUG → testTenantId, бусад → null
 function makeTenantResolver() {
   return async (slug: string): Promise<string | null> => {
-    const result = slug === TEST_SLUG ? testTenantId : null;
+    const result =
+      slug === TEST_SLUG ? testTenantId : slug === OTHER_SLUG ? otherTenantId : null;
     console.error('[PATCH] getTenantId slug:', slug, '→', result ?? 'null');
     return result;
   };
@@ -90,6 +89,12 @@ beforeAll(async () => {
     create: { name: 'Test Tenant', slug: TEST_SLUG, tier: TierType.TIER1 },
   });
   testTenantId = upsertedTenant.id;
+
+  // SEC-001: тест хэрэглэгчийн харьяалагддаггүй 2 дахь tenant
+  const otherTenant = await prismaAdmin.tenant.create({
+    data: { name: 'SEC-001 Other Tenant', slug: OTHER_SLUG, tier: TierType.TIER1 },
+  });
+  otherTenantId = otherTenant.id;
   console.error('[DEBUG] testTenantId:', testTenantId, 'TEST_SLUG:', TEST_SLUG);
 
   // ── 3. NestJS TestingModule — ConfigService + REDIS_CLIENT override ──
@@ -292,6 +297,11 @@ afterAll(async () => {
     .deleteMany({ where: { email: TEST_EMAIL } })
     .catch(() => {});
 
+  // SEC-001 tenant устгах
+  await prismaAdmin?.tenant
+    .deleteMany({ where: { slug: OTHER_SLUG } })
+    .catch(() => {});
+
   if (app) await app.close();
   await prismaAdmin?.$disconnect();
 });
@@ -320,6 +330,17 @@ describe('🔐 TenantAuthGuard — GET /api/v1/auth/me', () => {
       .get('/api/v1/auth/me')
       .set('Authorization', `Bearer ${accessToken}`)
       .set('Host', 'nonexistent-tenant.example.com');
+
+    expect(res.status).toBe(403);
+  });
+
+  it('SEC-001: хүчинтэй токен + DB-д БАЙГАА өөр tenant (гишүүн биш) → 403', async () => {
+    // Өмнө нь: guard зөвхөн tenant байгаа эсэхийг шалгадаг байсан → 200 буцааж
+    // B tenant-ийн өгөгдөл (RLS app.tenant_id=B) харагдах эрсдэлтэй байсан.
+    const res = await supertest(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('Host', `${OTHER_SLUG}.example.com`);
 
     expect(res.status).toBe(403);
   });

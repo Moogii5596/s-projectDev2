@@ -28,6 +28,8 @@
 | MIGRATE-001 | Enum ALTER TYPE | DROP дараалал → RULE-15 |
 | MIGRATE-002 | Partial index | DROP index эхлээд → RULE-15 |
 | RLS-002 | Superuser bypass | Dual PrismaClient → RULE-16 |
+| SEED-001 | Seed ↔ enum зөрүү | Enum migration бүрт `seed.sql` шалгах, `supabase:reset`-ээр турших |
+| ENV-001~005 | Шинэ машин (Windows) | PATH refresh, ExecutionPolicy, CLI devDependency, JWT key (`-o env`), 3 `.env` |
 | RLS-003 | Empty UUID cast | null UUID ашиглах → RULE-16 |
 | RESOLVE-001 | pnpm import type | `import type` → RULE-09 |
 | VITEST-001 | Worker memory | pool: forks → RULE-18 |
@@ -36,6 +38,12 @@
 | FE-003 | DTO mismatch | Backend DTO шалгах → RULE-20 |
 | CI-001 | turbo task script-гүй | `turbo --dry=json`-оор шалгах |
 | CI-003 | ESLint config | Root `.eslintrc.cjs` |
+| TEST-003 | Integration Redis mock дутуу | `test/helpers/redis-mock.ts` + coverage тест |
+| RL-001 | Rate limit Redis алдаа | fail-open + warn |
+| SEC-001 | Guard membership | `isMember()` + "гишүүн биш tenant" тест заавал |
+| TEST-002 | Vitest type-check хийхгүй | `tsc --noEmit` заавал |
+| ARCH-001 | Mock тест integration нуусан | Бодит DB тест + wiring grep |
+| PROC-001 | Скрипт давхар ажилласан | `if new in s: continue` |
 | TEST-001 | env-д хамаарсан тест | `vi.stubEnv` + env-гүй ажиллуулж шалгах |
 
 ---
@@ -695,10 +703,94 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 
 ---
 
+## 12. Local орчин / Шинэ машин тохиргоо (2026-10-08)
+
+> Төслийг GitHub-аас шинэ Windows машин дээр clone хийж Supabase-г Docker дээр асаах явцад гарсан. Бүрэн заавар: `docs/07_Tech_Stack_and_Environment/02_Local_Supabase_Docker_Windows.md`
+
+### [SEED-001] Enum migration-ий дараа `seed.sql` хуучин утгатай үлдсэн → `supabase start` унав
+**Алдаа:** `failed to send batch: ERROR: invalid input value for enum "TierType": "starter" (SQLSTATE 22P02)` — 15 migration амжилттай, seed дээр унаж контейнерүүд зогссон.
+**Шалтгаан:** `0004_add_native_enums.sql` нь `tenants.tier`-ийг TEXT → `TierType ('tier1','tier2','tier3')` болгосон, гэтэл `seed.sql` `'starter'` хэвээр. Хуучин машинд DB 0004-өөс өмнө үүссэн тул seed дахин ажиллаагүй — алдаа **нуугдмал** байсан.
+**Шийдэл:** `seed.sql`: `'starter'` → `'tier1'` (Prisma `@default(TIER1)`-тэй таарна).
+**Урьдчилан сэргийлэх:** TEXT→enum эсвэл CHECK constraint өөрчлөх migration бүрт `grep -n "<багана>" supabase/seed.sql` хийж хуучин утгыг шинэчилнэ. Migration нэмсний дараа **цэвэр DB дээр** `pnpm supabase:reset`-ээр бүх migration + seed-ийг туршина.
+
+### [ENV-001] `docker` / `node` / `pnpm` — `is not recognized` (суусан байхад)
+**Шалтгаан:** Терминал програм суулгахаас өмнө нээгдсэн → хуучин PATH. Docker Desktop **per-user** суувал `%LOCALAPPDATA%\Programs\DockerDesktop`-д байдаг (`C:\Program Files` биш) — буруу замаар шалгаж "суугаагүй" гэж андуурсан.
+**Шийдэл:** Терминал (VS Code бол бүхэлд нь) дахин нээх, эсвэл:
+`$env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")`
+**Дүрэм:** Суулгасан эсэхийг замаар биш registry-ээр шалгана: `HKLM` **болон** `HKCU` `...\Uninstall\*`.
+
+### [ENV-002] `npm.ps1 cannot be loaded because running scripts is disabled`
+**Шалтгаан:** Windows PowerShell-ийн анхдагч ExecutionPolicy `.ps1` хориглодог.
+**Шийдэл:** `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` (admin шаардахгүй).
+
+### [ENV-003] Supabase CLI-г `npm install -g supabase`-ээр суулгах — дэмжигдэхгүй
+**Шалтгаан:** README-д `npm install -g supabase@latest` гэж буруу заасан байсан. Supabase CLI npm global суулгалтыг дэмждэггүй.
+**Шийдэл:** Root devDependency: `pnpm add -D supabase -w` (одоо `package.json`-д орсон → `pnpm install` хангалттай). Баг бүхэлдээ ижил хувилбар, `pnpm supabase:*` script-ууд ажиллана.
+**Тэмдэглэл:** `pnpm add` дээр `Packages: +25 -147` гарсан ч lockfile-д зөвхөн нэмэлт орсон (`git diff pnpm-lock.yaml`-аар шалгасан) — `-147` нь `node_modules` бүтэц.
+
+### [ENV-004] Шинэ CLI `sb_publishable_…` / `sb_secret_…` key харуулдаг — код JWT key хүлээдэг
+**Шалтгаан:** Supabase CLI v2.1xx+ `supabase status`-д шинэ форматын API key харуулдаг. Манай код `@supabase/supabase-js ^2.46` + `auth.getUser(token)` нь хуучин JWT `anon` / `service_role` key-тэй ажилладаг.
+**Шийдэл:** `pnpm supabase status -o env` → `ANON_KEY`, `SERVICE_ROLE_KEY` (`eyJ…`-ээр эхэлнэ).
+**Дүрэм:** `.env`-д `sb_` угтвартай key оруулахгүй (supabase-js шинэчлэх хүртэл).
+
+### [ENV-005] Шинэ машинд 3 `.env` файл хэрэгтэй — GitHub-д байдаггүй
+**Шалтгаан:** `.env` нь `.gitignore`-д. Prisma (`apps/core-kernel`) root `.env`-г уншдаггүй, frontend `apps/web-shell/.env`-ээс `VITE_*` уншина.
+**Шийдэл:** `.env`, `apps/core-kernel/.env`, `apps/web-shell/.env` — `.env.example`-уудаас автоматаар үүсгэх скрипт баримтын §1.5-д.
+**Анхаар:** PowerShell 5.1 `Set-Content -Encoding utf8` BOM нэмдэг → `[IO.File]::WriteAllText(..., (New-Object System.Text.UTF8Encoding $false))` ашиглана.
+
+---
+
+### [ENV-006] `prisma generate` → `EPERM: operation not permitted, rename ...query_engine-windows.dll.node.tmp...`
+**Шалтгаан:** Windows дээр ажиллаж буй Node процесс (`pnpm dev`) Prisma query engine DLL-ийг ачаалсан → файл түгжигдсэн, солих боломжгүй.
+**Шийдэл:** `pnpm dev`-г зогсоох (Ctrl+C) → `pnpm db:generate` → дахин `pnpm dev`. Давтагдвал `Get-Process node`, VS Code Prisma extension-ийг хаах.
+**Анхаар:** Prisma schema өөрчлөгдсөн бол generate **заавал** — хуучин client устгагдсан багана (жнь `schema_name`) руу query хийж runtime алдаа өгнө; unit тест (mock) үүнийг барихгүй.
+
+## 13. Архитектур / Ажлын процесс (2026-10-08, Phase 2 — ADR-001)
+
+### [ARCH-001] Mock-д суурилсан unit тест integration алдааг нуусан — Schema-per-tenant ажиллаагүй байсан
+**Алдаа:** Sprint 6-ийн `SchemaRouterService` 20+ unit тесттэй "ногоон" байсан ч (1) request урсгалд огт холбогдоогүй, (2) `SET search_path` нь Prisma-д нөлөөлөхгүй (Prisma хүснэгтийг `"public"."table"` гэж бүрэн нэрээр бичдэг).
+**Шалтгаан:** Тест зөвхөн `$transaction`/`$executeRaw` mock дуудагдсан эсэхийг шалгасан — бодит SQL, бодит wiring шалгаагүй.
+**Шийдэл:** ADR-001 — schema-per-tenant цуцалж, RLS + dedicated deploy (B).
+**Дүрэм:** Тусгаарлалт/аюулгүй байдлын feature-ийг "дууссан" гэхээс өмнө (1) `grep`-ээр бодит дуудагдах газрыг шалгах, (2) **бодит DB** дээр integration/leakage тест заавал.
+
+### [PROC-001] Засварын скрипт давхар ажиллахад мөр давхардсан (Duplicate identifier)
+**Алдаа:** `TS2300: Duplicate identifier 'parseDeploymentConfig'` — import мөр 2 удаа.
+**Шалтгаан:** Idempotency шалгалт `new in s and old not in s` — `old` нь `new`-ийн дотор агуулагдах үед (import мөрөнд нэмэлт хийх) дахин хэрэглэгдсэн.
+**Шийдэл:** `if new in s: continue` — эхлээд үр дүн байгаа эсэхийг шалгана. Скриптийг 2 удаа ажиллуулж idempotent эсэхийг шалгана; дараа нь `tsc --noEmit`.
+
+### [SEC-001] 🔴 TenantAuthGuard tenant membership шалгадаггүй байсан — cross-tenant унших эрсдэл
+**Алдаа:** Shared горимд guard (1) JWT хүчинтэй, (2) Host-ийн tenant DB-д байгаа эсэхийг л шалгадаг байсан. A tenant-ийн хэрэглэгч `Host: b.app.mn` илгээвэл `request.user.tenantId = B` болж, RLS (`app.tenant_id = B`) B-ийн MR жагсаалтыг буцаах боломжтой байсан.
+**Шалтгаан:** RLS нь `app.tenant_id`-д бүрэн итгэдэг; тэр утгыг Host-оос авдаг ч хэрэглэгч тухайн tenant-д харьяалагдах эсэхийг хэн ч шалгаагүй. Тестүүд "зөв tenant" болон "байхгүй tenant"-ийг л шалгасан — "байгаа ч гишүүн биш" тохиолдол алга байсан.
+**Шийдэл:** `TenantCacheService.isMember(tenantId, authId)` — `core_users` (`is_active = true`), RULE-04 (`set_config` + query нэг `$transaction`), Redis cache (гишүүн 300с / гишүүн биш 30с), DB алдаа → `false` (fail closed). Guard: гишүүн биш → 403 (shared + dedicated).
+**Тест:** guard unit (+4), cache unit (+7), integration: бодит DB-д байгаа өөр tenant-ийн Host → 403. SQL-ийг RLS-тэй `app_user` role дээр шалгасан.
+**Дүрэм:** Auth guard-ын тест бүрт 3 тохиолдол заавал: зөв tenant (200) · байхгүй tenant (403) · **байгаа ч гишүүн биш tenant (403)**.
+**Анхаар:** Хэрэглэгчийг идэвхгүй болгох / хасах кодонд `invalidateMember()` дуудна (эсвэл 5 мин хүртэл cache хүчинтэй).
+
+### [TEST-002] Vitest нь type-check хийдэггүй — тест "ногоон" ч TS алдаатай
+**Алдаа:** `TS2322` (`vi.fn(impl)` generic таарахгүй) — vitest 132/132 давсан ч `tsc --noEmit` унасан.
+**Шийдэл:** `vi.fn().mockImplementation(impl)`.
+**Дүрэм:** Тест бичсний дараа **заавал** `tsc --noEmit` (core-kernel tsconfig `test/**`-г хамардаг) + `eslint`.
+
+### [TEST-003] Шинэ APP_GUARD Redis команд нэмсэн ч integration mock шинэчлэгдээгүй → 29 тест 500
+**Алдаа:** `TypeError: this.redis.incr is not a function` (`TenantRateLimitGuard`) — token-той бүх integration хүсэлт 500. Sprint 8-аас хойш нуугдмал (Sprint 8 зөвхөн unit тестээр "дууссан").
+**Шалтгаан:** 3 integration файл тус бүр өөрийн Redis mock-тай (`get/setex/del` л), апп-д `incr/pexpire/set/publish/scanStream` нэмэгдсэн. Copy-paste mock → нэгийг шинэчлэхэд бусад нь мартагдана.
+**Шийдэл:** `test/helpers/redis-mock.ts` — нийтлэг `createRedisMock()` (апп-ын бүх Redis команд). `src/common/tests/redis-mock-coverage.test.ts` — `src/`-ийн `redis.<cmd>(` бүрийг mock-д байгаа эсэхийг **unit** шатанд шалгана.
+**Дүрэм:** (1) APP_GUARD / global interceptor нэмбэл integration тест **заавал** ажиллуулна. (2) Тестийн mock-ийг хуулахгүй — `test/helpers/`.
+
+### [RL-001] Rate limit guard Redis тасрахад бүх API 500 болох эрсдэлтэй байсан → fail-open
+**Шийдвэр (2026-10-08, 2.9.2-A):** `incr/pexpire` алдаа → хүсэлтийг нэвтрүүлж, 60 сек тутам нэг warn log. Тэр хугацаанд rate limit түр ажиллахгүй (нийтлэг практик).
+
+---
+
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-08 | §12: SEED-001, ENV-001~005 нэмэв (шинэ машин дээр Supabase on Docker тохиргоо) |
+| 2026-10-08 | TEST-003, RL-001 нэмэв (Phase 2.9) |
+| 2026-10-08 | SEC-001, TEST-002 нэмэв (Phase 2.8) |
+| 2026-10-08 | ENV-006 нэмэв (Windows Prisma DLL lock) |
+| 2026-10-08 | ARCH-001, PROC-001 нэмэв (Phase 2, ADR-001) |
 | 2026-10-08 | CI-001~003, TEST-001 нэмэв (Phase 1 CI засвар) |
 | 2026-10-08 | Root `lessons_learned.md` (S5-E1~E16, META чеклист)-г 10-р хэсэг болгон нэгтгэв. Үндсэн файл = `docs/lessons_learned.md` |
 | 2026-09-21 | Бүх MVP + Sprint 5 алдааг нэгтгэж бүтэцтэй болгосон. RULE хөндлөн лавлагаа нэмсэн. |

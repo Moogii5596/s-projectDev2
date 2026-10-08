@@ -140,7 +140,7 @@ esbuild (default) → decorator metadata дэмждэггүй → БҮХИЙ Л 
 > Одоогийн зорилтот хувилбар: **v0.1.5**  
 > Дэлгэрэнгүй: `docs/08_Roadmap/01_Development_Roadmap.md` → "v0.1.5" хэсэг
 
-- [ ] **v0.1.5.1:** Tenant isolation — **шийдвэр B (2026-10-08):** schema-per-tenant цуцлагдсан; shared = RLS, Enterprise VPC = тусдаа DB/deploy
+- [x] **v0.1.5.1:** Tenant isolation — **ADR-001 (B, 2026-10-08):** shared = RLS, Enterprise VPC = тусдаа DB/deploy (`DEPLOYMENT_MODE=dedicated`)
 - [x] **v0.1.5.2:** Advanced approval workflow (мөнгөний хэмжээ, delegation, escalation)
 - [x] **v0.1.5.3:** Performance — Redis caching, cursor pagination, rate limiting
 - [ ] **v0.1.5.4:** Inventory, Budget, Vendor, Report модулиуд

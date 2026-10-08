@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { z } from 'zod';
+import { DeploymentConfig, parseDeploymentConfig } from './deployment-mode';
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -19,6 +20,7 @@ export type Env = z.infer<typeof EnvSchema>;
 @Injectable()
 export class EnvConfig {
   private readonly env: Env;
+  private readonly deployment: DeploymentConfig;
 
   constructor(private readonly configService: ConfigService) {
     const result = EnvSchema.safeParse({
@@ -41,6 +43,17 @@ export class EnvConfig {
     }
 
     this.env = result.data;
+
+    // ADR-001: DEPLOYMENT_MODE=shared|dedicated (+ DEDICATED_TENANT_SLUG)
+    try {
+      this.deployment = parseDeploymentConfig({
+        DEPLOYMENT_MODE: this.configService?.get('DEPLOYMENT_MODE') ?? process.env['DEPLOYMENT_MODE'],
+        DEDICATED_TENANT_SLUG:
+          this.configService?.get('DEDICATED_TENANT_SLUG') ?? process.env['DEDICATED_TENANT_SLUG'],
+      });
+    } catch (err) {
+      throw new Error(`Environment variable validation failed:\n  ❌ ${(err as Error).message}`);
+    }
   }
 
   get NODE_ENV() { return this.env.NODE_ENV; }
@@ -55,4 +68,7 @@ export class EnvConfig {
   get isProduction() { return this.env.NODE_ENV === 'production'; }
   get isDevelopment() { return this.env.NODE_ENV === 'development'; }
   get isTest() { return this.env.NODE_ENV === 'test'; }
+  get DEPLOYMENT_MODE() { return this.deployment.mode; }
+  get DEDICATED_TENANT_SLUG() { return this.deployment.dedicatedTenantSlug; }
+  get isDedicated() { return this.deployment.mode === 'dedicated'; }
 }

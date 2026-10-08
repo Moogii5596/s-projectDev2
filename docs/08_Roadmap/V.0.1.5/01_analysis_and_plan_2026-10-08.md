@@ -1,7 +1,7 @@
 # Төслийн Шинжилгээ ба Хөгжүүлэлтийн Төлөвлөгөө — 2026-10-08
 
 > Хувилбар: v0.1.0 ✅ → v0.1.5 (Tier 2 Enterprise VPC) 🔄
-> Төлөв: **БАТЛАГДСАН 2026-10-08** · Phase 0–1 ✅ · Phase 2 (B хувилбараар шинэчилсэн) батлуулах хүлээгдэж байна
+> Төлөв: **БАТЛАГДСАН 2026-10-08** · Phase 0–1 ✅ · Phase 2 ✅ · Phase 2.8 ✅ · Phase 2.9 ✅ (integration 47/47) · Phase 3 дараагийнх
 > **Шийдвэр (2026-10-08):** B — Schema-per-tenant цуцлах; shared tenant = RLS, Enterprise VPC = тусдаа DB/deploy
 
 ## 1. Одоогийн бодит төлөв (кодоос шалгасан)
@@ -48,14 +48,35 @@
 - [x] 1.5 lessons_learned-д бүртгэв
 - **Үр дүн:** unit 111/111 ✅ (env-гүй) · tsc core-kernel + web-shell ✅ · lint 0 error (78 warning) · `turbo lint test:unit` 3/3 ✅
 
-### Phase 2 — Sprint 6 дахин тодорхойлолт: Tenant Isolation (B) (1.5–2 session) — БАТЛУУЛАХ
-- [ ] 2.1 ADR бичих: `docs/02_System_Architecture/ADR-001_Tenant_Isolation.md` (яагаад B, search_path + Prisma асуудал)
-- [ ] 2.2 Sprint 6 кодыг хасах: `SchemaRouterService`, `TenantProvisioningService`, `TenantProvisioningController` (3 endpoint: `upgrade-enterprise`, `enterprise-schema`, `schema-health`), `schema-isolation.spec.ts`, module бүртгэл
-- [ ] 2.3 Шинэ migration: `provision_tenant_schema`, `clone_tables_to_schema`, `deprovision_tenant_schema` функц + `idx_tenants_schema_name` + `tenants.schema_name` DROP; Prisma `Tenant.schemaName` хасах
-- [ ] 2.4 Dedicated deploy mode: `DEPLOYMENT_MODE=shared|dedicated` + `DEDICATED_TENANT_SLUG` (env validation). Dedicated үед `TenantAuthGuard` зөвхөн тэр tenant-ийг зөвшөөрнө, бусад → 403
-- [ ] 2.5 `docker/docker-compose.vpc.yml` + `.env.vpc.example` — нэг байгууллагад тусдаа Postgres + Redis + API + Shell
-- [ ] 2.6 Тест: guard dedicated/shared mode unit тест; env validation тест; RLS leakage integration тест хэвээр давна
-- [ ] 2.7 Runbook `docs/07_Tech_Stack_and_Environment/02_Enterprise_VPC_Deployment.md`; `sprint_6_*.md`, `sprint_11_release.md` (schema-isolation E2E → dedicated-mode E2E) шинэчлэх
+### Phase 2 — Tenant Isolation (ADR-001) ✅ (2026-10-08)
+- [x] 2.1 ADR: `docs/02_System_Architecture/ADR-001_Tenant_Isolation.md`
+- [x] 2.2 Sprint 6 код хасав: `SchemaRouterService`, `TenantProvisioning{Service,Controller}` (3 endpoint), `schema-isolation.spec.ts`
+- [x] 2.3 Migration `20261008001_revert_schema_per_tenant.sql` (функц/index/багана DROP, `tenant_*` schema-г УСТГАХГҮЙ — NOTICE) + Prisma `schemaName` хасав
+- [x] 2.4 `src/config/deployment-mode.ts` (ганц эх сурвалж) → `EnvConfig` startup validation + `TenantAuthGuard` (dedicated → tenant = `DEDICATED_TENANT_SLUG`)
+- [x] 2.5 `docker/docker-compose.vpc.yml`, `docker/.env.vpc.example`, `docker/vpc/bootstrap_dedicated_tenant.sql`; `.gitignore`-д `.env.vpc`
+- [x] 2.6 Тест: `deployment-mode.spec.ts` (17), `env.config.spec.ts` (4), guard dedicated/shared (+8)
+- [x] 2.7 Runbook `docs/07_Tech_Stack_and_Environment/03_Enterprise_VPC_Deployment.md`; sprint_6 (орлогдсон), sprint_11, index, INDEX, `.env.example`, lessons (ARCH-001, PROC-001)
+- **Шалгалт:** unit 121/121 ✅ (env-гүй) · mutation шалгалт (dedicated логик унтраахад 4 тест унав) · tsc ✅ · lint 0 error ·
+  PostgreSQL 16 дээр 16 migration цэвэр DB-д ✅, provision хийсэн DB-д ✅, давтан ажиллуулахад ✅ · bootstrap SQL 2 удаа ✅ · `docker compose config` ✅
+- **Шалгаагүй:** бодит Supabase + Docker image build (сүлжээ хаалттай) → таны компьютер дээр `supabase db reset` + `pnpm test`
+
+### Phase 2.8 — 🔴 Аюулгүй байдал: tenant membership шалгалт ✅ (2026-10-08)
+- [x] 2.8.1 `TenantCacheService.isMember(tenantId, authId)` — `core_users.is_active`, RULE-04 transaction, Redis 300с/30с, fail closed
+- [x] 2.8.2 Guard: гишүүн биш → 403 (shared + dedicated); `invalidateMember()` нэмэгдсэн
+- [x] 2.8.3 Тест: guard unit +4, cache unit +7, integration `tenant-auth-guard` +1 (бодит DB-д байгаа өөр tenant → 403)
+- [x] 2.8.4 lessons_learned [SEC-001], [TEST-002]
+- **Шалгалт:** unit 132/132 ✅ · mutation (guard шалгалт хасахад 2, set_config хасахад 1 тест унав) · tsc (src+test) ✅ · lint 0 error ·
+  membership SQL-ийг RLS-тэй `app_user` role дээр PostgreSQL 16-д шалгасан (гишүүн → 1, өөр tenant → 0, идэвхгүй → 0)
+- **Таны компьютер дээр:** `pnpm --filter @s-project/core-kernel test:integration` (Supabase асаалттай)
+
+### Phase 2.9 — Integration Redis mock + rate limit fail-open ✅ (2026-10-08)
+> Шалтгаан: таны `test:integration` → 29/47 унасан, бүгд `redis.incr is not a function` (Sprint 8-аас хойш нуугдмал).
+> Phase 2.8 бодит DB-д баталгаажсан: "өөр tenant → 403" ✓; "зөв tenant" membership-г давж rate limit guard дээр унасан.
+- [x] 2.9.1 `test/helpers/redis-mock.ts` (бүх Redis команд) → 3 integration файл ашиглана; `redis-mock-coverage.test.ts` (unit)
+- [x] 2.9.2 (A) `TenantRateLimitGuard` Redis алдаа → fail-open + 60с тутам warn; unit +4
+- [x] 2.9.3 lessons_learned [TEST-003], [RL-001]
+- **Шалгалт:** unit 139/139 ✅ · mutation (try/catch хасахад 3, mock-оос `incr` хасахад coverage тест унав) · жинхэнэ guard + CacheService + mock хамтдаа ✅ · tsc (src+test) ✅ · lint 0 error · turbo 3/3
+- [x] 2.9.4 Таны компьютер дээр: `test:integration` → **47/47 ✅** (2026-10-08 15:58, Windows + local Supabase)
 
 ### Phase 3 — Sprint 8 DoD үлдэгдэл (0.5 session)
 - [ ] 3.1 Load test (100 concurrent, p99 < 500ms)

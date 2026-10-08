@@ -9,7 +9,7 @@ VALUES (
   '00000000-0000-0000-0000-000000000003',
   'Локал Тест Tenant',
   'test-tenant',
-  'starter',
+  'tier1',  -- TierType enum: tier1|tier2|tier3 (0004_add_native_enums.sql)
   true,
   NOW(),
   NOW()

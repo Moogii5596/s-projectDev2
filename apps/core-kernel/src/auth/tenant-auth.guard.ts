@@ -11,16 +11,29 @@ import { createClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
 import { TenantCacheService } from './tenant-cache.service';
 import { IS_PUBLIC_KEY } from '../common/decorators/skip-auth.decorator';
+import { DeploymentConfig, parseDeploymentConfig } from '../config/deployment-mode';
 
 @Injectable()
 export class TenantAuthGuard implements CanActivate {
   private readonly logger = new Logger(TenantAuthGuard.name);
+  private readonly deployment: DeploymentConfig;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly tenantCacheService: TenantCacheService,
     private readonly reflector: Reflector,
-  ) {}
+  ) {
+    // ADR-001: буруу тохиргоо → startup дээр алдаа (EnvConfig-тэй ижил функц)
+    this.deployment = parseDeploymentConfig({
+      DEPLOYMENT_MODE:
+        this.configService?.get<string>('DEPLOYMENT_MODE') ?? process.env['DEPLOYMENT_MODE'],
+      DEDICATED_TENANT_SLUG:
+        this.configService?.get<string>('DEDICATED_TENANT_SLUG') ?? process.env['DEDICATED_TENANT_SLUG'],
+    });
+    if (this.deployment.mode === 'dedicated') {
+      this.logger.log(`Deployment mode: dedicated (tenant=${this.deployment.dedicatedTenantSlug})`);
+    }
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     // @SkipAuth() decorator бүхий route-уудыг алгасна
@@ -60,7 +73,7 @@ export class TenantAuthGuard implements CanActivate {
 
     const user = data.user;
 
-    // 3. Subdomain-ээс tenant slug авах
+    // 3. Tenant slug: dedicated → тохиргооноос, shared → subdomain-ээс
     const host = request.headers['host'] as string;
     const tenantSlug = this.extractTenantSlug(host);
 
@@ -72,6 +85,14 @@ export class TenantAuthGuard implements CanActivate {
     const tenantId = await this.tenantCacheService.getTenantId(tenantSlug);
     if (!tenantId) {
       throw new ForbiddenException(`Tenant "${tenantSlug}" олдсонгүй`);
+    }
+
+    // 4b. SEC-001: хэрэглэгч энэ tenant-ийн идэвхтэй гишүүн эсэх (core_users)
+    //     Үгүй бол A tenant-ийн хэрэглэгч Host-оо сольж B-ийн өгөгдлийг уншиж чадна (RLS нь app.tenant_id-д итгэдэг)
+    const isMember = await this.tenantCacheService.isMember(tenantId, user.id);
+    if (!isMember) {
+      this.logger.warn(`Membership байхгүй: authId=${user.id} tenant=${tenantSlug}`);
+      throw new ForbiddenException('Та энэ байгууллагад харьяалагдахгүй байна');
     }
 
     // 5. Request-д context хавсаргах
@@ -86,6 +107,10 @@ export class TenantAuthGuard implements CanActivate {
   }
 
   private extractTenantSlug(host: string): string | null {
+    // ADR-001: Enterprise VPC (dedicated) — нэг deploy = нэг tenant, Host header-ээс үл хамаарна
+    if (this.deployment.mode === 'dedicated') {
+      return this.deployment.dedicatedTenantSlug;
+    }
     if (!host) return null;
     // subdomain.domain.com → subdomain
     // localhost:3000 (development) → 'test-tenant'

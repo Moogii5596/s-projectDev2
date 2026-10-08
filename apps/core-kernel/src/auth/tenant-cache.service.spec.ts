@@ -56,3 +56,72 @@ describe('TenantCacheService', () => {
     expect(mockRedis.del).toHaveBeenCalledWith('tenant:slug:acme');
   });
 });
+
+// SEC-001: membership шалгалт
+describe('TenantCacheService.isMember()', () => {
+  const T = 'aaaaaaaa-0000-0000-0000-00000000000a';
+  const U = '11111111-1111-1111-1111-111111111111';
+  let service: TenantCacheService;
+  let redis: { get: ReturnType<typeof vi.fn>; setex: ReturnType<typeof vi.fn>; del: ReturnType<typeof vi.fn> };
+  let tx: { $executeRaw: ReturnType<typeof vi.fn>; $queryRaw: ReturnType<typeof vi.fn> };
+  let prisma: { $transaction: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn().mockResolvedValue('OK'), del: vi.fn() };
+    tx = { $executeRaw: vi.fn().mockResolvedValue(1), $queryRaw: vi.fn() };
+    prisma = { $transaction: vi.fn().mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx)) };
+    service = new TenantCacheService(
+      redis as unknown as import('ioredis').default,
+      prisma as unknown as import('../db/prisma-tenant-client.service').PrismaTenantClientService,
+    );
+  });
+
+  it("cache '1' → true, DB рүү хандахгүй", async () => {
+    redis.get.mockResolvedValueOnce('1');
+    await expect(service.isMember(T, U)).resolves.toBe(true);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(redis.get).toHaveBeenCalledWith(`tenant:member:${T}:${U}`);
+  });
+
+  it("cache '0' → false, DB рүү хандахгүй", async () => {
+    redis.get.mockResolvedValueOnce('0');
+    await expect(service.isMember(T, U)).resolves.toBe(false);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('cache miss + гишүүн → true, 300 сек cache', async () => {
+    tx.$queryRaw.mockResolvedValueOnce([{ ok: 1 }]);
+    await expect(service.isMember(T, U)).resolves.toBe(true);
+    expect(redis.setex).toHaveBeenCalledWith(`tenant:member:${T}:${U}`, 300, '1');
+  });
+
+  it('cache miss + гишүүн биш → false, 30 сек cache', async () => {
+    tx.$queryRaw.mockResolvedValueOnce([]);
+    await expect(service.isMember(T, U)).resolves.toBe(false);
+    expect(redis.setex).toHaveBeenCalledWith(`tenant:member:${T}:${U}`, 30, '0');
+  });
+
+  it('RULE-04: set_config нь query-ээс ӨМНӨ, нэг transaction дотор', async () => {
+    tx.$queryRaw.mockResolvedValueOnce([{ ok: 1 }]);
+    await service.isMember(T, U);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    const setOrder = tx.$executeRaw.mock.invocationCallOrder[0];
+    const queryOrder = tx.$queryRaw.mock.invocationCallOrder[0];
+    expect(setOrder).toBeLessThan(queryOrder);
+    // tagged template: эхний strings-д set_config, утга нь tenantId
+    const [strings, value] = tx.$executeRaw.mock.calls[0];
+    expect((strings as string[]).join('?')).toContain("set_config('app.tenant_id'");
+    expect(value).toBe(T);
+  });
+
+  it('DB алдаа → false (fail closed), cache хийхгүй', async () => {
+    prisma.$transaction.mockRejectedValueOnce(new Error('connection lost'));
+    await expect(service.isMember(T, U)).resolves.toBe(false);
+    expect(redis.setex).not.toHaveBeenCalled();
+  });
+
+  it('invalidateMember() → membership key устгана', async () => {
+    await service.invalidateMember(T, U);
+    expect(redis.del).toHaveBeenCalledWith(`tenant:member:${T}:${U}`);
+  });
+});

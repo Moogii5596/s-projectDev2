@@ -12,9 +12,11 @@
 # pnpm суулгах
 npm install -g pnpm@9.12.0
 
-# Supabase CLI суулгах
-npm install -g supabase@latest
+# Supabase CLI — root devDependency, `pnpm install`-ээр хамт суулгагдана
+# ⚠️ npm install -g supabase ажиллахгүй (CLI дэмждэггүй)
 ```
+
+> **Шинэ машин дээр анх тохируулах** (Windows: Docker, Node, ExecutionPolicy, 3 `.env`-г автоматаар үүсгэх скрипт, алдаанууд): `docs/07_Tech_Stack_and_Environment/02_Local_Supabase_Docker_Windows.md`
 
 ### 2. Клон хийж эхлүүлэх
 
@@ -22,8 +24,10 @@ npm install -g supabase@latest
 # Dependencies суулгах
 pnpm install
 
-# .env файл үүсгэх
-cp .env.example .env
+# .env файлууд: .env, apps/core-kernel/.env, apps/web-shell/.env
+# Supabase асаасны дараа үүсгэнэ — key-ууд `pnpm supabase status -o env`-ээс
+# (ANON_KEY / SERVICE_ROLE_KEY = eyJ…; sb_publishable_/sb_secret_ БИШ)
+# Автомат скрипт: docs/07_Tech_Stack_and_Environment/02_Local_Supabase_Docker_Windows.md §1.5
 ```
 
 ### 3. Supabase local ажиллуулах
@@ -32,8 +36,8 @@ cp .env.example .env
 # Supabase Docker containers асаах
 pnpm supabase:start
 
-# Credentials авах (DATABASE_URL гэх мэт)
-supabase status
+# JWT key-ууд авах (.env-д)
+pnpm supabase status -o env
 
 # .env-д байгаа утгуудыг supabase status гаралтаар солих
 ```

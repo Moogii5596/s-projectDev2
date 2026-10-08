@@ -32,18 +32,12 @@ import { PrismaClient, TierType, UserRole } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from '../src/app/app.module';
 import { REDIS_CLIENT } from '../src/db/redis.module';
+import { createRedisMock } from './helpers/redis-mock';
 import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 
-// ── Redis mock ──────────────────────────────────────────────
-const redisMock = {
-  get: async (_key: string) => null,
-  setex: async () => 'OK',
-  del: async () => 1,
-  on: () => redisMock,
-  quit: async () => 'OK',
-  disconnect: () => undefined,
-};
+// ── Redis mock — нийтлэг helper [TEST-003] (апп-ын бүх Redis командтай) ──
+const redisMock = createRedisMock();
 
 // ── Тестийн тогтмолууд ──────────────────────────────────────
 const TEST_SLUG = process.env.DEV_TENANT_SLUG ?? 'test-tenant';

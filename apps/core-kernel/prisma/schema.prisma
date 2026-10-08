@@ -26,9 +26,6 @@ model Tenant {
   maxUsers    Int       @default(5)  @map("max_users")
   maxMfes     Int       @default(1)  @map("max_mfes")
   onboardedAt DateTime? @map("onboarded_at") @db.Timestamptz
-  // Sprint 6: Schema-per-Tenant — enterprise бол schema_name != null
-  // shared tenant (SMB) = null, enterprise = 'tenant_<uuid_prefix>'
-  schemaName  String?  @map("schema_name")
 
   users            CoreUser[]
   mrHeaders        MrHeader[]

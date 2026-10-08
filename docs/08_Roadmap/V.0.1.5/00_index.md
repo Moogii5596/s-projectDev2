@@ -13,7 +13,7 @@
 
 | Шаардлага | v0.1.0 байдал | v0.1.5 зорилго |
 |-----------|---------------|-----------------|
-| Tenant isolation | RLS (shared DB) | Schema-per-tenant (dedicated schema) |
+| Tenant isolation | RLS (shared DB) | RLS + Enterprise VPC тусдаа DB/deploy (ADR-001) |
 | Approval workflow | Multi-level, fixed | Amount-based routing + delegation + escalation |
 | Performance | No cache | Redis caching + cursor pagination + rate limiting |
 | Modules | MR only | + Inventory, Budget, Vendor, Report |
@@ -27,7 +27,7 @@
 |------|---------|----------|
 | `00_index.md` | Энэ файл — индекс, явцын хуваарь | — |
 | `01_analysis_and_plan_2026-10-08.md` | Шинжилгээ + Phase 0–6 төлөвлөгөө, шийдвэр B | **Эхэлж унших** |
-| `sprint_6_schema_isolation.md` | Sprint 6: Schema-per-tenant DB isolation | Суурь — эхлэх цэг |
+| `sprint_6_schema_isolation.md` | ⛔ Орлогдсон — ADR-001 (түүхэн лавлагаа) | — |
 | `sprint_7_advanced_workflow.md` | Sprint 7: Amount routing, delegation, escalation | Sprint 6 дараа |
 | `sprint_8_performance.md` | Sprint 8: Redis cache, cursor pagination, rate limit | Sprint 7 зэрэгцэж болно |
 | `sprint_9_modules.md` | Sprint 9: Inventory, Budget, Vendor, Report | Sprint 6 + 7 дараа |
@@ -54,7 +54,7 @@
 ## Явцын Хуваарь
 
 ```
-Sprint 6  │ Tenant Isolation (B)       │ [~] 🔁 2026-10-08 шийдвэр B: schema-per-tenant цуцлагдав → RLS + dedicated deploy
+Sprint 6  │ Tenant Isolation (B)       │ [x] ✅ ADR-001 хэрэгжсэн — 2026-10-08 (dedicated mode)
 Sprint 7  │ Advanced Approval Workflow │ [x] ✅ Дууссан (кодоор баталгаажсан 2026-10-08)
 Sprint 8  │ Performance & Scaling      │ [x] ✅ Дууссан — 2026-09-22 (load-test DoD 4 зүйл үлдсэн)
 Sprint 9  │ 4 Нэмэлт Модуль           │ [ ] ⏳ Хүлээгдэж байна
