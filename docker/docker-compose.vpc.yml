@@ -45,6 +45,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET тохируулна уу}
       REDIS_URL: redis://redis:6379
       NODE_CLUSTER_WORKERS: ${NODE_CLUSTER_WORKERS:-2}
+      RATE_LIMIT_SHORT: ${RATE_LIMIT_SHORT:-100}
+      RATE_LIMIT_MEDIUM: ${RATE_LIMIT_MEDIUM:-500}
+      RATE_LIMIT_LONG: ${RATE_LIMIT_LONG:-2000}
     depends_on:
       redis:
         condition: service_healthy

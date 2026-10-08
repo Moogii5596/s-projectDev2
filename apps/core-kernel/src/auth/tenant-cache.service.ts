@@ -1,4 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { REDIS_CLIENT } from '../db/redis.module';
 import Redis from 'ioredis';
 import { PrismaTenantClientService } from '../db/prisma-tenant-client.service';
@@ -9,6 +10,37 @@ const CACHE_PREFIX = 'tenant:slug:';
 const MEMBER_PREFIX = 'tenant:member:';
 const MEMBER_TTL_SECONDS = 300;
 const NON_MEMBER_TTL_SECONDS = 30;
+// PERF-003: Supabase token шалгалтын cache — хүсэлт бүрт Supabase Auth руу хандахгүй
+const AUTH_PREFIX = 'auth:token:';
+export const AUTH_CACHE_MAX_TTL_SECONDS = 60;
+
+export interface CachedAuthUser {
+  id: string;
+  email?: string;
+}
+
+/** Token-ийг Redis-д ХАДГАЛАХГҮЙ — зөвхөн SHA-256 hash-ийг түлхүүр болгоно */
+export function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+/**
+ * Cache TTL = min(60с, token дуусах хүртэлх хугацаа). Дууссан token → 0 (cache хийхгүй).
+ * exp-ийг гарын үсэг шалгалгүй уншина — зөвхөн TTL-ийг БОГИНОСГОХОД ашиглана,
+ * token өөрөө Supabase-аар баталгаажсаны дараа л cache-д орно.
+ */
+export function authCacheTtlSeconds(token: string, nowMs: number): number {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8')) as {
+      exp?: unknown;
+    };
+    if (typeof payload.exp !== 'number') return AUTH_CACHE_MAX_TTL_SECONDS;
+    const remaining = Math.floor(payload.exp - nowMs / 1000);
+    return Math.max(0, Math.min(AUTH_CACHE_MAX_TTL_SECONDS, remaining));
+  } catch {
+    return AUTH_CACHE_MAX_TTL_SECONDS;
+  }
+}
 
 @Injectable()
 export class TenantCacheService {
@@ -85,6 +117,31 @@ export class TenantCacheService {
       member ? '1' : '0',
     );
     return member;
+  }
+
+  /**
+   * PERF-003: Баталгаажсан token-ийн хэрэглэгч (cache). Redis алдаа → null
+   * (guard Supabase-аар шууд шалгана — аюулгүй тал руу).
+   */
+  async getCachedAuthUser(token: string): Promise<CachedAuthUser | null> {
+    try {
+      const value = await this.redis.get(`${AUTH_PREFIX}${hashToken(token)}`);
+      return value ? (JSON.parse(value) as CachedAuthUser) : null;
+    } catch (err) {
+      this.logger.warn(`Auth cache унших алдаа: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  /** Supabase-аар баталгаажсан хэрэглэгчийг cache-д хадгална (TTL ≤ 60с, token-ийн exp-ээс хэтрэхгүй) */
+  async cacheAuthUser(token: string, user: CachedAuthUser): Promise<void> {
+    const ttl = authCacheTtlSeconds(token, Date.now());
+    if (ttl <= 0) return;
+    try {
+      await this.redis.setex(`${AUTH_PREFIX}${hashToken(token)}`, ttl, JSON.stringify(user));
+    } catch (err) {
+      this.logger.warn(`Auth cache бичих алдаа: ${(err as Error).message}`);
+    }
   }
 
   /** Хэрэглэгчийг идэвхгүй болгох / tenant-аас хасах үед дуудна */

@@ -365,11 +365,11 @@ const rowVirtualizer = useVirtualizer({
 ## Шалгуур (Definition of Done)
 
 - [x] `pnpm test` бүх performance тест давна
-- [ ] Load test: 100 concurrent, p99 < 500ms, error 0%
-- [ ] Cache hit rate > 80% (жагсаалт endpoint)
-- [ ] Cursor pagination: 10,000 MR жагсаалтад response < 100ms
+- [x] Load test: 100 concurrent, p99 < 500ms, error 0% — `apps/e2e/tests/load-test.ts` → ✅ **p99=57ms**, avg 29ms, 3360 req/s, 100,771 × 2xx, non-2xx 0 (2026-10-08, Windows local, 100 conn × 30s; Phase 3.7 auth cache-ийн дараа)
+- [x] Cache hit rate > 80% (жагсаалт endpoint) — load-test.ts → ✅ **100%** (705,883 hits / 0 miss)
+- [x] Cursor pagination: 10,000 MR жагсаалтад response < 100ms — ✅ **HTTP max 31ms**, avg 18ms (20 хуудас); DB 5.8ms @10k
 - [x] Rate limit: tenant-аар хязгаарлагдана, 429 зөв буцаана
-- [ ] `NODE_CLUSTER_WORKERS=4` — 4 worker асна, crash нэг нь restart хийнэ
+- [x] `NODE_CLUSTER_WORKERS=4` — 4 worker асна, crash нэг нь restart хийнэ — `apps/e2e/tests/cluster-check.ts` → ✅ 4 worker online, kill → шинэ worker, /health 2/2 (2026-10-08, Windows)
 
 ---
 

@@ -1,7 +1,7 @@
 # Төслийн Шинжилгээ ба Хөгжүүлэлтийн Төлөвлөгөө — 2026-10-08
 
 > Хувилбар: v0.1.0 ✅ → v0.1.5 (Tier 2 Enterprise VPC) 🔄
-> Төлөв: **БАТЛАГДСАН 2026-10-08** · Phase 0–1 ✅ · Phase 2 ✅ · Phase 2.8 ✅ · Phase 2.9 ✅ (integration 47/47) · Phase 3 дараагийнх
+> Төлөв: **БАТЛАГДСАН 2026-10-08** · Phase 0–1 ✅ · Phase 2 ✅ · Phase 2.8 ✅ · Phase 2.9 ✅ (integration 47/47) · Phase 3 ✅ (Sprint 8 DoD 4/4) · Phase 3.7 ✅ · Phase 3.6 батлуулах
 > **Шийдвэр (2026-10-08):** B — Schema-per-tenant цуцлах; shared tenant = RLS, Enterprise VPC = тусдаа DB/deploy
 
 ## 1. Одоогийн бодит төлөв (кодоос шалгасан)
@@ -78,10 +78,41 @@
 - **Шалгалт:** unit 139/139 ✅ · mutation (try/catch хасахад 3, mock-оос `incr` хасахад coverage тест унав) · жинхэнэ guard + CacheService + mock хамтдаа ✅ · tsc (src+test) ✅ · lint 0 error · turbo 3/3
 - [x] 2.9.4 Таны компьютер дээр: `test:integration` → **47/47 ✅** (2026-10-08 15:58, Windows + local Supabase)
 
-### Phase 3 — Sprint 8 DoD үлдэгдэл (0.5 session)
-- [ ] 3.1 Load test (100 concurrent, p99 < 500ms)
-- [ ] 3.2 Cache hit rate, cursor pagination 10k хэмжилт
-- [ ] 3.3 Cluster mode worker restart шалгах
+### Phase 3 — Sprint 8 DoD үлдэгдэл ✅ ДУУССАН (2026-10-08) — DoD бүрэн баталгаажсан
+- [x] 3.1 (B) `src/config/rate-limit.ts` — `RATE_LIMIT_SHORT/MEDIUM/LONG`, default **100/500/2000**, буруу утга → startup алдаа; guard + EnvConfig; `.env.example`, compose (root, VPC)
+- [x] 3.2 `apps/e2e/tests/load-test.ts` — non-2xx/429 тоолно, preflight, token автоматаар (Supabase REST), Redis INFO hit rate, cursor 20 хуудас. Dependency нэмээгүй
+- [x] 3.3 `supabase/dev/seed_perf_10k_mr.sql` (dev only, idempotent) · EXPLAIN ANALYZE (PostgreSQL 16, app_user + RLS): **10k → 5.8ms** ✅
+- [x] 3.4 `apps/e2e/tests/cluster-check.ts` + `main.ts`-д `Worker <pid> online` log — 4 worker → нэгийг kill → respawn → /health; crash loop-г 12с-д илрүүлнэ
+- **Шалгалт:** unit 153/153 ✅ · mutation (rate limit hardcode → 2 тест унав) · load-test: fake API + жинхэнэ Redis дээр 4 сценари (хэвийн ✅ / 429 ❌ / буруу token ❌ / Redis байхгүй ❌) · cluster-check: `main.ts`-ийн cluster логик дээр хэвийн ✅, жинхэнэ build дээр crash loop ❌ (зөв), үлдсэн процесс 0 · tsc (core-kernel, e2e, web-shell) ✅ · lint 0 · turbo 3/3
+- [x] 3.5 Таны компьютер дээр ✅ — load test (3.7-ийн дараа) + cluster-check: **Sprint 8 DoD 4/4 + бүх тест** (2026-10-08 16:53)
+
+```powershell
+# 1) 10k MR (нэг удаа) — psql суугаагүй бол Supabase DB container-оор:
+$db = docker ps --filter "name=supabase_db" --format "{{.Names}}"
+Get-Content supabase/dev/seed_perf_10k_mr.sql -Raw | docker exec -i $db psql -U postgres -d postgres -v ON_ERROR_STOP=1
+# 2) Backend-ийг өндөр rate limit-тэй асаах (тусдаа терминал)
+$env:RATE_LIMIT_SHORT="1000000"; $env:RATE_LIMIT_MEDIUM="1000000"; $env:RATE_LIMIT_LONG="1000000"; pnpm --filter @s-project/core-kernel dev
+# 3) Load test (өөр терминал)
+pnpm --filter e2e exec tsx tests/load-test.ts
+# 4) Cluster (backend dev-ийг зогсоогоод)
+pnpm --filter @s-project/core-kernel build
+pnpm --filter e2e exec tsx tests/cluster-check.ts
+```
+
+### Phase 3.6 — Санал (БАТЛУУЛАХ) — Phase 3-ын явцад илэрсэн
+- [ ] 3.6.1 **Cursor pagination index:** `(tenant_id, created_at DESC, id DESC)` + query-д `createdAt <= cursor` нөхцөл. PostgreSQL 16, 100k мөр: **23ms → 0.14ms** (Index Scan). Одоогийн OR нөхцөл index range ашиглаж чадахгүй (index л нэмэхэд 26ms)
+- [ ] 3.6.2 `core-kernel` `start` script `node dist/main` → `node dist/src/main` (build гаралт `dist/src/`; Dockerfile аль хэдийн зөв)
+- [ ] 3.6.3 Буруу `cursor` → 500 буцааж байна (`decodeCursor` энгийн `Error` шиддэг) → 400 `BadRequestException`
+- [ ] 3.6.4 Cluster crash loop: worker эхлэхгүй бол master хязгааргүй, саатуулгүй fork хийдэг (энд 12с-д 11 удаа) → backoff + N удаа дараа master зогсох
+
+### Phase 3.7 — Auth token cache (A) ✅ хэрэгжсэн (2026-10-08)
+> 3.5-ийн анхны хэмжилт (таны компьютер): p99 = 1974ms ❌, 154 req/s, non-2xx 3268 (429 = 0) ❌, cache hit 100% ✅, cursor → 401 ❌.
+> Шалтгаан: guard хүсэлт бүрт Supabase Auth `getUser` + алдаа бүрийг 401 болгодог ([PERF-003]).
+- [x] 3.7.1 Redis cache: түлхүүр = SHA-256(token), TTL = min(60с, exp); алдааг cache-д хадгалахгүй; Redis алдаа → Supabase-аар шалгана
+- [x] 3.7.2 Нэг Supabase client (`persistSession/autoRefreshToken: false`) + **single-flight** (ижил token-ийн зэрэгцээ шалгалт → 1 дуудлага)
+- [x] 3.7.3 `isAuthServiceError`: сүлжээ / status 0 / ≥ 500 → **503**, бусад → 401
+- [x] 3.7.4 Тест: unit 179/179 · mutation 6/6 баригдсан (cache, 503→401, client дахин ашиглах, hash, exception→401, single-flight) · жинхэнэ supabase-js + Redis: 503/сүлжээ тасрах → 503, 401 → 401; **500 хүсэлт → Supabase 1 дуудлага** · tsc ×3 · lint 0 · turbo 3/3
+- [x] 3.7.5 Load test (таны компьютер, 16:52): ✅ p99 **1974 → 57ms**, **154 → 3360 req/s**, non-2xx **3268 → 0**, cache 100%, cursor max 31ms
 
 ### Phase 4 — Sprint 9: Нэмэлт модулиуд (5–6 session)
 - [ ] 4.1 Budget (MR submit-д budget check)

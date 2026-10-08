@@ -52,3 +52,19 @@ describe('EnvConfig — DEPLOYMENT_MODE', () => {
     );
   });
 });
+
+describe('EnvConfig — RATE_LIMIT_* (Phase 3.1)', () => {
+  it('тохируулаагүй → алдаагүй эхэлнэ', () => {
+    expect(() => new EnvConfig(makeConfig())).not.toThrow();
+  });
+
+  it('зөв утга → алдаагүй', () => {
+    expect(() => new EnvConfig(makeConfig({ RATE_LIMIT_SHORT: '1000000' }))).not.toThrow();
+  });
+
+  it('буруу утга → startup алдаа', () => {
+    expect(() => new EnvConfig(makeConfig({ RATE_LIMIT_MEDIUM: 'abc' }))).toThrow(
+      /Environment variable validation failed[\s\S]*RATE_LIMIT_MEDIUM/,
+    );
+  });
+});

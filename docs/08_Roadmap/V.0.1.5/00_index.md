@@ -56,7 +56,7 @@
 ```
 Sprint 6  │ Tenant Isolation (B)       │ [x] ✅ ADR-001 хэрэгжсэн — 2026-10-08 (dedicated mode)
 Sprint 7  │ Advanced Approval Workflow │ [x] ✅ Дууссан (кодоор баталгаажсан 2026-10-08)
-Sprint 8  │ Performance & Scaling      │ [x] ✅ Дууссан — 2026-09-22 (load-test DoD 4 зүйл үлдсэн)
+Sprint 8  │ Performance & Scaling      │ [x] ✅ Дууссан — DoD 4/4 баталгаажсан 2026-10-08 (p99 57ms, 3360 req/s)
 Sprint 9  │ 4 Нэмэлт Модуль           │ [ ] ⏳ Хүлээгдэж байна
 Sprint 10 │ Event Bus Integration Test │ [ ] ⏳ Хүлээгдэж байна
 Sprint 11 │ Release Hardening          │ [ ] ⏳ Хүлээгдэж байна

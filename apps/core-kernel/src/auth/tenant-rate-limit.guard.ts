@@ -9,17 +9,15 @@ import {
 } from '@nestjs/common';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../db/redis.module';
+import { parseRateLimitConfig } from '../config/rate-limit';
 
 @Injectable()
 export class TenantRateLimitGuard implements CanActivate {
   private readonly logger = new Logger(TenantRateLimitGuard.name);
   /** Redis тасарсан үед log-ийг 60 сек тутам нэг л удаа бичнэ */
   private lastFailOpenWarnAt = 0;
-  private readonly windows = [
-    { name: 'short', ttlMs: 1_000, limit: 10 },
-    { name: 'medium', ttlMs: 10_000, limit: 50 },
-    { name: 'long', ttlMs: 60_000, limit: 200 },
-  ];
+  // Phase 3.1: RATE_LIMIT_SHORT/MEDIUM/LONG (default 100/500/2000) — src/config/rate-limit.ts
+  private readonly windows = parseRateLimitConfig(process.env);
 
   constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
 

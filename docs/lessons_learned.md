@@ -38,6 +38,10 @@
 | FE-003 | DTO mismatch | Backend DTO шалгах → RULE-20 |
 | CI-001 | turbo task script-гүй | `turbo --dry=json`-оор шалгах |
 | CI-003 | ESLint config | Root `.eslintrc.cjs` |
+| PERF-003 | Хүсэлт бүрт Supabase getUser | Redis cache ≤60с + single-flight + 503 ялгах |
+| SEED-002 | reset → auth user алга | Studio Add user + auth_id UPDATE |
+| PERF-001 | Load test 429 тоолоогүй | non2xx + алдааны зам бүрийг турших |
+| PROC-002 | pkill/grep өөрийгөө олсон | PID файл, `[x]yz` bracket |
 | TEST-003 | Integration Redis mock дутуу | `test/helpers/redis-mock.ts` + coverage тест |
 | RL-001 | Rate limit Redis алдаа | fail-open + warn |
 | SEC-001 | Guard membership | `isMember()` + "гишүүн биш tenant" тест заавал |
@@ -780,6 +784,31 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 ### [RL-001] Rate limit guard Redis тасрахад бүх API 500 болох эрсдэлтэй байсан → fail-open
 **Шийдвэр (2026-10-08, 2.9.2-A):** `incr/pexpire` алдаа → хүсэлтийг нэвтрүүлж, 60 сек тутам нэг warn log. Тэр хугацаанд rate limit түр ажиллахгүй (нийтлэг практик).
 
+### [PERF-001] Load test зөвхөн socket алдаа тоолдог байсан → 429 хариутай ч "давсан"
+**Алдаа:** `load-test.ts` нь autocannon-ийн `errors`-ийг л шалгадаг; `non2xx` (429/500) тоологдохгүй. Rate limit (нэг tenant 10/с) 100 connection-ийг бараг бүхэлд нь 429 болгосон ч тест ✅.
+**Шийдэл:** `non2xx + errors + timeouts == 0`, 429-ийг тусад нь тайлагнана; preflight (401/403/429 → тодорхой зөвлөмж); шалгаж чадаагүй DoD (Redis INFO) → ❌ (давсан гэж харуулахгүй).
+**Дүрэм:** Хэмжилтийн script-ийг алдааны зам бүрээр (429, буруу token, Redis байхгүй) туршиж, **унах ёстой үед унаж** байгааг шалгана.
+
+### [PERF-002] Rate limit default хэт бага байсан (10/с нэг tenant)
+**Шийдвэр (Phase 3.1-B):** default 100 / 500 / 2000 (1с/10с/60с), `RATE_LIMIT_SHORT/MEDIUM/LONG` env, буруу утга → startup алдаа. Cluster горимд тоолуур Redis-д тул worker хооронд нэгдсэн.
+
+### [PROC-002] `pkill -f <текст>` / `grep -c <текст>` өөрийгөө (bash мөрийг) олж тоолсон
+**Алдаа:** `pkill -f fake-api.js` → өөрийн shell зогссон (exit 144); `ps | grep -c 'dist/src/main.js'` → "2 процесс үлдсэн" гэсэн худал тоо.
+**Шийдэл:** PID файл ашиглах; эсвэл `grep "[d]ist/src/main.js"` (bracket trick) — өөрийн командын мөрт тохирохгүй.
+
+### [PERF-003] Guard хүсэлт бүрт Supabase Auth руу (`getUser`) хандаж, шинэ client үүсгэдэг байсан
+**Алдаа (load test):** 154 req/s, p99 = 1974ms, 3268 non-2xx (429 = 0), дараа нь "Token хүчингүй" 401 — MR жагсаалт 100% Redis cache-ээс уншигдсан ч.
+**Шалтгаан:** (1) хүсэлт бүр = Supabase Auth HTTP дуудлага → Auth (Docker) 100 зэрэгцээ ачаалалд удаашрах/алдаа; (2) guard ЯМАР Ч алдааг (сүлжээ, 5xx) 401 болгодог → хүчинтэй хэрэглэгчийг гаргана; (3) хүсэлт бүрт `createClient` (autoRefreshToken timer-тэй).
+**Шийдэл (Phase 3.7-A):** `TenantCacheService.getCachedAuthUser/cacheAuthUser` — түлхүүр = token-ийн SHA-256, TTL = min(60с, token exp); single-flight (ижил token-ийн зэрэгцээ шалгалт → 1 дуудлага); нэг client (`persistSession/autoRefreshToken: false`); `isAuthServiceError` → сүлжээ/0/≥500 = **503**, бусад = 401; алдааг cache-д хадгалахгүй.
+**Хэмжилт:** жинхэнэ supabase-js + Redis: 500 хүсэлт (200 зэрэгцээ) → Supabase **500 → 1** дуудлага.
+**Trade-off:** хэрэглэгчийг гаргасан/хассан ч token нь ≤ 60с cache-д хүчинтэй.
+
+### [SEED-002] `supabase db reset` → `auth.users` хоосорно, seed-ийн `core_users.auth_id` хуучин машины UUID
+**Алдаа:** load test → `Supabase нэвтрэлт амжилтгүй (400): Invalid login credentials`; нэвтэрсэн ч SEC-001 → 403.
+**Шийдэл (гараар, reset бүрийн дараа):** Studio → Authentication → Add user (`admin@test.mn` / `test1234`, Auto Confirm) →
+`docker exec -i $db psql -U postgres -d postgres -c "UPDATE core_users c SET auth_id = u.id FROM auth.users u WHERE u.email = c.email AND c.email = 'admin@test.mn';"`
+**Цаашид:** `pnpm dev:test-user` script (Phase 3.6.5 — санал).
+
 ---
 
 ## Changelog
@@ -787,6 +816,8 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
 | 2026-10-08 | §12: SEED-001, ENV-001~005 нэмэв (шинэ машин дээр Supabase on Docker тохиргоо) |
+| 2026-10-08 | PERF-003, SEED-002 нэмэв (Phase 3.7) |
+| 2026-10-08 | PERF-001, PERF-002, PROC-002 нэмэв (Phase 3) |
 | 2026-10-08 | TEST-003, RL-001 нэмэв (Phase 2.9) |
 | 2026-10-08 | SEC-001, TEST-002 нэмэв (Phase 2.8) |
 | 2026-10-08 | ENV-006 нэмэв (Windows Prisma DLL lock) |

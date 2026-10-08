@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { z } from 'zod';
 import { DeploymentConfig, parseDeploymentConfig } from './deployment-mode';
+import { parseRateLimitConfig } from './rate-limit';
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -50,6 +51,17 @@ export class EnvConfig {
         DEPLOYMENT_MODE: this.configService?.get('DEPLOYMENT_MODE') ?? process.env['DEPLOYMENT_MODE'],
         DEDICATED_TENANT_SLUG:
           this.configService?.get('DEDICATED_TENANT_SLUG') ?? process.env['DEDICATED_TENANT_SLUG'],
+      });
+    } catch (err) {
+      throw new Error(`Environment variable validation failed:\n  ❌ ${(err as Error).message}`);
+    }
+
+    // Phase 3.1: RATE_LIMIT_* — буруу утга бол startup дээр зогсоно (guard ч ижил функц ашиглана)
+    try {
+      parseRateLimitConfig({
+        RATE_LIMIT_SHORT: this.configService?.get('RATE_LIMIT_SHORT') ?? process.env['RATE_LIMIT_SHORT'],
+        RATE_LIMIT_MEDIUM: this.configService?.get('RATE_LIMIT_MEDIUM') ?? process.env['RATE_LIMIT_MEDIUM'],
+        RATE_LIMIT_LONG: this.configService?.get('RATE_LIMIT_LONG') ?? process.env['RATE_LIMIT_LONG'],
       });
     } catch (err) {
       throw new Error(`Environment variable validation failed:\n  ❌ ${(err as Error).message}`);

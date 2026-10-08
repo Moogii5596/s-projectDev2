@@ -5,18 +5,34 @@ import {
   UnauthorizedException,
   ForbiddenException,
   Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
 import { TenantCacheService } from './tenant-cache.service';
 import { IS_PUBLIC_KEY } from '../common/decorators/skip-auth.decorator';
 import { DeploymentConfig, parseDeploymentConfig } from '../config/deployment-mode';
 
+/**
+ * PERF-003: Supabase Auth өөрөө ажиллахгүй байгаа (сүлжээ, timeout, 5xx) эсэх.
+ * Ийм үед 401 биш 503 — хүчинтэй token-тэй хэрэглэгчийг системээс гаргахгүй.
+ * auth-js: сүлжээ → AuthRetryableFetchError (status 0), 502/503/504 → retryable, бусад 5xx → status ≥ 500.
+ */
+export function isAuthServiceError(error: { name?: string; status?: number } | null | undefined): boolean {
+  if (!error) return false;
+  // status-гүй бусад алдаа → 401 хэвээр (сервисийн алдаа гэж таамаглахгүй)
+  return error.name === 'AuthRetryableFetchError' || error.status === 0 || (error.status ?? 0) >= 500;
+}
+
 @Injectable()
 export class TenantAuthGuard implements CanActivate {
   private readonly logger = new Logger(TenantAuthGuard.name);
   private readonly deployment: DeploymentConfig;
+  /** PERF-003: нэг client-ийг дахин ашиглана (өмнө нь хүсэлт бүрт шинээр + autoRefresh timer) */
+  private supabase: SupabaseClient | null = null;
+  /** PERF-003: single-flight — ижил token-ийн зэрэгцээ cache miss нэг л Supabase дуудлага хийнэ */
+  private readonly inflight = new Map<string, Promise<{ id: string; email?: string }>>();
 
   constructor(
     private readonly configService: ConfigService,
@@ -55,23 +71,8 @@ export class TenantAuthGuard implements CanActivate {
 
     const token = authHeader.substring(7);
 
-    // 2. Supabase-аар JWT баталгаажуулах
-    // [DI-009] process.env fallback: SWC+emitDecoratorMetadata суулгахаас өмнө
-    // esbuild configService-г undefined үлдээдэг байсан учир хамгаалалт нэмсэн
-    const supabaseUrl =
-      this.configService?.get<string>('SUPABASE_URL') ?? process.env['SUPABASE_URL']!;
-    const supabaseAnonKey =
-      this.configService?.get<string>('SUPABASE_ANON_KEY') ?? process.env['SUPABASE_ANON_KEY']!;
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data.user) {
-      this.logger.warn(`Invalid JWT token: ${error?.message}`);
-      throw new UnauthorizedException('Token хүчингүй байна');
-    }
-
-    const user = data.user;
+    // 2. JWT баталгаажуулах — PERF-003: Redis cache (≤ 60с) → miss үед Supabase Auth
+    const user = await this.verifyToken(token);
 
     // 3. Tenant slug: dedicated → тохиргооноос, shared → subdomain-ээс
     const host = request.headers['host'] as string;
@@ -104,6 +105,55 @@ export class TenantAuthGuard implements CanActivate {
     };
 
     return true;
+  }
+
+  private async verifyToken(token: string): Promise<{ id: string; email?: string }> {
+    const cached = await this.tenantCacheService.getCachedAuthUser(token);
+    if (cached) return cached;
+
+    const pending = this.inflight.get(token);
+    if (pending) return pending;
+    const promise = this.verifyWithSupabase(token).finally(() => this.inflight.delete(token));
+    this.inflight.set(token, promise);
+    return promise;
+  }
+
+  private async verifyWithSupabase(token: string): Promise<{ id: string; email?: string }> {
+    let result: Awaited<ReturnType<SupabaseClient['auth']['getUser']>>;
+    try {
+      result = await this.getSupabase().auth.getUser(token);
+    } catch (err) {
+      this.logger.error(`Supabase Auth дуудлага алдаа: ${(err as Error).message}`);
+      throw new ServiceUnavailableException('Нэвтрэлтийн сервис түр ажиллахгүй байна');
+    }
+
+    const { data, error } = result;
+    if (error && isAuthServiceError(error)) {
+      this.logger.error(`Supabase Auth ажиллахгүй (status=${error.status ?? 'n/a'}): ${error.message}`);
+      throw new ServiceUnavailableException('Нэвтрэлтийн сервис түр ажиллахгүй байна');
+    }
+    if (error || !data.user) {
+      this.logger.warn(`Invalid JWT token: ${error?.message}`);
+      throw new UnauthorizedException('Token хүчингүй байна');
+    }
+
+    const user = { id: data.user.id, email: data.user.email };
+    await this.tenantCacheService.cacheAuthUser(token, user);
+    return user;
+  }
+
+  private getSupabase(): SupabaseClient {
+    if (!this.supabase) {
+      // [DI-009] process.env fallback (integration тест configService-ийг дараа нь онооно — lazy үүсгэнэ)
+      const supabaseUrl =
+        this.configService?.get<string>('SUPABASE_URL') ?? process.env['SUPABASE_URL']!;
+      const supabaseAnonKey =
+        this.configService?.get<string>('SUPABASE_ANON_KEY') ?? process.env['SUPABASE_ANON_KEY']!;
+      this.supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      });
+    }
+    return this.supabase;
   }
 
   private extractTenantSlug(host: string): string | null {

@@ -38,6 +38,8 @@ const workers = Number.parseInt(process.env.NODE_CLUSTER_WORKERS ?? '1', 10);
 if (cluster.isPrimary && workers > 1) {
   console.log(`Master PID ${process.pid} — spawning ${workers} workers`);
   for (let index = 0; index < workers; index += 1) cluster.fork();
+  // Phase 3.4: apps/e2e/tests/cluster-check.ts энэ мөрөөр worker-уудыг танина
+  cluster.on('online', (worker) => console.log(`Worker ${worker.process.pid} online`));
   cluster.on('exit', (worker) => {
     console.warn(`Worker ${worker.process.pid} died — restarting`);
     cluster.fork();

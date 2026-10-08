@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common';
-import { TenantAuthGuard } from './tenant-auth.guard';
+import { ExecutionContext, UnauthorizedException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
+import { TenantAuthGuard, isAuthServiceError } from './tenant-auth.guard';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { TenantCacheService } from './tenant-cache.service';
@@ -48,6 +48,8 @@ describe('TenantAuthGuard', () => {
     tenantCacheService = {
       getTenantId: vi.fn(),
       isMember: vi.fn().mockResolvedValue(true), // SEC-001: default гишүүн
+      getCachedAuthUser: vi.fn().mockResolvedValue(null), // PERF-003: default cache miss
+      cacheAuthUser: vi.fn().mockResolvedValue(undefined),
       invalidate: vi.fn(),
     } as unknown as TenantCacheService;
 
@@ -265,6 +267,104 @@ describe('TenantAuthGuard', () => {
       const ctx = createMockContext({ authorization: 'Bearer valid-token', host: 'beta.app.com' });
       await expect(guard.canActivate(ctx)).resolves.toBe(true);
       expect(tenantCacheService.getTenantId).toHaveBeenLastCalledWith('beta');
+    });
+  });
+
+  // PERF-003: token cache + 401/503 ялгах
+  describe('Token cache + Supabase Auth алдаа (PERF-003)', () => {
+    const okUser = { data: { user: { id: 'user-123', email: 'test@example.com' } }, error: null };
+    const ctxFor = () => createMockContext({ authorization: 'Bearer tok-1', host: 'localhost:3000' });
+
+    beforeEach(() => {
+      (tenantCacheService.getTenantId as ReturnType<typeof vi.fn>).mockResolvedValue('tenant-uuid-456');
+    });
+
+    it('cache hit → Supabase дуудахгүй, request.user cache-ээс', async () => {
+      (tenantCacheService.getCachedAuthUser as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ id: 'cached-u', email: 'c@c.mn' });
+      const ctx = ctxFor();
+      await expect(guard.canActivate(ctx)).resolves.toBe(true);
+      expect(mockSupabaseGetUser).not.toHaveBeenCalled();
+      expect(ctx.switchToHttp().getRequest().user).toMatchObject({ id: 'cached-u', email: 'c@c.mn', tenantId: 'tenant-uuid-456' });
+      expect(tenantCacheService.isMember).toHaveBeenCalledWith('tenant-uuid-456', 'cached-u');
+    });
+
+    it('cache miss → Supabase шалгаад cache-д хадгална', async () => {
+      mockSupabaseGetUser.mockResolvedValueOnce(okUser);
+      await expect(guard.canActivate(ctxFor())).resolves.toBe(true);
+      expect(mockSupabaseGetUser).toHaveBeenCalledWith('tok-1');
+      expect(tenantCacheService.cacheAuthUser).toHaveBeenCalledWith('tok-1', { id: 'user-123', email: 'test@example.com' });
+    });
+
+    it('хүчингүй token (401) → 401, cache-д хадгалахгүй', async () => {
+      mockSupabaseGetUser.mockResolvedValueOnce({ data: { user: null }, error: { name: 'AuthApiError', status: 401, message: 'invalid JWT' } });
+      await expect(guard.canActivate(ctxFor())).rejects.toThrow(UnauthorizedException);
+      expect(tenantCacheService.cacheAuthUser).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['сүлжээ (AuthRetryableFetchError, status 0)', { name: 'AuthRetryableFetchError', status: 0, message: 'fetch failed' }],
+      ['504 gateway timeout', { name: 'AuthRetryableFetchError', status: 504, message: 'timeout' }],
+      ['500 server error', { name: 'AuthApiError', status: 500, message: 'boom' }],
+    ])('Supabase Auth ажиллахгүй: %s → 503 (401 биш)', async (_l, error) => {
+      mockSupabaseGetUser.mockResolvedValueOnce({ data: { user: null }, error });
+      await expect(guard.canActivate(ctxFor())).rejects.toThrow(ServiceUnavailableException);
+      expect(tenantCacheService.cacheAuthUser).not.toHaveBeenCalled();
+    });
+
+    it('getUser exception шидвэл → 503', async () => {
+      mockSupabaseGetUser.mockRejectedValueOnce(new Error('socket hang up'));
+      await expect(guard.canActivate(ctxFor())).rejects.toThrow(ServiceUnavailableException);
+    });
+
+    it('Supabase client-ийг нэг л удаа үүсгэнэ (persistSession/autoRefresh унтраалттай)', async () => {
+      (createClient as ReturnType<typeof vi.fn>).mockClear();
+      mockSupabaseGetUser.mockResolvedValue(okUser);
+      for (let i = 0; i < 3; i++) await guard.canActivate(ctxFor());
+      expect(createClient).toHaveBeenCalledTimes(1);
+      expect((createClient as ReturnType<typeof vi.fn>).mock.calls[0][2]).toMatchObject({
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+    });
+  });
+
+  describe('isAuthServiceError()', () => {
+    it.each([
+      [{ name: 'AuthRetryableFetchError', status: 503 }, true],
+      [{ name: 'AuthApiError', status: 0 }, true],
+      [{ name: 'AuthApiError', status: 502 }, true],
+      [{ name: 'AuthApiError', status: 401 }, false],
+      [{ name: 'AuthApiError', status: 403 }, false],
+      [{ message: 'no status' }, false],
+      [null, false],
+    ])('%j → %s', (err, expected) => {
+      expect(isAuthServiceError(err as never)).toBe(expected);
+    });
+  });
+
+  describe('Single-flight (PERF-003)', () => {
+    it('ижил token-ийн 50 зэрэгцээ хүсэлт → Supabase 1 дуудлага', async () => {
+      (tenantCacheService.getTenantId as ReturnType<typeof vi.fn>).mockResolvedValue('tenant-uuid-456');
+      let resolveUser!: (v: unknown) => void;
+      mockSupabaseGetUser.mockReturnValueOnce(new Promise((r) => (resolveUser = r)));
+      const runs = Array.from({ length: 50 }, () =>
+        guard.canActivate(createMockContext({ authorization: 'Bearer same-tok', host: 'localhost:3000' })),
+      );
+      await new Promise((r) => setTimeout(r, 0));
+      resolveUser({ data: { user: { id: 'user-123', email: 'test@example.com' } }, error: null });
+      await expect(Promise.all(runs)).resolves.toEqual(Array(50).fill(true));
+      expect(mockSupabaseGetUser).toHaveBeenCalledTimes(1);
+    });
+
+    it('алдаа бүх хүлээгчид дамжина, дараагийн хүсэлт дахин оролдоно', async () => {
+      mockSupabaseGetUser.mockResolvedValueOnce({ data: { user: null }, error: { name: 'AuthApiError', status: 503, message: 'x' } });
+      const a = guard.canActivate(createMockContext({ authorization: 'Bearer t2', host: 'localhost:3000' }));
+      const b = guard.canActivate(createMockContext({ authorization: 'Bearer t2', host: 'localhost:3000' }));
+      await expect(a).rejects.toThrow(ServiceUnavailableException);
+      await expect(b).rejects.toThrow(ServiceUnavailableException);
+      (tenantCacheService.getTenantId as ReturnType<typeof vi.fn>).mockResolvedValue('tenant-uuid-456');
+      mockSupabaseGetUser.mockResolvedValueOnce({ data: { user: { id: 'user-123', email: 'e@e.mn' } }, error: null });
+      await expect(guard.canActivate(createMockContext({ authorization: 'Bearer t2', host: 'localhost:3000' }))).resolves.toBe(true);
+      expect(mockSupabaseGetUser).toHaveBeenCalledTimes(2);
     });
   });
 });

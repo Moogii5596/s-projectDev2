@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TenantCacheService } from './tenant-cache.service';
+import { TenantCacheService, hashToken, authCacheTtlSeconds, AUTH_CACHE_MAX_TTL_SECONDS } from './tenant-cache.service';
 import { REDIS_CLIENT } from '../db/redis.module';
 
 describe('TenantCacheService', () => {
@@ -123,5 +123,70 @@ describe('TenantCacheService.isMember()', () => {
   it('invalidateMember() → membership key устгана', async () => {
     await service.invalidateMember(T, U);
     expect(redis.del).toHaveBeenCalledWith(`tenant:member:${T}:${U}`);
+  });
+});
+
+// PERF-003: Supabase token шалгалтын cache
+describe('Auth token cache (PERF-003)', () => {
+  // exp-тэй JWT хэлбэрийн token (гарын үсэг хамаагүй — TTL тооцоход л payload уншина)
+  const jwt = (exp?: number) =>
+    ['h', Buffer.from(JSON.stringify(exp === undefined ? {} : { exp })).toString('base64url'), 's'].join('.');
+  const NOW = 1_800_000_000_000; // ms
+  let service: TenantCacheService;
+  let redis: { get: ReturnType<typeof vi.fn>; setex: ReturnType<typeof vi.fn>; del: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn().mockResolvedValue('OK'), del: vi.fn() };
+    service = new TenantCacheService(
+      redis as unknown as import('ioredis').default,
+      {} as unknown as import('../db/prisma-tenant-client.service').PrismaTenantClientService,
+    );
+  });
+
+  it('hashToken: тогтвортой SHA-256, token-ийг өөрийг нь агуулахгүй', () => {
+    const t = jwt(1);
+    expect(hashToken(t)).toBe(hashToken(t));
+    expect(hashToken(t)).toMatch(/^[0-9a-f]{64}$/);
+    expect(hashToken(t)).not.toContain(t);
+  });
+
+  it.each([
+    ['30с үлдсэн', NOW / 1000 + 30, 30],
+    ['1 цаг үлдсэн → 60-аар хязгаарлана', NOW / 1000 + 3600, AUTH_CACHE_MAX_TTL_SECONDS],
+    ['дууссан → 0', NOW / 1000 - 5, 0],
+  ])('authCacheTtlSeconds: %s', (_l, exp, expected) => {
+    expect(authCacheTtlSeconds(jwt(exp), NOW)).toBe(expected);
+  });
+
+  it('authCacheTtlSeconds: exp байхгүй / буруу хэлбэр → 60', () => {
+    expect(authCacheTtlSeconds(jwt(), NOW)).toBe(60);
+    expect(authCacheTtlSeconds('not-a-jwt', NOW)).toBe(60);
+  });
+
+  it('cacheAuthUser: hash түлхүүрээр, TTL-тэй хадгална (token Redis-д орохгүй)', async () => {
+    const t = jwt(Math.floor(Date.now() / 1000) + 3600);
+    await service.cacheAuthUser(t, { id: 'u1', email: 'a@a.mn' });
+    expect(redis.setex).toHaveBeenCalledWith(`auth:token:${hashToken(t)}`, 60, JSON.stringify({ id: 'u1', email: 'a@a.mn' }));
+    expect(JSON.stringify(redis.setex.mock.calls)).not.toContain(t);
+  });
+
+  it('cacheAuthUser: дууссан token → cache хийхгүй', async () => {
+    await service.cacheAuthUser(jwt(Math.floor(Date.now() / 1000) - 10), { id: 'u1' });
+    expect(redis.setex).not.toHaveBeenCalled();
+  });
+
+  it('getCachedAuthUser: hit → хэрэглэгч, miss → null', async () => {
+    const t = jwt(1);
+    redis.get.mockResolvedValueOnce(JSON.stringify({ id: 'u1', email: 'a@a.mn' }));
+    await expect(service.getCachedAuthUser(t)).resolves.toEqual({ id: 'u1', email: 'a@a.mn' });
+    expect(redis.get).toHaveBeenCalledWith(`auth:token:${hashToken(t)}`);
+    await expect(service.getCachedAuthUser(t)).resolves.toBeNull();
+  });
+
+  it('Redis алдаа → get null (Supabase-аар шалгана), set алдааг залгина', async () => {
+    redis.get.mockRejectedValueOnce(new Error('down'));
+    redis.setex.mockRejectedValueOnce(new Error('down'));
+    await expect(service.getCachedAuthUser(jwt(1))).resolves.toBeNull();
+    await expect(service.cacheAuthUser(jwt(Math.floor(Date.now() / 1000) + 100), { id: 'u1' })).resolves.toBeUndefined();
   });
 });

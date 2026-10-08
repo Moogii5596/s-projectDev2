@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ExecutionContext, HttpException } from '@nestjs/common';
 import { TenantRateLimitGuard } from './tenant-rate-limit.guard';
+import { RATE_LIMIT_DEFAULTS } from '../config/rate-limit';
 
 describe('TenantRateLimitGuard', () => {
   it('returns 429 and Retry-After when a tenant exceeds a window', async () => {
-    const redis = { incr: vi.fn().mockResolvedValue(11), pexpire: vi.fn() };
+    const redis = { incr: vi.fn().mockResolvedValue(RATE_LIMIT_DEFAULTS.short + 1), pexpire: vi.fn() };
     const headers = vi.fn();
     const request = { user: { tenantId: 'tenant-1' }, ip: '127.0.0.1' };
     const context = {
@@ -53,5 +54,25 @@ describe('TenantRateLimitGuard', () => {
     await guard.canActivate(ctx({ ip: '1.1.1.1' }));
     await guard.canActivate(ctx({ ip: '1.1.1.1' }));
     expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  // Phase 3.1: env-ээр limit тохируулах
+  it('RATE_LIMIT_SHORT=5 → 6 дахь хүсэлт 429, 5 дахь нь зөвшөөрөгдөнө', async () => {
+    vi.stubEnv('RATE_LIMIT_SHORT', '5');
+    try {
+      const guard = new TenantRateLimitGuard({ incr: vi.fn().mockResolvedValue(5), pexpire: vi.fn() } as never);
+      await expect(guard.canActivate(ctx({ user: { tenantId: 't-1' } }))).resolves.toBe(true);
+      const over = new TenantRateLimitGuard({ incr: vi.fn().mockResolvedValue(6), pexpire: vi.fn() } as never);
+      await expect(over.canActivate(ctx({ user: { tenantId: 't-1' } }))).rejects.toBeInstanceOf(HttpException);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('default (B): 100 хүртэл зөвшөөрнө, 101 → 429', async () => {
+    const ok = new TenantRateLimitGuard({ incr: vi.fn().mockResolvedValue(100), pexpire: vi.fn() } as never);
+    await expect(ok.canActivate(ctx({ user: { tenantId: 't-1' } }))).resolves.toBe(true);
+    const over = new TenantRateLimitGuard({ incr: vi.fn().mockResolvedValue(101), pexpire: vi.fn() } as never);
+    await expect(over.canActivate(ctx({ user: { tenantId: 't-1' } }))).rejects.toBeInstanceOf(HttpException);
   });
 });
