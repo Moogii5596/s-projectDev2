@@ -1,6 +1,6 @@
 # S Project — Төслийн Явцын Тэмдэглэл
 
-> Шинэчлэгдсэн: 2026-09-21 | **Одоогийн хувилбар: `v0.1.0`** | **Дараагийн хувилбар: `v0.1.5`**
+> Шинэчлэгдсэн: 2026-10-08 | **Одоогийн хувилбар: `v0.1.0`** | **Дараагийн хувилбар: `v0.1.5`**
 > SemVer бодлого: `docs/VERSIONING.md` | Changelog: `docs/CHANGELOG.md`
 
 ---
@@ -140,11 +140,13 @@ esbuild (default) → decorator metadata дэмждэггүй → БҮХИЙ Л 
 > Одоогийн зорилтот хувилбар: **v0.1.5**  
 > Дэлгэрэнгүй: `docs/08_Roadmap/01_Development_Roadmap.md` → "v0.1.5" хэсэг
 
-- [ ] **v0.1.5.1:** Schema-per-tenant / DB-per-tenant isolation
-- [ ] **v0.1.5.2:** Advanced approval workflow (мөнгөний хэмжээ, delegation, escalation)
-- [ ] **v0.1.5.3:** Performance — Redis caching, cursor pagination, rate limiting
+- [ ] **v0.1.5.1:** Tenant isolation — **шийдвэр B (2026-10-08):** schema-per-tenant цуцлагдсан; shared = RLS, Enterprise VPC = тусдаа DB/deploy
+- [x] **v0.1.5.2:** Advanced approval workflow (мөнгөний хэмжээ, delegation, escalation)
+- [x] **v0.1.5.3:** Performance — Redis caching, cursor pagination, rate limiting
 - [ ] **v0.1.5.4:** Inventory, Budget, Vendor, Report модулиуд
 - [ ] **v0.1.5.5:** Event Bus integration тест (cross-module chain)
+
+> Дэлгэрэнгүй төлөвлөгөө: `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md`
 
 ### Ирээдүйн хувилбарууд
 - [ ] **v0.2.0:** Air-Gapped / Offline-First (Tier 3)

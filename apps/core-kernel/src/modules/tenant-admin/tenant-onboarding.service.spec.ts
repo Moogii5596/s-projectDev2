@@ -27,6 +27,11 @@ describe('TenantOnboardingService', () => {
   let mockSupabaseCreate: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    // CI-1: Constructor нь createClient(process.env...) дууддаг → env байхгүй орчинд (CI) унадаг.
+    // Тест .env-ээс хамаарахгүй байхын тулд stub хийнэ (dummy утга — бодит холболт хийгдэхгүй).
+    vi.stubEnv('SUPABASE_URL', 'http://localhost:54321');
+    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-role-key');
+
     // Supabase Admin API mock
     mockSupabaseCreate = vi.fn().mockResolvedValue({
       data: { user: { id: AUTH_ID } },

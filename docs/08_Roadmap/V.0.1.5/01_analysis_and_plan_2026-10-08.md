@@ -1,7 +1,8 @@
 # Төслийн Шинжилгээ ба Хөгжүүлэлтийн Төлөвлөгөө — 2026-10-08
 
 > Хувилбар: v0.1.0 ✅ → v0.1.5 (Tier 2 Enterprise VPC) 🔄
-> Төлөв: **БАТЛУУЛАХ ХҮЛЭЭГДЭЖ БАЙНА**
+> Төлөв: **БАТЛАГДСАН 2026-10-08** · Phase 0–1 ✅ · Phase 2 (B хувилбараар шинэчилсэн) батлуулах хүлээгдэж байна
+> **Шийдвэр (2026-10-08):** B — Schema-per-tenant цуцлах; shared tenant = RLS, Enterprise VPC = тусдаа DB/deploy
 
 ## 1. Одоогийн бодит төлөв (кодоос шалгасан)
 
@@ -33,24 +34,28 @@
 
 ## 3. Хийх ажлын төлөвлөгөө
 
-### Phase 0 — Цэвэрлэгээ ба суурь (0.5 session)
-- [ ] 0.1 `.git` байгаа эсэхийг шалгах; байхгүй бол `git init` + анхны commit (v0.1.0 tag)
-- [ ] 0.2 `_tmp_*`, `test_write.tmp`, untitled snippet файлуудыг цэвэрлэх
-- [ ] 0.3 `lessons_learned.md`-г нэгтгэх (root = үндсэн)
-- [ ] 0.4 `00_index.md`, `project-status.md`-г бодит төлөвтэй тааруулах
+### Phase 0 — Цэвэрлэгээ ба суурь ✅
+- [x] 0.1 Git: repo + `origin` (GitHub) хэрэглэгч үүсгэсэн (2026-10-08 13:46). Commit / `v0.1.0` tag — хэрэглэгч хийнэ
+- [x] 0.2 17 `_tmp_*`, `docs/test_write.tmp` устгав; `.gitignore`-д `_tmp_*`, `*.tmp` нэмэв (`supabase/snippets/` дахь seed snippet-ийг хадгалав)
+- [x] 0.3 lessons_learned нэгтгэв → **үндсэн: `docs/lessons_learned.md`** (бүх docs аль хэдийн тийш заадаг); root файл = заагч
+- [x] 0.4 `00_index.md`, `project-status.md` бодит төлөвтэй тааруулав
 
-### Phase 1 — CI засвар (0.5 session)
-- [ ] 1.1 `core-kernel`-д `test:unit` script нэмэх
-- [ ] 1.2 CI: `supabase db push` → `supabase db reset`
-- [ ] 1.3 lessons_learned-д [CI-E1] бүртгэх
+### Phase 1 — CI засвар ✅ (Linux орчинд бодитоор ажиллуулж шалгасан)
+- [x] 1.1 `core-kernel`-д `test:unit` script → turbo одоо бодитоор ажиллуулна [CI-001]
+- [x] 1.2 CI хоёр job-оос `supabase db push` хасав [CI-002]
+- [x] 1.3 Root `.eslintrc.cjs` + 5 lint алдаа засав [CI-003]
+- [x] 1.4 `tenant-onboarding.service.spec.ts` env-ээс хамааралгүй болгов [TEST-001]
+- [x] 1.5 lessons_learned-д бүртгэв
+- **Үр дүн:** unit 111/111 ✅ (env-гүй) · tsc core-kernel + web-shell ✅ · lint 0 error (78 warning) · `turbo lint test:unit` 3/3 ✅
 
-### Phase 2 — Sprint 6 дуусгах: Schema Isolation (2–3 session)
-- [ ] 2.1 **Spike:** Prisma query log асааж `withSchema()` доторх бодит SQL-ийг шалгах
-- [ ] 2.2 **Шийдвэр (та батлах):** доорх A/B/C-ээс сонгох
-- [ ] 2.3 Сонгосон аргаар `TenantContextInterceptor` / DB layer-т холбох
-- [ ] 2.4 MR, Workflow service-үүдийг schema-aware DB access руу шилжүүлэх
-- [ ] 2.5 **Бодит DB-тэй** integration тест: `schema-rls-leakage.integration.spec.ts` (RULE-16)
-- [ ] 2.6 Sprint 6 DoD шалгуурыг бүгдийг [x] болгох
+### Phase 2 — Sprint 6 дахин тодорхойлолт: Tenant Isolation (B) (1.5–2 session) — БАТЛУУЛАХ
+- [ ] 2.1 ADR бичих: `docs/02_System_Architecture/ADR-001_Tenant_Isolation.md` (яагаад B, search_path + Prisma асуудал)
+- [ ] 2.2 Sprint 6 кодыг хасах: `SchemaRouterService`, `TenantProvisioningService`, `TenantProvisioningController` (3 endpoint: `upgrade-enterprise`, `enterprise-schema`, `schema-health`), `schema-isolation.spec.ts`, module бүртгэл
+- [ ] 2.3 Шинэ migration: `provision_tenant_schema`, `clone_tables_to_schema`, `deprovision_tenant_schema` функц + `idx_tenants_schema_name` + `tenants.schema_name` DROP; Prisma `Tenant.schemaName` хасах
+- [ ] 2.4 Dedicated deploy mode: `DEPLOYMENT_MODE=shared|dedicated` + `DEDICATED_TENANT_SLUG` (env validation). Dedicated үед `TenantAuthGuard` зөвхөн тэр tenant-ийг зөвшөөрнө, бусад → 403
+- [ ] 2.5 `docker/docker-compose.vpc.yml` + `.env.vpc.example` — нэг байгууллагад тусдаа Postgres + Redis + API + Shell
+- [ ] 2.6 Тест: guard dedicated/shared mode unit тест; env validation тест; RLS leakage integration тест хэвээр давна
+- [ ] 2.7 Runbook `docs/07_Tech_Stack_and_Environment/02_Enterprise_VPC_Deployment.md`; `sprint_6_*.md`, `sprint_11_release.md` (schema-isolation E2E → dedicated-mode E2E) шинэчлэх
 
 ### Phase 3 — Sprint 8 DoD үлдэгдэл (0.5 session)
 - [ ] 3.1 Load test (100 concurrent, p99 < 500ms)

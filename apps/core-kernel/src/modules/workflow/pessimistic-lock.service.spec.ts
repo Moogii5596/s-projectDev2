@@ -14,7 +14,7 @@ function makePrisma(instanceRows: Array<{ id: string; locked_by: string | null; 
     $transaction: vi.fn(async (fn: (tx: any) => Promise<any>) => fn(tx)),
   } as any;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line no-var, @typescript-eslint/no-unused-vars
   var tx: any; // hoisted — доор тодорхойлогдоно
 }
 

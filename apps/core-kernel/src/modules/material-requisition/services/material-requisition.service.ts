@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { MrStatus, Prisma } from '@prisma/client';
+import { MrHeader, MrStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CreateMrDto } from '../dto/create-mr.dto';
 import { UpdateMrDto } from '../dto/update-mr.dto';
@@ -114,8 +114,8 @@ export class MaterialRequisitionService {
     tenantId: string,
     query: QueryMrDto,
   ): Promise<
-    | { data: Prisma.MrHeaderGetPayload<{}>[]; total: number; page: number; limit: number }
-    | CursorPaginationResult<Prisma.MrHeaderGetPayload<{}>>
+    | { data: MrHeader[]; total: number; page: number; limit: number }
+    | CursorPaginationResult<MrHeader>
   > {
     const cacheKey = this.cache.buildKey('mr', tenantId, 'list', JSON.stringify(query));
     const cached = await this.cache.get<Awaited<ReturnType<MaterialRequisitionService['findAll']>>>(cacheKey);
@@ -141,7 +141,7 @@ export class MaterialRequisitionService {
       const hasMore = items.length > limit;
       const data = hasMore ? items.slice(0, limit) : items;
       const lastItem = data[data.length - 1];
-      const result: CursorPaginationResult<Prisma.MrHeaderGetPayload<{}>> = {
+      const result: CursorPaginationResult<MrHeader> = {
         data,
         nextCursor: hasMore && lastItem ? encodeCursor(lastItem.id, lastItem.createdAt) : null,
         hasMore,

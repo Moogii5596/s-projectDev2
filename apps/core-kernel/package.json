@@ -8,6 +8,7 @@
     "dev": "nest start --watch",
     "start": "node dist/main",
     "test": "vitest run",
+    "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:integration": "prisma generate && vitest run --config vitest.integration.config.ts",
     "test:coverage": "vitest run --coverage",

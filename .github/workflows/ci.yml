@@ -47,8 +47,8 @@ jobs:
       - name: Start Supabase (local)
         run: npx supabase start
 
-      - name: Apply DB migrations
-        run: npx supabase db push
+      # CI-2: `supabase db push` нь remote project link шаарддаг тул устгав.
+      # `supabase start` нь supabase/migrations/*.sql + seed.sql-г автоматаар ажиллуулдаг.
 
       - name: Lint
         run: pnpm turbo lint
@@ -110,8 +110,8 @@ jobs:
       - name: Start Supabase
         run: npx supabase start
 
-      - name: Apply DB migrations
-        run: npx supabase db push
+      # CI-2: `supabase db push` нь remote project link шаарддаг тул устгав.
+      # `supabase start` нь supabase/migrations/*.sql + seed.sql-г автоматаар ажиллуулдаг.
 
       - name: Run E2E tests
         run: pnpm --filter e2e test

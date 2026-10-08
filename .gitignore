@@ -66,3 +66,6 @@ blob-report/
 docker-data/
 postgres-data/
 redis-data/
+# Түр файлууд (2026-10-08 цэвэрлэгээ — дахин үүсэхээс сэргийлэх)
+_tmp_*
+*.tmp

@@ -1,6 +1,6 @@
 # V.0.1.5 — Sprint Implementation Plan Index
 
-> Үүсгэсэн: 2026-09-21 | Шинэчлэгдсэн: 2026-09-21
+> Үүсгэсэн: 2026-09-21 | Шинэчлэгдсэн: 2026-10-08
 > **Энэ файл бүх sprint файлуудын индекс юм.**
 > Claude Sprint ажил эхлэхдээ хэрэгтэй файлаа тусад нь уншина — context хэмнэнэ.
 
@@ -26,6 +26,7 @@
 | Файл | Агуулга | Хамаарал |
 |------|---------|----------|
 | `00_index.md` | Энэ файл — индекс, явцын хуваарь | — |
+| `01_analysis_and_plan_2026-10-08.md` | Шинжилгээ + Phase 0–6 төлөвлөгөө, шийдвэр B | **Эхэлж унших** |
 | `sprint_6_schema_isolation.md` | Sprint 6: Schema-per-tenant DB isolation | Суурь — эхлэх цэг |
 | `sprint_7_advanced_workflow.md` | Sprint 7: Amount routing, delegation, escalation | Sprint 6 дараа |
 | `sprint_8_performance.md` | Sprint 8: Redis cache, cursor pagination, rate limit | Sprint 7 зэрэгцэж болно |
@@ -40,7 +41,7 @@
 **Sprint эхлэхдээ:**
 1. `V.0.1.0/00_rules_and_context.md` уншина (RULE-01~20 — өөрчлөгдөөгүй!)
 2. Тухайн sprint-ийн файлыг уншина
-3. `docs/lessons_learned.md` шалгана (давтагдах алдаанаас зайлсхийх)
+3. `docs/lessons_learned.md` шалгана (**ганц үндсэн файл**; root-ийнх нь заагч) (давтагдах алдаанаас зайлсхийх)
 
 **Жишээ: Sprint 7 дээр ажиллах бол:**
 ```
@@ -53,9 +54,9 @@
 ## Явцын Хуваарь
 
 ```
-Sprint 6  │ Schema/DB Isolation        │ [~] 🔄 Хэрэгжүүлэлт дууссан — тест хүлээгдэж байна
-Sprint 7  │ Advanced Approval Workflow │ [ ] ⏳ Хүлээгдэж байна
-Sprint 8  │ Performance & Scaling      │ [x] ✅ Дууссан — 2026-09-22
+Sprint 6  │ Tenant Isolation (B)       │ [~] 🔁 2026-10-08 шийдвэр B: schema-per-tenant цуцлагдав → RLS + dedicated deploy
+Sprint 7  │ Advanced Approval Workflow │ [x] ✅ Дууссан (кодоор баталгаажсан 2026-10-08)
+Sprint 8  │ Performance & Scaling      │ [x] ✅ Дууссан — 2026-09-22 (load-test DoD 4 зүйл үлдсэн)
 Sprint 9  │ 4 Нэмэлт Модуль           │ [ ] ⏳ Хүлээгдэж байна
 Sprint 10 │ Event Bus Integration Test │ [ ] ⏳ Хүлээгдэж байна
 Sprint 11 │ Release Hardening          │ [ ] ⏳ Хүлээгдэж байна

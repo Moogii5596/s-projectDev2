@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, WorkflowDefinition } from '@prisma/client';
 import { PrismaService } from '../../db/prisma.service';
 import { CacheService } from '../../cache/cache.service';
 
@@ -18,7 +18,7 @@ export class WorkflowDefinitionService {
     private readonly cache: CacheService,
   ) {}
 
-  async list(tenantId: string): Promise<Prisma.WorkflowDefinitionGetPayload<{}>[]> {
+  async list(tenantId: string): Promise<WorkflowDefinition[]> {
     const cacheKey = this.cache.buildKey('workflow', tenantId, 'definitions');
     const cached = await this.cache.get<Awaited<ReturnType<WorkflowDefinitionService['list']>>>(cacheKey);
     if (cached) return cached;
