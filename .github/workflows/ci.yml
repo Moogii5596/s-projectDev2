@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Lint · Unit · Integration · Build
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase (local)
+        run: npx supabase start
+
+      - name: Apply DB migrations
+        run: npx supabase db push
+
+      - name: Lint
+        run: pnpm turbo lint
+
+      - name: Unit tests
+        run: pnpm turbo test:unit
+
+      - name: Integration tests
+        run: pnpm turbo test:integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+          DIRECT_URL: postgresql://postgres:postgres@localhost:54322/postgres
+          SUPABASE_URL: http://localhost:54321
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRFA0NiK7NfD9vyTsBTuTIQbVh-jsBP7oBHBFGiIpRg' }}
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-for-ci
+          DEV_TENANT_SLUG: test-tenant
+
+      - name: Build
+        run: pnpm turbo build
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: test       # Unit/Integration дууссаны дараа
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: node node_modules/@playwright/test/cli.js install chromium --with-deps
+
+      - name: Setup Supabase
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase
+        run: npx supabase start
+
+      - name: Apply DB migrations
+        run: npx supabase db push
+
+      - name: Run E2E tests
+        run: pnpm --filter e2e test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+          DIRECT_URL: postgresql://postgres:postgres@localhost:54322/postgres
+          SUPABASE_URL: http://localhost:54321
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRFA0NiK7NfD9vyTsBTuTIQbVh-jsBP7oBHBFGiIpRg' }}
+          REDIS_URL: redis://localhost:6379
+          DEV_TENANT_SLUG: test-tenant
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/e2e/playwright-report/
+          retention-days: 7

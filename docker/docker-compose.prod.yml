@@ -1,0 +1,52 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  shell:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.shell
+      args:
+        VITE_SUPABASE_URL: ${SUPABASE_URL:-}
+        VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  redis_data:

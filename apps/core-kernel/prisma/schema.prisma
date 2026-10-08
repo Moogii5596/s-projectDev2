@@ -1,0 +1,390 @@
+// ============================================================
+// S Project — Prisma Schema
+// Multi-Tenant Supply Chain Platform
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ── Tenants ─────────────────────────────────────────────────
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  tier      TierType @default(TIER1)
+  isActive  Boolean  @default(true) @map("is_active")
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  maxUsers    Int       @default(5)  @map("max_users")
+  maxMfes     Int       @default(1)  @map("max_mfes")
+  onboardedAt DateTime? @map("onboarded_at") @db.Timestamptz
+  // Sprint 6: Schema-per-Tenant — enterprise бол schema_name != null
+  // shared tenant (SMB) = null, enterprise = 'tenant_<uuid_prefix>'
+  schemaName  String?  @map("schema_name")
+
+  users            CoreUser[]
+  mrHeaders        MrHeader[]
+  mrItems          MrItem[]
+  outboxEvents     OutboxEvent[]
+  approvalLogs     ApprovalLog[]
+  installedModules InstalledModule[]  // Sprint 0
+  tenantRoutes         TenantRoute[]         // Sprint 1
+  workflowDefinitions  WorkflowDefinition[]  // Sprint 2
+  workflowInstances    WorkflowInstance[]    // Sprint 2
+  workflowStepLogs     WorkflowStepLog[]     // Sprint 2
+  idempotencyKeys      IdempotencyKey[]      // Sprint 2
+  workflowDelegations  WorkflowDelegation[] // Sprint 7
+  workflowSlaLogs      WorkflowSlaLog[]     // Sprint 7
+  dlqEvents            DlqEvent[]           // Sprint 3
+
+  @@map("tenants")
+}
+
+enum TierType {
+  TIER1 @map("tier1")
+  TIER2 @map("tier2")
+  TIER3 @map("tier3")
+}
+
+// ── Core Users ──────────────────────────────────────────────
+model CoreUser {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  authId    String   @unique @map("auth_id") @db.Uuid
+  email     String
+  fullName  String?  @map("full_name")
+  role      UserRole @default(REQUESTER)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mrHeaders          MrHeader[]    @relation("MrRequester")
+  approvedMrHeaders  MrHeader[]    @relation("MrApprover")
+  approvalLogs       ApprovalLog[] @relation("ApproverLogs")
+
+  superAdmin         SuperAdmin?          // Sprint 4
+
+  @@unique([tenantId, email])
+  @@map("core_users")
+}
+
+enum UserRole {
+  REQUESTER @map("requester")
+  APPROVER  @map("approver")
+  ADMIN     @map("admin")
+  VIEWER    @map("viewer")
+  OWNER     @map("owner")   // Sprint 4 — Tenant admin
+}
+
+// ── Material Requisition Header ──────────────────────────────
+model MrHeader {
+  id                 String    @id @default(uuid()) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  mrNumber           String    @map("mr_number")
+  title              String
+  status             MrStatus  @default(DRAFT)
+  requesterId        String    @map("requester_id") @db.Uuid
+  department         String?
+  requiredDate       DateTime? @map("required_date") @db.Date
+  totalAmount        Decimal   @default(0) @map("total_amount") @db.Decimal(18, 2)
+  currency           String    @default("MNT")
+  notes              String?
+  version            Int       @default(1)
+  approvedBy         String?   @map("approved_by") @db.Uuid
+  approvedAt         DateTime? @map("approved_at")
+  workflowInstanceId String?   @map("workflow_instance_id") @db.Uuid  // Sprint 0 — RULE-05
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requester     CoreUser    @relation("MrRequester", fields: [requesterId], references: [id])
+  approver      CoreUser?   @relation("MrApprover", fields: [approvedBy], references: [id])
+  items         MrItem[]
+  approvalLogs     ApprovalLog[]
+  workflowInstance WorkflowInstance? @relation(fields: [workflowInstanceId], references: [id])  // Sprint 2
+
+  @@unique([tenantId, mrNumber])
+  @@index([tenantId, status])
+  @@map("mr_headers")
+}
+
+enum MrStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CANCELLED
+  PROVISIONALLY_APPROVED
+}
+
+// ── Material Requisition Items ───────────────────────────────
+model MrItem {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  headerId      String   @map("header_id") @db.Uuid
+  lineNumber    Int      @map("line_number")
+  description   String
+  unitOfMeasure String   @default("EA") @map("unit_of_measure")
+  quantity      Decimal  @db.Decimal(18, 4)
+  unitPrice     Decimal  @default(0) @map("unit_price") @db.Decimal(18, 2)
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  header        MrHeader @relation(fields: [headerId], references: [id], onDelete: Cascade)
+
+  @@unique([headerId, lineNumber])
+  @@index([tenantId])
+  @@map("mr_items")
+}
+
+// ── Outbox Events ────────────────────────────────────────────
+model OutboxEvent {
+  id            String       @id @default(uuid()) @db.Uuid
+  tenantId      String       @map("tenant_id") @db.Uuid
+  eventType     String       @map("event_type")
+  aggregateType String       @map("aggregate_type")
+  aggregateId   String       @map("aggregate_id")
+  payload       Json         @default("{}")
+  status        OutboxStatus @default(PENDING)
+  retryCount    Int          @default(0) @map("retry_count")
+  nextRetryAt   DateTime     @default(now()) @map("next_retry_at")
+  errorMessage     String?      @map("error_message")
+  cloudEventId     String?      @map("cloud_event_id")
+  cloudEventSource String?      @map("cloud_event_source")
+  cloudEventType   String?      @map("cloud_event_type")
+  lastError        String?      @map("last_error")
+  publishedAt      DateTime?    @map("published_at")
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextRetryAt])
+  @@map("outbox_events")
+}
+
+enum OutboxStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+  DLQ           // Sprint 0: DEAD_LETTERED → DLQ (0006 migration-тай нийцнэ)
+}
+
+// ── Approval Logs ────────────────────────────────────────────
+model ApprovalLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  mrId        String   @map("mr_id") @db.Uuid
+  approverId  String   @map("approver_id") @db.Uuid
+  action      String   // 'APPROVED' | 'REJECTED'
+  reason      String?
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mr          MrHeader @relation(fields: [mrId], references: [id], onDelete: Cascade)
+  approver    CoreUser @relation("ApproverLogs", fields: [approverId], references: [id])
+
+  @@unique([mrId, approverId, action])
+  @@index([tenantId])
+  @@map("approval_logs")
+}
+
+// ── Installed Modules ─────────────────────────────────────────
+// Sprint 0: Tenant-д суулгасан модулиудыг хадгалах
+model InstalledModule {
+  id               String    @id @default(uuid()) @db.Uuid  // RULE-05
+  tenantId         String    @map("tenant_id") @db.Uuid     // RULE-05
+  moduleId         String    @map("module_id")
+  version          String
+  status           String    @default("INSTALLED")
+  drainStartedAt   DateTime? @map("drain_started_at") @db.Timestamptz
+  manifestSnapshot Json      @default("{}") @map("manifest_snapshot")
+  installedAt      DateTime  @default(now()) @map("installed_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, moduleId])
+  @@index([tenantId, status])
+  @@map("installed_modules")
+}
+
+// ── Tenant Routes ─────────────────────────────────────────────
+// Sprint 1: Dynamic Route Ingress — module route бүртгэл
+model TenantRoute {
+  id           String   @id @default(uuid()) @db.Uuid    // RULE-05
+  tenantId     String   @map("tenant_id") @db.Uuid       // RULE-05
+  path         String
+  method       String
+  targetModule String   @map("target_module")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, path, method])
+  @@index([tenantId, isActive])
+  @@map("tenant_routes")
+}
+
+// ── Workflow Definitions ──────────────────────────────────────
+// Sprint 2: Workflow Engine — definition (steps_config JSONB)
+model WorkflowDefinition {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String
+  stepsConfig Json     @map("steps_config")
+  isActive    Boolean  @default(true) @map("is_active")
+  slaHours    Int      @default(48) @map("sla_hours")
+  escalationEnabled Boolean @default(false) @map("escalation_enabled")
+  delegationEnabled Boolean @default(false) @map("delegation_enabled")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  instances WorkflowInstance[]
+
+  @@map("workflow_definitions")
+}
+
+// ── Workflow Instances ────────────────────────────────────────
+// Sprint 2: Pessimistic lock (lockedBy → core_users.id, RULE-13)
+model WorkflowInstance {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  definitionId String    @map("definition_id") @db.Uuid
+  entityType   String    @default("MATERIAL_REQUISITION") @map("entity_type")
+  entityId     String    @map("entity_id") @db.Uuid
+  currentStep  Int       @default(0) @map("current_step")
+  resolvedSteps Json?    @map("resolved_steps")
+  status       String    @default("PENDING")
+  lockedBy     String?   @map("locked_by") @db.Uuid   // core_users.id — RULE-13
+  lockedAt     DateTime? @map("locked_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  definition WorkflowDefinition @relation(fields: [definitionId], references: [id])
+  stepLogs   WorkflowStepLog[]
+  slaLogs    WorkflowSlaLog[]
+  mrHeaders  MrHeader[]
+  escalationCount Int @default(0) @map("escalation_count")
+
+  @@index([tenantId, entityType, entityId])
+  @@map("workflow_instances")
+}
+
+// ── Workflow Step Logs ────────────────────────────────────────
+// Sprint 2: actorId → core_users.id (RULE-13, resolveUserId() дамжуулна)
+model WorkflowStepLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  instanceId String   @map("instance_id") @db.Uuid
+  stepOrder  Int      @map("step_order")
+  actorId    String   @map("actor_id") @db.Uuid   // core_users.id — RULE-13
+  action     String   // 'APPROVED' | 'REJECTED' | 'DELEGATED'
+  comment    String?
+  actedAt    DateTime @default(now()) @map("acted_at") @db.Timestamptz
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  instance WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, instanceId])
+  @@map("workflow_step_logs")
+}
+
+// ── Advanced Workflow ───────────────────────────────────────
+model WorkflowDelegation {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  delegatorId String   @map("delegator_id") @db.Uuid
+  delegateId  String   @map("delegate_id") @db.Uuid
+  validFrom   DateTime @default(now()) @map("valid_from") @db.Timestamptz
+  validUntil  DateTime @map("valid_until") @db.Timestamptz
+  reason      String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, delegatorId, isActive, validUntil])
+  @@map("workflow_delegations")
+}
+
+model WorkflowSlaLog {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  instanceId    String    @map("instance_id") @db.Uuid
+  stepOrder     Int       @map("step_order")
+  assignedToId  String    @map("assigned_to_id") @db.Uuid
+  dueAt         DateTime  @map("due_at") @db.Timestamptz
+  escalatedAt   DateTime? @map("escalated_at") @db.Timestamptz
+  escalatedToId String?   @map("escalated_to_id") @db.Uuid
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz
+  status        String    @default("PENDING")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  instance WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, dueAt, status])
+  @@map("workflow_sla_logs")
+}
+
+// ── Idempotency Keys ──────────────────────────────────────────
+// Sprint 2: 24 цагийн idempotency cache (key + tenant_id → composite PK)
+model IdempotencyKey {
+  key          String
+  tenantId     String   @map("tenant_id") @db.Uuid
+  responseCode Int      @map("response_code")
+  responseBody Json     @map("response_body")
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([key, tenantId])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+// ── DLQ Events ────────────────────────────────────────────────
+// Sprint 3: Dead Letter Queue — MAX_RETRIES давсан event архив
+model DlqEvent {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  originalEvent Json      @map("original_event")
+  errorMessage  String    @map("error_message")
+  retryCount    Int       @default(0) @map("retry_count")
+  maxRetries    Int       @default(3) @map("max_retries")
+  nextRetryAt   DateTime? @map("next_retry_at") @db.Timestamptz
+  status        String    @default("PENDING")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("dlq_events")
+}
+// ── Super Admins (Platform-level) ───────────────────────────
+// Sprint 4: Platform-level admin — RLS bypass, backend service layer шалгана
+model SuperAdmin {
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user CoreUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId])
+  @@map("super_admins")
+}

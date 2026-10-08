@@ -1,0 +1,63 @@
+# S Project — Local Development Docker Compose
+# Usage: docker-compose up -d
+
+version: '3.9'
+
+services:
+  # ── Redis ────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: s-project-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Core Kernel (NestJS) ──────────────────────────────────────
+  core-kernel:
+    build:
+      context: .
+      dockerfile: apps/core-kernel/Dockerfile
+      target: production
+    container_name: s-project-core-kernel
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      # Local Supabase (host дээр supabase start-аар ажиллаж байгаа) руу хандах
+      - "host.docker.internal:host-gateway"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - REDIS_URL=redis://redis:6379
+      - NODE_CLUSTER_WORKERS=${NODE_CLUSTER_WORKERS:-4}
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/v1/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    name: s-project-network

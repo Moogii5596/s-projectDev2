@@ -1,0 +1,123 @@
+import { AuthService } from '../src/auth/auth.service';
+import { PrismaTenantClientService } from '../src/db/prisma-tenant-client.service';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+// Integration tests — requires running Supabase (supabase start)
+// NestJS Testing Module ашиглахгүй — шууд instantiate хийнэ (DI асуудлаас зайлсхийх)
+describe('AuthService Integration', () => {
+  let authService: AuthService;
+  let prisma: PrismaTenantClientService;
+  let supabaseAdmin: SupabaseClient;
+
+  const TEST_TENANT_ID = '00000000-0000-0000-0000-000000000003';
+  const TEST_EMAIL = `integration-${Date.now()}@example.com`;
+  const TEST_PASSWORD = 'Test1234!';
+
+  beforeAll(async () => {
+    // ConfigService mock — process.env-ээс унших
+    const configServiceMock = {
+      get: <T = string>(key: string): T => process.env[key] as T,
+    } as any;
+
+    prisma = new PrismaTenantClientService();
+    authService = new AuthService(configServiceMock, prisma);
+
+    supabaseAdmin = createClient(
+      process.env['SUPABASE_URL']!,
+      process.env['SUPABASE_SERVICE_ROLE_KEY']!,
+    );
+
+    await prisma.$connect();
+  });
+
+  afterAll(async () => {
+    // Cleanup Supabase Auth user
+    try {
+      const { data } = await supabaseAdmin.auth.admin.listUsers();
+      const testUser = (data?.users ?? []).find((u: { id: string; email?: string }) => u.email === TEST_EMAIL);
+      if (testUser) {
+        await supabaseAdmin.auth.admin.deleteUser(testUser.id);
+      }
+    } catch (_) { /* ignore */ }
+
+    // Cleanup core_users
+    try {
+      await prisma.$executeRaw`SELECT set_config('app.current_tenant_id', ${TEST_TENANT_ID}, true)`;
+      await prisma.coreUser.deleteMany({
+        where: { email: TEST_EMAIL, tenantId: TEST_TENANT_ID },
+      });
+    } catch (_) { /* ignore */ }
+
+    await prisma?.$disconnect();
+  });
+
+  describe('register()', () => {
+    it('Supabase Auth үүссэний дараа core_users-д sync болно', async () => {
+      const result = await authService.register(
+        { email: TEST_EMAIL, password: TEST_PASSWORD, fullName: 'Integration Test' },
+        TEST_TENANT_ID,
+      );
+
+      expect(result.accessToken).toBeTruthy();
+      expect(result.user.email).toBe(TEST_EMAIL);
+      expect(result.user.tenantId).toBe(TEST_TENANT_ID);
+
+      // core_users мөр үүссэн эсэхийг шалгах
+      await prisma.withTenantContext(
+        { tenantId: TEST_TENANT_ID, userId: result.user.id },
+        async () => {
+          const dbUser = await prisma.coreUser.findFirst({
+            where: { email: TEST_EMAIL, tenantId: TEST_TENANT_ID },
+          });
+          expect(dbUser).not.toBeNull();
+          expect(dbUser!.fullName).toBe('Integration Test');
+        },
+      );
+    });
+
+    it('давхар email → ConflictException', async () => {
+      await expect(
+        authService.register(
+          { email: TEST_EMAIL, password: TEST_PASSWORD },
+          TEST_TENANT_ID,
+        ),
+      ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('login()', () => {
+    it('зөв нууц үг → accessToken буцаана', async () => {
+      const result = await authService.login({
+        email: TEST_EMAIL,
+        password: TEST_PASSWORD,
+      });
+      expect(result.accessToken).toBeTruthy();
+      expect(result.user.email).toBe(TEST_EMAIL);
+    });
+
+    it('буруу нууц үг → UnauthorizedException', async () => {
+      await expect(
+        authService.login({ email: TEST_EMAIL, password: 'WrongPass999!' }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('getMe()', () => {
+    it('authId + tenantId-р хэрэглэгч олдоно', async () => {
+      const login = await authService.login({
+        email: TEST_EMAIL,
+        password: TEST_PASSWORD,
+      });
+      const me = await authService.getMe(login.user.authId, TEST_TENANT_ID);
+      expect(me.email).toBe(TEST_EMAIL);
+      expect(me.tenantId).toBe(TEST_TENANT_ID);
+    });
+
+    it('олдохгүй authId → UnauthorizedException', async () => {
+      await expect(
+        authService.getMe('00000000-0000-0000-0000-000000000000', TEST_TENANT_ID),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+});

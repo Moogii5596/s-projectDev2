@@ -1,0 +1,27 @@
+{
+  "name": "@s-project/mfe-requisitions",
+  "version": "0.1.0",
+  "private": true,
+  "description": "S Project MFE — Requisitions Remote",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.62.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@module-federation/vite": "^1.0.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.4.5",
+    "vite": "^6.0.3"
+  }
+}

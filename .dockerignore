@@ -1,0 +1,22 @@
+# Dependencies
+**/node_modules
+**/.pnpm-store
+
+# Build outputs
+**/dist
+**/.next
+**/out
+
+# Dev tools
+**/.git
+**/.turbo
+**/playwright-report
+**/test-results
+
+# Env files (prod-д secrets inject хийнэ)
+.env.local
+.env.test
+
+# OS
+**/.DS_Store
+**/Thumbs.db

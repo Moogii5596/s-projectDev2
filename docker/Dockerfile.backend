@@ -1,0 +1,82 @@
+# ================================================================
+# Stage 1: Prune — зөвхөн core-kernel-д хэрэгтэй файлуудыг гаргана
+# ================================================================
+FROM node:22-alpine AS pruner
+RUN corepack enable && corepack prepare pnpm@9 --activate
+WORKDIR /app
+COPY . .
+RUN pnpm dlx turbo prune --scope=@s-project/core-kernel --docker
+
+# ================================================================
+# Stage 2: Builder — pruned workspace дотор install + build
+# ================================================================
+FROM node:22-alpine AS builder
+RUN corepack enable && corepack prepare pnpm@9 --activate
+WORKDIR /app
+
+# Pruned package.json файлууд (workspace бүтцийг хадгална)
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+# node-linker=hoisted: flat node_modules → .prisma binary root-д байрлана (Prisma+pnpm Docker fix)
+COPY --from=pruner /app/.npmrc ./.npmrc
+
+# Dependencies install (pnpm-lock.yaml-тай тохирно)
+RUN pnpm install --frozen-lockfile
+
+# Эх код хуулах
+COPY --from=pruner /app/out/full/ .
+
+# Prisma client generate
+RUN pnpm --filter @s-project/core-kernel exec prisma generate
+
+# .prisma binary-г predictable байршилд хуулах (pnpm virtual store fallback)
+# node-linker=hoisted байвал root-д байна; байхгүй бол .pnpm-с олж хуулна
+RUN if [ ! -d /app/node_modules/.prisma ]; then \
+      SRC=$(find /app/node_modules/.pnpm -maxdepth 8 -type d -name '.prisma' 2>/dev/null | head -1); \
+      if [ -n "$SRC" ]; then \
+        mkdir -p /app/node_modules/.prisma && cp -rn "$SRC"/. /app/node_modules/.prisma/; \
+        echo "Copied .prisma from $SRC"; \
+      else \
+        echo "ERROR: .prisma not found anywhere"; exit 1; \
+      fi; \
+    else \
+      echo ".prisma already at root (node-linker=hoisted)"; \
+    fi
+
+# TypeScript build
+RUN pnpm --filter @s-project/core-kernel build
+
+# ================================================================
+# Stage 3: Production — зөвхөн runtime хэрэгтэй зүйлс
+# ================================================================
+FROM node:22-alpine AS production
+# Prisma engine-д шаардлагатай OpenSSL
+RUN apk add --no-cache openssl
+RUN corepack enable && corepack prepare pnpm@9 --activate
+WORKDIR /app
+
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+# node-linker=hoisted: production-д ч flat node_modules ашиглана
+COPY --from=pruner /app/.npmrc ./.npmrc
+
+# Production deps only
+RUN pnpm install --frozen-lockfile --prod
+
+COPY --from=builder /app/apps/core-kernel/dist ./apps/core-kernel/dist
+COPY --from=builder /app/apps/core-kernel/prisma ./apps/core-kernel/prisma
+# .prisma binary: builder-с root-д хуулах
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# node-linker=hoisted үед production pnpm virtual store-д ч binary байрлуулах
+RUN PNPM_PRISMA=$(find /app/node_modules/.pnpm -maxdepth 6 -type d -name '.prisma' 2>/dev/null | head -1); \
+    if [ -n "$PNPM_PRISMA" ]; then \
+      cp -rn /app/node_modules/.prisma/. "$PNPM_PRISMA"/; \
+      echo "Synced .prisma to pnpm store: $PNPM_PRISMA"; \
+    fi
+
+WORKDIR /app/apps/core-kernel
+
+ENV NODE_ENV=production
+EXPOSE 3000
+
+CMD ["node", "dist/src/main.js"]
