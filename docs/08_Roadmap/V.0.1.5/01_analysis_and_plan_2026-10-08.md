@@ -114,12 +114,26 @@ pnpm --filter e2e exec tsx tests/cluster-check.ts
 - [x] 3.7.4 Тест: unit 179/179 · mutation 6/6 баригдсан (cache, 503→401, client дахин ашиглах, hash, exception→401, single-flight) · жинхэнэ supabase-js + Redis: 503/сүлжээ тасрах → 503, 401 → 401; **500 хүсэлт → Supabase 1 дуудлага** · tsc ×3 · lint 0 · turbo 3/3
 - [x] 3.7.5 Load test (таны компьютер, 16:52): ✅ p99 **1974 → 57ms**, **154 → 3360 req/s**, non-2xx **3268 → 0**, cache 100%, cursor max 31ms
 
-### Phase 4 — Sprint 9: Нэмэлт модулиуд (5–6 session)
-- [ ] 4.1 Budget (MR submit-д budget check)
-- [ ] 4.2 Inventory (`workflow.instance.approved` → reserve)
-- [ ] 4.3 Vendor (quote → accept)
-- [ ] 4.4 Report + Excel export + Dashboard
-- [ ] 4.5 Модуль бүрт RLS leakage тест
+### Phase 4 — Sprint 9: Нэмэлт модулиуд (2026-10-08 эхэлсэн)
+> **Шийдвэр (2026-10-08):** холболт = MR transaction дотор шууд (`MrLifecycleService`) · Budget: tenant-д идэвхтэй хугацаа байвал заавал ·
+> Inventory: боломжтойг нөөцөлж дутууг тэмдэглэнэ · Frontend: модуль бүрт хялбар хуудас + Report dashboard
+> **Илэрсэн:** sprint_9-ийн RLS загвар буруу (RESTRICTIVE-only) → PERMISSIVE TO app_user стандарт [RLS-004]; workflow хүснэгтүүд ижил алдаатай + app superuser-ээр ажилладаг (RLS runtime-д идэвхгүй) → Phase 4.8 санал
+- [x] **4.0** Суурь: `MrLifecycleService` (MR батлах 2 зам: MR service + WorkflowService), `requireRole` helper, RLS стандарт
+- [x] **4.1** Budget: migration `20261008002_budget.sql` + Prisma + `/api/v1/budget` (periods, allocations, check) + submit commit / approve SPENT / reject RELEASED
+  - Шалгалт: unit 210/210 · mutation 5/5 (+ сул assertion засав) · PostgreSQL 16 (app_user, RLS): migration 17/17, RLS 5 сценари, SQL 10 сценари (зэрэгцээ `FOR UPDATE` ✅) · AppModule DI ✅ · tsc/lint ✅
+  - [ ] Таны компьютер: `supabase migration up` → `db:generate` → `test` + `test:integration` (`budget.integration.spec.ts`)
+- [x] **Шийдвэр (17:47):** шинэ модулиуд = платформ батлах **хөнгөн** модуль (1 хүснэгт, хамгийн бага API); frontend энэ удаа алгасна
+- [x] **4.1 баталгаажуулалт:** integration **59/59 ✅** (таны компьютер, TEST-005/006 засварын дараа)
+- [x] **4.2 Inventory-lite ✅** — `inventory_items` · `GET/POST /inventory/items` (cursor + lowStock + Redis cache), `PATCH /inventory/items/:id/adjust` (атомик, сөрөг болохгүй)
+- [x] **4.3 Vendor-lite ✅** — `vendors` · `GET/POST /vendors`, `PATCH /vendors/:id` (загвар модуль)
+- [x] **4.4 Report-lite ✅** — `GET /reports/summary` (MR, төсөв, бараа, нийлүүлэгч) + `GET /reports/summary.csv` (BOM, injection хамгаалалт, dependency-гүй)
+- [x] **4.5 Integration** — `test/modules-lite.integration.spec.ts` (эрх, cursor, adjust, CSV, RLS app_user)
+- [x] **4.7 Загвар** — `docs/03_Data_Models_and_Security/03_Module_Template.md`
+  - Шалгалт: unit **230/230** (бохир env-ээр ч) · mutation 6/6 · PostgreSQL 16 (app_user, RLS): migration 18/18, RLS 5, SQL 10 сценари (cursor 25→3 хуудас давхардалгүй, **зэрэгцээ 10 хасалт → яг 5**) · бүтэн AppModule-ийн route 11/11 · tsc/lint ✅
+  - [ ] Таны компьютер: `supabase migration up` → `db:generate` → `test` + `test:integration`
+- [~] **4.6 Frontend** — энэ удаа алгассан (шийдвэр 17:50)
+- [x] **Хасагдсан** (анхны sprint_9-ээс): агуулахын байршил, нөөцлөлт/MR мөр холболт, үнийн санал, Excel (`exceljs`), тусдаа chain тест
+- [ ] **4.8 (санал)** RLS runtime: app-ийг `app_user`-ээр ажиллуулах — хуучин хүснэгтүүдийн policy/GRANT + MR transaction set_config
 
 ### Phase 5 — Sprint 10: Event Bus integration тест (2 session)
 - [ ] 5.1 MR → Workflow → Inventory → Budget chain тест

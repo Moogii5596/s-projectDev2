@@ -16,6 +16,7 @@ import { AmountRouterService } from '../../workflow/amount-router.service';
 import { CacheService } from '../../../cache/cache.service';
 import { CursorPaginationResult } from '../../../common/dto/cursor-pagination.dto';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
+import { MrLifecycleService } from '../../mr-lifecycle/mr-lifecycle.service';
 
 @Injectable()
 export class MaterialRequisitionService {
@@ -25,6 +26,7 @@ export class MaterialRequisitionService {
     private readonly prisma: PrismaTenantClientService,
     private readonly amountRouter: AmountRouterService,
     private readonly cache: CacheService,
+    private readonly lifecycle: MrLifecycleService, // Phase 4: Budget (+Inventory) — transaction дотор
   ) {}
 
   // ────────────────────────────────────────────────
@@ -333,6 +335,13 @@ export class MaterialRequisitionService {
         include: { items: { orderBy: { lineNumber: 'asc' } } },
       });
 
+      // Phase 4.1: төсөв шалгах + commit (хүрэлцэхгүй → 400, MR DRAFT хэвээр)
+      await this.lifecycle.onSubmitted(tx, tenantId, {
+        id,
+        department: header.department,
+        totalAmount: header.totalAmount,
+      });
+
       const definition = await tx.workflowDefinition.findFirst({
         where: { tenantId, isActive: true },
         orderBy: { createdAt: 'asc' },
@@ -430,6 +439,9 @@ export class MaterialRequisitionService {
         include: { items: { orderBy: { lineNumber: 'asc' } } },
       });
 
+      // Phase 4.1: төсөв COMMITTED → SPENT
+      await this.lifecycle.onApproved(tx, tenantId, id);
+
       await tx.approvalLog.create({
         data: {
           tenantId,
@@ -487,6 +499,9 @@ export class MaterialRequisitionService {
         },
         include: { items: { orderBy: { lineNumber: 'asc' } } },
       });
+
+      // Phase 4.1: төсөв COMMITTED → RELEASED
+      await this.lifecycle.onRejected(tx, tenantId, id);
 
       await tx.approvalLog.create({
         data: {

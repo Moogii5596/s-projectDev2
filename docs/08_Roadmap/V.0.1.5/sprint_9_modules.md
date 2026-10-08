@@ -1,5 +1,15 @@
 # Sprint 9 — Нэмэлт Модулиуд (v0.1.5.4)
 
+> 🔧 **Хэрэгжүүлэлтийн засвар (2026-10-08, Phase 4):**
+> - RLS: доорх `AS RESTRICTIVE ... TO s_project_app_user` загвар **БУРУУ** (permissive policy-гүй → 0 мөр; role байхгүй).
+>   Стандарт: `ENABLE` + `FORCE` + `AS PERMISSIVE FOR ALL TO app_user` + `GRANT ... TO app_user` — lessons [RLS-004].
+> - Модуль хоорондын холболт: EventEmitter биш, MR transaction дотор шууд — `MrLifecycleService` (submit/approve/reject).
+> - Budget: tenant-д идэвхтэй хугацаа байвал MR-д хэлтэс + төсөв заавал; давхцвал хамгийн богино хугацаа.
+> - Inventory: үлдэгдэл хүрэлцэхгүй бол боломжтойг нөөцөлж, дутууг тэмдэглэнэ (батлалт зогсохгүй).
+> - `GENERATED` багана ашиглахгүй (Prisma дэмжихгүй) — service-д тооцоолно. `prisma db push` хориотой [MIG-001].
+> - Төлөвлөгөө/явц: `01_analysis_and_plan_2026-10-08.md` → Phase 4.
+> - **Хамрах хүрээ (2026-10-08 17:47):** Inventory/Vendor/Report нь платформ батлах **ХӨНГӨН** модуль (`inventory_items`, `vendors`, `/reports/summary(.csv)`). Доорх 9.A, 9.C, 9.D-ийн дэлгэрэнгүй (агуулах, нөөцлөлт, үнийн санал, Excel, dashboard) **хэрэгжүүлэхгүй** — түүхэн лавлагаа. Шинэ модулийн загвар: `docs/03_Data_Models_and_Security/03_Module_Template.md`.
+
 > **Зорилго:** Inventory, Budget, Vendor, Report 4 модуль — schema, CRUD, модуль хоорондын холболт, frontend
 > **Working dir:** `apps/core-kernel/src/modules/` + `apps/web-shell/src/pages/`
 > **Хамаарал:** Sprint 6 (schema routing), Sprint 7 (workflow) дууссан байх
@@ -150,7 +160,7 @@ async handleMrApproved(payload: WorkflowApprovedEvent) {
 
 ### Алхам 9.B.1 — Migration
 
-- [ ] `supabase/migrations/YYYYMMDD_budget.sql`:
+- [x] `supabase/migrations/20261008002_budget.sql` (RLS стандартаар засварласан):
 
 ```sql
 -- Төсвийн ангилал (жил, улирал, сар)
@@ -211,13 +221,13 @@ CREATE POLICY rls_budget_commitments ON budget_commitments AS RESTRICTIVE FOR AL
 
 ### Алхам 9.B.2 — NestJS Module + Budget Check
 
-- [ ] `BudgetModule` endpoints:
+- [x] `BudgetModule` endpoints (+ `PATCH /budget/allocations/:id`):
   - `GET /api/v1/budget/periods` — идэвхтэй төсвийн хугацаа
   - `GET /api/v1/budget/allocations` — хэлтэсийн төсөв (үлдэгдэл харах)
   - `POST /api/v1/budget/allocations` — төсөв тогтоох
   - `POST /api/v1/budget/check` — MR-н дүнг төсвийн хязгаартай харьцуулах
 
-- [ ] MR submit-д budget check:
+- [x] MR submit-д budget check (`MrLifecycleService.onSubmitted` → `BudgetService.commitForMr`, `FOR UPDATE`):
 
 ```typescript
 // MaterialRequisitionService.submit()
@@ -238,9 +248,9 @@ async submit(tenantId: string, mrId: string, userId: string) {
 
 ### Алхам 9.B.3 — Тест
 
-- [ ] `budget.service.test.ts` — CRUD, check, commit
-- [ ] Budget limit exceed → 400 BadRequest тест
-- [ ] Event: workflow.approved → commitment.status = 'SPENT'
+- [x] `budget.service.test.ts` — CRUD, check, commit (+ PostgreSQL 16 дээр SQL 10 сценари, зэрэгцээ commit)
+- [x] Budget limit exceed → 400 BadRequest тест (`test/budget.integration.spec.ts`)
+- [x] MR approved → commitment.status = 'SPENT', rejected → 'RELEASED' (transaction дотор)
 
 ---
 

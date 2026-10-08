@@ -69,6 +69,7 @@
 ### 03 — Өгөгдлийн загвар ба аюулгүй байдал
 - `01_PostgreSQL_MultiTenant_RLS_Spec.md` — RLS policy
 - `02_core_kernel_schema.md` — Prisma schema
+- `03_Module_Template.md` — **Шинэ модуль нэмэх загвар** (migration/RLS, NestJS, тест шалгах хуудас) ✨
 
 ### 04 — Модулийн SDK
 - `01_Shared_Event_Bus_Contract_Spec.md` — Event bus

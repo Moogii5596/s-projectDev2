@@ -38,6 +38,10 @@
 | FE-003 | DTO mismatch | Backend DTO шалгах → RULE-20 |
 | CI-001 | turbo task script-гүй | `turbo --dry=json`-оор шалгах |
 | CI-003 | ESLint config | Root `.eslintrc.cjs` |
+| TEST-006 | JS default param + undefined | "байхгүй" = null |
+| TEST-005 | Тест shell env-ээс хамааралтай | `test/setup/unit-env.ts` + бохир env-ээр шалгах |
+| RLS-004 | RESTRICTIVE-only / app_user эрхгүй | PERMISSIVE TO app_user + FORCE + GRANT |
+| MIG-001 | prisma db push | supabase migration up + db:generate |
 | PERF-003 | Хүсэлт бүрт Supabase getUser | Redis cache ≤60с + single-flight + 503 ялгах |
 | SEED-002 | reset → auth user алга | Studio Add user + auth_id UPDATE |
 | PERF-001 | Load test 429 тоолоогүй | non2xx + алдааны зам бүрийг турших |
@@ -809,6 +813,40 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 `docker exec -i $db psql -U postgres -d postgres -c "UPDATE core_users c SET auth_id = u.id FROM auth.users u WHERE u.email = c.email AND c.email = 'admin@test.mn';"`
 **Цаашид:** `pnpm dev:test-user` script (Phase 3.6.5 — санал).
 
+
+---
+
+## 14. Phase 4 — Sprint 9 модулиуд (2026-10-08)
+
+### [RLS-004] 🔴 RESTRICTIVE-only policy + `app_user` эрхгүй → runtime дээр RLS огт ажилладаггүй
+**Илэрсэн:** Workflow хүснэгтүүд (`workflow_definitions`, `workflow_instances`, …) зөвхөн `AS RESTRICTIVE ... TO app_user` policy-тэй, `app_user`-д GRANT алга → цэвэр DB дээр `app_user`: `permission denied`; GRANT хийсэн ч RESTRICTIVE ганцаараа **0 мөр** (PostgreSQL permissive policy шаарддаг). Sprint 9 баримт ижил алдаатай загвар санал болгосон (+ байхгүй `s_project_app_user` role).
+**Бодит нөлөө:** App (local, compose, VPC runbook) postgres **superuser**-ээр холбогддог → RLS bypass. Tenant тусгаарлалт одоогоор код (`WHERE tenant_id`) + SEC-001-д тулгуурладаг.
+**Phase 4 стандарт (шинэ хүснэгт бүр):** `ENABLE` + `FORCE` + `AS PERMISSIVE FOR ALL TO app_user USING/WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)` + `GRANT ... TO app_user`; service бүрийн transaction `set_config('app.tenant_id')`-оор эхэлнэ; integration тестэд `app_user`-ээр leakage шалгана.
+**Үлдсэн ажил:** app-ийг `app_user`-ээр ажиллуулах (хуучин хүснэгтүүдийн policy/GRANT засах, MR transaction-уудад set_config) — тусдаа phase (санал).
+
+### [MIG-001] `prisma db push` БҮҮ ашигла — schema өөрчлөлт = supabase migration
+**Шалтгаан:** Expression/partial index (жнь `lower(btrim(department))`), RLS policy, GRANT зэрэг нь Prisma schema-д илэрхийлэгдэхгүй → `db push` тэдгээрийг устгах/зөрүүлэх эрсдэлтэй.
+**Дүрэм:** `supabase/migrations/*.sql` → `pnpm exec supabase migration up` (auth хэрэглэгчийг устгахгүй) → `pnpm db:generate`.
+
+### [TEST-004] Сул assertion — mutation шалгалтаар илэрсэн
+**Алдаа:** `toThrow(/хэлтэс/)` — "хэлтэс заавал" шалгалтыг хассан ч өөр мессеж ("хэлтэст ... төсөв алга") мөн "хэлтэс" агуулж тест давсаар байв.
+**Дүрэм:** Алдааны мессежийг онцлог хэсгээр нь шалгах (`/хэлтэс \(department\) заавал/`); шинэ логик бүрд mutation шалгалт.
+
+### [ASYNC-001] Promise буцаадаг method sync-аар throw хийсэн
+**Алдаа:** `createPeriod()` async биш → validation алдаа rejected promise биш sync exception (тест `.rejects` барьсангүй).
+**Дүрэм:** Promise буцаадаг public method → `async`.
+
+### [TEST-005] Unit тест shell-ийн env-ээс хамааралтай байсан (TEST-001 давтагдсан)
+**Алдаа:** Load test-д `$env:RATE_LIMIT_SHORT="1000000"` тохируулсан PowerShell session-д `pnpm test` → rate limit 2 тест "429 хүлээсэн, true буцаав".
+**Шалтгаан:** `TenantRateLimitGuard` constructor `process.env`-ээс уншдаг; тест зөвхөн *хоосон* env дээр шалгагдсан (`env -u`), *бохир* env дээр шалгагдаагүй.
+**Шийдэл:** `test/setup/unit-env.ts` (vitest `setupFiles`) — апп-ын зан төлөвийг өөрчилдөг env-үүдийг (`RATE_LIMIT_*`, `DEPLOYMENT_MODE`, `DEDICATED_TENANT_SLUG`, `DEV_TENANT_SLUG`, `NODE_CLUSTER_WORKERS`) тест бүрийн өмнө устгана; хэрэгтэй тест `vi.stubEnv`.
+**Дүрэм:** Unit тестийг **бохир env**-ээр (жнь `RATE_LIMIT_SHORT=1000000 DEPLOYMENT_MODE=dedicated`) ажиллуулж шалгана. Env-ээс уншдаг шинэ тохиргоо нэмбэл `APP_BEHAVIOR_ENV_KEYS`-д нэмнэ.
+
+### [TEST-006] JS default параметр `undefined`-д ажилладаг → "хэлтэсгүй MR" тест IT-ээр явсан
+**Алдаа:** `createMr(amount, department = 'IT')` → `createMr(10, undefined)` нь `'IT'` болсон → "хэлтэсгүй → 400" тест 200 авч, 10₮ committed үлдэж дараагийн 2 тест зөрсөн (integration 56/59).
+**Шийдэл:** "байхгүй"-г `null`-оор илэрхийлэх (`department: string | null = 'IT'`, `department !== null`); тест өөрийн урьдчилсан нөхцлийг шалгах (committed өөрчлөгдөөгүй).
+**Дүрэм:** Тестийн helper-т "утгагүй" гэсэн утгыг `undefined` биш `null`-оор дамжуулна; сөрөг тестэд "юу ч бичигдээгүй"-г assert хийнэ.
+
 ---
 
 ## Changelog
@@ -816,6 +854,9 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
 | 2026-10-08 | §12: SEED-001, ENV-001~005 нэмэв (шинэ машин дээр Supabase on Docker тохиргоо) |
+| 2026-10-08 | TEST-006 нэмэв |
+| 2026-10-08 | TEST-005 нэмэв |
+| 2026-10-08 | RLS-004, MIG-001, TEST-004, ASYNC-001 нэмэв (Phase 4.1) |
 | 2026-10-08 | PERF-003, SEED-002 нэмэв (Phase 3.7) |
 | 2026-10-08 | PERF-001, PERF-002, PROC-002 нэмэв (Phase 3) |
 | 2026-10-08 | TEST-003, RL-001 нэмэв (Phase 2.9) |

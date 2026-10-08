@@ -26,6 +26,11 @@ import { HealthModule }         from '../modules/health/health.module';
 import { TenantAdminModule }    from '../modules/tenant-admin/tenant-admin.module';
 // Sprint 3: Event Bus
 import { EventBusModule }      from '../modules/event-bus/event-bus.module';
+// Phase 4: Sprint 9 модулиуд
+import { BudgetModule }        from '../modules/budget/budget.module';
+import { InventoryModule }     from '../modules/inventory/inventory.module';
+import { VendorModule }        from '../modules/vendor/vendor.module';
+import { ReportModule }        from '../modules/report/report.module';
 
 @Module({
   imports: [
@@ -51,6 +56,10 @@ import { EventBusModule }      from '../modules/event-bus/event-bus.module';
     EventBusModule,            // Sprint 3
     TenantAdminModule,         // Sprint 4
     HealthModule,              // Sprint 5
+    BudgetModule,              // Phase 4.1
+    InventoryModule,           // Phase 4.2 (lite)
+    VendorModule,              // Phase 4.3 (lite)
+    ReportModule,              // Phase 4.4 (lite)
   ],
   controllers: [AppController],
   providers: [

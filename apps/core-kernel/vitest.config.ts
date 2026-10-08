@@ -4,6 +4,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // [TEST-005] гаднах env (жнь RATE_LIMIT_*) unit тестэд нөлөөлөхгүй
+    setupFiles: ['./test/setup/unit-env.ts'],
     include: ['src/**/*.spec.ts', 'src/**/*.test.ts'],
     exclude: ['**/*.integration.spec.ts', 'node_modules', 'dist'],
     coverage: {

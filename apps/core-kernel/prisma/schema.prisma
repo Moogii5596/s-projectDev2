@@ -41,6 +41,11 @@ model Tenant {
   workflowDelegations  WorkflowDelegation[] // Sprint 7
   workflowSlaLogs      WorkflowSlaLog[]     // Sprint 7
   dlqEvents            DlqEvent[]           // Sprint 3
+  budgetPeriods        BudgetPeriod[]       // Phase 4.1
+  budgetAllocations    BudgetAllocation[]   // Phase 4.1
+  budgetCommitments    BudgetCommitment[]   // Phase 4.1
+  inventoryItems       InventoryItem[]      // Phase 4.2
+  vendors              Vendor[]             // Phase 4.3
 
   @@map("tenants")
 }
@@ -107,6 +112,7 @@ model MrHeader {
   approver      CoreUser?   @relation("MrApprover", fields: [approvedBy], references: [id])
   items         MrItem[]
   approvalLogs     ApprovalLog[]
+  budgetCommitment BudgetCommitment?  // Phase 4.1
   workflowInstance WorkflowInstance? @relation(fields: [workflowInstanceId], references: [id])  // Sprint 2
 
   @@unique([tenantId, mrNumber])
@@ -384,4 +390,100 @@ model SuperAdmin {
 
   @@id([userId])
   @@map("super_admins")
+}
+
+// ============================================================
+// Phase 4.1 — Budget (supabase/migrations/20261008002_budget.sql)
+// ⚠️ Expression unique index (tenant, period, lower(btrim(department))) зөвхөн migration-д —
+//    `prisma db push` БҮҮ ашигла (migration-ийн index/policy-г устгана). Schema өөрчлөлт = supabase migration.
+// ============================================================
+model BudgetPeriod {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  name       String
+  periodType String   @map("period_type") // ANNUAL | QUARTERLY | MONTHLY (DB CHECK)
+  startDate  DateTime @map("start_date") @db.Date
+  endDate    DateTime @map("end_date") @db.Date
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  allocations BudgetAllocation[]
+
+  @@index([tenantId, isActive, startDate, endDate])
+  @@map("budget_periods")
+}
+
+model BudgetAllocation {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  periodId        String   @map("period_id") @db.Uuid
+  department      String
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(18, 2)
+  committedAmount Decimal  @default(0) @map("committed_amount") @db.Decimal(18, 2)
+  spentAmount     Decimal  @default(0) @map("spent_amount") @db.Decimal(18, 2)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  period      BudgetPeriod       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  commitments BudgetCommitment[]
+
+  @@index([tenantId, periodId])
+  @@map("budget_allocations")
+}
+
+model BudgetCommitment {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  allocationId String   @map("allocation_id") @db.Uuid
+  mrHeaderId   String   @unique @map("mr_header_id") @db.Uuid
+  amount       Decimal  @db.Decimal(18, 2)
+  status       String   @default("COMMITTED") // COMMITTED | SPENT | RELEASED (DB CHECK)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  allocation BudgetAllocation @relation(fields: [allocationId], references: [id])
+  mrHeader   MrHeader         @relation(fields: [mrHeaderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, allocationId, status])
+  @@map("budget_commitments")
+}
+
+// ============================================================
+// Phase 4.2 / 4.3 — хөнгөн модулиуд (supabase/migrations/20261008003_inventory_vendor_lite.sql)
+// ============================================================
+model InventoryItem {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  sku          String
+  name         String
+  unit         String   @default("EA")
+  quantity     Decimal  @default(0) @db.Decimal(15, 3)
+  minThreshold Decimal  @default(0) @map("min_threshold") @db.Decimal(15, 3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, sku], map: "uq_inventory_items_tenant_sku")
+  @@index([tenantId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_inventory_items_cursor")
+  @@map("inventory_items")
+}
+
+model Vendor {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  regNumber String?  @map("reg_number")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, isActive, name], map: "idx_vendors_tenant")
+  @@map("vendors")
 }

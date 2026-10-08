@@ -1,5 +1,6 @@
 import { Module }                from '@nestjs/common';
 import { EventBusModule }        from '../event-bus/event-bus.module';
+import { MrLifecycleModule }     from '../mr-lifecycle/mr-lifecycle.module';
 import { WorkflowService }        from './workflow.service';
 import { PessimisticLockService } from './pessimistic-lock.service';
 import { IdempotencyService }     from './idempotency.service';
@@ -20,7 +21,7 @@ import { WorkflowDefinitionService } from './workflow-definition.service';
  *  - IdempotencyService → checkAndStore
  */
 @Module({
-  imports:   [EventBusModule],
+  imports:   [EventBusModule, MrLifecycleModule],
   controllers: [ApprovalSlaController, DelegationController, WorkflowDefinitionController],
   providers: [WorkflowService, PessimisticLockService, IdempotencyService, AmountRouterService, DelegationService, EscalationScheduler, ApprovalSlaService, WorkflowDefinitionService],
   exports:   [WorkflowService, IdempotencyService, AmountRouterService, DelegationService, ApprovalSlaService],

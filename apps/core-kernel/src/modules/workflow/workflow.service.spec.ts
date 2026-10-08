@@ -26,6 +26,7 @@ describe('WorkflowService', () => {
   let mockTx: any;
   let mockLockSvc: PessimisticLockService;
   let mockEventBusSvc: any;
+  let mockLifecycle: { onApproved: ReturnType<typeof vi.fn>; onRejected: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockTx = {
@@ -56,7 +57,10 @@ describe('WorkflowService', () => {
       emit: vi.fn().mockResolvedValue(undefined),
     };
 
-    service = new WorkflowService(mockPrisma as never, mockLockSvc as never, mockEventBusSvc as never);
+    // Phase 4: MrLifecycleService mock
+    mockLifecycle = { onApproved: vi.fn().mockResolvedValue(undefined), onRejected: vi.fn().mockResolvedValue(undefined) };
+
+    service = new WorkflowService(mockPrisma as never, mockLockSvc as never, mockEventBusSvc as never, mockLifecycle as never);
   });
 
   // ── createInstance ──────────────────────────────────────────
@@ -222,6 +226,41 @@ describe('WorkflowService', () => {
       const stepLogCall = mockTx.workflowStepLog.create.mock.calls[0][0];
       expect(stepLogCall.data.actorId).toBe(CORE_USER_ID);
       expect(stepLogCall.data.actorId).not.toBe(AUTH_ID);
+    });
+  });
+
+  // Phase 4.1: MR батлах 2 дахь зам — MrLifecycleService hook
+  describe('MrLifecycle hook (Phase 4.1)', () => {
+    const MR_INSTANCE = {
+      id: INSTANCE_ID, tenantId: TENANT_ID, currentStep: 1, status: 'PENDING',
+      entityType: 'MATERIAL_REQUISITION', entityId: ENTITY_ID,
+      definition: { ...TWO_STEP_DEF },
+    };
+
+    it('сүүлийн алхам батлагдвал onApproved(tx, tenant, MR id)', async () => {
+      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue(MR_INSTANCE);
+      await service.approveStep({ authId: AUTH_ID, tenantId: TENANT_ID, instanceId: INSTANCE_ID });
+      expect(mockLifecycle.onApproved).toHaveBeenCalledWith(mockTx, TENANT_ID, ENTITY_ID);
+    });
+
+    it('дунд алхам → onApproved дуудахгүй', async () => {
+      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue({ ...MR_INSTANCE, currentStep: 0 });
+      await service.approveStep({ authId: AUTH_ID, tenantId: TENANT_ID, instanceId: INSTANCE_ID });
+      expect(mockLifecycle.onApproved).not.toHaveBeenCalled();
+    });
+
+    it('reject → onRejected(tx, tenant, MR id)', async () => {
+      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue(MR_INSTANCE);
+      await service.rejectStep({ authId: AUTH_ID, tenantId: TENANT_ID, instanceId: INSTANCE_ID });
+      expect(mockLifecycle.onRejected).toHaveBeenCalledWith(mockTx, TENANT_ID, ENTITY_ID);
+    });
+
+    it('MR биш entity → hook дуудахгүй', async () => {
+      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue({ ...MR_INSTANCE, entityType: 'OTHER' });
+      await service.approveStep({ authId: AUTH_ID, tenantId: TENANT_ID, instanceId: INSTANCE_ID });
+      await service.rejectStep({ authId: AUTH_ID, tenantId: TENANT_ID, instanceId: INSTANCE_ID });
+      expect(mockLifecycle.onApproved).not.toHaveBeenCalled();
+      expect(mockLifecycle.onRejected).not.toHaveBeenCalled();
     });
   });
 });

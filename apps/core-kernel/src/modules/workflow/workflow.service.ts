@@ -5,6 +5,7 @@ import { PessimisticLockService } from './pessimistic-lock.service';
 import { resolveUserId }          from '../../common/helpers/resolve-user-id.helper';
 import { EventBusService }        from '../event-bus/event-bus.service';
 import { EventTypes }             from '../event-bus/interfaces/cloud-event.interface';
+import { MrLifecycleService }     from '../mr-lifecycle/mr-lifecycle.service';
 
 export interface CreateInstanceParams {
   tenantId:     string;
@@ -35,6 +36,7 @@ export class WorkflowService {
     private readonly prisma:       PrismaService,
     private readonly lockSvc:      PessimisticLockService,
     private readonly eventBusSvc:  EventBusService,
+    private readonly lifecycle:    MrLifecycleService,  // Phase 4: MR батлах 2 дахь зам
   ) {}
 
   /**
@@ -117,6 +119,11 @@ export class WorkflowService {
           WHERE workflow_instance_id = ${params.instanceId}::uuid
         `;
 
+        // Phase 4.1: төсөв SPENT (MR-ийн workflow бол)
+        if (instance.entityType === 'MATERIAL_REQUISITION' && instance.entityId) {
+          await this.lifecycle.onApproved(tx, params.tenantId, instance.entityId);
+        }
+
         // Sprint 3: Transactional Outbox — RULE-04: tx дотор emit
         await this.eventBusSvc.emit({
           tx:          tx as any,
@@ -188,6 +195,11 @@ export class WorkflowService {
         SET status = 'REJECTED', updated_at = now()
         WHERE workflow_instance_id = ${params.instanceId}::uuid
       `;
+
+      // Phase 4.1: төсөв RELEASED (MR-ийн workflow бол)
+      if (instance.entityType === 'MATERIAL_REQUISITION' && instance.entityId) {
+        await this.lifecycle.onRejected(tx, params.tenantId, instance.entityId);
+      }
 
       // Sprint 3: Transactional Outbox — RULE-04: tx дотор emit
       await this.eventBusSvc.emit({
