@@ -38,7 +38,7 @@ export function createTx(): TxMock {
 }
 
 export function createPrisma(tx: TxMock) {
-  return { $transaction: vi.fn(async (fn: (t: unknown) => unknown) => fn(tx)) };
+  return { $transaction: vi.fn(async (fn: (t: unknown) => unknown, _options?: { timeout?: number; maxWait?: number }) => fn(tx)) };
 }
 
 export function createCache() {

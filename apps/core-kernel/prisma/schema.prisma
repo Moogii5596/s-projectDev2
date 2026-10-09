@@ -1032,6 +1032,8 @@ model CampMovementImport {
   errorRows   Int              @default(0) @map("error_rows")
   /// [{ row, column, message }]
   errors      Json             @default("[]")
+  /// PREVIEW-д задалсан мөрүүд (20261010001) — CONFIRM эндээс уншина
+  parsedRows  Json             @default("[]") @map("parsed_rows")
   uploadedBy  String           @map("uploaded_by") @db.Uuid
   confirmedBy String?          @map("confirmed_by") @db.Uuid
   confirmedAt DateTime?        @map("confirmed_at") @db.Timestamptz

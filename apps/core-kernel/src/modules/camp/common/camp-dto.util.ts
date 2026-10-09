@@ -7,6 +7,7 @@ export const trimOrNull = ({ value }: { value: unknown }) => {
   const t = value.trim();
   return t === '' ? null : t;
 };
-export const toBool = ({ value }: { value: unknown }) => (value === 'true' ? true : value === 'false' ? false : value);
+/** [VALID-001] implicit conversion-оос хамгаалсан boolean (src/common/utils/query-bool.ts) */
+export { queryBool as toBool } from '../../../common/utils/query-bool';
 export const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 export const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;

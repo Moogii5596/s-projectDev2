@@ -1,5 +1,6 @@
 import { IsBoolean, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { queryBool } from '../../common/utils/query-bool';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -33,6 +34,6 @@ export class QueryInventoryDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100)
   limit?: number;
 
-  @IsOptional() @Transform(({ value }) => value === true || value === 'true') @IsBoolean()
+  @IsOptional() @Transform(queryBool) @IsBoolean()
   lowStock?: boolean;
 }

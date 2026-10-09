@@ -1,6 +1,6 @@
 # Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD · v4
 
-> 2026-10-09 · Төлөв: **ERD v4 батлагдсан · Шат 1 ДУУССАН · Шат 2 код + unit ДУУССАН (integration хүлээгдэж байна)** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
+> 2026-10-09 · Төлөв: **ERD v4 батлагдсан · Шат 1–3 ДУУССАН · Дараагийнх: Шат 4** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
 > Мөрдөх: `docs/08_Roadmap/00_rules_and_context.md` (RULE-01~20), `docs/03_Data_Models_and_Security/03_Module_Template.md`,
 > lessons_learned [RLS-004] (PERMISSIVE TO app_user + FORCE + GRANT), [MIG-001] (`prisma db push` ХОРИОТОЙ — зөвхөн supabase migration)
 
@@ -23,7 +23,7 @@
 | Бохир ус / хог | Катеринг үүсгэнэ (тээврийн + **нийлүүлэх цэг**-ийн гэрээт байгууллага сонгоно) → кемп менежер батална |
 | Засвар | Ажлын хөлс үнэгүй; сэлбэг уурхайгаас. Катеринг **өөрөө авсан** сэлбэгийг тоо, үнэтэй бүртгэнэ → зардалд орно |
 | Өрөө | Багтаамжийг өрөө бүрээр; сул/дүүрсэн харагдана. Ээлж солигдоход **багууд өрөөг хуваалцана** |
-| Ростер | 4 баг, 14/14. Лхагва солигдоно: ирж буй баг оройн хоолноос, бууж буй баг өглөөний хоол идээд явна. Ээлжийн бусаар ирвэл хоолоо сонгоно |
+| Ростер | 4 баг, 14/14: **14 ажлын өдөр**, ирэх/явах замын хоног **амралтын 14 хоногт орно** (тодруулга 2026-10-09). Лхагва ирж (оройн хоолноос), 14 хоног ажиллаад **Пүрэв** гарагт явна (өглөөний хоол идээд). Ээлжийн бусаар ирэх/явахад хоолоо **заавал** сонгоно (идэхгүй бол NONE) |
 | Ирц импорт | Кемп менежер xlsx-ээр (ажилтны кодоор) импортлоно |
 
 ## 2. ERD
@@ -82,7 +82,7 @@ erDiagram
 - `camp_department_shift_patterns` *(шинэ)* — department_id, day_from, day_to (ээлжийн 1..14 дэх өдөр), shift `DAY|NIGHT`
   - CHECK 1 ≤ day_from ≤ day_to ≤ roster_on_days; хэлтсийн мөрүүд 1..14-ийг **давхцалгүй, цоорхойгүй** бүрхэнэ (хадгалахад шалгана)
   - Жнь Уулын хэсэг: (1–7, DAY), (8–14, NIGHT) · Захиргаа: (1–14, DAY)
-  - Ээлжийн өдрийн дугаар: багийн ирсэн Лхагва = 0, Пүрэв = 1 … явах Лхагва = 14
+  - Ээлжийн өдрийн дугаар: багийн ирсэн Лхагва = 0, Пүрэв = 1 … Лхагва = 14 (сүүлийн ажлын өдөр), **явах Пүрэв = 15**; мөчлөг = on + off = 28
   - Байршлыг солиход өмнөх захиалга өөрчлөгдөхгүй (захиалгын мөрөнд байршил snapshot-оор хадгалагдана)
 - `camp_buildings`, `camp_rooms` (capacity > 0, status `ACTIVE|MAINTENANCE|INACTIVE`)
 - `camp_organizations` — name, reg_number, org_type `MAIN|SUBCONTRACTOR|CONTRACTOR`, is_disposal_point, contact, is_active
@@ -188,7 +188,7 @@ erDiagram
 - [x] 2.3 `camp-settings` (тохиргоо PUT, хоол идэх байршил; загвартай хэлтэс байхад ростерын урт солих → 409)
 - [x] 2.4 `camp-master` (кемп [+ анхдагч тохиргоо], байр/өрөө, байгууллага, хэлтэс + ээлжийн загвар [1..N цоорхойгүй], баг [солигдох гараг], ажилтан [cursor])
 - [x] 2.5a Unit 76 тест (нийт 306 ✅), бохир env ✅, mutation 24/24 баригдсан, HTTP wiring (DB-гүй, swc) 8/8 ✅
-- [ ] 2.5b Integration: `test/camp-master.integration.spec.ts` (бодит DB + Auth + RLS + camp-errors бодит Prisma алдаан дээр) ← **хэрэглэгчийн машин дээр**
+- [x] 2.5b Integration: `test/camp-master.integration.spec.ts` 25/25 ✅ (2026-10-09, PRISMA-003 засварын дараа)
 - [x] 2.6 `tsc --noEmit` ✅, `eslint` (camp: 0 анхааруулга)
 
 #### Шат 2 — API (`/api/v1/camp/...`, эрх)
@@ -207,13 +207,33 @@ erDiagram
 Дүрэм: мастер өгөгдөл устгахгүй (`isActive`/`status`); идэвхтэй хамааралтай бол идэвхгүй болгох → 409. Кемп/байрны `code` өөрчлөгдөхгүй.
 
 ### Шат 3 — Backend: цагийн бүртгэл, ирц, өрөө
-- [ ] 3.1 `exceljs` нэмэх, upload (`FileInterceptor`, хэмжээ/төрөл хязгаар)
-- [ ] 3.2 `RosterService` (солигдох өдөр, ROSTER/OFF_ROSTER)
-- [ ] 3.3 Ирц импорт PREVIEW → CONFIRM, stays нээх/хаах, загвар xlsx
-- [ ] 3.4 `ShiftResolver` (зохицуулалт → хэлтсийн загвар → тодорхойгүй) + ээлжийн зохицуулалт CRUD (бөөнөөр)
-- [ ] 3.5 Өрөө хуваарилалт (28 хоногийн багтаамжийн шалгалт), өрөөний самбар, "өрөөгүй" жагсаалт
-- [ ] 3.6 `PresenceService` — D өдрийн (хоол × байршил) суурь тоо
-- [ ] 3.7 Тест: Лхагвын ирэлт/явалт, ээлжийн бус, 7/7 загвар, Пүрэвийн өдрийн хоол, зохицуулалт загварыг дарах, тодорхойгүй ээлж, хэлтсийн байршил, хуваалцсан өрөө → ногоон
+- [x] 3.0 Migration `20261010001` (`parsed_rows`, `roster_off_days ≥ 2`); `@fastify/multipart` 8.3.1 + `exceljs` 4.4.0; `registerMultipart` (main.ts + тест)
+- [x] 3.1 `roster.ts` (өдрийн дугаар 0..on+1, ROSTER/OFF_ROSTER, хоногоор байх эсэх)
+- [x] 3.2 `ShiftResolver` (зохицуулалт → загвар → багагүй бол нэг ээлжтэй загвар → UNKNOWN) + зохицуулалт (бөөнөөр) + ээлжийн календарь
+- [x] 3.3 Ирц: xlsx задлагч (англи/монгол), `planImport` (цэвэр, PREVIEW/CONFIRM/гараар нэг дүрэм), CONFIRM all-or-nothing + advisory lock, загвар xlsx, гараар бүртгэх/сүүлийнхийг устгах
+- [x] 3.4 Өрөө: хуваарилах (28 шөнийн багтаамж, хоногоор), шилжүүлэх (replaceCurrent), дуусгах, самбар, "өрөөгүй"
+- [x] 3.5 `PresenceService` — D өдрийн хоол × байршил, задаргаа, хүн-өдөр, анхааруулга (тодорхойгүй ээлж, анхдагч байршилгүй)
+- [x] 3.6a Unit 130 (нийт 362), mutation 26/27 (1 нь equivalent), HTTP wiring 14/14 (multipart, 413, VALID-001)
+- [x] 3.6b Integration: `camp-attendance` 15/15 + `camp-master` 25/25 ✅ (2026-10-09, main.ts-тэй ижил pipe)
+- [x] 3.7 `tsc`, `eslint`, баримт
+
+#### Шат 3 — шийдвэрүүд (2026-10-09, хэрэглэгч баталсан)
+- xlsx багана/утга англи (монгол ч хүлээн авна): `employee_code | date | direction (ARRIVAL/DEPARTURE) | meals (BREAKFAST,LUNCH,DINNER,NIGHT | NONE) | shift (DAY/NIGHT)`
+- `shift` зөвхөн ARRIVAL мөрөнд → ирсэн өдрөөс (тухайн файл дахь) явах өдөр хүртэл, эсвэл +`roster_on_days` хоног ээлжийн зохицуулалт
+- Ээлжийн бус ирэлт/явалт: хоол ЗААВАЛ (`NONE` = идэхгүй). Ростерын: хоосон бол ирэлт → DINNER, явалт → BREAKFAST
+- Багагүй ажилтан: загвар нэг ээлжтэй бол түүгээр, бусад үед зохицуулалтгүй → тодорхойгүй; өрөөний багтаамжид шөнө бүр тоологдоно
+- Шөнийн эхний өдөр: D ШӨНӨ ба D−1 шөнө ШӨНИЙН ээлжээр хонож байгаагүй (ирсэн өдөр ч тооцогдоно — ERD-ийн "Даваа ирж шөнө гарах" жишээ)
+- Өрөө "хоногоор": солигдох Лхагва шөнө ирж буй + явах баг хоёулаа хононо → хуваалцсан өрөө тэр шөнө хоёуланд хүрэлцэх ёстой
+
+#### Шат 3 — API (`/api/v1/camp/camps/:campId/...`)
+| Endpoint | Эрх |
+|---|---|
+| `GET movement-imports/template`, `POST movement-imports` (multipart `file`, ≤ 2 MB, ≤ 5000 мөр), `GET movement-imports[/:id]`, `POST .../:id/confirm`, `POST .../:id/cancel` | `movement.import` |
+| `GET movements?from&to&employeeId` (≤ 93 хоног), `POST movements`, `DELETE movements/:id` (зөвхөн сүүлийнх) | унших: кемп · бичих: `movement.import` |
+| `GET stays?date=` | кемп |
+| `GET shift-adjustments?from&to`, `POST shift-adjustments` (бөөнөөр), `DELETE shift-adjustments/:id`, `GET shift-calendar?from&to&departmentId&crewId` (≤ 31 хоног) | бичих: `shift.adjust` |
+| `GET room-allocations`, `POST room-allocations`, `POST room-allocations/:id/end`, `GET room-board?date=` | бичих: `room.manage` |
+| `GET presence?date=` | кемп |
 
 ### Шат 4 — Backend: хөрөнгө, засвар (+ сэлбэгийн зардал) → тест ногоон
 ### Шат 5 — Backend: гэрээ, `ContractPricingService`, `VatCalculator`, `CostEntryWriter` → тест ногоон

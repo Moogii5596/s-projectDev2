@@ -56,6 +56,7 @@
 | ENV-009 | PowerShell pipe кирилл → `?` | `docker cp` + `psql -f` |
 | TEST-007 | Supabase postgres superuser биш | RLS SQL тест → `supabase_admin` |
 | ENV-010 | Хавтас зөөсний дараа workspace module алга | `pnpm install` (junction бүтэн замтай) |
+| VALID-001 | `?x=false` → true (implicit conversion) | `@Transform(queryBool)` + тестийн pipe = main.ts |
 | PRISMA-003 | Prisma алдааны текст `\"` escape-тэй | хэвийн болгох + SQLSTATE-ээр таних |
 
 ---
@@ -892,12 +893,20 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** мессежийг эхлээд `.replace(/\\"/g, '"')`-ээр хэвийн болгох + SQLSTATE (`code: "23P01"` EXCLUDE, `"23514"` CHECK)-ээр нөөц таних. Unit тестэд Prisma-гийн бодит хэлбэрийн мессеж нэмсэн.
 **Дүрэм:** DB/гадаад системийн алдааны текстэд тулгуурласан код бичихдээ (1) mock-ийн мессежийг **бодит гаралтаас хуулж** бичнэ, (2) integration тестэд бодит алдаан дээр баталгаажуулна, (3) боломжтой бол текст биш код (SQLSTATE)-оор танина.
 
+
+### [VALID-001] 🔴 `enableImplicitConversion` → query `?activeOnly=false` нь `true` болдог
+**Алдаа:** main.ts-ийн ValidationPipe `transformOptions: { enableImplicitConversion: true }` — class-transformer нь `@Transform`-оос ӨМНӨ declared type-аар хөрвүүлнэ: `Boolean('false') === true`. `@Transform(({ value }) => value === 'true')` нь аль хэдийн `true` болсон утга авна → `?activeOnly=false` = шүүлттэй. Camp, vendor (`activeOnly`), inventory (`lowStock`), budget (`activeOnly`) — бүгд нөлөөлөгдсөн.
+**Яагаад нуугдсан:** integration тестүүд `new ValidationPipe({ whitelist: true, transform: true })` — main.ts-ээс ӨӨР тохиргоо (implicit conversion, forbidNonWhitelisted байхгүй).
+**Шийдэл:** `src/common/utils/query-bool.ts` → `queryBool` анхны утгыг (`obj[key]`) уншина; 4 модульд хэрэглэсэн. Camp integration тестүүд main.ts-тэй ИЖИЛ pipe ашигладаг болсон + регресс тест (хуучин кодоор унадгийг шалгасан).
+**Дүрэм:** (1) Query boolean → ЗААВАЛ `@Transform(queryBool)`. (2) Integration тестийн app тохиргоо (pipe, prefix, plugin) main.ts-тэй ИЖИЛ байх — өөр бол production алдааг нуудаг. (3) Үлдсэн integration spec-үүдийн pipe-ийг ч нийцүүлэх (санал).
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-09 | §15: VALID-001 (implicit conversion → boolean query буруу) |
 | 2026-10-09 | §15: PRISMA-003 (Prisma алдааны мессеж escape-тэй) |
 | 2026-10-09 | §15: ENV-009 (PowerShell pipe → кирилл `?`), TEST-007 (Supabase `postgres` superuser биш), ENV-010 (хавтас зөөхөд pnpm junction тасрах) |
 | 2026-10-08 | ENV-007 (Playwright Chromium), ENV-008 (web-shell `VITE_API_BASE_URL` → CORS) нэмэв |

@@ -14,7 +14,8 @@ export class UpdateCampSettingsDto {
   @Type(() => Number) @IsInt() @Min(1) @Max(28)
   rosterOnDays!: number;
 
-  @Type(() => Number) @IsInt() @Min(0) @Max(28)
+  /** Амралт = замын 2 хоног (ирэх + явах) орно → ≥ 2 (DB CHECK 20261010001) */
+  @Type(() => Number) @IsInt() @Min(2, { message: 'rosterOffDays ≥ 2 (ирэх, явах замын хоног амралтад орно)' }) @Max(28)
   rosterOffDays!: number;
 
   /** 'HH:MM' эсвэл null (хязгааргүй) */

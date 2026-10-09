@@ -11,6 +11,7 @@ import {
   Min,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { queryBool } from '../../../common/utils/query-bool';
 
 export const BUDGET_PERIOD_TYPES = ['ANNUAL', 'QUARTERLY', 'MONTHLY'] as const;
 export type BudgetPeriodType = (typeof BUDGET_PERIOD_TYPES)[number];
@@ -66,7 +67,7 @@ export class QueryBudgetAllocationsDto {
 
 export class QueryBudgetPeriodsDto {
   @IsOptional()
-  @Transform(({ value }) => value === true || value === 'true')
+  @Transform(queryBool)
   @IsBoolean()
   activeOnly?: boolean;
 }

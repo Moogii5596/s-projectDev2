@@ -10,11 +10,13 @@ export function inTenantTx<T>(
   prisma: PrismaTenantClientService,
   tenantId: string,
   fn: (tx: Tx) => Promise<T>,
+  /** Том импорт г.м. — Prisma interactive transaction-ийн анхдагч timeout 5с */
+  options?: { timeout?: number; maxWait?: number },
 ): Promise<T> {
   return prisma.$transaction(async (tx: Tx) => {
     await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
     return fn(tx);
-  });
+  }, options);
 }
 
 /** 'YYYY-MM-DD' → UTC шөнө дунд (Prisma @db.Date) */

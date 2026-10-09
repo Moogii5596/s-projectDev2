@@ -71,7 +71,10 @@ beforeAll(async () => {
     .useValue(createRedisMock())
     .compile();
   app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // main.ts-тэй ИЖИЛ тохиргоо [VALID-001] — implicit conversion-ийн алдааг тест барина
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, transformOptions: { enableImplicitConversion: true } }),
+  );
   app.setGlobalPrefix('api/v1');
   app.useGlobalFilters({
     catch(exception: unknown, host: ArgumentsHost) {

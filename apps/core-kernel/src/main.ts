@@ -4,6 +4,7 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app/app.module';
 import { EnvConfig } from './config/env.config';
+import { registerMultipart } from './common/http/multipart';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -24,6 +25,8 @@ async function bootstrap() {
   );
 
   app.setGlobalPrefix('api/v1');
+  // Camp Шат 3: ирцийн xlsx upload (@fastify/multipart, ≤ 2 MB)
+  await registerMultipart(app);
 
   const config = app.get(EnvConfig);
   const port = config.PORT;

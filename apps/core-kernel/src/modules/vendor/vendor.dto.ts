@@ -1,8 +1,8 @@
 import { IsBoolean, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { queryBool } from '../../common/utils/query-bool';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
-const bool = ({ value }: { value: unknown }) => value === true || value === 'true';
 
 export class CreateVendorDto {
   @Transform(trim) @IsString() @IsNotEmpty({ message: 'name шаардлагатай' }) @MaxLength(200)
@@ -24,6 +24,6 @@ export class UpdateVendorDto {
 }
 
 export class QueryVendorDto {
-  @IsOptional() @Transform(bool) @IsBoolean()
+  @IsOptional() @Transform(queryBool) @IsBoolean()
   activeOnly?: boolean;
 }
