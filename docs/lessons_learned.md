@@ -753,6 +753,17 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** `pnpm dev`-г зогсоох (Ctrl+C) → `pnpm db:generate` → дахин `pnpm dev`. Давтагдвал `Get-Process node`, VS Code Prisma extension-ийг хаах.
 **Анхаар:** Prisma schema өөрчлөгдсөн бол generate **заавал** — хуучин client устгагдсан багана (жнь `schema_name`) руу query хийж runtime алдаа өгнө; unit тест (mock) үүнийг барихгүй.
 
+### [ENV-007] Шинэ машин дээр `pnpm e2e` → 8 тест 3–5ms-д унана: `browserType.launch: Executable doesn't exist ... chromium-1140\chrome-win\chrome.exe`
+**Шалтгаан:** Playwright-ийн Chromium нь `pnpm install`-ээр суудаггүй (хэрэглэгчийн `AppData\Local\ms-playwright`-д тусад нь татагдана). Зөвхөн API тест (`health endpoint`) давна.
+**Шийдэл:** `pnpm playwright:install` (root script — [S5-E3]-ыг үз; `pnpm --filter e2e exec playwright install` ажиллахгүй).
+**Дүрэм:** Шинэ машины шалгах жагсаалтад `pnpm playwright:install` заавал.
+
+### [ENV-008] E2E: login амжилттай ч "MR жагсаалт татахад алдаа гарлаа" — CORS
+**Алдаа:** `requisition-flow`, `workflow-multistep` 4 тест "Шинэ MR" товч / хүснэгт олдохгүй timeout. DB-ийн `auth_id` зөв, membership асуудалгүй байсан.
+**Шалтгаан:** `apps/web-shell/.env.example`-д `VITE_API_BASE_URL=http://localhost:3000` → хөтөч `:5173`-аас `:3000` руу шууд (cross-origin) хандана. `core-kernel` (`main.ts`) CORS идэвхжүүлээгүй тул хөтөч хүсэлтийг хаадаг. Supabase Auth (54321) өөрөө CORS зөвшөөрдөг тул login ажилласан нь асуудлыг нуусан.
+**Шийдэл:** `VITE_API_BASE_URL=` (хоосон) → `client.ts` same-origin `/api` → Vite proxy → `:3000`. `.env` болон `.env.example` хоёуланг засав. Vite-г дахин асаах (`.env`-г зөвхөн эхлэхдээ уншдаг).
+**Дүрэм:** `.env.example`-ийн утга кодын тайлбартай (`client.ts`) зөрчилдөж болохгүй. Frontend API алдаа гарвал эхлээд DevTools → Network (CORS / status)-ийг шалгаж, дараа нь DB-г сэжиглэ.
+
 ## 13. Архитектур / Ажлын процесс (2026-10-08, Phase 2 — ADR-001)
 
 ### [ARCH-001] Mock-д суурилсан unit тест integration алдааг нуусан — Schema-per-tenant ажиллаагүй байсан
@@ -853,6 +864,7 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-08 | ENV-007 (Playwright Chromium), ENV-008 (web-shell `VITE_API_BASE_URL` → CORS) нэмэв |
 | 2026-10-08 | §12: SEED-001, ENV-001~005 нэмэв (шинэ машин дээр Supabase on Docker тохиргоо) |
 | 2026-10-08 | TEST-006 нэмэв |
 | 2026-10-08 | TEST-005 нэмэв |

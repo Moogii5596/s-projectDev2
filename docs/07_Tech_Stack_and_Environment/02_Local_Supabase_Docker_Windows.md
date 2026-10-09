@@ -62,7 +62,7 @@ pnpm supabase:start           # Анх удаа ~10 image (2–3 GB) татна 
 |---|---|
 | `.env` | NestJS (root) |
 | `apps/core-kernel/.env` | **Prisma** — `pnpm db:*` нь `apps/core-kernel` дотроос ажилладаг тул root `.env`-г уншдаггүй |
-| `apps/web-shell/.env` | Vite frontend (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_BASE_URL`) |
+| `apps/web-shell/.env` | Vite frontend (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_BASE_URL`). **`VITE_API_BASE_URL` хоосон үлдээнэ** → Vite proxy (`/api` → `:3000`); утга өгвөл CORS-оор хаагдана [ENV-008] |
 
 > ⚠️ Supabase CLI v2.1xx+ нь `supabase status`-д **шинэ форматын key** (`sb_publishable_…`, `sb_secret_…`) харуулдаг. Манай код (`@supabase/supabase-js ^2.46`) **хуучин JWT key** (`eyJ…`) ашигладаг тул `supabase status -o env`-ээс `ANON_KEY`, `SERVICE_ROLE_KEY`-г авна.
 
@@ -189,3 +189,5 @@ SUPABASE_URL="http://host.docker.internal:54321"
 - [ ] `pnpm db:push` → "Your database is now in sync"
 - [ ] `docker-compose -f docker-compose.dev.yml up -d` → Redis
 - [ ] `pnpm dev` → core-kernel DB, Redis-тэй холбогдоно
+- [ ] `pnpm playwright:install` → Chromium (E2E-д заавал) [ENV-007]
+- [ ] `pnpm e2e` → 9 passed / 2 skipped
