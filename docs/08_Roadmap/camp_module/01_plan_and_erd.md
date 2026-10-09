@@ -1,6 +1,6 @@
 # Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD · v4
 
-> 2026-10-09 · Төлөв: **ERD v4 батлагдсан · Шат 1 (DB) хийгдсэн — local дээр migration up хүлээгдэж байна** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
+> 2026-10-09 · Төлөв: **ERD v4 батлагдсан · Шат 1 (DB) ДУУССАН (local дээр баталгаажсан) · Дараагийнх: Шат 2** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
 > Мөрдөх: `docs/08_Roadmap/00_rules_and_context.md` (RULE-01~20), `docs/03_Data_Models_and_Security/03_Module_Template.md`,
 > lessons_learned [RLS-004] (PERMISSIVE TO app_user + FORCE + GRANT), [MIG-001] (`prisma db push` ХОРИОТОЙ — зөвхөн supabase migration)
 
@@ -180,10 +180,10 @@ erDiagram
 - [x] 1.8a Prisma schema: 31 model, 22 enum, `@db.Uuid`, `Decimal`, composite relation, Tenant/CoreUser back-relation
 - [x] 1.8b Шалгалт (цэвэр PG): 24 migration + seed.sql → `supabase/dev/camp_schema_test.sql` 97/97 ✅ (app_user + RLS), mutation 8/8 баригдсан,
       Prisma validate ✅ (prisma-schema-wasm 5.22), Prisma ↔ DB тулгалт: 31 хүснэгт — зөрүүгүй
-- [ ] 1.8c Local: `pnpm exec supabase migration up` → `pnpm db:generate` → camp_schema_test.sql → `tsc --noEmit` ← **ОДОО (хэрэглэгч)**
+- [x] 1.8c Local (2026-10-09): `supabase migration up` ✅ → `pnpm db:generate` ✅ → camp_schema_test.sql 97/97 ✅ (supabase_admin) → `tsc --noEmit` ✅ (ENV-010 засварын дараа)
 
 ### Шат 2 — Backend: эрх, тохиргоо, мастер өгөгдөл
-- [ ] 2.1 Permission каталог + `requireCampPermission` + cache
+- [ ] 2.1 Permission каталог + `requireCampPermission` + cache ← **ДАРААГИЙНХ**
 - [ ] 2.2 `camp-rbac` (роль CRUD, эрх оноох, хэрэглэгчид роль өгөх)
 - [ ] 2.3 `camp-settings` (НӨАТ, ростер, хоол идэх байршил)
 - [ ] 2.4 `camp-master` (кемп/байр/өрөө/байгууллага/хэлтэс + ээлжийн загвар/баг/ажилтан)

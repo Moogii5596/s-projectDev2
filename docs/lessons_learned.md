@@ -55,6 +55,7 @@
 | TEST-001 | env-д хамаарсан тест | `vi.stubEnv` + env-гүй ажиллуулж шалгах |
 | ENV-009 | PowerShell pipe кирилл → `?` | `docker cp` + `psql -f` |
 | TEST-007 | Supabase postgres superuser биш | RLS SQL тест → `supabase_admin` |
+| ENV-010 | Хавтас зөөсний дараа workspace module алга | `pnpm install` (junction бүтэн замтай) |
 
 ---
 
@@ -875,13 +876,21 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** SQL-ээр RLS тест хийхдээ Supabase-ийн superuser `supabase_admin`-аар холбогдоно: `docker exec -e PGPASSWORD=postgres $db psql -h 127.0.0.1 -U supabase_admin ...`. (`GRANT app_user TO postgres` хийхгүй — role-ийн эрхийг байнга өөрчилнө.)
 **Дүрэм:** Supabase дээр ажиллах SQL скриптийг бичихдээ `postgres` = superuser гэж бүү тооц (RLS-002-той холбоотой: bypass нь BYPASSRLS-ээс, superuser-ээс биш).
 
+
+### [ENV-010] Төслийн хавтсыг зөөсний дараа `tsc`: `Cannot find module '@s-project/shared-types'`
+**Алдаа:** `TS2307` — `import type { RequestUser } from '@s-project/shared-types'` бүхий 5 controller. Код өөрчлөгдөөгүй.
+**Шалтгаан:** pnpm (Windows) workspace package-ийг **junction**-оор холбодог, junction нь **бүтэн замтай**. Төслийг `E:\MoogiiDev\s-project` → `E:\MoogiiDev\Dev\s-project` зөөхөд `apps/core-kernel/node_modules/@s-project/*` хуучин зам руу заасаар үлдэж тасарсан.
+**Оношлох:** `(Get-Item apps\core-kernel\node_modules\@s-project\shared-types).Target` → хуучин зам гарвал энэ.
+**Шийдэл:** `pnpm install --frozen-lockfile` (node_modules-ийг дахин үүсгэнэ; `pnpm dev` зогссон байх [ENV-006]).
+**Дүрэм:** Төслийн хавтсыг зөөх/нэр солих бүрт `pnpm install` заавал.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
-| 2026-10-09 | §15: ENV-009 (PowerShell pipe → кирилл `?`), TEST-007 (Supabase `postgres` superuser биш) |
+| 2026-10-09 | §15: ENV-009 (PowerShell pipe → кирилл `?`), TEST-007 (Supabase `postgres` superuser биш), ENV-010 (хавтас зөөхөд pnpm junction тасрах) |
 | 2026-10-08 | ENV-007 (Playwright Chromium), ENV-008 (web-shell `VITE_API_BASE_URL` → CORS) нэмэв |
 | 2026-10-08 | §12: SEED-001, ENV-001~005 нэмэв (шинэ машин дээр Supabase on Docker тохиргоо) |
 | 2026-10-08 | TEST-006 нэмэв |
