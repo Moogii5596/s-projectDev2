@@ -5,7 +5,7 @@ import { computeVat } from './vat';
 
 /**
  * Нэгдсэн зардлын бичигч (camp_cost_entries) — тайлангийн цорын ганц эх сурвалж, snapshot (засагдахгүй, DB trigger).
- * Шат 4: засварын сэлбэг (CATERING_PURCHASED). Шат 5-6: бохир ус/хог, хоол (ижил бичигч).
+ * V1 (Шат 4): засварын сэлбэг (CATERING_PURCHASED). V2 (хойшлуулсан Шат 5–6, D8): бохир ус/хог, хоол (ижил бичигч).
  */
 export interface MaintenancePartCost {
   id: string;

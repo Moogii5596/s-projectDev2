@@ -7,7 +7,7 @@ import { addDays } from './camp-date';
 import { computePresence, PresenceEmployee, PresenceResult } from './presence';
 import { assertDate } from './range';
 
-/** D өдрийн хоолны суурь тоо (Шат 3.5) — Шат 6-ийн хоолны захиалга үүнийг ашиглана */
+/** D өдрийн хоолны суурь тоо (Шат 3.5) — V2-ийн хоолны захиалга (Шат 6, D8) үүнийг ашиглана */
 @Injectable()
 export class CampPresenceService {
   constructor(
@@ -30,7 +30,7 @@ export class CampPresenceService {
     });
   }
 
-  /** Transaction дотроос дуудагдана (Шат 6 захиалга үүсгэхэд дахин ашиглана) */
+  /** Transaction дотроос дуудагдана (V2: Шат 6 захиалга үүсгэхэд дахин ашиглана) */
   async compute(tx: Tx, tenantId: string, campId: string, date: string): Promise<PresenceResult> {
     const settings = await getRosterSettings(tx, tenantId, campId);
     const d = toDbDate(date);

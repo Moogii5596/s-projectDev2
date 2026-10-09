@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CampRoleCode, UserRole } from '@prisma/client';
 import { CampRbacService } from '../camp-rbac.service';
-import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
+import { CAMP_PERMISSIONS, CAMP_PERMISSION_AVAILABILITY, CAMP_PERMISSION_CODES, campPermissionAvailableIn } from '../../common/camp-permissions';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
 
 const P = CAMP_PERMISSIONS;
@@ -166,5 +166,43 @@ describe('CampRbacService (Шат 2.2)', () => {
   it('createRole BadRequest нь Forbidden-оос өмнө (validation) — эрхгүй ч үл мэдэгдэх код → 400', async () => {
     setActor(s.tx, {});
     await expect(svc.createRole('t1', 'a1', { name: 'X', permissionCodes: ['nope'] })).rejects.toThrow(BadRequestException);
+  });
+});
+
+describe('Эрхийн V1/V2 хүрээ (D8, 2026-10-09)', () => {
+  it('каталогийн код бүр тэмдэглэгээтэй; V2 = гэрээ, бохир ус/хог, хоолны захиалга, зардлын тайлан (яг 6)', () => {
+    expect(Object.keys(CAMP_PERMISSION_AVAILABILITY).sort()).toEqual([...CAMP_PERMISSION_CODES].sort());
+    const v2 = CAMP_PERMISSION_CODES.filter((c) => CAMP_PERMISSION_AVAILABILITY[c] === 'v2').sort();
+    expect(v2).toEqual(
+      [P.CONTRACT_MANAGE, P.HAUL_CREATE, P.HAUL_APPROVE, P.MEAL_ORDER, P.MEAL_ACCEPT, P.REPORT_VIEW].sort(),
+    );
+    // Шат 2–4-ийн эрхүүд V1 (засвар хаах = сэлбэгийн зардал — гэрээнээс хамааралгүй)
+    for (const c of [P.SETTINGS_MANAGE, P.ROLES_MANAGE, P.MASTER_MANAGE, P.EMPLOYEE_MANAGE, P.MOVEMENT_IMPORT, P.SHIFT_ADJUST,
+      P.ROOM_MANAGE, P.ASSET_MANAGE, P.MAINTENANCE_CREATE, P.MAINTENANCE_PARTS, P.MAINTENANCE_CLOSE]) {
+      expect(campPermissionAvailableIn(c)).toBe('v1');
+    }
+    expect(campPermissionAvailableIn('camp.unknown.code')).toBe('v2');
+  });
+
+  it('listPermissions: DB-ийн мөр бүрт availableIn нэмнэ (DB-ээс юу ч хасахгүй)', async () => {
+    const s = setup();
+    const svc = new CampRbacService(s.prisma as never, s.access);
+    s.tx.campPermission.findMany.mockResolvedValueOnce([
+      { code: P.SETTINGS_MANAGE, name: 'Тохиргоо', sortOrder: 10 },
+      { code: P.REPORT_VIEW, name: 'Зардлын тайлан харах', sortOrder: 170 },
+    ]);
+    const res = await svc.listPermissions('t1');
+    expectTenantTx(s.tx, 't1');
+    expect(res).toEqual([
+      { code: P.SETTINGS_MANAGE, name: 'Тохиргоо', sortOrder: 10, availableIn: 'v1' },
+      { code: P.REPORT_VIEW, name: 'Зардлын тайлан харах', sortOrder: 170, availableIn: 'v2' },
+    ]);
+  });
+
+  it('V2 эрх эрх шалгалтад хэвээр ажиллана (оноосон эрх хасагдахгүй)', async () => {
+    const s = setup();
+    setActor(s.tx, { userId: 'cu1', roles: [{ campId: 'c1', perms: [P.HAUL_APPROVE] }] });
+    await expect(s.access.require(s.tx as never, 't1', 'a1', 'c1', P.HAUL_APPROVE)).resolves.toBe('cu1');
+    await expect(s.access.requireAccess(s.tx as never, 't1', 'a1', 'c1')).resolves.toMatchObject({ userId: 'cu1' });
   });
 });

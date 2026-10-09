@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
-import { CAMP_PERMISSIONS, CAMP_PERMISSION_CODES, isCampPermission } from '../common/camp-permissions';
+import { CAMP_PERMISSIONS, CAMP_PERMISSION_CODES, campPermissionAvailableIn, isCampPermission } from '../common/camp-permissions';
 import { inTenantTx, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import { AssignUserRoleDto, CreateCampRoleDto, QueryUserRolesDto, SetRolePermissionsDto, UpdateCampRoleDto } from './camp-rbac.dto';
@@ -65,10 +65,12 @@ export class CampRbacService {
     return role;
   }
 
+  /** Каталог + `availableIn` ('v1' | 'v2') — V1 UI нь V2 эрхийг нууна (D8) */
   async listPermissions(tenantId: string) {
-    return inTenantTx(this.prisma, tenantId, (tx) =>
+    const rows = await inTenantTx(this.prisma, tenantId, (tx) =>
       tx.campPermission.findMany({ orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }], select: { code: true, name: true, sortOrder: true } }),
     );
+    return rows.map((r) => ({ ...r, availableIn: campPermissionAvailableIn(r.code) }));
   }
 
   /** Нэвтэрсэн хэрэглэгчийн эрх (frontend цэс/товч нуух). campId өгвөл тухайн кемпийн бодит эрх */

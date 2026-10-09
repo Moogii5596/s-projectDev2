@@ -14,7 +14,7 @@ export interface VatAmounts {
 }
 
 /**
- * НӨАТ тооцоолол (Шат 4.2 — Шат 5-6 дахин ашиглана). Бүх дүн 2 оронтой, net + vat = gross ҮРГЭЛЖ (DB CHECK).
+ * НӨАТ тооцоолол (Шат 4.2 — V2-ийн Шат 5–6 дахин ашиглана, D8). Бүх дүн 2 оронтой, net + vat = gross ҮРГЭЛЖ (DB CHECK).
  *   vatIncluded = true  → gross = тоо × үнэ;  net = gross ÷ (1 + r/100);  vat = gross − net
  *   vatIncluded = false → net = тоо × үнэ;    vat = net × r/100;           gross = net + vat
  */
