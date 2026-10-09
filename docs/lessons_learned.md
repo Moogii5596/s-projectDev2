@@ -56,6 +56,7 @@
 | ENV-009 | PowerShell pipe кирилл → `?` | `docker cp` + `psql -f` |
 | TEST-007 | Supabase postgres superuser биш | RLS SQL тест → `supabase_admin` |
 | ENV-010 | Хавтас зөөсний дараа workspace module алга | `pnpm install` (junction бүтэн замтай) |
+| PRISMA-003 | Prisma алдааны текст `\"` escape-тэй | хэвийн болгох + SQLSTATE-ээр таних |
 
 ---
 
@@ -884,12 +885,20 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** `pnpm install --frozen-lockfile` (node_modules-ийг дахин үүсгэнэ; `pnpm dev` зогссон байх [ENV-006]).
 **Дүрэм:** Төслийн хавтсыг зөөх/нэр солих бүрт `pnpm install` заавал.
 
+
+### [PRISMA-003] Prisma 5-ийн DB алдааны мессеж Rust Debug хэлбэртэй — хашилт escape-тэй (`\"`)
+**Алдаа:** `camp-errors.ts` EXCLUDE/CHECK алдааг 409/400 болгож чадаагүй (integration 2/25 унав) — unit тест давсан, учир нь тестийн мессежийг гараар "цэвэр" хэлбэрээр бичсэн байсан.
+**Шалтгаан:** `PrismaClientUnknownRequestError.message` = `... PostgresError { code: "23514", message: "... violates check constraint \"camp_rooms_capacity_check\"" ... }` — regex `constraint "(...)"` нь `\"`-тэй таарахгүй. Trigger-ийн мессеж (`CAMP_*: ...`) хашилтгүй тул давсан.
+**Шийдэл:** мессежийг эхлээд `.replace(/\\"/g, '"')`-ээр хэвийн болгох + SQLSTATE (`code: "23P01"` EXCLUDE, `"23514"` CHECK)-ээр нөөц таних. Unit тестэд Prisma-гийн бодит хэлбэрийн мессеж нэмсэн.
+**Дүрэм:** DB/гадаад системийн алдааны текстэд тулгуурласан код бичихдээ (1) mock-ийн мессежийг **бодит гаралтаас хуулж** бичнэ, (2) integration тестэд бодит алдаан дээр баталгаажуулна, (3) боломжтой бол текст биш код (SQLSTATE)-оор танина.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-09 | §15: PRISMA-003 (Prisma алдааны мессеж escape-тэй) |
 | 2026-10-09 | §15: ENV-009 (PowerShell pipe → кирилл `?`), TEST-007 (Supabase `postgres` superuser биш), ENV-010 (хавтас зөөхөд pnpm junction тасрах) |
 | 2026-10-08 | ENV-007 (Playwright Chromium), ENV-008 (web-shell `VITE_API_BASE_URL` → CORS) нэмэв |
 | 2026-10-08 | §12: SEED-001, ENV-001~005 нэмэв (шинэ машин дээр Supabase on Docker тохиргоо) |

@@ -1,6 +1,6 @@
 # Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD · v4
 
-> 2026-10-09 · Төлөв: **ERD v4 батлагдсан · Шат 1 (DB) ДУУССАН (local дээр баталгаажсан) · Дараагийнх: Шат 2** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
+> 2026-10-09 · Төлөв: **ERD v4 батлагдсан · Шат 1 ДУУССАН · Шат 2 код + unit ДУУССАН (integration хүлээгдэж байна)** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
 > Мөрдөх: `docs/08_Roadmap/00_rules_and_context.md` (RULE-01~20), `docs/03_Data_Models_and_Security/03_Module_Template.md`,
 > lessons_learned [RLS-004] (PERMISSIVE TO app_user + FORCE + GRANT), [MIG-001] (`prisma db push` ХОРИОТОЙ — зөвхөн supabase migration)
 
@@ -183,11 +183,28 @@ erDiagram
 - [x] 1.8c Local (2026-10-09): `supabase migration up` ✅ → `pnpm db:generate` ✅ → camp_schema_test.sql 97/97 ✅ (supabase_admin) → `tsc --noEmit` ✅ (ENV-010 засварын дараа)
 
 ### Шат 2 — Backend: эрх, тохиргоо, мастер өгөгдөл
-- [ ] 2.1 Permission каталог + `requireCampPermission` + cache ← **ДАРААГИЙНХ**
-- [ ] 2.2 `camp-rbac` (роль CRUD, эрх оноох, хэрэглэгчид роль өгөх)
-- [ ] 2.3 `camp-settings` (НӨАТ, ростер, хоол идэх байршил)
-- [ ] 2.4 `camp-master` (кемп/байр/өрөө/байгууллага/хэлтэс + ээлжийн загвар/баг/ажилтан)
-- [ ] 2.5 Тест: эрхгүй → 403, роль өөрчлөгдөхөд cache шинэчлэгдэх, OWNER bootstrap → ногоон
+- [x] 2.1 `camp/common`: `CAMP_PERMISSIONS` (17), `CampAccessService.require/requireAccess` (OWNER/ADMIN = бүх эрх; Redis 5 мин, хэрэглэгчийг хүсэлт бүрт DB-ээс), `inTenantTx` (RULE-04), `camp-errors` (P2002→409, P2003→400, trigger/EXCLUDE→409, CHECK→400)
+- [x] 2.2 `camp-rbac` (роль CRUD, эрхийн багц солих, хэрэглэгчид роль; системийн роль устгахгүй; өөрчлөлт бүрт cache цэвэрлэнэ)
+- [x] 2.3 `camp-settings` (тохиргоо PUT, хоол идэх байршил; загвартай хэлтэс байхад ростерын урт солих → 409)
+- [x] 2.4 `camp-master` (кемп [+ анхдагч тохиргоо], байр/өрөө, байгууллага, хэлтэс + ээлжийн загвар [1..N цоорхойгүй], баг [солигдох гараг], ажилтан [cursor])
+- [x] 2.5a Unit 76 тест (нийт 306 ✅), бохир env ✅, mutation 24/24 баригдсан, HTTP wiring (DB-гүй, swc) 8/8 ✅
+- [ ] 2.5b Integration: `test/camp-master.integration.spec.ts` (бодит DB + Auth + RLS + camp-errors бодит Prisma алдаан дээр) ← **хэрэглэгчийн машин дээр**
+- [x] 2.6 `tsc --noEmit` ✅, `eslint` (camp: 0 анхааруулга)
+
+#### Шат 2 — API (`/api/v1/camp/...`, эрх)
+| Endpoint | Эрх |
+|---|---|
+| `GET permissions`, `GET me/permissions?campId=` | нэвтэрсэн |
+| `GET users`, `GET/POST roles`, `PATCH/DELETE roles/:id`, `PUT roles/:id/permissions`, `GET/POST user-roles`, `DELETE user-roles/:id` | `roles.manage` (бүх кемпийн) |
+| `GET camps` (эрхтэй кемпүүд), `GET camps/:campId` | тухайн кемпэд аль нэг эрх |
+| `POST camps` | `master.manage` (бүх кемпийн) · `PATCH camps/:campId` — тухайн кемпийн |
+| `GET/PUT camps/:campId/settings`, `GET/POST/PATCH .../meal-locations` | унших: кемпийн эрх · бичих: `settings.manage` |
+| `.../buildings`, `.../departments`, `PUT .../departments/:id/shift-pattern`, `.../crews` | бичих: `master.manage` |
+| `.../rooms` | бичих: `room.manage` эсвэл `master.manage` |
+| `GET/POST/PATCH organizations` (tenant түвшин) | унших: аль нэг кемпэд эрх · бичих: `master.manage` (бүх кемпийн) |
+| `GET .../employees` (cursor: limit, departmentId, crewId, organizationId, status, q), `GET/POST/PATCH .../employees[/:id]` | бичих: `employee.manage` |
+
+Дүрэм: мастер өгөгдөл устгахгүй (`isActive`/`status`); идэвхтэй хамааралтай бол идэвхгүй болгох → 409. Кемп/байрны `code` өөрчлөгдөхгүй.
 
 ### Шат 3 — Backend: цагийн бүртгэл, ирц, өрөө
 - [ ] 3.1 `exceljs` нэмэх, upload (`FileInterceptor`, хэмжээ/төрөл хязгаар)

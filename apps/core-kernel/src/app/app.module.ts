@@ -31,6 +31,8 @@ import { BudgetModule }        from '../modules/budget/budget.module';
 import { InventoryModule }     from '../modules/inventory/inventory.module';
 import { VendorModule }        from '../modules/vendor/vendor.module';
 import { ReportModule }        from '../modules/report/report.module';
+// Camp Module (ERD v4, Шат 2)
+import { CampModule }          from '../modules/camp/camp.module';
 
 @Module({
   imports: [
@@ -60,6 +62,7 @@ import { ReportModule }        from '../modules/report/report.module';
     InventoryModule,           // Phase 4.2 (lite)
     VendorModule,              // Phase 4.3 (lite)
     ReportModule,              // Phase 4.4 (lite)
+    CampModule,                // Camp Module — Шат 2
   ],
   controllers: [AppController],
   providers: [

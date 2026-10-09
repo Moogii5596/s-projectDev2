@@ -1,0 +1,44 @@
+import { IsBoolean, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { HHMM, toBool, trim } from '../common/camp-dto.util';
+
+/** PUT — бүх талбар заавал (бүтэн тохиргоо) */
+export class UpdateCampSettingsDto {
+  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(99.99)
+  vatRate!: number;
+
+  /** 0 = Ням … 3 = Лхагва … 6 = Бямба (PostgreSQL EXTRACT(DOW)) */
+  @Type(() => Number) @IsInt() @Min(0) @Max(6)
+  changeoverWeekday!: number;
+
+  @Type(() => Number) @IsInt() @Min(1) @Max(28)
+  rosterOnDays!: number;
+
+  @Type(() => Number) @IsInt() @Min(0) @Max(28)
+  rosterOffDays!: number;
+
+  /** 'HH:MM' эсвэл null (хязгааргүй) */
+  @ValidateIf((_o, v) => v !== null) @IsString() @Matches(HHMM, { message: 'mealOrderCutoffTime HH:MM байх ёстой' })
+  mealOrderCutoffTime!: string | null;
+
+  @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'defaultMealLocationId UUID байх ёстой' })
+  defaultMealLocationId!: string | null;
+}
+
+export class CreateMealLocationDto {
+  @Transform(trim) @IsString() @IsNotEmpty({ message: 'name шаардлагатай' }) @MaxLength(100)
+  name!: string;
+}
+
+export class UpdateMealLocationDto {
+  @IsOptional() @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(100)
+  name?: string;
+
+  @IsOptional() @IsBoolean()
+  isActive?: boolean;
+}
+
+export class QueryActiveDto {
+  @IsOptional() @Transform(toBool) @IsBoolean()
+  activeOnly?: boolean;
+}
