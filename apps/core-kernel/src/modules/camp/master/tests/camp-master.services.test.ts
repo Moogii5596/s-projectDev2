@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { CampEmployeeStatus, CampOrgType, CampShiftType, UserRole } from '@prisma/client';
+import { CampEmployeeStatus, CampOrgServiceType, CampOrgType, CampShiftType, UserRole } from '@prisma/client';
 import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
 import { CampsService } from '../camps.service';
@@ -107,6 +107,23 @@ describe('CampFacilitiesService (Шат 2.4)', () => {
     await expect(svc.updateRoom('t1', 'a1', 'c1', 'r1', { roomNo: '102' })).rejects.toThrow(ConflictException);
     expect(s.tx.campRoom.findFirst).toHaveBeenLastCalledWith({ where: { tenantId: 't1', buildingId: 'b1', roomNo: '102', NOT: { id: 'r1' } }, select: { id: true } });
   });
+
+  it('өрөө засах (Шат 4): түгжих нээлттэй засвартай өрөөг гараар MAINTENANCE-ээс гаргахгүй → 409', async () => {
+    setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.ROOM_MANAGE] }] });
+    s.tx.campRoom.findFirst.mockResolvedValue({ id: 'r1', buildingId: 'b1' });
+    s.tx.campMaintenanceRequest.findFirst.mockResolvedValueOnce({ requestNo: 'ZAS-C1-2026-0003' });
+    await expect(svc.updateRoom('t1', 'a1', 'c1', 'r1', { status: 'ACTIVE' })).rejects.toThrow(/ZAS-C1-2026-0003/);
+    expect(s.tx.campMaintenanceRequest.findFirst).toHaveBeenCalledWith({
+      where: { tenantId: 't1', roomId: 'r1', blocksRoom: true, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+      select: { requestNo: true },
+    });
+    expect(s.tx.campRoom.update).not.toHaveBeenCalled();
+    // MAINTENANCE болгох / төлөв хөндөхгүй засвар → шалгахгүй
+    await svc.updateRoom('t1', 'a1', 'c1', 'r1', { status: 'MAINTENANCE' });
+    await svc.updateRoom('t1', 'a1', 'c1', 'r1', { capacity: 3 });
+    expect(s.tx.campMaintenanceRequest.findFirst).toHaveBeenCalledTimes(1);
+    expect(s.tx.campRoom.update).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('CampOrganizationsService (Шат 2.4)', () => {
@@ -119,8 +136,8 @@ describe('CampOrganizationsService (Шат 2.4)', () => {
 
   it('list: аль нэг кемпэд эрхтэй бол уншина; шүүлт', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.HAUL_CREATE] }] });
-    await svc.list('t1', 'a1', { disposalPoint: true, orgType: CampOrgType.CONTRACTOR });
-    expect(s.tx.campOrganization.findMany.mock.calls[0][0].where).toEqual({ tenantId: 't1', isDisposalPoint: true, orgType: 'CONTRACTOR' });
+    await svc.list('t1', 'a1', { serviceType: CampOrgServiceType.SEWAGE_DISPOSAL, orgType: CampOrgType.CONTRACTOR });
+    expect(s.tx.campOrganization.findMany.mock.calls[0][0].where).toEqual({ tenantId: 't1', serviceTypes: { has: 'SEWAGE_DISPOSAL' }, orgType: 'CONTRACTOR' });
   });
 
   it('create: кемпийн master.manage хангалтгүй → 403; давхар регистр → 409', async () => {
@@ -133,11 +150,23 @@ describe('CampOrganizationsService (Шат 2.4)', () => {
 
   it('регистргүй байгууллага давхардал шалгахгүй; null талбарууд', async () => {
     setActor(s.tx, { role: UserRole.ADMIN });
-    await svc.create('t1', 'a1', { name: 'X', orgType: CampOrgType.CONTRACTOR, isDisposalPoint: true });
+    await svc.create('t1', 'a1', { name: 'X', orgType: CampOrgType.CONTRACTOR, serviceTypes: [CampOrgServiceType.CATERING] });
     expect(s.tx.campOrganization.findFirst).not.toHaveBeenCalled();
     expect(s.tx.campOrganization.create.mock.calls[0][0].data).toEqual({
-      tenantId: 't1', name: 'X', regNumber: null, orgType: 'CONTRACTOR', isDisposalPoint: true, contactName: null, phone: null, email: null,
+      tenantId: 't1', name: 'X', regNumber: null, orgType: 'CONTRACTOR', serviceTypes: ['CATERING'], contactName: null, phone: null, email: null,
     });
+  });
+
+  it('кемпийн катеринг байгууллагаас CATERING хасах / идэвхгүй болгох → 409 (кемпийн кодыг нэрлэнэ); бусад төрөл өөрчлөхөд шалгахгүй', async () => {
+    setActor(s.tx, { role: UserRole.ADMIN });
+    s.tx.campOrganization.findFirst.mockResolvedValue({ id: 'o1' });
+    s.tx.campSetting.findMany.mockResolvedValue([{ camp: { code: 'C1' } }]);
+    await expect(svc.update('t1', 'a1', 'o1', { serviceTypes: [CampOrgServiceType.OTHER] })).rejects.toThrow(/катеринг байгууллага \(C1\)/);
+    await expect(svc.update('t1', 'a1', 'o1', { isActive: false })).rejects.toThrow(/C1/);
+    expect(s.tx.campSetting.findMany).toHaveBeenCalledWith({ where: { tenantId: 't1', cateringOrganizationId: 'o1' }, select: { camp: { select: { code: true } } } });
+    s.tx.campSetting.findMany.mockClear();
+    await svc.update('t1', 'a1', 'o1', { serviceTypes: [CampOrgServiceType.CATERING, CampOrgServiceType.OTHER] });
+    expect(s.tx.campSetting.findMany).not.toHaveBeenCalled();
   });
 
   it('идэвхгүй болгох: идэвхтэй ажилтан / гэрээ → 409; зөвхөн ирсэн талбарыг шинэчилнэ', async () => {

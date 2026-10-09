@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { CampOrgServiceType } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
@@ -12,7 +13,7 @@ const ORG_SELECT = {
   name: true,
   regNumber: true,
   orgType: true,
-  isDisposalPoint: true,
+  serviceTypes: true,
   contactName: true,
   phone: true,
   email: true,
@@ -48,7 +49,7 @@ export class CampOrganizationsService {
         where: {
           tenantId,
           ...(q.activeOnly ? { isActive: true } : {}),
-          ...(q.disposalPoint !== undefined ? { isDisposalPoint: q.disposalPoint } : {}),
+          ...(q.serviceType ? { serviceTypes: { has: q.serviceType } } : {}),
           ...(q.orgType ? { orgType: q.orgType } : {}),
         },
         select: ORG_SELECT,
@@ -68,7 +69,7 @@ export class CampOrganizationsService {
             name: dto.name,
             regNumber: dto.regNumber ?? null,
             orgType: dto.orgType,
-            isDisposalPoint: dto.isDisposalPoint ?? false,
+            serviceTypes: dto.serviceTypes ?? [],
             contactName: dto.contactName ?? null,
             phone: dto.phone ?? null,
             email: dto.email ?? null,
@@ -86,6 +87,13 @@ export class CampOrganizationsService {
         const org = await tx.campOrganization.findFirst({ where: { id, tenantId }, select: { id: true } });
         if (!org) throw new NotFoundException('Байгууллага олдсонгүй');
         await this.assertRegUnique(tx, tenantId, dto.regNumber, id);
+        // Кемпийн катеринг байгууллага бол CATERING-ийг хасах / идэвхгүй болгох → 409
+        if (dto.isActive === false || (dto.serviceTypes !== undefined && !dto.serviceTypes.includes(CampOrgServiceType.CATERING))) {
+          const camps = await tx.campSetting.findMany({ where: { tenantId, cateringOrganizationId: id }, select: { camp: { select: { code: true } } } });
+          if (camps.length > 0) {
+            throw new ConflictException(`Кемпийн катеринг байгууллага (${camps.map((c) => c.camp.code).join(', ')}) — эхлээд тохиргоонд өөрийг сонгоно уу`);
+          }
+        }
         if (dto.isActive === false) {
           const employees = await tx.campEmployee.count({ where: { tenantId, organizationId: id, status: 'ACTIVE' } });
           const contracts = await tx.campContract.count({ where: { tenantId, organizationId: id, status: 'ACTIVE' } });
@@ -93,7 +101,7 @@ export class CampOrganizationsService {
             throw new ConflictException(`Идэвхгүй болгох боломжгүй: идэвхтэй ${employees} ажилтан, ${contracts} гэрээ холбоотой`);
           }
         }
-        const fields = ['name', 'regNumber', 'orgType', 'isDisposalPoint', 'contactName', 'phone', 'email', 'isActive'] as const;
+        const fields = ['name', 'regNumber', 'orgType', 'serviceTypes', 'contactName', 'phone', 'email', 'isActive'] as const;
         const data = Object.fromEntries(fields.filter((f) => dto[f] !== undefined).map((f) => [f, dto[f]]));
         return tx.campOrganization.update({ where: { id }, data, select: ORG_SELECT });
       }),

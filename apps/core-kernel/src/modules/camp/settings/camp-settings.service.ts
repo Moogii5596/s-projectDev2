@@ -1,5 +1,5 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { CampOrgServiceType, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
@@ -18,6 +18,7 @@ export const CAMP_SETTINGS_DEFAULTS = {
   rosterOffDays: 14,
   mealOrderCutoffTime: null as string | null,
   defaultMealLocationId: null as string | null,
+  cateringOrganizationId: null as string | null,
 };
 
 type SettingsRow = {
@@ -27,6 +28,7 @@ type SettingsRow = {
   rosterOffDays: number;
   mealOrderCutoffTime: Date | null;
   defaultMealLocationId: string | null;
+  cateringOrganizationId: string | null;
   updatedAt: Date;
 };
 
@@ -41,6 +43,7 @@ const toSettingsView = (campId: string, s: SettingsRow | null) =>
         rosterOffDays: s.rosterOffDays,
         mealOrderCutoffTime: s.mealOrderCutoffTime ? fromDbTime(s.mealOrderCutoffTime) : null,
         defaultMealLocationId: s.defaultMealLocationId,
+        cateringOrganizationId: s.cateringOrganizationId,
         updatedAt: s.updatedAt,
       }
     : { campId, configured: false, ...CAMP_SETTINGS_DEFAULTS, updatedAt: null };
@@ -52,6 +55,7 @@ const SETTINGS_SELECT = {
   rosterOffDays: true,
   mealOrderCutoffTime: true,
   defaultMealLocationId: true,
+  cateringOrganizationId: true,
   updatedAt: true,
 } as const;
 
@@ -80,6 +84,7 @@ export class CampSettingsService {
         await this.access.require(tx, tenantId, authId, campId, P.SETTINGS_MANAGE);
         await getCampOr404(tx, tenantId, campId);
         if (dto.defaultMealLocationId !== null) await assertMealLocation(tx, tenantId, campId, dto.defaultMealLocationId);
+        if (dto.cateringOrganizationId) await this.assertCateringOrg(tx, tenantId, dto.cateringOrganizationId);
         await this.assertRosterChangeAllowed(tx, tenantId, campId, dto.rosterOnDays);
         const data = {
           vatRate: new Prisma.Decimal(dto.vatRate),
@@ -88,6 +93,7 @@ export class CampSettingsService {
           rosterOffDays: dto.rosterOffDays,
           mealOrderCutoffTime: dto.mealOrderCutoffTime === null ? null : toDbTime(dto.mealOrderCutoffTime),
           defaultMealLocationId: dto.defaultMealLocationId,
+          ...(dto.cateringOrganizationId !== undefined ? { cateringOrganizationId: dto.cateringOrganizationId } : {}),
         };
         const s = await tx.campSetting.upsert({
           where: { tenantId_campId: { tenantId, campId } },
@@ -98,6 +104,16 @@ export class CampSettingsService {
         return toSettingsView(campId, s);
       }),
     );
+  }
+
+  /** Катеринг байгууллага: tenant-д байгаа, идэвхтэй, CATERING үйлчилгээтэй (400) */
+  private async assertCateringOrg(tx: Tx, tenantId: string, id: string) {
+    const org = await tx.campOrganization.findFirst({ where: { id, tenantId }, select: { name: true, isActive: true, serviceTypes: true } });
+    if (!org) throw new BadRequestException('Катеринг байгууллага олдсонгүй');
+    if (!org.isActive) throw new BadRequestException(`"${org.name}" идэвхгүй байна`);
+    if (!org.serviceTypes.includes(CampOrgServiceType.CATERING)) {
+      throw new BadRequestException(`"${org.name}" катерингийн үйлчилгээ (CATERING) үзүүлэгч гэж бүртгэгдээгүй`);
+    }
   }
 
   /**

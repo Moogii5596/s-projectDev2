@@ -1,10 +1,10 @@
 import cluster from 'node:cluster';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { AppModule } from './app/app.module';
 import { EnvConfig } from './config/env.config';
-import { registerMultipart } from './common/http/multipart';
+import { configureApp } from './common/http/configure-app';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -15,18 +15,8 @@ async function bootstrap() {
     { bufferLogs: true },
   );
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: { enableImplicitConversion: true },
-    }),
-  );
-
-  app.setGlobalPrefix('api/v1');
-  // Camp Шат 3: ирцийн xlsx upload (@fastify/multipart, ≤ 2 MB)
-  await registerMultipart(app);
+  // Pipe (implicit conversion, forbidNonWhitelisted), 'api/v1' prefix, multipart — integration тестүүдтэй ИЖИЛ [VALID-001]
+  await configureApp(app);
 
   const config = app.get(EnvConfig);
   const port = config.PORT;

@@ -21,6 +21,7 @@ const row = {
   rosterOffDays: 14,
   mealOrderCutoffTime: new Date('1970-01-01T15:00:00.000Z'),
   defaultMealLocationId: 'loc1',
+  cateringOrganizationId: null,
   updatedAt: new Date(),
 };
 
@@ -91,6 +92,25 @@ describe('CampSettingsService (Шат 2.3)', () => {
     s.tx.campSetting.upsert.mockResolvedValueOnce(row);
     await svc.updateSettings('t1', 'a1', 'c1', { ...dto, mealOrderCutoffTime: '16:45' });
     expect(s.tx.campSetting.upsert.mock.calls[0][0].update.mealOrderCutoffTime.toISOString()).toBe('1970-01-01T16:45:00.000Z');
+  });
+
+  it('катеринг байгууллага: олдохгүй / идэвхгүй / CATERING биш → 400; хүчинтэй → хадгална; өгөөгүй бол өөрчлөхгүй', async () => {
+    s.tx.campMealLocation.findFirst.mockResolvedValue({ id: 'loc1', isActive: true });
+    await expect(svc.updateSettings('t1', 'a1', 'c1', { ...dto, cateringOrganizationId: 'o9' })).rejects.toThrow(/Катеринг байгууллага олдсонгүй/);
+    s.tx.campOrganization.findFirst.mockResolvedValueOnce({ name: 'Тээвэр', isActive: true, serviceTypes: ['WASTE_TRANSPORT'] });
+    await expect(svc.updateSettings('t1', 'a1', 'c1', { ...dto, cateringOrganizationId: 'o2' })).rejects.toThrow(/"Тээвэр" катерингийн үйлчилгээ \(CATERING\)/);
+    s.tx.campOrganization.findFirst.mockResolvedValueOnce({ name: 'K', isActive: false, serviceTypes: ['CATERING'] });
+    await expect(svc.updateSettings('t1', 'a1', 'c1', { ...dto, cateringOrganizationId: 'o4' })).rejects.toThrow(/идэвхгүй/);
+    expect(s.tx.campSetting.upsert).not.toHaveBeenCalled();
+    s.tx.campOrganization.findFirst.mockResolvedValueOnce({ name: 'K', isActive: true, serviceTypes: ['CATERING'] });
+    s.tx.campSetting.upsert.mockResolvedValue({ ...row, cateringOrganizationId: 'o4' });
+    const res = await svc.updateSettings('t1', 'a1', 'c1', { ...dto, cateringOrganizationId: 'o4' });
+    expect(s.tx.campSetting.upsert.mock.calls[0][0].update.cateringOrganizationId).toBe('o4');
+    expect(res.cateringOrganizationId).toBe('o4');
+    await svc.updateSettings('t1', 'a1', 'c1', dto);
+    expect('cateringOrganizationId' in s.tx.campSetting.upsert.mock.calls[1][0].update).toBe(false);
+    await svc.updateSettings('t1', 'a1', 'c1', { ...dto, cateringOrganizationId: null });
+    expect(s.tx.campSetting.upsert.mock.calls[2][0].update.cateringOrganizationId).toBeNull();
   });
 
   it('meal location: давхар нэр → 409; үүсгэхэд tenant + camp', async () => {

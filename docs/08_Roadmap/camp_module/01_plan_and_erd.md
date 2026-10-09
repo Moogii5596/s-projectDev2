@@ -1,6 +1,6 @@
 # Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD · v4
 
-> 2026-10-09 · Төлөв: **ERD v4 батлагдсан · Шат 1–3 ДУУССАН · Дараагийнх: Шат 4** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
+> 2026-10-09 · Төлөв: **ERD v4 батлагдсан · Шат 1–4 ДУУССАН · Дараагийнх: Шат 5** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
 > Мөрдөх: `docs/08_Roadmap/00_rules_and_context.md` (RULE-01~20), `docs/03_Data_Models_and_Security/03_Module_Template.md`,
 > lessons_learned [RLS-004] (PERMISSIVE TO app_user + FORCE + GRANT), [MIG-001] (`prisma db push` ХОРИОТОЙ — зөвхөн supabase migration)
 
@@ -76,7 +76,7 @@ erDiagram
 
 **Тохиргоо ба мастер өгөгдөл**
 - `camps` — code, name, location, is_active
-- `camp_settings` — camp_id (1:1), vat_rate (10), changeover_weekday (3 = Лхагва), roster_on_days (14), roster_off_days (14), meal_order_cutoff_time, default_meal_location_id (кемп гал тогоо)
+- `camp_settings` — camp_id (1:1), vat_rate (10), changeover_weekday (3 = Лхагва), roster_on_days (14), roster_off_days (14), meal_order_cutoff_time, default_meal_location_id (кемп гал тогоо), catering_organization_id *(Шат 4 — сэлбэгийн зардал үүнд)*
 - `camp_meal_locations` *(шинэ)* — camp_id, name (Кемп гал тогоо, Уулын хэсэг …), is_active · UNIQUE(camp, name)
 - `camp_departments` *(шинэ)* — camp_id, code, name, **meal_location_id**, is_active · UNIQUE(camp, code)
 - `camp_department_shift_patterns` *(шинэ)* — department_id, day_from, day_to (ээлжийн 1..14 дэх өдөр), shift `DAY|NIGHT`
@@ -85,7 +85,7 @@ erDiagram
   - Ээлжийн өдрийн дугаар: багийн ирсэн Лхагва = 0, Пүрэв = 1 … Лхагва = 14 (сүүлийн ажлын өдөр), **явах Пүрэв = 15**; мөчлөг = on + off = 28
   - Байршлыг солиход өмнөх захиалга өөрчлөгдөхгүй (захиалгын мөрөнд байршил snapshot-оор хадгалагдана)
 - `camp_buildings`, `camp_rooms` (capacity > 0, status `ACTIVE|MAINTENANCE|INACTIVE`)
-- `camp_organizations` — name, reg_number, org_type `MAIN|SUBCONTRACTOR|CONTRACTOR`, is_disposal_point, contact, is_active
+- `camp_organizations` — name, reg_number, org_type `MAIN|SUBCONTRACTOR|CONTRACTOR`, service_types `CampOrgServiceType[]` (`CATERING|WASTE_TRANSPORT|SEWAGE_TRANSPORT|WASTE_DISPOSAL|SEWAGE_DISPOSAL|OTHER`; Шат 4-д is_disposal_point-ийг орлосон), contact, is_active
 - `camp_crews` — camp_id, code (A/B/C/D), roster_anchor_date (энэ багийн ирэх нэг Лхагва)
 - `camp_employees` — organization_id, department_id, crew_id?, employee_code (импортын түлхүүр), full_name, position, phone, status
 
@@ -109,7 +109,7 @@ erDiagram
 
 **Үндсэн хөрөнгө** — `camp_asset_categories`, `camp_assets`, `camp_asset_movements` (өмнөхтэй адил)
 
-**Засвар** — `camp_maintenance_requests`, `camp_maintenance_parts` (source `MINE_SUPPLIED|CATERING_PURCHASED`; зөвхөн CATERING_PURCHASED нь CLOSED болоход зардалд)
+**Засвар** — `camp_maintenance_requests`, `camp_maintenance_parts` (source `MINE_SUPPLIED|CATERING_PURCHASED`; зөвхөн CATERING_PURCHASED нь CLOSED болоход зардалд); хүсэлт `blocks_room` *(Шат 4)* — өрөөг засварт оруулах эсэх
 
 **Гэрээ** — `camp_contracts`, `camp_contract_items` (`SEWAGE_TRANSPORT|SEWAGE_DISPOSAL|WASTE_TRANSPORT|WASTE_DISPOSAL|MEAL`; `TRIP|M3|TON|PERSON_DAY`), `camp_contract_item_prices` (effective_from, unit_price, vat_included)
 
@@ -235,7 +235,37 @@ erDiagram
 | `GET room-allocations`, `POST room-allocations`, `POST room-allocations/:id/end`, `GET room-board?date=` | бичих: `room.manage` |
 | `GET presence?date=` | кемп |
 
-### Шат 4 — Backend: хөрөнгө, засвар (+ сэлбэгийн зардал) → тест ногоон
+### Шат 4 — Backend: хөрөнгө, засвар (+ сэлбэгийн зардал)
+- [x] 4.0 [VALID-001] үлдэгдэл: `configureApp` (pipe + prefix + multipart) — `main.ts` ба БҮХ integration spec нэг функц ашиглана
+- [x] 4.1 Migration `20261010002`: `service_types[]` (is_disposal_point → өгөгдөл шилжинэ), `camp_settings.catering_organization_id`, `blocks_room`, сэлбэгийн trigger `FOR SHARE`; байгууллага/тохиргооны API
+- [x] 4.2 `costs/vat.ts` (`computeVat`, ROUND_HALF_UP, net + vat = gross) + `cost-entry-writer.ts` (Шат 5-6 дахин ашиглана)
+- [x] 4.3 Хөрөнгө: ангилал (tenant), бүртгэл, шилжүүлэх (түүх), актлах
+- [x] 4.4 Засвар: `ZAS-` дугаар, төлвийн машин (`maintenance-flow.ts`), өрөөний түгжээ, сэлбэг, хаахад зардал
+- [x] 4.5a Unit 46 (нийт 421), mutation 8/8, HTTP wiring 5/5, DB race (хаах ↔ сэлбэг) 2 чиглэлд, tenant CASCADE, app_user RLS
+- [x] 4.5b Integration: `camp-assets-maintenance` + бүх хуучин spec (`configureApp`) ✅ (2026-10-09, хэрэглэгчийн машин дээр)
+- [x] 4.6 `tsc`, `eslint`, баримт
+
+#### Шат 4 — шийдвэрүүд (2026-10-09, хэрэглэгч баталсан + Lead Dev)
+- Байгууллага олон үйлчилгээний төрөлтэй (`service_types`). Кемпийн тохиргооны катеринг байгууллага нь CATERING төрөлтэй, идэвхтэй байх ёстой; ашиглагдаж байхад CATERING-ийг хасах / идэвхгүй болгох → 409
+- Засвар үүсгэхдээ `blocksRoom` сонгоно → өрөө `MAINTENANCE`. DONE / CANCELLED болоход өөр түгжих нээлттэй засвар үлдээгүй бол `ACTIVE`; reopen → дахин түгжинэ. Өрөөний мөрийг `FOR UPDATE`-аар түгжиж зэрэгцээ суллалтыг цэгцэлнэ. Түгжээтэй өрөөг гараар MAINTENANCE-ээс гаргах → 409. INACTIVE өрөөг түгжих → 409. Өрөөнд хүн байрлаж байвал `warnings`
+- Дугаар `ZAS-{campCode}-{YYYY}-{NNNN}` — кемп+он тус бүр advisory lock; он = Улаанбаатарын огноо; `starts_with` (LIKE биш: код `_` агуулж болно)
+- Урсгал: OPEN →start→ IN_PROGRESS →complete→ DONE →close→ CLOSED; DONE →reopen→ IN_PROGRESS; OPEN/IN_PROGRESS →cancel (шалтгаантай)→ CANCELLED. start/complete = `maintenance.parts`, reopen/close = `maintenance.close`, cancel/засах = үүсгэсэн хүн эсвэл `maintenance.close`. Шилжилт бүр `updateMany where status = уншсан` → зэрэгцээ өөрчлөлтөд 409
+- Хаах: зөвхөн CATERING_PURCHASED сэлбэг → `camp_cost_entries` (катеринг байгууллага, кемпийн НӨАТ, өнөөдөр, хаасан хүн). Катерингийн сэлбэг байгаа ч катеринг байгууллага тохируулаагүй → 409. Төлвийг ЭХЛЭЭД CLOSED болгоод дараа нь сэлбэг уншина + сэлбэгийн trigger `FOR SHARE` → хаах үеийн зардал сэлбэгийн жагсаалттай үргэлж таарна (2 чиглэлийн race DB дээр шалгагдсан)
+- Сэлбэг OPEN / IN_PROGRESS / DONE үед засагдана (хаахаас өмнө залруулах); катерингийн сэлбэгт үнэ заавал
+- Хөрөнгө: байршил зөвхөн move / write-off-оор өөрчлөгдөж түүх бичигдэнэ (анхны байршуулалт ч). Актлагдсан хөрөнгө түгжигдэнэ; нээлттэй засвартай хөрөнгийг актлахгүй (409); засварт байгаа өрөөнд хөрөнгө байрлуулж болно. Зөвхөн хөрөнгө өгсөн засвар түүний одоогийн өрөөг авна
+- Хөрөнгийн ангилал = tenant түвшний лавлах: аль нэг кемпэд `asset.manage` эрхтэй бол удирдана
+
+#### Шат 4 — API
+| Endpoint | Эрх |
+|---|---|
+| `GET/POST /camp/asset-categories`, `PATCH /camp/asset-categories/:id` | унших: аль нэг кемп · бичих: аль нэг кемпэд `asset.manage` |
+| `GET camps/:campId/assets?roomId=<uuid\|warehouse>&categoryId&condition&q&cursor&limit`, `GET .../assets/:id`, `GET .../assets/:id/movements` | кемп |
+| `POST .../assets`, `PATCH .../assets/:id`, `POST .../assets/:id/move` (`toRoomId` null = агуулах), `POST .../assets/:id/write-off` (`reason`) | `asset.manage` |
+| `GET camps/:campId/maintenance?status&priority&roomId&assetId&q&cursor&limit`, `GET .../maintenance/:id` (сэлбэг + зардлын урьдчилсан тооцоо) | кемп |
+| `POST .../maintenance` (`roomId?`, `assetId?`, `title`, `priority?`, `blocksRoom?`) | `maintenance.create` |
+| `PATCH .../maintenance/:id` (гарчиг/тайлбар/зэрэглэл), `POST .../:id/cancel` (`reason`) | үүсгэсэн хүн эсвэл `maintenance.close` |
+| `POST .../:id/start`, `POST .../:id/complete`, `POST/PATCH/DELETE .../:id/parts[/:partId]` | `maintenance.parts` |
+| `POST .../:id/reopen`, `POST .../:id/close` | `maintenance.close` |
 ### Шат 5 — Backend: гэрээ, `ContractPricingService`, `VatCalculator`, `CostEntryWriter` → тест ногоон
 ### Шат 6 — Backend: бохир ус / хог / хоолны захиалга (ORDERED → ACCEPTED) → тест ногоон
 ### Шат 7 — Backend: зардлын тайлан (байгууллага → гэрээ → үйлчилгээ, net/НӨАТ/нийт), тооцоо нийлэх акт, Excel → тест ногоон

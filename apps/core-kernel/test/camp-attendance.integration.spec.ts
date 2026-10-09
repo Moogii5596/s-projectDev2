@@ -12,7 +12,7 @@
  */
 import { Test } from '@nestjs/testing';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import { ArgumentsHost, ExceptionFilter, HttpException, ValidationPipe } from '@nestjs/common';
+import { ArgumentsHost, ExceptionFilter, HttpException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import supertest from 'supertest';
 import ExcelJS from 'exceljs';
@@ -24,7 +24,7 @@ import { REDIS_CLIENT } from '../src/db/redis.module';
 import { createRedisMock } from './helpers/redis-mock';
 import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
-import { registerMultipart } from '../src/common/http/multipart';
+import { configureApp } from '../src/common/http/configure-app';
 
 const STAMP = Date.now();
 const SLUG = `camp-att-it-${STAMP}`;
@@ -79,12 +79,8 @@ beforeAll(async () => {
     .useValue(createRedisMock())
     .compile();
   app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
-  // main.ts-тэй ИЖИЛ [VALID-001]
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, transformOptions: { enableImplicitConversion: true } }),
-  );
-  app.setGlobalPrefix('api/v1');
-  await registerMultipart(app);
+  // main.ts-тэй ИЖИЛ тохиргоо (pipe, prefix, multipart) [VALID-001]
+  await configureApp(app);
   app.useGlobalFilters({
     catch(exception: unknown, host: ArgumentsHost) {
       const res = host.switchToHttp().getResponse() as any;

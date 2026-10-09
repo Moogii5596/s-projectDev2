@@ -24,6 +24,10 @@ export class UpdateCampSettingsDto {
 
   @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'defaultMealLocationId UUID байх ёстой' })
   defaultMealLocationId!: string | null;
+
+  /** Катерингийн үйлчилгээ үзүүлэгч (CATERING төрөлтэй байгууллага). Өгөөгүй = өөрчлөхгүй, null = арилгах */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'cateringOrganizationId UUID байх ёстой' })
+  cateringOrganizationId?: string | null;
 }
 
 export class CreateMealLocationDto {

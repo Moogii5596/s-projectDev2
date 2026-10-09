@@ -1,5 +1,5 @@
 -- ============================================================
--- Camp Module · Шат 1 — DB тест (97 шалгалт): RLS (app_user), composite FK (D2), EXCLUDE, CHECK, trigger, seed, CASCADE
+-- Camp Module · Шат 1 (+4.1) — DB тест (99 шалгалт): RLS (app_user), composite FK (D2), EXCLUDE, CHECK, trigger, seed, CASCADE
 -- ============================================================
 -- Цэвэр/local DB дээр (migration up хийсний дараа) ажиллуулна. Өөрийн 2 tenant үүсгээд төгсгөлд устгана (дахин ажиллуулж болно).
 -- Windows (PowerShell) — файлыг контейнер руу ХУУЛЖ ажиллуулна (pipe БИШ) [ENV-009], superuser-ээр (SET ROLE app_user) [TEST-007]:
@@ -121,11 +121,11 @@ SELECT t_fail($$INSERT INTO camp_rooms (tenant_id, camp_id, building_id, room_no
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-1000-0000-0000-000000000001', 'aaaaaaaa-1300-0000-0000-000000000009', '1', 2)$$, '%fk_camp_rooms_building%');
 SELECT t_fail($$INSERT INTO camp_rooms (tenant_id, camp_id, building_id, room_no, capacity) VALUES
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-1000-0000-0000-000000000001', 'aaaaaaaa-1300-0000-0000-000000000001', '102', 0)$$, '%capacity_check%');
-INSERT INTO camp_organizations (id, tenant_id, name, reg_number, org_type, is_disposal_point) VALUES
-  ('aaaaaaaa-1500-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', 'Уурхай ХХК', '1111111', 'MAIN', false),
-  ('aaaaaaaa-1500-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', 'Тээвэр ХХК', '2222222', 'CONTRACTOR', false),
-  ('aaaaaaaa-1500-0000-0000-000000000003', 'aaaaaaaa-0000-0000-0000-000000000001', 'Цэвэрлэх байгууламж', '3333333', 'CONTRACTOR', true),
-  ('aaaaaaaa-1500-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001', 'Катеринг ХХК', '4444444', 'CONTRACTOR', false);
+INSERT INTO camp_organizations (id, tenant_id, name, reg_number, org_type, service_types) VALUES
+  ('aaaaaaaa-1500-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', 'Уурхай ХХК', '1111111', 'MAIN', '{}'),
+  ('aaaaaaaa-1500-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', 'Тээвэр ХХК', '2222222', 'CONTRACTOR', '{SEWAGE_TRANSPORT,WASTE_TRANSPORT}'),
+  ('aaaaaaaa-1500-0000-0000-000000000003', 'aaaaaaaa-0000-0000-0000-000000000001', 'Цэвэрлэх байгууламж', '3333333', 'CONTRACTOR', '{SEWAGE_DISPOSAL}'),
+  ('aaaaaaaa-1500-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001', 'Катеринг ХХК', '4444444', 'CONTRACTOR', '{CATERING}');
 SELECT t_fail($$INSERT INTO camp_organizations (tenant_id, name, reg_number, org_type) VALUES
   ('aaaaaaaa-0000-0000-0000-000000000001', 'Давхар', '1111111', 'MAIN')$$, '%uq_camp_organizations_reg%');
 INSERT INTO camp_crews (id, tenant_id, camp_id, code, roster_anchor_date) VALUES
@@ -203,6 +203,10 @@ SELECT t_fail($$INSERT INTO camp_asset_movements (tenant_id, camp_id, asset_id, 
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-1000-0000-0000-000000000001', 'aaaaaaaa-2100-0000-0000-000000000001', NULL, NULL, 'aaaaaaaa-0000-0000-0000-0000000000a1')$$, '%chk_camp_asset_movements_rooms%');
 SELECT t_fail($$INSERT INTO camp_maintenance_requests (tenant_id, camp_id, request_no, title, reported_by) VALUES
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-1000-0000-0000-000000000001', 'MR-0', 'x', 'aaaaaaaa-0000-0000-0000-0000000000a1')$$, '%chk_camp_maintenance_target%');
+SELECT t_fail($$INSERT INTO camp_maintenance_requests (tenant_id, camp_id, request_no, asset_id, title, reported_by, blocks_room) VALUES
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-1000-0000-0000-000000000001', 'MR-B', 'aaaaaaaa-2100-0000-0000-000000000001', 'x', 'aaaaaaaa-0000-0000-0000-0000000000a1', true)$$, '%chk_camp_maintenance_blocks_room%');
+SELECT t_fail($$INSERT INTO camp_organizations (tenant_id, name, org_type, service_types) VALUES
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'x', 'MAIN', ARRAY['CATERING', NULL]::"CampOrgServiceType"[])$$, '%chk_camp_organizations_services_nonull%');
 INSERT INTO camp_maintenance_requests (id, tenant_id, camp_id, request_no, room_id, title, reported_by, status) VALUES
   ('aaaaaaaa-2200-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-1000-0000-0000-000000000001', 'MR-1', 'aaaaaaaa-1400-0000-0000-000000000001', 'Ус гоожиж байна', 'aaaaaaaa-0000-0000-0000-0000000000a1', 'DONE');
 SELECT t_fail($$INSERT INTO camp_maintenance_parts (tenant_id, request_id, part_name, quantity, source, created_by) VALUES

@@ -16,13 +16,28 @@ import { CampAttendanceService } from './attendance/camp-attendance.service';
 import { CampShiftsService } from './attendance/camp-shifts.service';
 import { CampRoomsService } from './attendance/camp-rooms.service';
 import { CampPresenceService } from './attendance/camp-presence.service';
+import { CampAssetCategoriesController, CampAssetsController } from './assets/camp-assets.controller';
+import { CampAssetsService } from './assets/camp-assets.service';
+import { CampMaintenanceController } from './maintenance/camp-maintenance.controller';
+import { CampMaintenanceService } from './maintenance/camp-maintenance.service';
 
 /**
- * Camp Module — Шат 2 (эрх, тохиргоо, мастер өгөгдөл), Шат 3 (ирц, ээлж, өрөө, хоолны суурь тоо). DatabaseModule, AppCacheModule нь global.
+ * Camp Module — Шат 2 (эрх, тохиргоо, мастер өгөгдөл), Шат 3 (ирц, ээлж, өрөө, хоолны суурь тоо),
+ * Шат 4 (үндсэн хөрөнгө, засвар + сэлбэгийн зардал). DatabaseModule, AppCacheModule нь global.
  * Guard/interceptor нь APP_GUARD-аар (RULE-07) — controller-д decorator хэрэггүй.
  */
 @Module({
-  controllers: [CampRbacController, CampSettingsController, CampsController, CampOrganizationsController, CampMasterController, CampAttendanceController],
+  controllers: [
+    CampRbacController,
+    CampSettingsController,
+    CampsController,
+    CampOrganizationsController,
+    CampMasterController,
+    CampAttendanceController,
+    CampAssetCategoriesController,
+    CampAssetsController,
+    CampMaintenanceController,
+  ],
   providers: [
     CampAccessService,
     CampRbacService,
@@ -37,6 +52,8 @@ import { CampPresenceService } from './attendance/camp-presence.service';
     CampShiftsService,
     CampRoomsService,
     CampPresenceService,
+    CampAssetsService,
+    CampMaintenanceService,
   ],
   exports: [CampAccessService, CampPresenceService],
 })

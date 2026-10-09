@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { CampMaintenanceStatus, CampRoomStatus } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
@@ -133,6 +134,17 @@ export class CampFacilitiesService {
             select: { id: true },
           });
           if (dup) throw new ConflictException(`"${dto.roomNo}" дугаартай өрөө энэ байранд аль хэдийн байна`);
+        }
+        // Шат 4: өрөөг түгжсэн (blocks_room) нээлттэй засвар байхад гараар MAINTENANCE-ээс гаргахгүй —
+        // засвар дуусах/цуцлагдахад автоматаар ACTIVE болно
+        if (dto.status !== undefined && dto.status !== CampRoomStatus.MAINTENANCE) {
+          const blocking = await tx.campMaintenanceRequest.findFirst({
+            where: { tenantId, roomId: id, blocksRoom: true, status: { in: [CampMaintenanceStatus.OPEN, CampMaintenanceStatus.IN_PROGRESS] } },
+            select: { requestNo: true },
+          });
+          if (blocking) {
+            throw new ConflictException(`Өрөө нээлттэй засвартай (${blocking.requestNo}) — засвар дуусахад автоматаар идэвхжинэ`);
+          }
         }
         return tx.campRoom.update({
           where: { id },

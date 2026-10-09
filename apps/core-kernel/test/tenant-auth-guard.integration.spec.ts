@@ -34,7 +34,7 @@
 
 import { Test } from '@nestjs/testing';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import { ValidationPipe, ExceptionFilter, ArgumentsHost, HttpException, UnauthorizedException } from '@nestjs/common';
+import { ExceptionFilter, ArgumentsHost, HttpException, UnauthorizedException } from '@nestjs/common';
 import supertest from 'supertest';
 import { createClient } from '@supabase/supabase-js';
 import { PrismaClient, TierType, UserRole } from '@prisma/client';
@@ -47,6 +47,7 @@ import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { AuthService } from '../src/auth/auth.service';
 import { AuthController } from '../src/auth/auth.controller';
+import { configureApp } from '../src/common/http/configure-app';
 
 // ── Redis mock — нийтлэг helper [TEST-003] (апп-ын бүх Redis командтай) ──
 const redisMock = createRedisMock();
@@ -136,10 +137,8 @@ beforeAll(async () => {
   app = moduleRef.createNestApplication<NestFastifyApplication>(
     new FastifyAdapter(),
   );
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, transform: true }),
-  );
-  app.setGlobalPrefix('api/v1');
+  // main.ts-тэй ИЖИЛ тохиргоо (pipe, prefix, multipart) [VALID-001]
+  await configureApp(app);
 
   // ── 3a. Global Exception Filter — app.init()-ын ӨМНӨ бүртгэх [FILTER-001] ──
   //    Fastify adapter: init()-ын дараа useGlobalFilters() дуудсан ч БҮРТГЭГДЭХГҮЙ!

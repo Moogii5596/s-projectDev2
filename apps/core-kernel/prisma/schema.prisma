@@ -567,6 +567,16 @@ enum CampOrgType {
   CONTRACTOR
 }
 
+/// Байгууллагын үйлчилгээний төрөл (олон байж болно) — 20261010002
+enum CampOrgServiceType {
+  CATERING
+  WASTE_TRANSPORT
+  SEWAGE_TRANSPORT
+  WASTE_DISPOSAL
+  SEWAGE_DISPOSAL
+  OTHER
+}
+
 enum CampEmployeeStatus {
   ACTIVE
   INACTIVE
@@ -813,12 +823,15 @@ model CampSetting {
   rosterOffDays         Int       @default(14) @map("roster_off_days") @db.SmallInt
   mealOrderCutoffTime   DateTime? @map("meal_order_cutoff_time") @db.Time(6)
   defaultMealLocationId String?   @map("default_meal_location_id") @db.Uuid
+  /// Катерингийн үйлчилгээ үзүүлэгч (CATERING төрөлтэй) — сэлбэгийн зардал үүнд бүртгэгдэнэ (20261010002)
+  cateringOrganizationId String?  @map("catering_organization_id") @db.Uuid
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   camp                Camp              @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_settings_camp")
   defaultMealLocation CampMealLocation? @relation(fields: [tenantId, campId, defaultMealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_settings_default_location")
+  cateringOrganization CampOrganization? @relation(fields: [tenantId, cateringOrganizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_settings_catering_org")
 
   @@unique([tenantId, campId], map: "uq_camp_settings_camp")
   @@map("camp_settings")
@@ -922,7 +935,8 @@ model CampOrganization {
   name            String
   regNumber       String?     @map("reg_number")
   orgType         CampOrgType @map("org_type")
-  isDisposalPoint Boolean     @default(false) @map("is_disposal_point")
+  /// Катеринг / хог-бохир ус тээвэрлэгч / хүлээн авах цэг … (is_disposal_point-ийг орлосон)
+  serviceTypes    CampOrgServiceType[] @default([]) @map("service_types")
   contactName     String?     @map("contact_name")
   phone           String?
   email           String?
@@ -930,13 +944,15 @@ model CampOrganization {
   createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz
 
-  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  employees   CampEmployee[]
-  contracts   CampContract[]
-  costEntries CampCostEntry[]
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employees       CampEmployee[]
+  contracts       CampContract[]
+  costEntries     CampCostEntry[]
+  cateringForCamps CampSetting[]
 
   @@unique([tenantId, id], map: "uq_camp_organizations_tenant_id")
   @@index([tenantId, isActive, name], map: "idx_camp_organizations_list")
+  @@index([serviceTypes], type: Gin, map: "idx_camp_organizations_services")
   @@map("camp_organizations")
 }
 
@@ -1213,6 +1229,8 @@ model CampMaintenanceRequest {
   closedBy     String?                 @map("closed_by") @db.Uuid
   closedAt     DateTime?               @map("closed_at") @db.Timestamptz
   cancelReason String?                 @map("cancel_reason")
+  /// true = өрөөг засварт оруулна (MAINTENANCE), DONE/CANCELLED болоход буцаана (20261010002)
+  blocksRoom   Boolean                 @default(false) @map("blocks_room")
   createdAt    DateTime                @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime                @updatedAt @map("updated_at") @db.Timestamptz
 

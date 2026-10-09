@@ -13,7 +13,7 @@
  */
 import { Test } from '@nestjs/testing';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import { ArgumentsHost, BadRequestException, ConflictException, ExceptionFilter, HttpException, ValidationPipe } from '@nestjs/common';
+import { ArgumentsHost, BadRequestException, ConflictException, ExceptionFilter, HttpException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import supertest from 'supertest';
 import { createClient } from '@supabase/supabase-js';
@@ -26,6 +26,7 @@ import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { CAMP_PERMISSION_CODES } from '../src/modules/camp/common/camp-permissions';
 import { toCampHttpError } from '../src/modules/camp/common/camp-errors';
+import { configureApp } from '../src/common/http/configure-app';
 
 const STAMP = Date.now();
 const SLUG = `camp-it-${STAMP}`;
@@ -71,11 +72,8 @@ beforeAll(async () => {
     .useValue(createRedisMock())
     .compile();
   app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
-  // main.ts-тэй ИЖИЛ тохиргоо [VALID-001] — implicit conversion-ийн алдааг тест барина
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, transformOptions: { enableImplicitConversion: true } }),
-  );
-  app.setGlobalPrefix('api/v1');
+  // main.ts-тэй ИЖИЛ тохиргоо (pipe, prefix, multipart) [VALID-001] — implicit conversion-ийн алдааг тест барина
+  await configureApp(app);
   app.useGlobalFilters({
     catch(exception: unknown, host: ArgumentsHost) {
       const res = host.switchToHttp().getResponse() as any;

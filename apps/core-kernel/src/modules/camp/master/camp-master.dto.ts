@@ -1,6 +1,7 @@
 import {
   ArrayMaxSize,
   ArrayMinSize,
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsEmail,
@@ -18,7 +19,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { CampEmployeeStatus, CampOrgType, CampRoomStatus, CampShiftType } from '@prisma/client';
+import { CampEmployeeStatus, CampOrgServiceType, CampOrgType, CampRoomStatus, CampShiftType } from '@prisma/client';
 import { ISO_DATE, toBool, trim, trimOrNull } from '../common/camp-dto.util';
 
 const CODE = /^[A-Za-z0-9._-]+$/;
@@ -120,8 +121,9 @@ export class CreateOrganizationDto {
   @IsEnum(CampOrgType, { message: 'orgType: MAIN | SUBCONTRACTOR | CONTRACTOR' })
   orgType!: CampOrgType;
 
-  @IsOptional() @IsBoolean()
-  isDisposalPoint?: boolean;
+  /** Үйлчилгээний төрөл (олон): CATERING, WASTE_TRANSPORT, SEWAGE_TRANSPORT, WASTE_DISPOSAL, SEWAGE_DISPOSAL, OTHER */
+  @IsOptional() @IsArray() @ArrayUnique() @ArrayMaxSize(6) @IsEnum(CampOrgServiceType, { each: true, message: 'serviceTypes буруу утга' })
+  serviceTypes?: CampOrgServiceType[];
 
   @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(200)
   contactName?: string | null;
@@ -143,8 +145,8 @@ export class UpdateOrganizationDto {
   @IsOptional() @IsEnum(CampOrgType)
   orgType?: CampOrgType;
 
-  @IsOptional() @IsBoolean()
-  isDisposalPoint?: boolean;
+  @IsOptional() @IsArray() @ArrayUnique() @ArrayMaxSize(6) @IsEnum(CampOrgServiceType, { each: true, message: 'serviceTypes буруу утга' })
+  serviceTypes?: CampOrgServiceType[];
 
   @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(200)
   contactName?: string | null;
@@ -161,7 +163,8 @@ export class UpdateOrganizationDto {
 
 export class QueryOrganizationsDto {
   @IsOptional() @Transform(toBool) @IsBoolean() activeOnly?: boolean;
-  @IsOptional() @Transform(toBool) @IsBoolean() disposalPoint?: boolean;
+  /** Тухайн үйлчилгээг үзүүлдэг байгууллагууд (жнь SEWAGE_DISPOSAL) */
+  @IsOptional() @IsEnum(CampOrgServiceType) serviceType?: CampOrgServiceType;
   @IsOptional() @IsEnum(CampOrgType) orgType?: CampOrgType;
 }
 

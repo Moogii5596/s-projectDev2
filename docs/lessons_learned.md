@@ -58,6 +58,7 @@
 | ENV-010 | Хавтас зөөсний дараа workspace module алга | `pnpm install` (junction бүтэн замтай) |
 | VALID-001 | `?x=false` → true (implicit conversion) | `@Transform(queryBool)` + тестийн pipe = main.ts |
 | PRISMA-003 | Prisma алдааны текст `\"` escape-тэй | хэвийн болгох + SQLSTATE-ээр таних |
+| CONC-001 | Snapshot бичих ↔ дэд мөр өөрчлөх race | эцэг мөрийг `FOR SHARE`; төлвийг эхэлж сольж дараа нь унш |
 
 ---
 
@@ -898,7 +899,15 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Алдаа:** main.ts-ийн ValidationPipe `transformOptions: { enableImplicitConversion: true }` — class-transformer нь `@Transform`-оос ӨМНӨ declared type-аар хөрвүүлнэ: `Boolean('false') === true`. `@Transform(({ value }) => value === 'true')` нь аль хэдийн `true` болсон утга авна → `?activeOnly=false` = шүүлттэй. Camp, vendor (`activeOnly`), inventory (`lowStock`), budget (`activeOnly`) — бүгд нөлөөлөгдсөн.
 **Яагаад нуугдсан:** integration тестүүд `new ValidationPipe({ whitelist: true, transform: true })` — main.ts-ээс ӨӨР тохиргоо (implicit conversion, forbidNonWhitelisted байхгүй).
 **Шийдэл:** `src/common/utils/query-bool.ts` → `queryBool` анхны утгыг (`obj[key]`) уншина; 4 модульд хэрэглэсэн. Camp integration тестүүд main.ts-тэй ИЖИЛ pipe ашигладаг болсон + регресс тест (хуучин кодоор унадгийг шалгасан).
-**Дүрэм:** (1) Query boolean → ЗААВАЛ `@Transform(queryBool)`. (2) Integration тестийн app тохиргоо (pipe, prefix, plugin) main.ts-тэй ИЖИЛ байх — өөр бол production алдааг нуудаг. (3) Үлдсэн integration spec-үүдийн pipe-ийг ч нийцүүлэх (санал).
+**Дүрэм:** (1) Query boolean → ЗААВАЛ `@Transform(queryBool)`. (2) Integration тестийн app тохиргоо (pipe, prefix, plugin) main.ts-тэй ИЖИЛ байх — өөр бол production алдааг нуудаг. (3) ✅ Шат 4.0: `src/common/http/configure-app.ts` → `main.ts` ба БҮХ integration spec `await configureApp(app)` (шинэ spec ч заавал).
+
+---
+
+### [CONC-001] 🔴 Snapshot бичих (засвар хаах → зардал) ба дэд мөр (сэлбэг) өөрчлөх race — trigger-ийн SELECT түгжээ авдаггүй
+**Илэрсэн:** Шат 4.4 дизайн шалгалт (Шат 1-ийн `camp_maintenance_parts_protect` trigger). Production-д гараагүй.
+**Алдаа:** Trigger хүсэлтийн төлвийг энгийн `SELECT`-ээр уншдаг байсан. READ COMMITTED-д: A transaction засварыг CLOSED болгож сэлбэгийг уншиж зардал бичиж байх зуур B transaction сэлбэг нэмбэл B-ийн trigger commit хийгдээгүй CLOSED-ийг харахгүй (DONE гэж харна) → сэлбэг нэмэгдэнэ, харин зардалд ОРОХГҮЙ → тайлан ба сэлбэгийн жагсаалт зөрнө.
+**Шийдэл:** (1) Migration `20261010002` §4: trigger `SELECT ... FOR SHARE` — хаах transaction-ийн мөрийн түгжээг хүлээгээд CLOSED-ийг харж татгалзана. (2) Хаах үед төлвийг ЭХЛЭЭД CLOSED болгож (мөр түгжигдэнэ), ДАРАА нь сэлбэг уншина → өмнө нь эхэлсэн сэлбэгийн transaction commit хийгдтэл UPDATE хүлээнэ. Хоёр чиглэлийг 2 psql session-оор шалгасан (хүлээгээд татгалзсан / хоцорсон сэлбэгийг харсан).
+**Дүрэм:** Эцэг мөрийн төлвөөс хамаарч дэд мөр бичихийг хориглох trigger/код → эцэг мөрийг `FOR SHARE` (эсвэл `FOR UPDATE`)-ээр унш. "Төлөв солих + дэд мөрөөс snapshot" үйлдэлд төлвийг эхэлж сольж, дараа нь дэд мөрийг унш. Нэгээс олон хүсэлт нэг нөөцийг (өрөөний төлөв) суллах/түгжих бол нөөцийн мөрийг `FOR UPDATE`-аар түгж.
 
 ---
 
@@ -906,6 +915,7 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-09 | §15: CONC-001 (засвар хаах ↔ сэлбэг race, trigger `FOR SHARE`); VALID-001 дүрэм (3) хэрэгжсэн (`configureApp`) |
 | 2026-10-09 | §15: VALID-001 (implicit conversion → boolean query буруу) |
 | 2026-10-09 | §15: PRISMA-003 (Prisma алдааны мессеж escape-тэй) |
 | 2026-10-09 | §15: ENV-009 (PowerShell pipe → кирилл `?`), TEST-007 (Supabase `postgres` superuser биш), ENV-010 (хавтас зөөхөд pnpm junction тасрах) |

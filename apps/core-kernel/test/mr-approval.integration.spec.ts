@@ -17,7 +17,6 @@
 import { Test } from '@nestjs/testing';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import {
-  ValidationPipe,
   ExceptionFilter,
   ArgumentsHost,
   HttpException,
@@ -32,6 +31,7 @@ import { REDIS_CLIENT } from '../src/db/redis.module';
 import { createRedisMock } from './helpers/redis-mock';
 import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
+import { configureApp } from '../src/common/http/configure-app';
 
 // ── Redis mock — нийтлэг helper [TEST-003] (апп-ын бүх Redis командтай) ──
 const redisMock = createRedisMock();
@@ -104,8 +104,8 @@ beforeAll(async () => {
     .compile();
 
   app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.setGlobalPrefix('api/v1');
+  // main.ts-тэй ИЖИЛ тохиргоо (pipe, prefix, multipart) [VALID-001]
+  await configureApp(app);
 
   app.useGlobalFilters({
     catch(exception: unknown, host: ArgumentsHost) {

@@ -7,7 +7,7 @@ import { UserRole } from '@prisma/client';
 import { CampAccessService } from '../camp-access.service';
 
 type ModelMock = Record<string, Mock>;
-export type TxMock = Record<string, ModelMock> & { $executeRaw: Mock };
+export type TxMock = Record<string, ModelMock> & { $executeRaw: Mock; $queryRaw: Mock };
 
 const DEFAULTS: Record<string, unknown> = {
   findFirst: null,
@@ -19,14 +19,17 @@ const DEFAULTS: Record<string, unknown> = {
   delete: {},
   deleteMany: { count: 0 },
   createMany: { count: 0 },
+  updateMany: { count: 1 },
 };
 
 export function createTx(): TxMock {
   const models: Record<string, ModelMock> = {};
   const executeRaw = vi.fn().mockResolvedValue(1);
+  const queryRaw = vi.fn().mockResolvedValue([]);
   return new Proxy({} as TxMock, {
     get(_t, prop: string) {
       if (prop === '$executeRaw') return executeRaw;
+      if (prop === '$queryRaw') return queryRaw;
       if (prop === 'then') return undefined;
       return (models[prop] ??= new Proxy({} as ModelMock, {
         get(m, method: string) {

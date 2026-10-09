@@ -86,6 +86,17 @@ export class CampAccessService {
     return actor.userId;
   }
 
+  /** Тухайн эрх аль НЭГ кемпэд (эсвэл бүх кемпэд) байвал — tenant түвшний лавлах (жнь хөрөнгийн ангилал) */
+  static hasInAnyCamp(perms: CampPermissionSet, code: CampPermission): boolean {
+    return CampAccessService.has(perms, null, code) || Object.values(perms.byCamp).some((p) => p.includes(code));
+  }
+
+  async requireInAnyCamp(tx: Tx, tenantId: string, authId: string, code: CampPermission): Promise<string> {
+    const actor = await this.resolve(tx, tenantId, authId);
+    if (!CampAccessService.hasInAnyCamp(actor.perms, code)) throw new ForbiddenException(`Энэ үйлдэлд ${code} эрх шаардлагатай`);
+    return actor.userId;
+  }
+
   /** Унших: тухайн кемпэд (null = аль нэг кемпэд) ямар нэг эрхтэй байх */
   async requireAccess(tx: Tx, tenantId: string, authId: string, campId: string | null): Promise<CampActor> {
     const actor = await this.resolve(tx, tenantId, authId);
