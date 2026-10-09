@@ -53,6 +53,8 @@
 | ARCH-001 | Mock тест integration нуусан | Бодит DB тест + wiring grep |
 | PROC-001 | Скрипт давхар ажилласан | `if new in s: continue` |
 | TEST-001 | env-д хамаарсан тест | `vi.stubEnv` + env-гүй ажиллуулж шалгах |
+| ENV-009 | PowerShell pipe кирилл → `?` | `docker cp` + `psql -f` |
+| TEST-007 | Supabase postgres superuser биш | RLS SQL тест → `supabase_admin` |
 
 ---
 
@@ -858,12 +860,28 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** "байхгүй"-г `null`-оор илэрхийлэх (`department: string | null = 'IT'`, `department !== null`); тест өөрийн урьдчилсан нөхцлийг шалгах (committed өөрчлөгдөөгүй).
 **Дүрэм:** Тестийн helper-т "утгагүй" гэсэн утгыг `undefined` биш `null`-оор дамжуулна; сөрөг тестэд "юу ч бичигдээгүй"-г assert хийнэ.
 
+
+## 15. Camp Module (2026-10-09)
+
+### [ENV-009] PowerShell pipe (`Get-Content ... | docker exec -i ... psql`) кирилл үсгийг `?` болгодог
+**Алдаа:** `camp_schema_test.sql`-ийг pipe-ээр өгөхөд NOTICE-ууд `????` болж гарсан — зөвхөн дэлгэц биш, **SQL текст өөрөө** эвдэрнэ (`'Кемп админ'` → `'?????'`) → өгөгдөл буруу бичигдэх / тест худал унах эрсдэлтэй.
+**Шалтгаан:** Windows PowerShell 5.1-ийн `$OutputEncoding` анхдагчаар US-ASCII — native програм руу pipe хийхэд ASCII-аас бусад тэмдэгт `?` болно.
+**Шийдэл:** Файлыг контейнер руу хуулж `-f`-ээр ажиллуулна: `docker cp file.sql "${db}:/tmp/x.sql"` → `docker exec $db psql ... -f /tmp/x.sql`. Гаралтыг уншихад `[Console]::OutputEncoding = [Text.UTF8Encoding]::new()`.
+**Дүрэм:** Монгол текст агуулсан SQL-ийг PowerShell pipe-ээр ХЭЗЭЭ Ч өгөхгүй.
+
+### [TEST-007] Supabase local-д `postgres` superuser биш → `SET ROLE app_user` хориотой
+**Алдаа:** `ERROR: permission denied to set role "app_user"` (RLS тест `app_user` болж шилжих үед).
+**Шалтгаан:** Supabase-ийн `postgres` role нь BYPASSRLS-тэй ч superuser биш, `app_user`-ийн гишүүн биш. Cloud-ийн цэвэр PostgreSQL дээр `postgres` = superuser байсан тул тест тэнд давсан — орчны ялгаа.
+**Шийдэл:** SQL-ээр RLS тест хийхдээ Supabase-ийн superuser `supabase_admin`-аар холбогдоно: `docker exec -e PGPASSWORD=postgres $db psql -h 127.0.0.1 -U supabase_admin ...`. (`GRANT app_user TO postgres` хийхгүй — role-ийн эрхийг байнга өөрчилнө.)
+**Дүрэм:** Supabase дээр ажиллах SQL скриптийг бичихдээ `postgres` = superuser гэж бүү тооц (RLS-002-той холбоотой: bypass нь BYPASSRLS-ээс, superuser-ээс биш).
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-09 | §15: ENV-009 (PowerShell pipe → кирилл `?`), TEST-007 (Supabase `postgres` superuser биш) |
 | 2026-10-08 | ENV-007 (Playwright Chromium), ENV-008 (web-shell `VITE_API_BASE_URL` → CORS) нэмэв |
 | 2026-10-08 | §12: SEED-001, ENV-001~005 нэмэв (шинэ машин дээр Supabase on Docker тохиргоо) |
 | 2026-10-08 | TEST-006 нэмэв |

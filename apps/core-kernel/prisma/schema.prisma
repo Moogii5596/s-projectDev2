@@ -46,6 +46,37 @@ model Tenant {
   budgetCommitments    BudgetCommitment[]   // Phase 4.1
   inventoryItems       InventoryItem[]      // Phase 4.2
   vendors              Vendor[]             // Phase 4.3
+  // Camp Module (20261009001..006)
+  campRoles                   CampRole[]
+  campRolePermissions         CampRolePermission[]
+  campUserRoles               CampUserRole[]
+  camps                       Camp[]
+  campMealLocations           CampMealLocation[]
+  campSettings                CampSetting[]
+  campDepartments             CampDepartment[]
+  campDepartmentShiftPatterns CampDepartmentShiftPattern[]
+  campBuildings               CampBuilding[]
+  campRooms                   CampRoom[]
+  campOrganizations           CampOrganization[]
+  campCrews                   CampCrew[]
+  campEmployees               CampEmployee[]
+  campShiftAdjustments        CampShiftAdjustment[]
+  campMovementImports         CampMovementImport[]
+  campMovements               CampMovement[]
+  campStays                   CampStay[]
+  campRoomAllocations         CampRoomAllocation[]
+  campAssetCategories         CampAssetCategory[]
+  campAssets                  CampAsset[]
+  campAssetMovements          CampAssetMovement[]
+  campMaintenanceRequests     CampMaintenanceRequest[]
+  campMaintenanceParts        CampMaintenancePart[]
+  campContracts               CampContract[]
+  campContractItems           CampContractItem[]
+  campContractItemPrices      CampContractItemPrice[]
+  campHaulRecords             CampHaulRecord[]
+  campMealOrders              CampMealOrder[]
+  campMealOrderLines          CampMealOrderLine[]
+  campCostEntries             CampCostEntry[]
 
   @@map("tenants")
 }
@@ -75,7 +106,24 @@ model CoreUser {
 
   superAdmin         SuperAdmin?          // Sprint 4
 
+  // Camp Module — (tenant_id, id) composite FK-ууд (D2)
+  campUserRoles             CampUserRole[]           @relation("CampUserRoleUser")
+  campShiftAdjustments      CampShiftAdjustment[]    @relation("CampShiftAdjustmentCreatedBy")
+  campImportsUploaded       CampMovementImport[]     @relation("CampMovementImportUploadedBy")
+  campImportsConfirmed      CampMovementImport[]     @relation("CampMovementImportConfirmedBy")
+  campMovementsCreated      CampMovement[]           @relation("CampMovementCreatedBy")
+  campAssetMovements        CampAssetMovement[]      @relation("CampAssetMovementMovedBy")
+  campMaintenanceReported   CampMaintenanceRequest[] @relation("CampMaintenanceReportedBy")
+  campMaintenanceClosed     CampMaintenanceRequest[] @relation("CampMaintenanceClosedBy")
+  campMaintenanceParts      CampMaintenancePart[]    @relation("CampMaintenancePartCreatedBy")
+  campHaulCreated           CampHaulRecord[]         @relation("CampHaulCreatedBy")
+  campHaulReviewed          CampHaulRecord[]         @relation("CampHaulReviewedBy")
+  campMealOrdersOrdered     CampMealOrder[]          @relation("CampMealOrderOrderedBy")
+  campMealOrdersReviewed    CampMealOrder[]          @relation("CampMealOrderReviewedBy")
+  campCostEntries           CampCostEntry[]          @relation("CampCostEntryCreatedBy")
+
   @@unique([tenantId, email])
+  @@unique([tenantId, id], map: "uq_core_users_tenant_id") // Camp D2 (20261009001)
   @@map("core_users")
 }
 
@@ -486,4 +534,940 @@ model Vendor {
 
   @@index([tenantId, isActive, name], map: "idx_vendors_tenant")
   @@map("vendors")
+}
+
+// ============================================================
+// Camp Module — Шат 1 (supabase/migrations/20261009001..006_camp_*.sql) — 2026-10-09
+// ⚠️ Schema өөрчлөлт = ЗӨВХӨН supabase migration [MIG-001]. `prisma db push` ХОРИОТОЙ:
+//    EXCLUDE (daterange/int4range), NULLS NOT DISTINCT unique, partial index, CHECK, trigger, RLS — Prisma-д илэрхийлэгдэхгүй.
+// D2: tenant хоорондын холбоос → (tenantId, x) composite FK. id-г DB үүсгэнэ (uuid_generate_v7, RULE-11).
+// D1: enum утга = Prisma нэр (UPPERCASE, @map хэрэггүй) → `import { CampHaulStatus } from '@prisma/client'` (RULE-02).
+// ============================================================
+
+enum CampRoleCode {
+  CAMP_ADMIN
+  CAMP_MANAGER
+  CATERING_ADMIN
+}
+
+enum CampShiftType {
+  DAY
+  NIGHT
+}
+
+enum CampRoomStatus {
+  ACTIVE
+  MAINTENANCE
+  INACTIVE
+}
+
+enum CampOrgType {
+  MAIN
+  SUBCONTRACTOR
+  CONTRACTOR
+}
+
+enum CampEmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CampShiftAdjustmentReason {
+  EARLY_ARRIVAL
+  SHIFT_CHANGE
+  OTHER
+}
+
+enum CampImportStatus {
+  PREVIEW
+  CONFIRMED
+  CANCELLED
+}
+
+enum CampMovementDirection {
+  ARRIVAL
+  DEPARTURE
+}
+
+enum CampMovementKind {
+  ROSTER
+  OFF_ROSTER
+}
+
+enum CampMealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  NIGHT
+}
+
+enum CampAssetCondition {
+  GOOD
+  DAMAGED
+  WRITTEN_OFF
+}
+
+enum CampMaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum CampMaintenanceStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CLOSED
+  CANCELLED
+}
+
+enum CampPartSource {
+  MINE_SUPPLIED
+  CATERING_PURCHASED
+}
+
+enum CampContractStatus {
+  DRAFT
+  ACTIVE
+  TERMINATED
+}
+
+enum CampServiceType {
+  SEWAGE_TRANSPORT
+  SEWAGE_DISPOSAL
+  WASTE_TRANSPORT
+  WASTE_DISPOSAL
+  MEAL
+}
+
+enum CampContractUnit {
+  TRIP
+  M3
+  TON
+  PERSON_DAY
+}
+
+enum CampHaulType {
+  SEWAGE
+  WASTE
+}
+
+enum CampVolumeUnit {
+  M3
+  TON
+}
+
+enum CampHaulStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum CampMealOrderStatus {
+  DRAFT
+  ORDERED
+  ACCEPTED
+  REJECTED
+}
+
+enum CampCostSource {
+  HAUL
+  MEAL
+  MAINTENANCE_PART
+}
+
+// ── 1.1 RBAC ─────────────────────────────────────────────────
+
+/// Permission каталог — tenant-гүй, migration-аар л нэмэгдэнэ (app_user: зөвхөн SELECT)
+model CampPermission {
+  code      String   @id
+  name      String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  rolePermissions CampRolePermission[]
+
+  @@map("camp_permissions")
+}
+
+/// Системийн роль (isSystem) устгагдахгүй, systemCode солигдохгүй (trigger)
+model CampRole {
+  id          String        @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId    String        @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  isSystem    Boolean       @default(false) @map("is_system")
+  systemCode  CampRoleCode? @map("system_code")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  permissions CampRolePermission[]
+  userRoles   CampUserRole[]
+
+  @@unique([tenantId, id], map: "uq_camp_roles_tenant_id")
+  @@unique([tenantId, name], map: "uq_camp_roles_tenant_name")
+  @@unique([tenantId, systemCode], map: "uq_camp_roles_tenant_code")
+  @@map("camp_roles")
+}
+
+model CampRolePermission {
+  tenantId       String   @map("tenant_id") @db.Uuid
+  roleId         String   @map("role_id") @db.Uuid
+  permissionCode String   @map("permission_code")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  role       CampRole       @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_role_permissions_role")
+  permission CampPermission @relation(fields: [permissionCode], references: [code], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([roleId, permissionCode], map: "pk_camp_role_permissions")
+  @@index([tenantId, roleId], map: "idx_camp_role_permissions_tenant")
+  @@map("camp_role_permissions")
+}
+
+/// campId NULL = бүх кемп. UNIQUE (tenant, user, role, camp) NULLS NOT DISTINCT — зөвхөн migration-д (uq_camp_user_roles)
+model CampUserRole {
+  id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  campId    String?  @map("camp_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user   CoreUser @relation("CampUserRoleUser", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_roles_user")
+  role   CampRole @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_roles_role")
+  camp   Camp?    @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_roles_camp")
+
+  @@index([tenantId, roleId], map: "idx_camp_user_roles_role")
+  @@map("camp_user_roles")
+}
+
+// ── 1.2 Тохиргоо ба мастер өгөгдөл ───────────────────────────
+
+model Camp {
+  id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  code      String
+  name      String
+  location  String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  settings        CampSetting?
+  userRoles       CampUserRole[]
+  mealLocations   CampMealLocation[]
+  departments     CampDepartment[]
+  buildings       CampBuilding[]
+  crews           CampCrew[]
+  employees       CampEmployee[]
+  movementImports CampMovementImport[]
+  assets          CampAsset[]
+  maintenance     CampMaintenanceRequest[]
+  contracts       CampContract[]
+  haulRecords     CampHaulRecord[]
+  mealOrders      CampMealOrder[]
+  costEntries     CampCostEntry[]
+
+  @@unique([tenantId, id], map: "uq_camps_tenant_id")
+  @@unique([tenantId, code], map: "uq_camps_tenant_code")
+  @@map("camps")
+}
+
+model CampMealLocation {
+  id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  campId    String   @map("camp_id") @db.Uuid
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp            Camp                 @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_meal_locations_camp")
+  defaultForCamps CampSetting[]
+  departments     CampDepartment[]
+  mealOrderLines  CampMealOrderLine[]
+
+  @@unique([tenantId, id], map: "uq_camp_meal_locations_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_meal_locations_camp_id")
+  @@unique([tenantId, campId, name], map: "uq_camp_meal_locations_name")
+  @@map("camp_meal_locations")
+}
+
+model CampSetting {
+  id                    String    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  campId                String    @map("camp_id") @db.Uuid
+  vatRate               Decimal   @default(10) @map("vat_rate") @db.Decimal(5, 2)
+  /// EXTRACT(DOW): 0 = Ням … 3 = Лхагва
+  changeoverWeekday     Int       @default(3) @map("changeover_weekday") @db.SmallInt
+  rosterOnDays          Int       @default(14) @map("roster_on_days") @db.SmallInt
+  rosterOffDays         Int       @default(14) @map("roster_off_days") @db.SmallInt
+  mealOrderCutoffTime   DateTime? @map("meal_order_cutoff_time") @db.Time(6)
+  defaultMealLocationId String?   @map("default_meal_location_id") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp                Camp              @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_settings_camp")
+  defaultMealLocation CampMealLocation? @relation(fields: [tenantId, campId, defaultMealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_settings_default_location")
+
+  @@unique([tenantId, campId], map: "uq_camp_settings_camp")
+  @@map("camp_settings")
+}
+
+model CampDepartment {
+  id             String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  campId         String   @map("camp_id") @db.Uuid
+  code           String
+  name           String
+  mealLocationId String   @map("meal_location_id") @db.Uuid
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant        Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp          Camp                         @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_departments_camp")
+  mealLocation  CampMealLocation             @relation(fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_departments_location")
+  shiftPatterns CampDepartmentShiftPattern[]
+  employees     CampEmployee[]
+
+  @@unique([tenantId, id], map: "uq_camp_departments_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_departments_camp_id")
+  @@unique([tenantId, campId, code], map: "uq_camp_departments_code")
+  @@index([tenantId, mealLocationId], map: "idx_camp_departments_location")
+  @@map("camp_departments")
+}
+
+/// Ээлжийн өдрийн дугаар 1..roster_on_days. Давхцал → EXCLUDE (migration); цоорхойгүй бүрхэлт → app
+model CampDepartmentShiftPattern {
+  id           String        @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId     String        @map("tenant_id") @db.Uuid
+  departmentId String        @map("department_id") @db.Uuid
+  dayFrom      Int           @map("day_from") @db.SmallInt
+  dayTo        Int           @map("day_to") @db.SmallInt
+  shift        CampShiftType
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  department CampDepartment @relation(fields: [tenantId, departmentId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_shift_patterns_department")
+
+  @@index([tenantId, departmentId, dayFrom], map: "idx_camp_shift_patterns_department")
+  @@map("camp_department_shift_patterns")
+}
+
+model CampBuilding {
+  id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  campId    String   @map("camp_id") @db.Uuid
+  code      String
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp   Camp       @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_buildings_camp")
+  rooms  CampRoom[]
+
+  @@unique([tenantId, id], map: "uq_camp_buildings_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_buildings_camp_id")
+  @@unique([tenantId, campId, code], map: "uq_camp_buildings_code")
+  @@map("camp_buildings")
+}
+
+/// Дүүргэлт (VACANT/PARTIAL/FULL) хадгалахгүй — хуваарилалт × байгаа эсэхээс тооцоолно
+model CampRoom {
+  id         String         @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String         @map("tenant_id") @db.Uuid
+  campId     String         @map("camp_id") @db.Uuid
+  buildingId String         @map("building_id") @db.Uuid
+  roomNo     String         @map("room_no")
+  floor      Int?           @db.SmallInt
+  capacity   Int            @db.SmallInt
+  status     CampRoomStatus @default(ACTIVE)
+  note       String?
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant             Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  building           CampBuilding             @relation(fields: [tenantId, campId, buildingId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_rooms_building")
+  allocations        CampRoomAllocation[]
+  assets             CampAsset[]
+  assetMovementsFrom CampAssetMovement[]      @relation("CampAssetMovementFrom")
+  assetMovementsTo   CampAssetMovement[]      @relation("CampAssetMovementTo")
+  maintenance        CampMaintenanceRequest[]
+
+  @@unique([tenantId, id], map: "uq_camp_rooms_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_rooms_camp_id")
+  @@unique([tenantId, buildingId, roomNo], map: "uq_camp_rooms_no")
+  @@index([tenantId, campId, status], map: "idx_camp_rooms_camp")
+  @@map("camp_rooms")
+}
+
+/// reg_number давхардал → partial unique index (migration: uq_camp_organizations_reg)
+model CampOrganization {
+  id              String      @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId        String      @map("tenant_id") @db.Uuid
+  name            String
+  regNumber       String?     @map("reg_number")
+  orgType         CampOrgType @map("org_type")
+  isDisposalPoint Boolean     @default(false) @map("is_disposal_point")
+  contactName     String?     @map("contact_name")
+  phone           String?
+  email           String?
+  isActive        Boolean     @default(true) @map("is_active")
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employees   CampEmployee[]
+  contracts   CampContract[]
+  costEntries CampCostEntry[]
+
+  @@unique([tenantId, id], map: "uq_camp_organizations_tenant_id")
+  @@index([tenantId, isActive, name], map: "idx_camp_organizations_list")
+  @@map("camp_organizations")
+}
+
+model CampCrew {
+  id               String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  campId           String   @map("camp_id") @db.Uuid
+  code             String
+  name             String?
+  /// Энэ багийн ирэх нэг өдөр (солигдох гараг) — мөчлөгийн эхлэл
+  rosterAnchorDate DateTime @map("roster_anchor_date") @db.Date
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp      Camp           @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_crews_camp")
+  employees CampEmployee[]
+
+  @@unique([tenantId, id], map: "uq_camp_crews_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_crews_camp_id")
+  @@unique([tenantId, campId, code], map: "uq_camp_crews_code")
+  @@map("camp_crews")
+}
+
+model CampEmployee {
+  id             String             @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId       String             @map("tenant_id") @db.Uuid
+  campId         String             @map("camp_id") @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  departmentId   String             @map("department_id") @db.Uuid
+  /// NULL = ростергүй (ээлжийн бус)
+  crewId         String?            @map("crew_id") @db.Uuid
+  employeeCode   String             @map("employee_code")
+  fullName       String             @map("full_name")
+  position       String?
+  phone          String?
+  status         CampEmployeeStatus @default(ACTIVE)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp             Camp                  @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_camp")
+  organization     CampOrganization      @relation(fields: [tenantId, organizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_org")
+  department       CampDepartment        @relation(fields: [tenantId, campId, departmentId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_department")
+  crew             CampCrew?             @relation(fields: [tenantId, campId, crewId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_crew")
+  shiftAdjustments CampShiftAdjustment[]
+  movements        CampMovement[]
+  stays            CampStay[]
+  roomAllocations  CampRoomAllocation[]
+
+  @@unique([tenantId, id], map: "uq_camp_employees_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_employees_camp_id")
+  @@unique([tenantId, employeeCode], map: "uq_camp_employees_code")
+  @@index([tenantId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_employees_cursor")
+  @@index([tenantId, departmentId], map: "idx_camp_employees_department")
+  @@index([tenantId, organizationId], map: "idx_camp_employees_org")
+  @@map("camp_employees")
+}
+
+// ── 1.3 Цагийн бүртгэл, ирц, өрөө ────────────────────────────
+
+/// Давхцал → EXCLUDE (employee, daterange) — migration
+model CampShiftAdjustment {
+  id         String                    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String                    @map("tenant_id") @db.Uuid
+  employeeId String                    @map("employee_id") @db.Uuid
+  startDate  DateTime                  @map("start_date") @db.Date
+  endDate    DateTime                  @map("end_date") @db.Date
+  shift      CampShiftType
+  reasonType CampShiftAdjustmentReason @map("reason_type")
+  reason     String?
+  createdBy  String                    @map("created_by") @db.Uuid
+  createdAt  DateTime                  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime                  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employee      CampEmployee @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_shift_adj_employee")
+  createdByUser CoreUser     @relation("CampShiftAdjustmentCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_shift_adj_created_by")
+
+  @@index([tenantId, startDate, endDate], map: "idx_camp_shift_adj_dates")
+  @@map("camp_shift_adjustments")
+}
+
+model CampMovementImport {
+  id          String           @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId    String           @map("tenant_id") @db.Uuid
+  campId      String           @map("camp_id") @db.Uuid
+  fileName    String           @map("file_name")
+  status      CampImportStatus @default(PREVIEW)
+  totalRows   Int              @default(0) @map("total_rows")
+  okRows      Int              @default(0) @map("ok_rows")
+  errorRows   Int              @default(0) @map("error_rows")
+  /// [{ row, column, message }]
+  errors      Json             @default("[]")
+  uploadedBy  String           @map("uploaded_by") @db.Uuid
+  confirmedBy String?          @map("confirmed_by") @db.Uuid
+  confirmedAt DateTime?        @map("confirmed_at") @db.Timestamptz
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp            Camp           @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movement_imports_camp")
+  uploadedByUser  CoreUser       @relation("CampMovementImportUploadedBy", fields: [tenantId, uploadedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movement_imports_uploaded_by")
+  confirmedByUser CoreUser?      @relation("CampMovementImportConfirmedBy", fields: [tenantId, confirmedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movement_imports_confirmed_by")
+  movements       CampMovement[]
+
+  @@unique([tenantId, campId, id], map: "uq_camp_movement_imports_camp_id")
+  @@index([tenantId, campId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_movement_imports_cursor")
+  @@map("camp_movement_imports")
+}
+
+/// ROSTER ирэлт → [DINNER], ROSTER явалт → [BREAKFAST], OFF_ROSTER → сонгосон хоол
+model CampMovement {
+  id           String                @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId     String                @map("tenant_id") @db.Uuid
+  campId       String                @map("camp_id") @db.Uuid
+  employeeId   String                @map("employee_id") @db.Uuid
+  movementDate DateTime              @map("movement_date") @db.Date
+  direction    CampMovementDirection
+  kind         CampMovementKind
+  meals        CampMealType[]        @default([])
+  importId     String?               @map("import_id") @db.Uuid
+  createdBy    String?               @map("created_by") @db.Uuid
+  createdAt    DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employee        CampEmployee        @relation(fields: [tenantId, campId, employeeId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movements_employee")
+  import          CampMovementImport? @relation(fields: [tenantId, campId, importId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movements_import")
+  createdByUser   CoreUser?           @relation("CampMovementCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movements_created_by")
+  arrivalStays    CampStay[]          @relation("CampStayArrival")
+  departureStays  CampStay[]          @relation("CampStayDeparture")
+
+  @@unique([tenantId, id], map: "uq_camp_movements_tenant_id")
+  @@unique([tenantId, employeeId, movementDate, direction], map: "uq_camp_movements_unique")
+  @@index([tenantId, campId, movementDate], map: "idx_camp_movements_date")
+  @@map("camp_movements")
+}
+
+/// "Байгаа эсэх"-ийн цорын ганц эх сурвалж. Давхцал → EXCLUDE; movement-ийн чиглэл/огноо → trigger
+model CampStay {
+  id                  String    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  campId              String    @map("camp_id") @db.Uuid
+  employeeId          String    @map("employee_id") @db.Uuid
+  arrivalMovementId   String    @unique(map: "uq_camp_stays_arrival") @map("arrival_movement_id") @db.Uuid
+  departureMovementId String?   @unique(map: "uq_camp_stays_departure") @map("departure_movement_id") @db.Uuid
+  startDate           DateTime  @map("start_date") @db.Date
+  endDate             DateTime? @map("end_date") @db.Date
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employee          CampEmployee  @relation(fields: [tenantId, campId, employeeId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_stays_employee")
+  arrivalMovement   CampMovement  @relation("CampStayArrival", fields: [tenantId, arrivalMovementId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_stays_arrival")
+  departureMovement CampMovement? @relation("CampStayDeparture", fields: [tenantId, departureMovementId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_stays_departure")
+
+  @@index([tenantId, campId, startDate, endDate], map: "idx_camp_stays_presence")
+  @@map("camp_stays")
+}
+
+/// Ажилтны үндсэн өрөө; өөр багууд хуваалцана. Ажилтны давхцал → EXCLUDE; багтаамж → app (28 хоног)
+model CampRoomAllocation {
+  id         String    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  campId     String    @map("camp_id") @db.Uuid
+  roomId     String    @map("room_id") @db.Uuid
+  employeeId String    @map("employee_id") @db.Uuid
+  startDate  DateTime  @map("start_date") @db.Date
+  endDate    DateTime? @map("end_date") @db.Date
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  room     CampRoom     @relation(fields: [tenantId, campId, roomId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_room_alloc_room")
+  employee CampEmployee @relation(fields: [tenantId, campId, employeeId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_room_alloc_employee")
+
+  @@index([tenantId, roomId, startDate, endDate], map: "idx_camp_room_alloc_room")
+  @@map("camp_room_allocations")
+}
+
+// ── 1.4 Үндсэн хөрөнгө, засвар ───────────────────────────────
+
+model CampAssetCategory {
+  id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  assets CampAsset[]
+
+  @@unique([tenantId, id], map: "uq_camp_asset_categories_tenant_id")
+  @@unique([tenantId, name], map: "uq_camp_asset_categories_name")
+  @@map("camp_asset_categories")
+}
+
+model CampAsset {
+  id           String             @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId     String             @map("tenant_id") @db.Uuid
+  campId       String             @map("camp_id") @db.Uuid
+  categoryId   String             @map("category_id") @db.Uuid
+  inventoryNo  String             @map("inventory_no")
+  name         String
+  serialNo     String?            @map("serial_no")
+  /// NULL = агуулахад
+  roomId       String?            @map("room_id") @db.Uuid
+  condition    CampAssetCondition @default(GOOD)
+  acquiredDate DateTime?          @map("acquired_date") @db.Date
+  acquiredCost Decimal?           @map("acquired_cost") @db.Decimal(18, 2)
+  note         String?
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant      Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp        Camp                     @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_assets_camp")
+  category    CampAssetCategory        @relation(fields: [tenantId, categoryId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_assets_category")
+  room        CampRoom?                @relation(fields: [tenantId, campId, roomId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_assets_room")
+  movements   CampAssetMovement[]
+  maintenance CampMaintenanceRequest[]
+
+  @@unique([tenantId, id], map: "uq_camp_assets_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_assets_camp_id")
+  @@unique([tenantId, inventoryNo], map: "uq_camp_assets_inventory")
+  @@index([tenantId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_assets_cursor")
+  @@map("camp_assets")
+}
+
+model CampAssetMovement {
+  id         String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  campId     String   @map("camp_id") @db.Uuid
+  assetId    String   @map("asset_id") @db.Uuid
+  /// NULL = агуулах
+  fromRoomId String?  @map("from_room_id") @db.Uuid
+  /// NULL = агуулах
+  toRoomId   String?  @map("to_room_id") @db.Uuid
+  movedAt    DateTime @default(now()) @map("moved_at") @db.Timestamptz
+  movedBy    String   @map("moved_by") @db.Uuid
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  asset       CampAsset @relation(fields: [tenantId, campId, assetId], references: [tenantId, campId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_asset_movements_asset")
+  fromRoom    CampRoom? @relation("CampAssetMovementFrom", fields: [tenantId, campId, fromRoomId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_asset_movements_from")
+  toRoom      CampRoom? @relation("CampAssetMovementTo", fields: [tenantId, campId, toRoomId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_asset_movements_to")
+  movedByUser CoreUser  @relation("CampAssetMovementMovedBy", fields: [tenantId, movedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_asset_movements_moved_by")
+
+  @@index([tenantId, assetId, movedAt(sort: Desc)], map: "idx_camp_asset_movements_asset")
+  @@map("camp_asset_movements")
+}
+
+/// CLOSED болсны дараа өөрчлөгдөхгүй (trigger); сэлбэг нь мөн түгжигдэнэ
+model CampMaintenanceRequest {
+  id           String                  @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId     String                  @map("tenant_id") @db.Uuid
+  campId       String                  @map("camp_id") @db.Uuid
+  requestNo    String                  @map("request_no")
+  roomId       String?                 @map("room_id") @db.Uuid
+  assetId      String?                 @map("asset_id") @db.Uuid
+  title        String
+  description  String?
+  priority     CampMaintenancePriority @default(MEDIUM)
+  status       CampMaintenanceStatus   @default(OPEN)
+  reportedBy   String                  @map("reported_by") @db.Uuid
+  startedAt    DateTime?               @map("started_at") @db.Timestamptz
+  completedAt  DateTime?               @map("completed_at") @db.Timestamptz
+  closedBy     String?                 @map("closed_by") @db.Uuid
+  closedAt     DateTime?               @map("closed_at") @db.Timestamptz
+  cancelReason String?                 @map("cancel_reason")
+  createdAt    DateTime                @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime                @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp           Camp                  @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_maintenance_camp")
+  room           CampRoom?             @relation(fields: [tenantId, campId, roomId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_maintenance_room")
+  asset          CampAsset?            @relation(fields: [tenantId, campId, assetId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_maintenance_asset")
+  reportedByUser CoreUser              @relation("CampMaintenanceReportedBy", fields: [tenantId, reportedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_maintenance_reported_by")
+  closedByUser   CoreUser?             @relation("CampMaintenanceClosedBy", fields: [tenantId, closedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_maintenance_closed_by")
+  parts          CampMaintenancePart[]
+
+  @@unique([tenantId, id], map: "uq_camp_maintenance_requests_tenant_id")
+  @@unique([tenantId, requestNo], map: "uq_camp_maintenance_requests_no")
+  @@index([tenantId, campId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_maintenance_cursor")
+  @@index([tenantId, campId, status], map: "idx_camp_maintenance_status")
+  @@map("camp_maintenance_requests")
+}
+
+/// CATERING_PURCHASED → unitPrice заавал; хүсэлт CLOSED болоход зардалд орно
+model CampMaintenancePart {
+  id          String         @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId    String         @map("tenant_id") @db.Uuid
+  requestId   String         @map("request_id") @db.Uuid
+  partName    String         @map("part_name")
+  quantity    Decimal        @db.Decimal(15, 3)
+  unit        String         @default("ш")
+  unitPrice   Decimal?       @map("unit_price") @db.Decimal(18, 2)
+  vatIncluded Boolean        @default(true) @map("vat_included")
+  source      CampPartSource
+  createdBy   String         @map("created_by") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  request       CampMaintenanceRequest @relation(fields: [tenantId, requestId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_parts_request")
+  createdByUser CoreUser               @relation("CampMaintenancePartCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_parts_created_by")
+  costEntries   CampCostEntry[]
+
+  @@unique([tenantId, id], map: "uq_camp_maintenance_parts_tenant_id")
+  @@index([tenantId, requestId], map: "idx_camp_parts_request")
+  @@map("camp_maintenance_parts")
+}
+
+// ── 1.5 Гэрээ ────────────────────────────────────────────────
+
+model CampContract {
+  id             String             @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId       String             @map("tenant_id") @db.Uuid
+  campId         String             @map("camp_id") @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  contractNo     String             @map("contract_no")
+  title          String
+  startDate      DateTime           @map("start_date") @db.Date
+  /// NULL = хугацаагүй
+  endDate        DateTime?          @map("end_date") @db.Date
+  status         CampContractStatus @default(DRAFT)
+  terminatedAt   DateTime?          @map("terminated_at") @db.Date
+  note           String?
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp         Camp               @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contracts_camp")
+  organization CampOrganization   @relation(fields: [tenantId, organizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contracts_org")
+  items        CampContractItem[]
+
+  @@unique([tenantId, id], map: "uq_camp_contracts_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_contracts_camp_id")
+  @@unique([tenantId, contractNo], map: "uq_camp_contracts_no")
+  @@index([tenantId, campId, status, startDate, endDate], map: "idx_camp_contracts_active")
+  @@index([tenantId, organizationId], map: "idx_camp_contracts_org")
+  @@map("camp_contracts")
+}
+
+/// MEAL ⇔ PERSON_DAY (CHECK). campId-г гэрээнээс давтан хадгална (бүртгэл зөвхөн өөрийн кемпийн гэрээг сонгоно)
+model CampContractItem {
+  id          String           @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId    String           @map("tenant_id") @db.Uuid
+  campId      String           @map("camp_id") @db.Uuid
+  contractId  String           @map("contract_id") @db.Uuid
+  serviceType CampServiceType  @map("service_type")
+  unit        CampContractUnit
+  description String?
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant             Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  contract           CampContract            @relation(fields: [tenantId, campId, contractId], references: [tenantId, campId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_contract_items_contract")
+  prices             CampContractItemPrice[]
+  haulTransport      CampHaulRecord[]        @relation("CampHaulTransportItem")
+  haulDisposal       CampHaulRecord[]        @relation("CampHaulDisposalItem")
+  mealOrders         CampMealOrder[]
+  costEntries        CampCostEntry[]
+
+  @@unique([tenantId, id], map: "uq_camp_contract_items_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_contract_items_camp_id")
+  @@unique([contractId, serviceType], map: "uq_camp_contract_items_service")
+  @@index([tenantId, campId, serviceType], map: "idx_camp_contract_items_service")
+  @@map("camp_contract_items")
+}
+
+/// Тухайн өдрийн үнэ = effectiveFrom <= D-ийн хамгийн сүүлийнх
+model CampContractItemPrice {
+  id             String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  contractItemId String   @map("contract_item_id") @db.Uuid
+  effectiveFrom  DateTime @map("effective_from") @db.Date
+  unitPrice      Decimal  @map("unit_price") @db.Decimal(18, 2)
+  vatIncluded    Boolean  @map("vat_included")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  contractItem CampContractItem @relation(fields: [tenantId, contractItemId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_contract_item_prices_item")
+
+  @@unique([contractItemId, effectiveFrom], map: "uq_camp_contract_item_prices")
+  @@index([tenantId, contractItemId, effectiveFrom(sort: Desc)], map: "idx_camp_contract_item_prices_lookup")
+  @@map("camp_contract_item_prices")
+}
+
+// ── 1.6 Бохир ус/хог, хоол, зардал ───────────────────────────
+
+/// APPROVED → өөрчлөгдөхгүй (trigger); гэрээний төрөл haulType-тай таарна (trigger); reviewedBy ≠ createdBy (CHECK)
+model CampHaulRecord {
+  id                      String          @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId                String          @map("tenant_id") @db.Uuid
+  campId                  String          @map("camp_id") @db.Uuid
+  recordNo                String          @map("record_no")
+  haulType                CampHaulType    @map("haul_type")
+  haulDate                DateTime        @map("haul_date") @db.Date
+  vehicleNo               String?         @map("vehicle_no")
+  driverName              String?         @map("driver_name")
+  trips                   Int             @default(1)
+  volume                  Decimal?        @db.Decimal(15, 3)
+  volumeUnit              CampVolumeUnit? @map("volume_unit")
+  transportContractItemId String          @map("transport_contract_item_id") @db.Uuid
+  disposalContractItemId  String          @map("disposal_contract_item_id") @db.Uuid
+  status                  CampHaulStatus  @default(DRAFT)
+  note                    String?
+  createdBy               String          @map("created_by") @db.Uuid
+  submittedAt             DateTime?       @map("submitted_at") @db.Timestamptz
+  reviewedBy              String?         @map("reviewed_by") @db.Uuid
+  reviewedAt              DateTime?       @map("reviewed_at") @db.Timestamptz
+  rejectReason            String?         @map("reject_reason")
+  createdAt               DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant                Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp                  Camp             @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_haul_camp")
+  transportContractItem CampContractItem @relation("CampHaulTransportItem", fields: [tenantId, campId, transportContractItemId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_haul_transport")
+  disposalContractItem  CampContractItem @relation("CampHaulDisposalItem", fields: [tenantId, campId, disposalContractItemId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_haul_disposal")
+  createdByUser         CoreUser         @relation("CampHaulCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_haul_created_by")
+  reviewedByUser        CoreUser?        @relation("CampHaulReviewedBy", fields: [tenantId, reviewedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_haul_reviewed_by")
+  costEntries           CampCostEntry[]
+
+  @@unique([tenantId, id], map: "uq_camp_haul_records_tenant_id")
+  @@unique([tenantId, recordNo], map: "uq_camp_haul_records_no")
+  @@index([tenantId, campId, haulDate], map: "idx_camp_haul_date")
+  @@index([tenantId, campId, status], map: "idx_camp_haul_status")
+  @@index([tenantId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_haul_cursor")
+  @@map("camp_haul_records")
+}
+
+/// ACCEPTED → өөрчлөгдөхгүй (trigger); reviewedBy ≠ orderedBy (CHECK). Хүн-өдөр = Σ(base + extra) ÷ 3
+model CampMealOrder {
+  id                 String              @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId           String              @map("tenant_id") @db.Uuid
+  campId             String              @map("camp_id") @db.Uuid
+  orderDate          DateTime            @map("order_date") @db.Date
+  /// DRAFT-д хоосон байж болно, ORDERED-оос заавал (MEAL гэрээ)
+  mealContractItemId String?             @map("meal_contract_item_id") @db.Uuid
+  status             CampMealOrderStatus @default(DRAFT)
+  note               String?
+  orderedBy          String?             @map("ordered_by") @db.Uuid
+  orderedAt          DateTime?           @map("ordered_at") @db.Timestamptz
+  reviewedBy         String?             @map("reviewed_by") @db.Uuid
+  reviewedAt         DateTime?           @map("reviewed_at") @db.Timestamptz
+  rejectReason       String?             @map("reject_reason")
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp             Camp                @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_meal_orders_camp")
+  mealContractItem CampContractItem?   @relation(fields: [tenantId, campId, mealContractItemId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_meal_orders_contract")
+  orderedByUser    CoreUser?           @relation("CampMealOrderOrderedBy", fields: [tenantId, orderedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_meal_orders_ordered_by")
+  reviewedByUser   CoreUser?           @relation("CampMealOrderReviewedBy", fields: [tenantId, reviewedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_meal_orders_reviewed_by")
+  lines            CampMealOrderLine[]
+  costEntries      CampCostEntry[]
+
+  @@unique([tenantId, id], map: "uq_camp_meal_orders_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_meal_orders_camp_id")
+  @@unique([tenantId, campId, orderDate], map: "uq_camp_meal_orders_day")
+  @@index([tenantId, campId, status, orderDate], map: "idx_camp_meal_orders_status")
+  @@map("camp_meal_orders")
+}
+
+/// base = захиалах үеийн тооцоолсон snapshot, extra = менежерийн залруулга (±); base + extra >= 0
+model CampMealOrderLine {
+  id             String       @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId       String       @map("tenant_id") @db.Uuid
+  campId         String       @map("camp_id") @db.Uuid
+  orderId        String       @map("order_id") @db.Uuid
+  mealType       CampMealType @map("meal_type")
+  /// snapshot — хэлтсийн байршил хожим солигдсон ч өөрчлөгдөхгүй
+  mealLocationId String       @map("meal_location_id") @db.Uuid
+  baseCount      Int          @default(0) @map("base_count")
+  extraCount     Int          @default(0) @map("extra_count")
+  extraNote      String?      @map("extra_note")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  order        CampMealOrder    @relation(fields: [tenantId, campId, orderId], references: [tenantId, campId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_meal_order_lines_order")
+  mealLocation CampMealLocation @relation(fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_meal_order_lines_location")
+
+  @@unique([orderId, mealType, mealLocationId], map: "uq_camp_meal_order_lines")
+  @@index([tenantId, orderId], map: "idx_camp_meal_order_lines_order")
+  @@map("camp_meal_order_lines")
+}
+
+/// Тайлангийн цорын ганц эх сурвалж — snapshot, засагдахгүй (trigger). source бүрт яг нэг FK (CHECK).
+/// Давхардал: partial unique (haul+service / meal / part) — migration-д
+model CampCostEntry {
+  id                String           @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId          String           @map("tenant_id") @db.Uuid
+  campId            String           @map("camp_id") @db.Uuid
+  costDate          DateTime         @map("cost_date") @db.Date
+  source            CampCostSource
+  haulRecordId      String?          @map("haul_record_id") @db.Uuid
+  mealOrderId       String?          @map("meal_order_id") @db.Uuid
+  maintenancePartId String?          @map("maintenance_part_id") @db.Uuid
+  serviceType       CampServiceType? @map("service_type")
+  contractItemId    String?          @map("contract_item_id") @db.Uuid
+  organizationId    String?          @map("organization_id") @db.Uuid
+  description       String?
+  quantity          Decimal          @db.Decimal(15, 4)
+  unit              String
+  unitPrice         Decimal          @map("unit_price") @db.Decimal(18, 2)
+  vatIncluded       Boolean          @map("vat_included")
+  vatRate           Decimal          @map("vat_rate") @db.Decimal(5, 2)
+  netAmount         Decimal          @map("net_amount") @db.Decimal(18, 2)
+  vatAmount         Decimal          @map("vat_amount") @db.Decimal(18, 2)
+  grossAmount       Decimal          @map("gross_amount") @db.Decimal(18, 2)
+  createdBy         String           @map("created_by") @db.Uuid
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp            Camp                 @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_camp")
+  haulRecord      CampHaulRecord?      @relation(fields: [tenantId, haulRecordId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_haul")
+  mealOrder       CampMealOrder?       @relation(fields: [tenantId, campId, mealOrderId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_meal")
+  maintenancePart CampMaintenancePart? @relation(fields: [tenantId, maintenancePartId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_part")
+  contractItem    CampContractItem?    @relation(fields: [tenantId, campId, contractItemId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_contract_item")
+  organization    CampOrganization?    @relation(fields: [tenantId, organizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_org")
+  createdByUser   CoreUser             @relation("CampCostEntryCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_created_by")
+
+  @@index([tenantId, campId, costDate], map: "idx_camp_cost_report")
+  @@index([tenantId, organizationId, costDate], map: "idx_camp_cost_org")
+  @@map("camp_cost_entries")
 }

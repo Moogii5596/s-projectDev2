@@ -1,6 +1,6 @@
 # Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD · v4
 
-> 2026-10-09 · Төлөв: **ERD v4 батлуулах шатанд** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
+> 2026-10-09 · Төлөв: **ERD v4 батлагдсан · Шат 1 (DB) хийгдсэн — local дээр migration up хүлээгдэж байна** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
 > Мөрдөх: `docs/08_Roadmap/00_rules_and_context.md` (RULE-01~20), `docs/03_Data_Models_and_Security/03_Module_Template.md`,
 > lessons_learned [RLS-004] (PERMISSIVE TO app_user + FORCE + GRANT), [MIG-001] (`prisma db push` ХОРИОТОЙ — зөвхөн supabase migration)
 
@@ -146,24 +146,41 @@ erDiagram
 | meal.accept | | | ✅ |
 | maintenance.create, report.view | ✅ | ✅ | ✅ |
 
+### 2.3 Шат 1-ийн техникийн шийдвэрүүд (2026-10-09, Lead Dev — хэрэглэгч эрх олгосон)
+| # | Шийдвэр | Шалтгаан |
+|---|---|---|
+| D1 | Төлөв/төрөл → PostgreSQL native enum (`Camp*`), утга = Prisma нэр | RULE-02 (`import { CampHaulStatus } from '@prisma/client'`). Утга нэмэхэд RULE-15, `ADD VALUE` тусдаа migration |
+| D2 | Tenant/кемп хоорондын холбоос → `(tenant_id, x_id)` / `(tenant_id, camp_id, x_id)` composite FK; эх хүснэгтэд `UNIQUE (tenant_id, id)`; `core_users`-д `uq_core_users_tenant_id` нэмсэн | App superuser-ээр ажилладаг тул RLS bypass [RLS-004] — FK нь bypass-гүй. Өөр кемпийн байршил/өрөө/гэрээ сонгох боломжгүй |
+| D3 | Анхдагч 3 роль → `camp_seed_default_roles()` + `tenants` AFTER INSERT trigger + backfill. Idempotent, админы зассан эрхийг дарахгүй | Шинэ tenant бүр шууд ажиллах боломжтой |
+| D4 | `camp_cost_entries` → 3 nullable FK + `chk_camp_cost_source`; partial unique (давхар бичихгүй); засагдахгүй (trigger) | Тайлангийн snapshot |
+| D5 | Permission каталог → tenant-гүй `camp_permissions` хүснэгт (CHECK биш), 17 код (`camp.master.manage` нэмсэн — ERD 2.2-ын "master") | Тайлбар/эрэмбэтэй (UI матриц), FK-ээр хамгаалагдана, шинэ эрх = 1 INSERT. Шат 2.1-ийн кодын каталог үүнтэй тестээр тулгагдана |
+| D6 | Устгах: tenant → бүх camp_* CASCADE; хүснэгт хооронд NO ACTION (идэвхгүй болгоно); эзэмшигч→дэд (role→perms, order→lines, request→parts, contract→items→prices, asset→movements) CASCADE. Хамгаалах trigger-үүд tenant устгах CASCADE-ийг блоклохгүй (`camp_tenant_exists`) | Integration тест `tenant.delete`-ээр цэвэрлэдэг |
+| D7 | Хяналтын дүрэм DB-д: `reviewed_by <> created_by` (haul), `reviewed_by <> ordered_by` (meal) — CHECK | "Үүсгэсэн хүн өөрөө батлахгүй" |
+
+**DB түвшинд хамгаалагдсан:** гэрээний төрөл ↔ haul_type / MEAL (trigger), APPROVED haul · ACCEPTED хоол · CLOSED засвар (+ сэлбэг) түгжигдэнэ, stay ↔ movement чиглэл/огноо (trigger), ээлжийн загвар · зохицуулалт · stay · өрөөний хуваарилалтын давхцал (EXCLUDE), НӨАТ дүн `net + vat = gross`.
+**App-д үлдсэн (Шат 2–6):** ээлжийн загварын 1..N цоорхойгүй бүрхэлт, өрөөний 28 хоногийн багтаамж, гэрээ тухайн огноонд ACTIVE + үнэтэй эсэх, нэгж (TRIP/M3/TON) ↔ volume_unit, ажилтан/хэлтэс идэвхтэй эсэх.
+
 ## 3. Хийх ажлын төлөвлөгөө
 
 ### Шат 0 — Дизайн
 - [x] 0.1 Шаардлага тодруулах
 - [x] 0.2a ERD v1 · [x] 0.2b ERD v2
 - [x] 0.2c ERD v3
-- [ ] 0.2d ERD v4 батлуулах ← **ОДОО**
+- [x] 0.2d ERD v4 батлагдсан (2026-10-09)
 - [x] 0.3 Бүх асуулт хариулагдсан (2026-10-09)
 
 ### Шат 1 — Database (supabase migrations)
-- [ ] 1.1 `..001_camp_rbac.sql` — roles, role_permissions, user_roles
-- [ ] 1.2 `..002_camp_master.sql` — camps, settings, meal_locations, departments, department_shift_patterns, buildings, rooms, organizations, crews, employees
-- [ ] 1.3 `..003_camp_attendance.sql` — shift_adjustments, movement_imports, movements, stays, room_allocations (btree_gist)
-- [ ] 1.4 `..004_camp_assets_maintenance.sql`
-- [ ] 1.5 `..005_camp_contracts.sql`
-- [ ] 1.6 `..006_camp_operations.sql` — haul_records, meal_orders, meal_order_lines, cost_entries, trigger-үүд
-- [ ] 1.7 RLS [RLS-004] + GRANT бүх хүснэгтэд; анхдагч ролиудыг tenant бүрт seed
-- [ ] 1.8 `supabase migration up` → `pnpm db:generate`; Prisma schema (`@db.Uuid`, `Decimal`, back-relation)
+- [x] 1.1 `20261009001_camp_rbac.sql` — camp_permissions (каталог), roles, role_permissions, user_roles, seed функц + tenants trigger, туслах функцууд
+- [x] 1.2 `20261009002_camp_master.sql` — camps, settings, meal_locations, departments, department_shift_patterns, buildings, rooms, organizations, crews, employees
+- [x] 1.3 `20261009003_camp_attendance.sql` — shift_adjustments, movement_imports, movements, stays (+ validate trigger), room_allocations (btree_gist EXCLUDE)
+- [x] 1.4 `20261009004_camp_assets_maintenance.sql` — asset_categories, assets, asset_movements, maintenance_requests, maintenance_parts (+ түгжих trigger)
+- [x] 1.5 `20261009005_camp_contracts.sql` — contracts, contract_items, contract_item_prices
+- [x] 1.6 `20261009006_camp_operations.sql` — haul_records, meal_orders, meal_order_lines, cost_entries + trigger-үүд
+- [x] 1.7 RLS [RLS-004] + GRANT бүх 30 tenant хүснэгтэд (`camp_apply_tenant_rls`); анхдагч ролиуд tenant бүрт (trigger + backfill)
+- [x] 1.8a Prisma schema: 31 model, 22 enum, `@db.Uuid`, `Decimal`, composite relation, Tenant/CoreUser back-relation
+- [x] 1.8b Шалгалт (цэвэр PG): 24 migration + seed.sql → `supabase/dev/camp_schema_test.sql` 97/97 ✅ (app_user + RLS), mutation 8/8 баригдсан,
+      Prisma validate ✅ (prisma-schema-wasm 5.22), Prisma ↔ DB тулгалт: 31 хүснэгт — зөрүүгүй
+- [ ] 1.8c Local: `pnpm exec supabase migration up` → `pnpm db:generate` → camp_schema_test.sql → `tsc --noEmit` ← **ОДОО (хэрэглэгч)**
 
 ### Шат 2 — Backend: эрх, тохиргоо, мастер өгөгдөл
 - [ ] 2.1 Permission каталог + `requireCampPermission` + cache
