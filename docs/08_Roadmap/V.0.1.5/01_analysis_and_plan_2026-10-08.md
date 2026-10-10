@@ -166,22 +166,73 @@ pnpm --filter e2e exec tsx tests/cluster-check.ts
   - Шалгалт: unit **489/489** · tsc ✅ · lint 0 алдаа · integration **13 файл / 138** (`app_user` ба `postgres` хоёр горимд)
   - [x] Таны компьютер (17:48): `test` → `test:integration` ✅
 
-### Phase 5 — Sprint 10: Event Bus (2 session)
-- [ ] 5.0 [EVT-001] Outbox poller: `FOR UPDATE SKIP LOCKED` + publish/шинэчлэлийг нэг transaction-д (давхар publish-ээс сэргийлэх)
-- [ ] 5.1 MR → Workflow → Budget → Outbox chain integration тест (Inventory-lite нь MR-тэй холбогдоогүй — шийдвэр 2026-10-08)
-- [ ] 5.2 Event idempotency + DLQ integration тест
+### Phase 5 — Sprint 10: Event Bus ✅ (код, батлагдсан 2026-10-10 17:50)
+- [x] 5.0 [EVT-001] `OutboxPollerService.processNext()`: event БҮР нэг transaction-д `FOR UPDATE SKIP LOCKED LIMIT 1` → publish → `PUBLISHED`/retry/`DLQ` (DLQ мөр ижил transaction-д). `OUTBOX_POLLER_CRON=off` (integration тест)
+  - PG16 race (4 poller, 40 event, 50мс зайтай): **хуучин 80–119 publish (бүгд давхар) → шинэ яг 40**
+- [x] 5.1 [EVT-002/003] `CloudEventsAdapter.fromOutbox` — хадгалсан `cloud_event_id`/type/source/time (retry-д id ижил); MR submit/approve/reject → `EventBusService.emit` (`event_type` хуучин нэр, `cloud_event_type` = EventTypes.*)
+- [x] 5.2 `test/event-bus.integration.spec.ts` — гинж: MR → submit (COMMITTED, workflow, SLA) → approve (SPENT) / reject (RELEASED) → poller → Redis `tenant.{id}.{type}` (хадгалсан id); PUBLISHED дахин илгээгдэхгүй
+- [x] 5.3 Retry (retry 1, backoff ~30с, PENDING) → 3 дахь алдаа → `DLQ` + `dlq_events`; 4 зэрэгцээ poller → event бүр 1 удаа
+- [x] 5.4 Шалгалт: unit **498/498** · tsc ✅ · lint 0 алдаа · integration **14 файл / 143** (`app_user` ба `postgres`)
+  - [x] Таны компьютер: unit **498/498** · integration **14 файл / 143** ✅
 
-### Phase 6 — Sprint 11: v0.1.5 Release (1 session)
-- [ ] 6.1 E2E (Playwright): advanced-workflow, modules, multi-tenant (schema-isolation-ийг хасна — шийдвэр B)
-- [ ] 6.2 Баримт: CHANGELOG, project-status, `00_index.md` зөрүү, `.env.example`, docker-compose/VPC runbook-д `app_user` + `SYSTEM_DATABASE_URL`, `app_user` нууц үг production-д
-- [ ] 6.3 Цэвэрлэгээ: root `db:push`/`db:migrate` script (MIG-001), `_tmp_*`, `supabase/snippets`, root `lessons_learned.md` давхар, хуучин `$use`-ийг дурдсан тестийн тайлбар
-- [ ] 6.4 `v0.1.5` git tag
+### Phase 6 — Sprint 11: v0.1.5 Release (батлагдсан 2026-10-10 18:29; + 4.6 frontend нэмэгдсэн)
+PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохирсон (зөвхөн таны `rls_audit.txt` илүү → 6.3)
+
+**6.0 (= 4.6) Хөнгөн frontend — Inventory / Vendor / Report** ✅ (батлагдсан 18:33, код дууссан). Шинэ dependency-гүй; Tailwind + react-query + axios (одоогийн загвар)
+- [x] 6.0.1 `lib/roles.ts` (цэвэр, FE-005) + `api/me.ts` + `hooks/useMe.ts`: `GET /auth/me` → role; `canWrite` = OWNER/ADMIN (backend `WRITE_ROLES`-тэй ижил) → бусдад засах товч харагдахгүй, backend 403 нь хамгаалалт хэвээр
+- [x] 6.0.2 `modules/inventory/`: `api.ts` (list cursor/lowStock, create, adjust), `lib/quantity.ts` (BigInt ×1000, float-гүй) (тоо шалгах, үлдэгдэл сөрөг болох эсэх), `InventoryPage.tsx` — хүснэгт (SKU, нэр, үлдэгдэл, доод хэмжээ, ⚠️ бага), "Зөвхөн бага үлдэгдэл" шүүлт, "Цааш ачаалах", шинэ бараа форм, +/− тохируулга
+- [x] 6.0.3 `modules/vendor/`: `api.ts`, `VendorsPage.tsx` — жагсаалт (идэвхтэй шүүлт), үүсгэх, нэр/РД засах, идэвхжүүлэх/идэвхгүй болгох
+- [x] 6.0.4 `modules/report/`: `api.ts`, `lib/report.ts` (мөнгө формат, статусын монгол нэр), `ReportPage.tsx` — MR статусаар, төсвийн ашиглалт (%), бараа/нийлүүлэгчийн тоо, CSV татах (axios blob → token-той)
+- [x] 6.0.5 `App.tsx` route (`/inventory`, `/vendors`, `/reports`) + `Layout` цэс
+- [x] 6.0.6 Шалгалт: web-shell vitest **37/37** (+10) · tsc ✅ · lint 0 алдаа · `vite build` ✅ · cloud Playwright UI (app_user/RLS backend + vite): бараа/тохируулга/давхар SKU, нийлүүлэгч, тайлан + CSV, REQUESTER эрх, cursor 20→25, төсвийн ашиглалт — бүгд ✅ (төслийн e2e spec → 6.1.4)
+  - [x] Таны компьютер (18:43): тест ✅
+
+**6.0b [SEC-004] 🔴 MR батлалт workflow-г тойрдог** (6.1.3 бэлтгэх үед илэрсэн, батлуулахаар хүлээж буй)
+- Cloud-д баталгаажсан: REQUESTER өөрийн 5,000,000₮ MR-г (amount_rules → 2 алхам) `POST /requisitions/:id/approve`-ээр нэг дор APPROVED болгосон; `workflow_instances` PENDING/current_step 0, `workflow_sla_logs` PENDING хэвээр → SLA хугацаа өнгөрөхөд батлагдсан MR-г escalate хийнэ
+- Шалтгаан: `WorkflowService.approveStep/rejectStep` ямар ч controller-т холбогдоогүй; MR approve/reject-д role, өөрийгөө батлах, алхмын шалгалт алга
+- [x] Засвар (батлагдсан 18:47; шийдвэр А = алхмын role эсвэл OWNER/ADMIN, Б = delegation → backlog)
+  - [x] 1–3 `mr-approval.ts` + MR service approve/reject: `FOR UPDATE` түгжээ, role/өөрийгөө батлах шалгалт, quorum, олон алхам, SLA COMPLETED/дараагийн алхмын SLA, reject → REJECTED/RELEASED, хуучин MR → LEGACY 1 алхам
+  - [x] 4 API нийцтэй: зам хэвээр, хариунд `workflow` (GET/approve/reject); давтан батлалт → 200
+  - [x] 5 MRDetailPage: "Алхам 1/2", алхмын төлөв, товч зөвхөн эрхтэй хүнд, backend-ийн алдааны мессеж
+  - [x] 6–7 Шалгалт: core unit **506/506** (+8) · web-shell **45/45** (+8) · tsc ✅ · lint 0 алдаа · integration **15 файл / 154** (`app_user`, `postgres`) — шинэ `mr-workflow-approval` 11 тест (хуучин код дээр 11/11 унасан) · cloud UI (2 алхам, 3 хэрэглэгч) ✅
+  - [x] 8 `lessons_learned.md` SEC-004
+  - [x] Таны компьютер (20:05): unit 506/506 · web-shell 45/45 ✅; e2e 26 ✅ / 3 ❌ (яг хүлээгдсэн: admin@test.mn өөрийн MR-г батлах → товч алга) / 2 skip
+  - [ ] Таны компьютер: `test:integration` (15 файл / 154)
+  - ⚠️ Одоогийн `apps/e2e` requisition-flow / workflow-multistep нь admin@test.mn өөрийн MR-г батладаг → 6.1-д 2 хэрэглэгчтэй болгож засна
+Одоогийн байдал (v6 snapshot): `apps/e2e` — Playwright, 7 spec (auth, requisition-flow, workflow-multistep, multi-tenant, camp×3); `multi-tenant.spec.ts` нь `MULTI_TENANT_E2E` + гараар өгсөн `TENANT_B_TOKEN`-оос хамаарч ихэвчлэн skip болдог; Inventory/Vendor/Report-д e2e алга.
+- [ ] 6.1 E2E (Playwright) — нарийвчилсан (батлуулахаар хүлээж буй, 20:05)
+  - [ ] 6.1.0 Script: `pnpm test` нь e2e-г (Playwright, сервер асаадаг) ажиллуулдаг байсан (e2e-ийн `test` script) → e2e: `test` → `test:e2e`; turbo.json-д `test:e2e` (cache: false) — root `pnpm test:e2e` одоо task байхгүй тул эвдэрхий. Үр дүн: `pnpm test` = unit л, `pnpm test:e2e` = Playwright
+  - [ ] 6.1.1 Fixture: core-kernel `src/scripts/e2e-fixture.ts` (+ cli, unit тест; шинэ dependency-гүй — core-kernel-ийн Prisma + supabase-js), зөвхөн local:
+    - `setup` → 2 tenant (`e2e-a-<ts>`, `e2e-b-<ts>`) + хэрэглэгчид (A: REQUESTER, APPROVER×2, ADMIN; B: ADMIN) + DEV tenant (`test-tenant`)-д UI хэрэглэгчид (REQUESTER, APPROVER×2, ADMIN) → `apps/e2e/.fixture.json` (token, нууц үг, id; .gitignore)
+    - `teardown` → tenant-ууд (cascade), DEV tenant-ийн e2e хэрэглэгчид, Auth хэрэглэгчид
+    - e2e `global-setup.ts` / `global-teardown.ts` нь `pnpm --filter @s-project/core-kernel e2e:fixture` дуудна
+  - [ ] 6.1.2 `multi-tenant.spec.ts` дахин бичих (API, skip-гүй): A-ийн MR/definition B-д 404, жагсаалтад алга, B→A Host 403
+  - [ ] 6.1.3 `advanced-workflow.spec.ts` (API): A tenant-д ADMIN definition үүсгэнэ (amount_rules 2 алхам) + төсөв → өөрийгөө батлах 403, алхам 1/2 → 2/2 → APPROVED, төсөв SPENT; татгалзах → RELEASED
+  - [ ] 6.1.4 `modules-lite.spec.ts`: API (A/B тусгаарлалт, REQUESTER 403) + UI (DEV tenant: бараа/нийлүүлэгч/тайлан, REQUESTER-т товч алга)
+  - [ ] 6.1.5 Хуучин spec засах: `requisition-flow` / `workflow-multistep` → REQUESTER үүсгэж илгээнэ, APPROVER батлана/татгалзана (fixture хэрэглэгч, UI); 2 алхамт урсгал UI-д
+  - [ ] 6.1.6 `helpers/auth.helper.ts`: `loginAs(page, user)` fixture-ээс; camp spec-үүд admin@test.mn хэвээр (camp_e2e_grant.sql)
+  - [ ] 6.1.7 Cloud-д бүх e2e ажиллуулж шалгах → таны компьютер: `pnpm test:e2e`
+- [ ] 6.2 Баримт
+  - [ ] 6.2.1 `docs/CHANGELOG.md` — v0.1.5 хэсэг (Phase 2–5: RLS runtime, SystemPrisma, outbox, SEC-002/003, API-001, cursor, cluster restart)
+  - [ ] 6.2.2 `docs/project-status.md` шинэчлэх; `docs/INDEX.md` / `08_Roadmap/*/00_index` зөрүү засах
+  - [ ] 6.2.3 `docs/07_.../03_Enterprise_VPC_Deployment.md` + `02_Local_Supabase_Docker_Windows.md`: `app_user` / `SYSTEM_DATABASE_URL`, production-д `app_user` нууц үг солих SQL, RLS шалгах (`rls_audit.sql`)
+  - [ ] 6.2.4 `ADR-001_Tenant_Isolation.md`-д шийдвэр B-г тэмдэглэх
+- [ ] 6.3 Цэвэрлэгээ (устгахаас өмнө жагсаалтыг танд харуулна)
+  - [ ] 6.3.1 root `db:push` script хасах / `db:migrate`-ийг Supabase migration руу чиглүүлэх [MIG-001]
+  - [ ] 6.3.2 `_tmp_*`, `supabase/snippets/Untitled query 611.sql`, root `package-lock.json` (pnpm төсөл), root `rls_audit.txt`
+  - [ ] 6.3.3 root `lessons_learned.md` → `docs/lessons_learned.md`-тэй нэгтгэх/устгах
+  - [ ] 6.3.4 `$use` дурдсан тайлбар (`tenant-auth-guard`, `mr-crud` integration spec, `prisma-tenant-client.service.ts`)
+- [ ] 6.4 Эцсийн шалгалт: tsc · lint · unit · integration (2 горим) · e2e → `package.json` хувилбар `0.1.5` → `v0.1.5` git tag (таны компьютер дээр, таны зөвшөөрлөөр)
 
 ### Backlog (товлоогүй — шийдвэр шаардлагатай)
-- [ ] 4.6 Frontend: Inventory / Vendor / Report хуудас (энэ удаа алгассан)
+- [x] ~~4.6 Frontend~~ → Phase 6.0 руу шилжсэн
 - [ ] Frontend component тест, `mfe-requisitions` stub
 - [ ] Integration Redis mock-ийг санах ойн (бичсэнээ уншдаг) болгох — cache алдааг тест барих [CACHE-001]
 - [ ] Давхар RESTRICTIVE policy-нуудыг цэвэрлэх (PERMISSIVE-тэй ижил нөхцөл)
+- [ ] Delegation-ийг MR батлалттай холбох (шийдвэр Б) — орлон гүйцэтгэгч алхмыг батлах
+- [ ] `WorkflowService.approveStep/rejectStep` (controller-гүй, role шалгалтгүй) — устгах эсвэл MR батлалттай нэгтгэх
+- [ ] Escalation: `escalationEnabled`-ийг шалгадаггүй; `currentStep = order - 1` (1-ээс эхэлсэн order гэж үздэг); escalate = алхам алгасах утга — бизнесийн шийдвэр
+- [ ] MR үүсгэх UI-д нэгж үнэ талбар алга (бүх UI MR 0₮ → үргэлж 1 алхам)
 
 ## 4. Phase 2.2-ийн сонголтууд
 

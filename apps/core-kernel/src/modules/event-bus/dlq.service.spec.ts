@@ -27,6 +27,13 @@ describe('DlqService', () => {
     service = new DlqService(mockPrisma as never);
   });
 
+  it('tx өгвөл тэр transaction-д бичнэ (Phase 5.0)', async () => {
+    const tx = { dlqEvent: { create: vi.fn().mockResolvedValue({}) } };
+    await service.createDlqRecord(ORIGINAL_EVENT, 'x', tx as never);
+    expect(tx.dlqEvent.create).toHaveBeenCalledOnce();
+    expect(mockPrisma.dlqEvent.create).not.toHaveBeenCalled();
+  });
+
   it('createDlqRecord() → dlqEvent.create дуудагдана', async () => {
     await service.createDlqRecord(ORIGINAL_EVENT, 'Redis connection failed');
 

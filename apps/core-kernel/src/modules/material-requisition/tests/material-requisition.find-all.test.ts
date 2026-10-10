@@ -28,7 +28,7 @@ describe('MaterialRequisitionService.findAll (cursor)', () => {
     // Phase 4.8.3: бүх query tenant transaction (set_config) дотор
     prisma = { mrHeader, tx, $transaction: vi.fn((fn: (t: typeof tx) => unknown) => Promise.resolve(fn(tx))) as ReturnType<typeof vi.fn> };
     cache = { buildKey: vi.fn().mockReturnValue('k'), get: vi.fn().mockResolvedValue(null), set: vi.fn() };
-    svc = new MaterialRequisitionService(prisma as never, {} as never, cache as never, {} as never);
+    svc = new MaterialRequisitionService(prisma as never, {} as never, cache as never, {} as never, {} as never);
   });
 
   it('буруу cursor (garbage / UUID биш id) → 400, cache болон DB-д хүрэхгүй', async () => {

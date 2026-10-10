@@ -21,6 +21,7 @@ export const APP_BEHAVIOR_ENV_KEYS = [
   'CLUSTER_RESTART_WINDOW_MS',
   'PRISMA_LOG_LEVELS', // Phase 3.6.6
   'SYSTEM_DATABASE_URL', // Phase 4.8.4
+  'OUTBOX_POLLER_CRON', // Phase 5
 ] as const;
 
 beforeEach(() => {

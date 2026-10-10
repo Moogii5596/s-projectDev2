@@ -1,10 +1,11 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { MrHeader, MrStatus, Prisma } from '@prisma/client';
+import { MrHeader, MrStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CreateMrDto } from '../dto/create-mr.dto';
 import { UpdateMrDto } from '../dto/update-mr.dto';
@@ -18,6 +19,17 @@ import { CursorPaginationResult } from '../../../common/dto/cursor-pagination.dt
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
 import { MrLifecycleService } from '../../mr-lifecycle/mr-lifecycle.service';
 import { inTenantTx, TenantTx } from '../../../db/tenant-tx';
+import { EventBusService } from '../../event-bus/event-bus.service';
+import { EventTypes } from '../../event-bus/interfaces/cloud-event.interface';
+import {
+  ApprovalActor,
+  ApprovalStep,
+  approvalDenial,
+  MrWorkflowSummary,
+  normalizeSteps,
+  quorumReached,
+  summarizeWorkflow,
+} from '../mr-approval';
 
 const MR_DETAIL_INCLUDE = {
   items: { orderBy: { lineNumber: 'asc' } },
@@ -25,6 +37,29 @@ const MR_DETAIL_INCLUDE = {
 } satisfies Prisma.MrHeaderInclude;
 
 type MrDetail = Prisma.MrHeaderGetPayload<{ include: typeof MR_DETAIL_INCLUDE }>;
+
+/** Phase 6.0b [SEC-004]: дэлгэрэнгүй + workflow-ийн байдал (алхам, батлалтууд) */
+const MR_WORKFLOW_INCLUDE = {
+  ...MR_DETAIL_INCLUDE,
+  workflowInstance: {
+    select: {
+      id: true,
+      status: true,
+      currentStep: true,
+      resolvedSteps: true,
+      stepLogs: { select: { stepOrder: true, actorId: true, action: true, actedAt: true }, orderBy: { actedAt: 'asc' } },
+    },
+  },
+} satisfies Prisma.MrHeaderInclude;
+
+export type MrDetailWithWorkflow = MrDetail & { workflow: MrWorkflowSummary };
+
+/** Батлалтын үед ачаалах workflow (instance-гүй хуучин MR → LEGACY_STEPS) */
+interface MrFlow {
+  instance: { id: string; currentStep: number; definition: { slaHours: number } } | null;
+  steps: ApprovalStep[];
+  index: number;
+}
 
 /**
  * Phase 4.8.3 (2026-10-10): бүх DB хандалт `inTenantTx` (set_config + query нэг transaction) дотор —
@@ -40,6 +75,7 @@ export class MaterialRequisitionService {
     private readonly amountRouter: AmountRouterService,
     private readonly cache: CacheService,
     private readonly lifecycle: MrLifecycleService, // Phase 4: Budget (+Inventory) — transaction дотор
+    private readonly eventBus: EventBusService, // Phase 5.1 [EVT-003]: CloudEvent id/type/source outbox-д
   ) {}
 
   // ────────────────────────────────────────────────
@@ -63,6 +99,89 @@ export class MaterialRequisitionService {
       throw new NotFoundException(`MR олдсонгүй (id: ${id})`);
     }
     return header;
+  }
+
+  /** Phase 6.0b: дэлгэрэнгүй + `workflow` (findOne, approve, reject-ийн хариу) */
+  private async loadDetail(tx: TenantTx, tenantId: string, id: string): Promise<MrDetailWithWorkflow> {
+    const header = await tx.mrHeader.findFirst({ where: { id, tenantId }, include: MR_WORKFLOW_INCLUDE });
+    if (!header) {
+      throw new NotFoundException(`MR олдсонгүй (id: ${id})`);
+    }
+    const { workflowInstance, ...rest } = header;
+    return { ...rest, workflow: summarizeWorkflow(workflowInstance) };
+  }
+
+  /** RULE-13 + role (батлах эрх шалгахад) */
+  private async resolveActor(tx: TenantTx, tenantId: string, authId: string): Promise<ApprovalActor> {
+    const user = await tx.coreUser.findFirst({ where: { authId, tenantId }, select: { id: true, role: true } });
+    if (!user) {
+      throw new NotFoundException('Хэрэглэгч олдсонгүй');
+    }
+    return user;
+  }
+
+  /**
+   * Phase 6.0b: MR мөрийг түгжинэ (transaction дуустал) — зэрэгцээ батлалт quorum/алхмыг
+   * давхар тоолохоос сэргийлнэ. Олдохгүй (өөр tenant / байхгүй) → 404.
+   */
+  private async lockMr(tx: TenantTx, tenantId: string, id: string): Promise<void> {
+    const rows = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM mr_headers WHERE id = ${id}::uuid AND tenant_id = ${tenantId}::uuid FOR UPDATE
+    `;
+    if (rows.length === 0) {
+      throw new NotFoundException(`MR олдсонгүй (id: ${id})`);
+    }
+  }
+
+  private async loadFlow(tx: TenantTx, tenantId: string, mr: { workflowInstanceId: string | null }): Promise<MrFlow> {
+    if (!mr.workflowInstanceId) {
+      return { instance: null, steps: normalizeSteps(null), index: 0 };
+    }
+    const instance = await tx.workflowInstance.findFirst({
+      where: { id: mr.workflowInstanceId, tenantId },
+      select: { id: true, currentStep: true, resolvedSteps: true, definition: { select: { slaHours: true } } },
+    });
+    if (!instance) {
+      return { instance: null, steps: normalizeSteps(null), index: 0 };
+    }
+    return { instance, steps: normalizeSteps(instance.resolvedSteps), index: instance.currentStep };
+  }
+
+  /** Алхмын SLA — тухайн role-той идэвхтэй эхний хэрэглэгч (MR үүсгэгчээс бусад) */
+  private async assignSla(
+    tx: TenantTx,
+    tenantId: string,
+    instanceId: string,
+    step: ApprovalStep,
+    requesterId: string,
+    slaHours: number,
+  ): Promise<void> {
+    // Enum-д байхгүй role (хуучин/гараар оруулсан тохиргоо) → Prisma validation 500-аас сэргийлж SLA-гүй
+    if (!(Object.values(UserRole) as string[]).includes(step.role)) return;
+    const assignee = await tx.coreUser.findFirst({
+      where: { tenantId, isActive: true, role: step.role as UserRole, id: { not: requesterId } },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!assignee) return;
+    await tx.workflowSlaLog.create({
+      data: {
+        tenantId,
+        instanceId,
+        stepOrder: step.order,
+        assignedToId: assignee.id,
+        dueAt: new Date(Date.now() + slaHours * 60 * 60 * 1000),
+        status: 'PENDING',
+      },
+    });
+  }
+
+  /** Алхам шийдэгдсэн → тухайн instance-ийн PENDING SLA → COMPLETED (escalation scheduler дахин хөндөхгүй) */
+  private async completeSla(tx: TenantTx, tenantId: string, instanceId: string): Promise<void> {
+    await tx.workflowSlaLog.updateMany({
+      where: { tenantId, instanceId, status: 'PENDING' },
+      data: { status: 'COMPLETED', completedAt: new Date() },
+    });
   }
 
   /** [CACHE-001] MR өөрчлөгдсөний дараа tenant-ийн жагсаалт/дэлгэрэнгүй cache-ийг цэвэрлэнэ */
@@ -219,12 +338,12 @@ export class MaterialRequisitionService {
   // ────────────────────────────────────────────────
   // FIND ONE
   // ────────────────────────────────────────────────
-  async findOne(tenantId: string, id: string): Promise<MrDetail> {
+  async findOne(tenantId: string, id: string): Promise<MrDetailWithWorkflow> {
     const cacheKey = this.cache.buildKey('mr', tenantId, 'detail', id);
-    const cached = await this.cache.get<MrDetail>(cacheKey);
+    const cached = await this.cache.get<MrDetailWithWorkflow>(cacheKey);
     if (cached) return cached;
 
-    const header = await inTenantTx(this.prisma, tenantId, (tx) => this.loadOne(tx, tenantId, id));
+    const header = await inTenantTx(this.prisma, tenantId, (tx) => this.loadDetail(tx, tenantId, id));
 
     await this.cache.set(cacheKey, header, 60);
     return header;
@@ -365,9 +484,9 @@ export class MaterialRequisitionService {
         throw new ForbiddenException('Идэвхтэй workflow definition олдсонгүй');
       }
 
-      const resolvedSteps = this.amountRouter.resolveStepsFromConfig(
-        Number(header.totalAmount),
-        definition.stepsConfig,
+      // Phase 6.0b: эрэмбэлсэн, шалгасан алхмууд (хоосон бол LEGACY: 1 алхам APPROVER)
+      const resolvedSteps = normalizeSteps(
+        this.amountRouter.resolveStepsFromConfig(Number(header.totalAmount), definition.stepsConfig),
       );
       const instance = await tx.workflowInstance.create({
         data: {
@@ -380,38 +499,20 @@ export class MaterialRequisitionService {
           resolvedSteps: resolvedSteps as unknown as Prisma.InputJsonValue,
         },
       });
-      const firstStep = resolvedSteps[0];
-      const firstApprover = firstStep
-        ? await tx.coreUser.findFirst({
-            where: { tenantId, isActive: true, role: firstStep.role as any },
-            select: { id: true },
-          })
-        : null;
-      if (firstStep && firstApprover) {
-        await tx.workflowSlaLog.create({
-          data: {
-            tenantId,
-            instanceId: instance.id,
-            stepOrder: firstStep.order,
-            assignedToId: firstApprover.id,
-            dueAt: new Date(Date.now() + definition.slaHours * 60 * 60 * 1000),
-            status: 'PENDING',
-          },
-        });
-      }
+      await this.assignSla(tx, tenantId, instance.id, resolvedSteps[0], requesterId, definition.slaHours);
       await tx.mrHeader.update({
         where: { id },
         data: { workflowInstanceId: instance.id },
       });
 
-      await tx.outboxEvent.create({
-        data: {
-          tenantId,
-          eventType: 'MR_SUBMITTED',
-          aggregateType: 'MR',
-          aggregateId: id,
-          payload: { mrId: id, mrNumber: header.mrNumber, requesterId },
-        },
+      await this.eventBus.emit({
+        tx: tx as never,
+        tenantId,
+        eventType: 'MR_SUBMITTED', // outbox.event_type (хуучин нэр хэвээр)
+        cloudEventType: EventTypes.MR_SUBMITTED,
+        aggregateType: 'MR',
+        aggregateId: id,
+        data: { mrId: id, mrNumber: header.mrNumber, requesterId },
       });
 
       return header;
@@ -425,122 +526,212 @@ export class MaterialRequisitionService {
   // ────────────────────────────────────────────────
   // APPROVE / REJECT
   // ────────────────────────────────────────────────
-  async approve(tenantId: string, id: string, authId: string, dto: ApproveMrDto) {
+  /**
+   * Phase 6.0b [SEC-004]: workflow-ийн одоогийн алхмыг батална.
+   * - Эрх: алхмын role эсвэл OWNER/ADMIN; MR үүсгэгч өөрөө батлахгүй; нэг хүн нэг MR-д нэг л удаа
+   *   (approval_logs unique) → олон алхамд өөр өөр хүн
+   * - quorum хүрвэл: завсрын алхам → дараагийн алхам (MR PENDING_APPROVAL хэвээр, шинэ SLA);
+   *   сүүлийн алхам → MR APPROVED + төсөв SPENT + MR_APPROVED event
+   * - Давтан батлах (ижил хүн) → 200, өөрчлөлтгүй (өмнөх idempotency хэвээр)
+   */
+  async approve(tenantId: string, id: string, authId: string, dto: ApproveMrDto): Promise<MrDetailWithWorkflow> {
     const result = await inTenantTx(this.prisma, tenantId, async (tx) => {
-      const approverId = await this.resolveUserId(tx, tenantId, authId);
+      const actor = await this.resolveActor(tx, tenantId, authId);
+      await this.lockMr(tx, tenantId, id);
 
-      // Idempotency шалгах: status шалгалтаас ӨМНӨ — давхар approve 200 буцаах
+      // Idempotency: status шалгалтаас ӨМНӨ — давхар approve 200 буцаах
       const existingLog = await tx.approvalLog.findUnique({
-        where: { mrId_approverId_action: { mrId: id, approverId, action: 'APPROVED' } },
+        where: { mrId_approverId_action: { mrId: id, approverId: actor.id, action: 'APPROVED' } },
       });
       if (existingLog) {
-        this.logger.log(`MR approve idempotent: ${id} (approver: ${approverId})`);
-        return { idempotent: true as const, header: await this.loadOne(tx, tenantId, id) };
+        this.logger.log(`MR approve idempotent: ${id} (approver: ${actor.id})`);
+        return { changed: false as const, final: false, header: await this.loadDetail(tx, tenantId, id) };
       }
 
       const existing = await this.loadOne(tx, tenantId, id);
       if (existing.status !== MrStatus.PENDING_APPROVAL) {
         throw new ForbiddenException('Зөвхөн PENDING_APPROVAL статуст батлах боломжтой');
       }
+      const flow = await this.loadFlow(tx, tenantId, existing);
+      const step = flow.steps[flow.index];
+      if (!step) {
+        throw new ConflictException('Workflow-ийн бүх алхам аль хэдийн шийдэгдсэн');
+      }
+      const denial = approvalDenial(actor, existing.requesterId, step);
+      if (denial) {
+        throw new ForbiddenException(denial);
+      }
 
+      await tx.approvalLog.create({
+        data: { tenantId, mrId: id, approverId: actor.id, action: 'APPROVED', notes: dto.notes },
+      });
+
+      let approvedCount = 1;
+      if (flow.instance) {
+        await tx.workflowStepLog.create({
+          data: {
+            tenantId,
+            instanceId: flow.instance.id,
+            stepOrder: flow.index,
+            actorId: actor.id,
+            action: 'APPROVED',
+            comment: dto.notes,
+          },
+        });
+        approvedCount = await tx.workflowStepLog.count({
+          where: { tenantId, instanceId: flow.instance.id, stepOrder: flow.index, action: 'APPROVED' },
+        });
+      }
+
+      // quorum хүрээгүй → алхам хэвээр (MR-ийн version л өснө)
+      if (!quorumReached(approvedCount, step)) {
+        await tx.mrHeader.update({ where: { id }, data: { version: { increment: 1 } } });
+        return { changed: true as const, final: false, header: await this.loadDetail(tx, tenantId, id) };
+      }
+
+      if (flow.instance) {
+        await this.completeSla(tx, tenantId, flow.instance.id);
+      }
+
+      const nextIndex = flow.index + 1;
+      if (nextIndex < flow.steps.length && flow.instance) {
+        // Завсрын алхам дууслаа → дараагийн алхам
+        await tx.workflowInstance.update({
+          where: { id: flow.instance.id },
+          data: { currentStep: nextIndex, lockedBy: null, lockedAt: null },
+        });
+        await this.assignSla(
+          tx,
+          tenantId,
+          flow.instance.id,
+          flow.steps[nextIndex],
+          existing.requesterId,
+          flow.instance.definition.slaHours,
+        );
+        await tx.mrHeader.update({ where: { id }, data: { version: { increment: 1 } } });
+        return { changed: true as const, final: false, header: await this.loadDetail(tx, tenantId, id) };
+      }
+
+      // Сүүлийн алхам → APPROVED
+      if (flow.instance) {
+        await tx.workflowInstance.update({
+          where: { id: flow.instance.id },
+          data: { status: 'APPROVED', currentStep: flow.steps.length, lockedBy: null, lockedAt: null },
+        });
+      }
       const header = await tx.mrHeader.update({
         where: { id },
         data: {
           status: MrStatus.APPROVED,
-          approvedBy: approverId,
+          approvedBy: actor.id,
           approvedAt: new Date(),
           version: { increment: 1 },
         },
-        include: { items: { orderBy: { lineNumber: 'asc' } } },
       });
 
       // Phase 4.1: төсөв COMMITTED → SPENT
       await this.lifecycle.onApproved(tx, tenantId, id);
 
-      await tx.approvalLog.create({
-        data: {
-          tenantId,
-          mrId: id,
-          approverId,
-          action: 'APPROVED',
-          notes: dto.notes,
-        },
+      await this.eventBus.emit({
+        tx: tx as never,
+        tenantId,
+        eventType: 'MR_APPROVED', // outbox.event_type (хуучин нэр хэвээр)
+        cloudEventType: EventTypes.MR_APPROVED,
+        aggregateType: 'MR',
+        aggregateId: id,
+        data: { mrId: id, mrNumber: header.mrNumber, approverId: actor.id },
       });
 
-      await tx.outboxEvent.create({
-        data: {
-          tenantId,
-          eventType: 'MR_APPROVED',
-          aggregateType: 'MR',
-          aggregateId: id,
-          payload: { mrId: id, mrNumber: header.mrNumber, approverId },
-        },
-      });
-
-      return { idempotent: false as const, header };
+      return { changed: true as const, final: true, header: await this.loadDetail(tx, tenantId, id) };
     });
 
-    if (result.idempotent) return result.header;
+    if (!result.changed) return result.header;
     await this.invalidate(tenantId);
-    this.logger.log(`MR approved: ${result.header.mrNumber} (tenant: ${tenantId})`);
+    const w = result.header.workflow;
+    this.logger.log(
+      result.final
+        ? `MR approved: ${result.header.mrNumber} (tenant: ${tenantId})`
+        : `MR step approved: ${result.header.mrNumber} алхам ${w.currentStep + 1}/${w.totalSteps} (tenant: ${tenantId})`,
+    );
     return result.header;
   }
 
-  async reject(tenantId: string, id: string, authId: string, dto: RejectMrDto) {
+  /**
+   * Phase 6.0b [SEC-004]: одоогийн алхмын эрхтэй хүн татгалзана → MR, workflow REJECTED,
+   * төсөв RELEASED, SLA хаагдана. MR үүсгэгч өөрөө татгалзахгүй.
+   */
+  async reject(tenantId: string, id: string, authId: string, dto: RejectMrDto): Promise<MrDetailWithWorkflow> {
     const result = await inTenantTx(this.prisma, tenantId, async (tx) => {
-      const approverId = await this.resolveUserId(tx, tenantId, authId);
+      const actor = await this.resolveActor(tx, tenantId, authId);
+      await this.lockMr(tx, tenantId, id);
 
-      // Idempotency шалгах: status шалгалтаас ӨМНӨ — давхар reject 200 буцаах
+      // Idempotency: status шалгалтаас ӨМНӨ — давхар reject 200 буцаах
       const existingLog = await tx.approvalLog.findUnique({
-        where: { mrId_approverId_action: { mrId: id, approverId, action: 'REJECTED' } },
+        where: { mrId_approverId_action: { mrId: id, approverId: actor.id, action: 'REJECTED' } },
       });
       if (existingLog) {
-        this.logger.log(`MR reject idempotent: ${id} (approver: ${approverId})`);
-        return { idempotent: true as const, header: await this.loadOne(tx, tenantId, id) };
+        this.logger.log(`MR reject idempotent: ${id} (approver: ${actor.id})`);
+        return { changed: false as const, header: await this.loadDetail(tx, tenantId, id) };
       }
 
       const existing = await this.loadOne(tx, tenantId, id);
       if (existing.status !== MrStatus.PENDING_APPROVAL) {
         throw new ForbiddenException('Зөвхөн PENDING_APPROVAL статуст татгалзах боломжтой');
       }
+      const flow = await this.loadFlow(tx, tenantId, existing);
+      const step = flow.steps[flow.index];
+      if (!step) {
+        throw new ConflictException('Workflow-ийн бүх алхам аль хэдийн шийдэгдсэн');
+      }
+      const denial = approvalDenial(actor, existing.requesterId, step);
+      if (denial) {
+        throw new ForbiddenException(denial);
+      }
 
       const header = await tx.mrHeader.update({
         where: { id },
-        data: {
-          status: MrStatus.REJECTED,
-          version: { increment: 1 },
-        },
-        include: { items: { orderBy: { lineNumber: 'asc' } } },
+        data: { status: MrStatus.REJECTED, version: { increment: 1 } },
       });
 
       // Phase 4.1: төсөв COMMITTED → RELEASED
       await this.lifecycle.onRejected(tx, tenantId, id);
 
       await tx.approvalLog.create({
-        data: {
-          tenantId,
-          mrId: id,
-          approverId,
-          action: 'REJECTED',
-          reason: dto.reason,
-          notes: dto.notes,
-        },
+        data: { tenantId, mrId: id, approverId: actor.id, action: 'REJECTED', reason: dto.reason, notes: dto.notes },
       });
 
-      await tx.outboxEvent.create({
-        data: {
-          tenantId,
-          eventType: 'MR_REJECTED',
-          aggregateType: 'MR',
-          aggregateId: id,
-          payload: { mrId: id, mrNumber: header.mrNumber, approverId, reason: dto.reason },
-        },
+      if (flow.instance) {
+        await tx.workflowStepLog.create({
+          data: {
+            tenantId,
+            instanceId: flow.instance.id,
+            stepOrder: flow.index,
+            actorId: actor.id,
+            action: 'REJECTED',
+            comment: dto.reason,
+          },
+        });
+        await tx.workflowInstance.update({
+          where: { id: flow.instance.id },
+          data: { status: 'REJECTED', lockedBy: null, lockedAt: null },
+        });
+        await this.completeSla(tx, tenantId, flow.instance.id);
+      }
+
+      await this.eventBus.emit({
+        tx: tx as never,
+        tenantId,
+        eventType: 'MR_REJECTED', // outbox.event_type (хуучин нэр хэвээр)
+        cloudEventType: EventTypes.MR_REJECTED,
+        aggregateType: 'MR',
+        aggregateId: id,
+        data: { mrId: id, mrNumber: header.mrNumber, approverId: actor.id, reason: dto.reason },
       });
 
-      return { idempotent: false as const, header };
+      return { changed: true as const, header: await this.loadDetail(tx, tenantId, id) };
     });
 
-    if (result.idempotent) return result.header;
+    if (!result.changed) return result.header;
     await this.invalidate(tenantId);
     this.logger.log(`MR rejected: ${result.header.mrNumber} (tenant: ${tenantId})`);
     return result.header;

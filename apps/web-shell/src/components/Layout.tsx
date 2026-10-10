@@ -8,7 +8,11 @@ export default function Layout() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   // Кемпийн хуудсууд (эрхийн матриц, календарь) өргөн хүснэгттэй
-  const wide = useLocation().pathname.startsWith('/camp')
+  const { pathname } = useLocation()
+  const wide = pathname.startsWith('/camp')
+  // Phase 6.0: идэвхтэй цэсийг тодруулна
+  const navCls = (prefix: string) =>
+    `text-sm hover:text-blue-600 ${pathname.startsWith(prefix) ? 'text-blue-600 font-medium' : 'text-gray-600'}`
 
   const handleSignOut = async () => {
     await signOut()
@@ -28,7 +32,10 @@ export default function Layout() {
           S Project
         </span>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <button onClick={() => navigate('/camp')} className={`text-sm hover:text-blue-600 ${wide ? 'text-blue-600 font-medium' : 'text-gray-600'}`}>Кемп</button>
+          <button onClick={() => navigate('/camp')} className={navCls('/camp')}>Кемп</button>
+          <button onClick={() => navigate('/inventory')} className={navCls('/inventory')}>Бараа</button>
+          <button onClick={() => navigate('/vendors')} className={navCls('/vendors')}>Нийлүүлэгч</button>
+          <button onClick={() => navigate('/reports')} className={navCls('/reports')}>Тайлан</button>
           <button onClick={() => navigate('/admin/approval-sla')} className="text-sm text-gray-600 hover:text-blue-600">SLA</button>
           <button onClick={() => navigate('/admin/workflow-definitions')} className="text-sm text-gray-600 hover:text-blue-600">Workflow</button>
           <button onClick={() => navigate('/admin/delegations')} className="text-sm text-gray-600 hover:text-blue-600">Delegation</button>

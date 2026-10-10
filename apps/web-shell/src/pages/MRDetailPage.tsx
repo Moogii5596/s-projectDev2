@@ -7,6 +7,16 @@ import StatusBadge from '../components/StatusBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorMessage from '../components/ErrorMessage'
 import RejectModal from '../components/RejectModal'
+import { useMe } from '../hooks/useMe'
+import { approvalState, roleLabel, stepViews } from '../lib/mr-approval'
+import { apiErrorMessage } from '../modules/camp/lib/errors'
+
+const STEP_CLS = {
+  done: 'bg-green-50 border-green-200 text-green-700',
+  current: 'bg-blue-50 border-blue-300 text-blue-700',
+  waiting: 'bg-gray-50 border-gray-200 text-gray-500',
+  rejected: 'bg-red-50 border-red-200 text-red-700',
+} as const
 
 export default function MRDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -17,6 +27,7 @@ export default function MRDetailPage() {
   const submitMutation = useSubmitMR(mrId)
   const approveMutation = useApproveMR(mrId)
   const rejectMutation = useRejectMR(mrId)
+  const { me } = useMe() // Phase 6.0b [SEC-004]: батлах товч зөвхөн эрхтэй хүнд
 
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -31,8 +42,8 @@ export default function MRDetailPage() {
     setActionError(null)
     try {
       await submitMutation.mutateAsync({})
-    } catch {
-      setActionError('Илгээхэд алдаа гарлаа')
+    } catch (err) {
+      setActionError(apiErrorMessage(err, 'Илгээхэд алдаа гарлаа'))
     }
   }
 
@@ -40,8 +51,8 @@ export default function MRDetailPage() {
     setActionError(null)
     try {
       await approveMutation.mutateAsync({})
-    } catch {
-      setActionError('Батлахад алдаа гарлаа')
+    } catch (err) {
+      setActionError(apiErrorMessage(err, 'Батлахад алдаа гарлаа'))
     }
   }
 
@@ -50,12 +61,14 @@ export default function MRDetailPage() {
     try {
       await rejectMutation.mutateAsync({ reason, notes })
       setShowRejectModal(false)
-    } catch {
-      setActionError('Татгалзахад алдаа гарлаа')
+    } catch (err) {
+      setActionError(apiErrorMessage(err, 'Татгалзахад алдаа гарлаа'))
     }
   }
 
   const isActing = submitMutation.isPending || approveMutation.isPending || rejectMutation.isPending
+  const approval = approvalState(mr, me)
+  const wf = mr.workflow
 
   return (
     <div className="max-w-3xl">
@@ -95,7 +108,11 @@ export default function MRDetailPage() {
             </button>
           )}
 
-          {mr.status === MrStatus.PENDING_APPROVAL && (
+          {mr.status === MrStatus.PENDING_APPROVAL && !approval.canAct && approval.reason && (
+            <p className="text-sm text-gray-500 py-2">{approval.reason}</p>
+          )}
+
+          {mr.status === MrStatus.PENDING_APPROVAL && approval.canAct && (
             <>
               <button
                 onClick={handleApprove}
@@ -138,6 +155,31 @@ export default function MRDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Phase 6.0b: батлалтын алхмууд */}
+      {wf && mr.status !== MrStatus.DRAFT && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
+          <h2 className="text-sm font-semibold text-gray-900 mb-3">
+            Батлалт
+            {mr.status === MrStatus.PENDING_APPROVAL && wf.currentStep < wf.totalSteps && (
+              <span className="ml-2 font-normal text-gray-500">
+                Алхам {wf.currentStep + 1}/{wf.totalSteps}
+              </span>
+            )}
+          </h2>
+          <ol className="flex flex-wrap gap-2" aria-label="Батлалтын алхмууд">
+            {stepViews(wf, mr.status).map((s) => (
+              <li key={s.index} className={`border rounded-lg px-3 py-2 text-xs ${STEP_CLS[s.state]}`} data-testid={`mr-step-${s.index}`} data-state={s.state}>
+                <span className="font-medium">
+                  {s.index + 1}. {roleLabel(s.role)}
+                </span>
+                {s.quorum > 1 && <span className="ml-1">({s.approved}/{s.quorum})</span>}
+                <span className="ml-1">{s.state === 'done' ? '✓' : s.state === 'rejected' ? '✕' : s.state === 'current' ? '…' : ''}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {/* Items table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

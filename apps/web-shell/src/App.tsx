@@ -10,6 +10,9 @@ import ApprovalSlaPage from './pages/ApprovalSlaPage';
 import WorkflowDefinitionPage from './pages/WorkflowDefinitionPage';
 import DelegationPage from './pages/DelegationPage';
 import CampRoutes from './modules/camp/CampRoutes';
+import InventoryPage from './modules/inventory/InventoryPage';
+import VendorsPage from './modules/vendor/VendorsPage';
+import ReportPage from './modules/report/ReportPage';
 
 // Sprint 4: Module Federation — React.lazy + dynamic import
 // mfe-requisitions remote-оос ачаалагдана (port 5174)
@@ -33,6 +36,11 @@ export default function App() {
           <Route path="/admin/approval-sla" element={<ApprovalSlaPage />} />
           <Route path="/admin/workflow-definitions" element={<WorkflowDefinitionPage />} />
           <Route path="/admin/delegations" element={<DelegationPage />} />
+
+          {/* Phase 6.0: хөнгөн модулиуд (Inventory / Vendor / Report) */}
+          <Route path="/inventory" element={<InventoryPage />} />
+          <Route path="/vendors" element={<VendorsPage />} />
+          <Route path="/reports" element={<ReportPage />} />
 
           {/* Шат 8: Кемп модуль (V1) */}
           <Route path="/camp/*" element={<CampRoutes />} />

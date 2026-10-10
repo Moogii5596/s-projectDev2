@@ -79,6 +79,9 @@
 | SEC-003 | Workflow definition эрхгүй + body шалгалтгүй | `requireRole(OWNER/ADMIN)` + class DTO (interface → шалгагдахгүй) |
 | API-001 | `:id`-д `ParseUUIDPipe` алга → Prisma алдаа → 500 | Бүх UUID параметрт `ParseUUIDPipe`; route probe тест |
 | HTTP-001 | `@Header(Content-Type)` + алдаа → Fastify 500 | Файлын header-ийг handler дотор амжилттай үед |
+| EVT-001 | `FOR UPDATE SKIP LOCKED` transaction-гүй → түгжээ шууд суларна → давхар publish | Event бүр: lock → publish → UPDATE нэг transaction-д |
+| EVT-002 | Retry бүрт CloudEvent id шинэ | Outbox-д хадгалсан `cloud_event_id`-аар publish (`fromOutbox`) |
+| TEST-012 | `client.$queryRaw`-г monkeypatch → tx доторх query transaction-аас гарна | Instrument хийх бол tx-ийг биш, publisher/mock-ийг |
 
 ---
 
@@ -1038,12 +1041,56 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шалтгаан:** Nest-Fastify `@Header`-ийг pipe-ээс ӨМНӨ тавьдаг → `ParseUUIDPipe`-ийн 400 JSON xlsx Content-Type-тай → Fastify object serialize хийж чадахгүй → 500.
 **Шийдэл:** `@Res({ passthrough: true })` → амжилттай үед л `reply.header(...)`.
 
+## 18. Phase 5 — Event Bus (2026-10-10)
+
+### [EVT-001] Outbox poller: `SELECT … FOR UPDATE SKIP LOCKED` transaction-ГҮЙ → олон worker нэг event-ийг давхар publish хийдэг байсан
+**Шалтгаан:** autocommit-д мөрийн түгжээ statement дуусахад суларна. Worker бүр (cluster, cron 5с) PENDING мөрүүдийг авч, нэг нэгээр нь publish → UPDATE. Хоёр дахь worker эхнийх нь PUBLISHED болгохоос өмнө ижил мөрүүдийг авна.
+**Баталгаа:** PG16 race (4 poller, 40 event, 50мс зайтай эхлэх) → хуучин код **80–119 publish**, бүх event давхар; шинэ код яг 40.
+**Шийдэл:** `processNext()` — event бүр нэг transaction: `… WHERE status='PENDING' AND next_retry_at <= now() ORDER BY … LIMIT 1 FOR UPDATE SKIP LOCKED` → publish → `PUBLISHED` (эсвэл retry/`DLQ` + `dlq_events` ижил transaction-д) → commit. Баталгаа = at-least-once (publish-ийн дараа commit-оос өмнө унавал дахин) → consumer CloudEvent `id`-аар dedupe [EVT-002].
+**Дүрэм:** `FOR UPDATE [SKIP LOCKED]` нь ЗӨВХӨН transaction дотор утгатай. Queue/claim хэв маягийг зэрэгцээ worker-тэй тестлэнэ (эхлэх хугацааг зөрүүлж — яг зэрэг эхэлбэл алдаа нуугдана).
+
+### [EVT-002] Retry бүрт CloudEvent id шинээр үүсдэг байсан / [EVT-003] MR outbox-ийг шууд бичдэг байсан
+**Шалтгаан:** Poller publish бүрт `CloudEventsAdapter.wrap()` → `randomUUID()`. MR service `tx.outboxEvent.create`-ээр `cloud_event_*` баганагүй бичдэг.
+**Шийдэл:** `EventBusService.emit` id/type/source-ийг outbox-д нэг удаа хадгална (MR ч үүгээр, `event_type` хуучин нэр хэвээр + `cloudEventType`); poller `CloudEventsAdapter.fromOutbox(row)` (id алга бол outbox мөрийн id).
+
+### [TEST-012] `client.$queryRaw`-г monkeypatch хийхэд interactive transaction доторх `tx.$queryRaw` transaction-аас ГАРСАН
+**Тохиолдсон:** Race harness-д poller бүрийн авсан мөрийн тоог logging хийх гэж `PrismaClient.$queryRaw`-г орлуулахад шинэ (зөв) код давхар publish хийсэн мэт харагдсан — `tx.$queryRaw` нь клиентийн method-ийг transaction context-гүй дуудсан.
+**Дүрэм:** Prisma клиентийн method-ийг тестэд орлуулахгүй; хэмжилтийг гадна талд (publisher mock, DB-ийн төлөв) хийнэ.
+
+---
+
+## 19. Phase 6.0 — Хөнгөн frontend (2026-10-10)
+
+### [PROC-006] Төхөөрөмж рүү хуулахад ижил staged нэр → ХУУЧИН агуулга бичигдсэн
+**Тохиолдсон:** Төлөвлөгөөний файлыг `outputs/plan.md` нэрээр 2 дахь удаагаа хуулахад tool "written" гэж хариулсан ч төхөөрөмж дээрх hash хуучин хэвээр (өмнөх upload-ийн хуулбар ашиглагдсан). Hash шалгалтаар илэрсэн.
+**Шийдэл:** Хуулах бүрт давтагдашгүй staged нэр (`plan_6_0.md`, bundle-д огноо/шат) ашиглана; хуулсны ДАРАА төхөөрөмж дээр hash заавал тулгана (PROC-005-ийн үргэлжлэл).
+
+### [FE-005] Frontend-д role хэрэгтэй үед API импортлох файлаас цэвэр функц тестлэхгүй
+**Тохиолдсон (урьдчилан сэргийлсэн):** `canWrite`-г `api/me.ts`-д байршуулбал vitest (node) → `api/client` → `lib/supabase` импорт → `VITE_SUPABASE_URL` байхгүй тул module ачаалахад throw.
+**Дүрэм:** Цэвэр логик (`lib/roles.ts`, `modules/*/lib/*`) нь API/supabase импортгүй байна; хуудас/hook л API-г импортлоно. UI-д эрх нуух нь зөвхөн UX — хамгаалалт backend `requireRole` (403).
+
+### [TEST-013] Cloud harness: Playwright 1.48 + суулгасан Chromium (шинэ) → "Old Headless mode has been removed"
+**Тохиолдсон:** `executablePath: /opt/pw-browsers/chromium` → 1.48 нь `--headless=old` дамжуулдаг тул шинэ Chrome эхлэхгүй.
+**Шийдэл (зөвхөн harness):** `chromium_headless_shell-*/…/headless_shell`-ийг `executablePath` болгоно. Таны компьютер дээр `pnpm exec playwright install chromium` (ENV-007) хэвээр.
+
+### [SEC-004] 🔴 MR батлалт workflow-г тойрдог байсан — REQUESTER өөрийн 5 сая₮ MR-г нэг дор баталсан
+**Тохиолдсон:** `POST /requisitions/:id/approve|reject` нь role, өөрийгөө батлах, workflow алхам/quorum-ийг шалгадаггүй; amount_rules-ийн олон алхам (`resolved_steps`) зөвхөн submit-д тооцоологдоод ашиглагддаггүй. `WorkflowService.approveStep/rejectStep` ямар ч controller-т холбогдоогүй (dead code). Үр дагавар: ямар ч гишүүн ямар ч дүнтэй MR-г батална; `workflow_instances` PENDING / `workflow_sla_logs` PENDING үлдэж, SLA хугацаа өнгөрөхөд батлагдсан MR-г escalate хийнэ; SLA тайлангийн COMPLETED хэзээ ч бичигддэггүй.
+**Яаж илэрсэн:** 6.1.3 (advanced workflow E2E) бэлтгэхдээ "батлах зам workflow-ийг ашигладаг уу" гэж кодыг уншаад → cloud-д бодит хүсэлтээр баталгаажуулав. Өмнөх бүх тест 1 алхамт definition + APPROVER хэрэглэгчээр батладаг байсан тул илрээгүй.
+**Шийдэл (Phase 6.0b):** `mr-approval.ts` (цэвэр логик) + MR service: MR мөрийг `FOR UPDATE` → идэвхтэй алхмын role эсвэл OWNER/ADMIN (шийдвэр А); MR үүсгэгч өөрөө батлахгүй; quorum (`workflow_step_logs`) → завсрын алхам: дараагийн алхам + SLA, сүүлийн алхам: APPROVED + төсөв SPENT + MR_APPROVED; reject: MR/workflow REJECTED + RELEASED; шийдэгдсэн алхмын SLA → COMPLETED. Instance-гүй хуучин MR → 1 алхам APPROVER. Хариунд `workflow` (алхам, батлалтууд); frontend товчийг эрхтэй хүнд л харуулна.
+**Дүрэм:**
+1. Төлөвийг өөрчилдөг endpoint бүрт "хэн, ямар нөхцөлд" гэдгийг тест заавал шалгана — зөвхөн "зөв хэрэглэгч амжилттай" биш, **буруу хэрэглэгч 403** (өөрөө, өөр role, VIEWER) кейс.
+2. Тохиргоо (amount_rules г.м.) үүсгэдэг код байвал түүнийг **хэрэглэдэг** зам бий эсэхийг шалгана; холбогдоогүй service method = анхааруулга.
+3. Шинэ тестийг хуучин кодон дээр ажиллуулж (before/after) унахыг нь баталгаажуулна — энэ удаа хуучин код дээр 11/11 унасан.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §19 (Phase 6.0b): SEC-004 (MR батлалт workflow/role/өөрийгөө батлахыг шалгадаггүй) |
+| 2026-10-10 | §19 (Phase 6.0): PROC-006 (ижил staged нэр → хуучин агуулга), FE-005 (цэвэр логик API импортгүй), TEST-013 (harness headless_shell) |
+| 2026-10-10 | §18 (Phase 5): EVT-001, EVT-002/003, TEST-012 |
 | 2026-10-10 | §17 (Phase 4.9): SEC-003, API-001, HTTP-001; route probe тест |
 | 2026-10-10 | §17 (Phase 4.8.5): SEC-002 (workflow definition cross-tenant update), TEST-011; RLS-004 шийдэл |
 | 2026-10-10 | §17 (Phase 4.8.3): RLS-007 (set_config transaction-ий гадна), CACHE-001 (MR cache), TEST-010 (Prisma wasm harness) |

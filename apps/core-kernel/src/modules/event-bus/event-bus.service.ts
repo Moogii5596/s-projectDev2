@@ -1,27 +1,34 @@
 import { Injectable } from '@nestjs/common';
 import { CloudEventsAdapter } from './cloud-events.adapter';
 
-const SOURCE = '/s-project/core-kernel';
+export const EVENT_SOURCE = '/s-project/core-kernel';
 
 export interface EmitParams {
-  tx:          Record<string, unknown>;  // Prisma transaction client
-  tenantId:    string;
-  eventType:   string;                   // EventTypes.MR_SUBMITTED
-  aggregateId: string;
-  data:        object;
+  tx:             Record<string, unknown>;  // Prisma transaction client (tenant transaction)
+  tenantId:       string;
+  /** outbox_events.event_type (жнь 'MR_SUBMITTED' эсвэл EventTypes.*) */
+  eventType:      string;
+  aggregateId:    string;
+  data:           object;
+  /** Phase 5.1: анхдагч 'MATERIAL_REQUISITION' */
+  aggregateType?: string;
+  /** Phase 5.1: CloudEvent `type` (анхдагч = eventType), жнь EventTypes.MR_SUBMITTED */
+  cloudEventType?: string;
 }
 
 @Injectable()
 export class EventBusService {
   /**
    * Transactional Outbox pattern
-   * RULE-04: caller-ийн $transaction(tx) дотор дуудна
+   * RULE-04: caller-ийн $transaction(tx) дотор дуудна (бизнес өөрчлөлттэй хамт commit/rollback)
+   * Phase 5.1 [EVT-003]: CloudEvent id/type/source энд НЭГ УДАА үүсч outbox-д хадгалагдана →
+   *   poller үүнийг л илгээнэ (retry бүрт id өөрчлөгдөхгүй).
    */
   async emit(params: EmitParams): Promise<void> {
     const cloudEvent = CloudEventsAdapter.wrap({
       tenantId: params.tenantId,
-      type:     params.eventType,
-      source:   SOURCE,
+      type:     params.cloudEventType ?? params.eventType,
+      source:   EVENT_SOURCE,
       data:     params.data,
     });
 
@@ -34,7 +41,7 @@ export class EventBusService {
     await outboxEvent.outboxEvent.create({
       data: {
         tenantId:         params.tenantId,
-        aggregateType:    'MATERIAL_REQUISITION',
+        aggregateType:    params.aggregateType ?? 'MATERIAL_REQUISITION',
         aggregateId:      params.aggregateId,
         eventType:        params.eventType,
         payload:          params.data as Record<string, unknown>,

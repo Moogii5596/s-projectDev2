@@ -6,8 +6,15 @@ import { SystemPrismaService } from '../../db/system-prisma.service'; // Phase 4
 export class DlqService {
   constructor(private readonly prisma: SystemPrismaService) {}
 
-  async createDlqRecord(originalEvent: Record<string, unknown>, errorMessage: string): Promise<void> {
-    await this.prisma.dlqEvent.create({
+  /**
+   * Phase 5.0: `tx` өгвөл outbox-ийн DLQ төлөвтэй ижил transaction-д бичнэ (хамт commit/rollback)
+   */
+  async createDlqRecord(
+    originalEvent: Record<string, unknown>,
+    errorMessage: string,
+    tx?: Pick<Prisma.TransactionClient, 'dlqEvent'>,
+  ): Promise<void> {
+    await (tx ?? this.prisma).dlqEvent.create({
       data: {
         tenantId:      originalEvent['tenant_id'] as string,
         originalEvent: originalEvent as Prisma.InputJsonValue,

@@ -35,6 +35,26 @@ export interface MrHeader {
   createdAt: string
   updatedAt: string
   items?: MrItem[]
+  /** Phase 6.0b [SEC-004]: GET /requisitions/:id, approve, reject-ийн хариунд */
+  workflow?: MrWorkflow
+}
+
+// Phase 6.0b [SEC-004] — workflow-ийн алхам (backend `MrWorkflowSummary`)
+export interface MrWorkflowStep {
+  order: number
+  role: string
+  quorum: number
+}
+
+export interface MrWorkflow {
+  instanceId: string | null
+  /** PENDING | APPROVED | REJECTED | LEGACY */
+  status: string
+  /** 0-ээс эхэлсэн индекс; дууссан бол totalSteps */
+  currentStep: number
+  totalSteps: number
+  steps: MrWorkflowStep[]
+  approvals: { stepIndex: number; actorId: string; action: string; actedAt: string }[]
 }
 
 // DTOs
