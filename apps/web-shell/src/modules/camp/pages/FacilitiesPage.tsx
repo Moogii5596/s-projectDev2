@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
 import type { Building, Room, RoomStatus } from '../api/types'
@@ -65,7 +65,13 @@ export default function FacilitiesPage() {
                 <td className={td}>{r.floor ?? '—'}</td>
                 <td className={td}>{r.capacity}</td>
                 <td className={td}>
-                  <Badge tone={STATUS_TONE[r.status]}>{ROOM_STATUS_LABEL[r.status]}</Badge>
+                  {r.status === 'MAINTENANCE' ? (
+                    <Link to={`../maintenance?roomId=${r.id}`} title="Энэ өрөөний засварууд">
+                      <Badge tone={STATUS_TONE[r.status]}>{ROOM_STATUS_LABEL[r.status]} →</Badge>
+                    </Link>
+                  ) : (
+                    <Badge tone={STATUS_TONE[r.status]}>{ROOM_STATUS_LABEL[r.status]}</Badge>
+                  )}
                 </td>
                 <td className={`${td} text-gray-500 max-w-[16rem] truncate`}>{r.note ?? ''}</td>
                 <td className={`${td} text-right`}>

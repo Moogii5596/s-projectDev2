@@ -1,5 +1,9 @@
 import type {
   AdjustmentReason,
+  AssetCondition,
+  MaintenancePriority,
+  MaintenanceStatus,
+  PartSource,
   Direction,
   EmployeeStatus,
   ImportStatus,
@@ -51,3 +55,14 @@ export const REASON_LABEL: Record<AdjustmentReason, string> = { EARLY_ARRIVAL: '
 export const EMPLOYEE_STATUS_LABEL: Record<EmployeeStatus, string> = { ACTIVE: 'Идэвхтэй', INACTIVE: 'Идэвхгүй' }
 /** Хоолны задаргааны бүлэг (backend PresenceBreakdown.group) */
 export const PRESENCE_GROUP_LABEL: Record<string, string> = { DAY: 'Өдрийн ээлж', NIGHT: 'Шөнийн ээлж', UNKNOWN: 'Ээлж тодорхойгүй', MOVEMENT: 'Ирэх/явах өдөр' }
+
+export const CONDITION_LABEL: Record<AssetCondition, string> = { GOOD: 'Хэвийн', DAMAGED: 'Гэмтэлтэй', WRITTEN_OFF: 'Актлагдсан' }
+export const MAINT_STATUS_LABEL: Record<MaintenanceStatus, string> = {
+  OPEN: 'Нээлттэй',
+  IN_PROGRESS: 'Хийгдэж буй',
+  DONE: 'Дууссан',
+  CLOSED: 'Хаагдсан',
+  CANCELLED: 'Цуцлагдсан',
+}
+export const PRIORITY_LABEL: Record<MaintenancePriority, string> = { LOW: 'Бага', MEDIUM: 'Дунд', HIGH: 'Өндөр', URGENT: 'Яаралтай' }
+export const PART_SOURCE_LABEL: Record<PartSource, string> = { MINE_SUPPLIED: 'Уурхайн нийлүүлсэн', CATERING_PURCHASED: 'Катерингийн авсан' }

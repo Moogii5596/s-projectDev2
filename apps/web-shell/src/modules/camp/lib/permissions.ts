@@ -45,3 +45,10 @@ export function mergeRolePermissions(current: string[], visibleCodes: string[], 
   const chosen = selectedVisible.filter((c) => visible.has(c))
   return [...new Set([...hiddenKept, ...chosen])].sort()
 }
+
+/** Аль нэг кемпэд (эсвэл бүх кемпэд) эрхтэй эсэх — tenant түвшний лавлах (хөрөнгийн ангилал). Backend `requireInAnyCamp`-тэй ижил */
+export function canInAnyCamp(perm: { isTenantAdmin: boolean; permissions: string[]; byCamp: Record<string, string[]> } | undefined, code: CampPermission): boolean {
+  if (!perm) return false
+  if (perm.isTenantAdmin || perm.permissions.includes(code)) return true
+  return Object.values(perm.byCamp).some((list) => list.includes(code))
+}

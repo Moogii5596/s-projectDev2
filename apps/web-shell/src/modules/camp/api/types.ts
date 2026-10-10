@@ -308,3 +308,109 @@ export interface Presence {
     noDefaultMealLocation: boolean
   }
 }
+
+// ── Шат 8 багц 3: хөрөнгө, засвар ───────────────────────────
+export type AssetCondition = 'GOOD' | 'DAMAGED' | 'WRITTEN_OFF'
+export type MaintenanceStatus = 'OPEN' | 'IN_PROGRESS' | 'DONE' | 'CLOSED' | 'CANCELLED'
+export type MaintenancePriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+export type PartSource = 'MINE_SUPPLIED' | 'CATERING_PURCHASED'
+export type MaintenanceAction = 'start' | 'complete' | 'reopen' | 'close' | 'cancel'
+
+export interface AssetCategory {
+  id: string
+  name: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Asset {
+  id: string
+  campId: string
+  categoryId: string
+  inventoryNo: string
+  name: string
+  serialNo: string | null
+  roomId: string | null
+  condition: AssetCondition
+  /** 'YYYY-MM-DD' */
+  acquiredDate: string | null
+  /** '1500000.50' */
+  acquiredCost: string | null
+  note: string | null
+  createdAt: string
+  updatedAt: string
+  category: { name: string }
+  room: { roomNo: string; building: { code: string } } | null
+  /** зөвхөн дэлгэрэнгүйд */
+  openMaintenance?: number
+}
+
+export interface AssetMovement {
+  id: string
+  fromRoomId: string | null
+  toRoomId: string | null
+  movedAt: string
+  reason: string | null
+  fromRoom: { roomNo: string } | null
+  toRoom: { roomNo: string } | null
+  movedByUser: { fullName: string | null; email: string }
+}
+
+export interface MaintenancePart {
+  id: string
+  partName: string
+  /** '2' / '1.5' */
+  quantity: string
+  unit: string
+  /** '11000.00' | null */
+  unitPrice: string | null
+  vatIncluded: boolean
+  source: PartSource
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface VatAmounts {
+  net: string
+  vat: string
+  gross: string
+}
+
+export interface MaintenanceRequest {
+  id: string
+  campId: string
+  requestNo: string
+  roomId: string | null
+  assetId: string | null
+  title: string
+  description: string | null
+  priority: MaintenancePriority
+  status: MaintenanceStatus
+  statusLabel: string
+  blocksRoom: boolean
+  reportedBy: string
+  startedAt: string | null
+  completedAt: string | null
+  closedBy: string | null
+  closedAt: string | null
+  cancelReason: string | null
+  createdAt: string
+  updatedAt: string
+  room: { roomNo: string; status: RoomStatus; building: { code: string } } | null
+  asset: { inventoryNo: string; name: string } | null
+  reportedByUser: { fullName: string | null; email: string } | null
+}
+
+export interface MaintenanceDetail extends MaintenanceRequest {
+  parts: MaintenancePart[]
+  cost: { vatRate: string; lines: ({ partId: string } & VatAmounts)[]; total: VatAmounts }
+}
+
+/** Үүсгэх / төлөв шилжүүлэх хариу */
+export interface MaintenanceMutationResult extends MaintenanceDetail {
+  warnings?: string[]
+  roomReleased?: boolean
+  costEntries?: number
+}

@@ -71,6 +71,12 @@ export default function CampHomePage() {
             </Link>
             <span className="text-gray-500"> — уурхай, туслан гүйцэтгэгч, катеринг, хог/бохир ус</span>
           </li>
+          <li>
+            <Link to="/camp/admin/asset-categories" className="text-blue-600 hover:underline">
+              Хөрөнгийн ангилал
+            </Link>
+            <span className="text-gray-500"> — бүх кемпэд нийтлэг</span>
+          </li>
           {canRoles && (
             <>
               <li>

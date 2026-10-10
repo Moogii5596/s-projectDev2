@@ -26,6 +26,9 @@ export const campKeys = {
   roomBoard: (campId: string) => ['camp', campId, 'room-board'] as const,
   allocations: (campId: string) => ['camp', campId, 'allocations'] as const,
   presence: (campId: string) => ['camp', campId, 'presence'] as const,
+  assetCategories: ['camp', 'asset-categories'] as const,
+  assets: (campId: string) => ['camp', campId, 'assets'] as const,
+  maintenance: (campId: string) => ['camp', campId, 'maintenance'] as const,
   /** Ирц/ээлж/өрөө өөрчлөгдөхөд хамааралтай бүх харагдац */
   operational: (campId: string) =>
     [

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
 import type { BoardRoom } from '../api/types'
@@ -100,7 +100,9 @@ export default function RoomBoardPage() {
                 </div>
                 {r.roomStatus === 'MAINTENANCE' && (
                   <div className="mt-1">
-                    <Badge tone="yellow">Засварт</Badge>
+                    <Link to={`../maintenance?roomId=${r.id}`} title="Энэ өрөөний засварууд">
+                      <Badge tone="yellow">Засварт →</Badge>
+                    </Link>
                   </div>
                 )}
                 <ul className="mt-2 space-y-1 text-sm">

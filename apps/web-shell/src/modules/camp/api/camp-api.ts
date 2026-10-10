@@ -1,6 +1,10 @@
 import apiClient from '../../../api/client'
 import type {
   AdjustmentReason,
+  Asset,
+  AssetCategory,
+  AssetCondition,
+  AssetMovement,
   Building,
   Camp,
   CampSettings,
@@ -14,8 +18,16 @@ import type {
   ImportHeader,
   ImportPreview,
   MealLocation,
+  MaintenanceAction,
+  MaintenanceDetail,
+  MaintenanceMutationResult,
+  MaintenancePart,
+  MaintenancePriority,
+  MaintenanceRequest,
+  MaintenanceStatus,
   MealType,
   Movement,
+  PartSource,
   MyPermissions,
   Organization,
   OrgServiceType,
@@ -143,6 +155,74 @@ export const campApi = {
 
   // ── Хоол ───────────────────────────────────────────────────
   presence: (campId: string, date: string) => get<Presence>(campUrl(campId, '/presence'), { date }),
+
+  // ── Хөрөнгө ────────────────────────────────────────────────
+  assetCategories: (activeOnly = false) => get<AssetCategory[]>(`${V1}/asset-categories`, { activeOnly }),
+  createAssetCategory: (name: string) => post<AssetCategory>(`${V1}/asset-categories`, { name }),
+  updateAssetCategory: (id: string, body: { name?: string; isActive?: boolean }) => patch<AssetCategory>(`${V1}/asset-categories/${id}`, body),
+  assets: (campId: string, q: AssetQuery) => get<Page<Asset>>(campUrl(campId, '/assets'), q),
+  asset: (campId: string, id: string) => get<Asset>(campUrl(campId, `/assets/${id}`)),
+  createAsset: (campId: string, body: AssetInput & { roomId?: string | null }) => post<Asset>(campUrl(campId, '/assets'), body),
+  updateAsset: (campId: string, id: string, body: Partial<AssetInput>) => patch<Asset>(campUrl(campId, `/assets/${id}`), body),
+  moveAsset: (campId: string, id: string, body: { toRoomId: string | null; reason?: string | null }) => post<Asset>(campUrl(campId, `/assets/${id}/move`), body),
+  writeOffAsset: (campId: string, id: string, reason: string) => post<Asset>(campUrl(campId, `/assets/${id}/write-off`), { reason }),
+  assetMovements: (campId: string, id: string) => get<AssetMovement[]>(campUrl(campId, `/assets/${id}/movements`)),
+
+  // ── Засвар ─────────────────────────────────────────────────
+  maintenanceList: (campId: string, q: MaintenanceQuery) => get<Page<MaintenanceRequest>>(campUrl(campId, '/maintenance'), q),
+  maintenance: (campId: string, id: string) => get<MaintenanceDetail>(campUrl(campId, `/maintenance/${id}`)),
+  createMaintenance: (
+    campId: string,
+    body: { roomId?: string; assetId?: string; title: string; description?: string | null; priority?: MaintenancePriority; blocksRoom?: boolean },
+  ) => post<MaintenanceMutationResult>(campUrl(campId, '/maintenance'), body),
+  updateMaintenance: (campId: string, id: string, body: { title?: string; description?: string | null; priority?: MaintenancePriority }) =>
+    patch<MaintenanceDetail>(campUrl(campId, `/maintenance/${id}`), body),
+  /** start | complete | reopen | close | cancel (cancel → reason заавал) */
+  transitionMaintenance: (campId: string, id: string, action: MaintenanceAction, reason?: string) =>
+    post<MaintenanceMutationResult>(campUrl(campId, `/maintenance/${id}/${action}`), action === 'cancel' ? { reason } : {}),
+  addPart: (campId: string, id: string, body: PartInput) => post<MaintenancePart>(campUrl(campId, `/maintenance/${id}/parts`), body),
+  updatePart: (campId: string, id: string, partId: string, body: Partial<PartInput>) => patch<MaintenancePart>(campUrl(campId, `/maintenance/${id}/parts/${partId}`), body),
+  removePart: (campId: string, id: string, partId: string) => del<unknown>(campUrl(campId, `/maintenance/${id}/parts/${partId}`)),
+}
+
+export interface AssetQuery {
+  cursor?: string
+  limit?: number
+  /** өрөөний UUID эсвэл 'warehouse' */
+  roomId?: string
+  categoryId?: string
+  condition?: AssetCondition
+  q?: string
+}
+
+export interface AssetInput {
+  categoryId: string
+  inventoryNo: string
+  name: string
+  serialNo?: string | null
+  condition?: AssetCondition
+  acquiredDate?: string | null
+  acquiredCost?: number | null
+  note?: string | null
+}
+
+export interface MaintenanceQuery {
+  cursor?: string
+  limit?: number
+  status?: MaintenanceStatus
+  priority?: MaintenancePriority
+  roomId?: string
+  assetId?: string
+  q?: string
+}
+
+export interface PartInput {
+  partName: string
+  quantity: number
+  unit?: string
+  unitPrice?: number | null
+  vatIncluded?: boolean
+  source: PartSource
 }
 
 export interface EmployeeQuery {
