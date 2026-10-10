@@ -97,7 +97,7 @@ docker-compose -f docker-compose.dev.yml up -d
 pnpm dev
 ```
 
-> ⚠️ **`pnpm db:push` БҮҮ ажиллуул** [MIG-001] — DB-г `supabase/migrations/*.sql` (`pnpm supabase:start` / `supabase:reset` автоматаар) үүсгэнэ; `db push` RLS policy, GRANT, тусгай index-ийг устгах/зөрүүлэх эрсдэлтэй. Шинэ migration: `pnpm exec supabase migration up` → `pnpm db:generate`.
+> ⚠️ **Prisma `db push` хэрэглэхгүй** [MIG-001] (root `db:push` script 6.3-д хасагдсан) — DB-г `supabase/migrations/*.sql` (`pnpm supabase:start` / `supabase:reset` автоматаар) үүсгэнэ; `db push` RLS policy, GRANT, тусгай index-ийг устгах/зөрүүлэх эрсдэлтэй. Шинэ migration: `pnpm db:migrate` (= `supabase migration up`) → `pnpm db:generate`.
 
 ---
 
@@ -112,7 +112,7 @@ pnpm dev
 | `pnpm supabase:reset` | DB-г устгаад `supabase/migrations/*.sql` + `seed.sql`-ийг дахин ажиллуулна | ⚠️ **БҮГДИЙГ УСТГАНА** |
 | `docker-compose -f docker-compose.dev.yml up -d` / `down` | Redis асаах / зогсоох | Хадгална |
 | `pnpm db:generate` | Prisma Client үүсгэнэ | — |
-| `pnpm exec supabase migration up` | Шинэ migration-ийг хэрэглэнэ (auth хэрэглэгчийг устгахгүй) | Schema өөрчилнө |
+| `pnpm db:migrate` (= `supabase migration up`) | Шинэ migration-ийг хэрэглэнэ (auth хэрэглэгчийг устгахгүй) | Schema өөрчилнө |
 
 ### Тест
 
@@ -140,7 +140,7 @@ pnpm supabase:stop
 docker-compose -f docker-compose.dev.yml down
 ```
 
-> `supabase:reset`-ийн дараа зөвхөн `supabase/migrations/` дахь объектууд сэргэнэ. Prisma-гаар нэмэгдсэн өөрчлөлт байвал **`pnpm db:push`**-г дахин ажиллуулна.
+> `supabase:reset`-ийн дараа зөвхөн `supabase/migrations/` дахь объектууд сэргэнэ. Schema-ийн бүх өөрчлөлт migration файлаар орно (Prisma `db push` хэрэглэхгүй [MIG-001]) — reset-ийн дараа `pnpm db:generate` + `pnpm dev:test-user`.
 
 ---
 

@@ -12,8 +12,9 @@
  *   - supertest          → HTTP endpoint тест
  *
  * ЯАГААД RLS АЖИЛДАГ?
- *   TenantContextInterceptor → tenantStorage.run() → PrismaTenantClientService
- *   $use middleware → set_config('app.tenant_id', ...) → PostgreSQL RLS
+ *   MR service-ийн query бүр `inTenantTx` (src/db/tenant-tx.ts) дотор: нэг transaction-д
+ *   set_config('app.tenant_id', ...) → query → PostgreSQL RLS (`app_user` холболтод бодитоор шүүнэ).
+ *   (Phase 4.8.3: хуучин `$use` middleware устсан — set_config transaction-ий гадна байсан [RLS-007].)
  * ============================================================
  */
 

@@ -14,10 +14,9 @@
  *   - supertest          → HTTP endpoint тест (4 тест)
  *
  * ЯАГААД DIRECT SETUP?
- *   AuthService.register() нь PrismaTenantClientService-ийн $use middleware +
- *   tenantStorage context-тэй нарийн зааглалтай тул integration тест орчинд
- *   coreUser.create алдаа гаргадаг.  Тиймээс prismaAdmin (superuser, RLS bypass)-аар
- *   шууд бүртгэж, supabaseAdmin-аар JWT авна.
+ *   Тест хэрэглэгчийг endpoint-оор биш prismaAdmin (ADMIN_DB_URL — системийн холболт, RLS bypass)-аар
+ *   шууд бүртгэж, supabaseAdmin-аар JWT авна — guard-ийг бусад урсгалаас тусгаарлаж шалгана.
+ *   (Phase 4.8.3: хуучин `$use` middleware устсан; RLS context = `inTenantTx`.)
  *
  * ЯАГААД DIRECT PATCH?
  *   NestJS DI init дарааллын улмаас TenantAuthGuard-ын tenantCacheService field нь

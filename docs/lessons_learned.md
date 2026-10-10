@@ -1097,12 +1097,18 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** 6.2-оор бүгдийг бодит төлөвтэй тааруулав; `.env.example` анхдагч = `app_user` + `SYSTEM_DATABASE_URL`.
 **Дүрэм:** Зан төлөв/команд/env өөрчилсөн phase бүрийн checklist-д "баримт: README, runbook, `.env.example`, CHANGELOG" мөр заавал байна; release-ийн өмнө `grep`-ээр хуучирсан команд (db:push г.м.) хайна.
 
+### [TEST-015] `pnpm test:integration`-ийг `pnpm dev`-тэй зэрэг ажиллуулахад ачааллын flaky 500
+**Тохиолдсон (20:35):** 154-өөс 1 (`mr-approval` — бэлтгэлийн `createDraftMr` → 500); `pnpm dev`-гүй дахин → 154/154; cloud-д бүтэн suite 3/3, 2 файл зэрэг 6/6 давтагдаагүй. Integration 15 файл зэрэг (fork бүр NestJS app + Prisma pool) + dev server-ийн cron/pool нэг DB-д → холболт/transaction хүлээлт эсвэл MR дугаар (`max+1`, 3 retry) давхцал гэж үзэв (шалтгааныг log-оор баталж чадаагүй — vitest TUI `[ERROR]`-ийг дарж бичсэн).
+**Дүрэм:** Integration / e2e ажиллуулахдаа `pnpm dev`-ийг зогсооно. Flaky алдааны үед эхлээд `… 2>&1 | Select-String -Pattern "\[ERROR\]|P20|Transaction|FAIL|Tests " -Context 0,4`-оор шалтгааныг авна. `[ERROR] … Authorization header / Token хүчингүй / Tenant олдсонгүй / харьяалагдахгүй` = 401/403-ийг санаатай шалгадаг тестийн хэвийн лог.
+**Backlog:** MR дугаар олголтыг tenant-ийн advisory lock (Кемпийн `ZAS-` дугаартай адил) эсвэл sequence болгох.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §19 (Phase 6.3): TEST-015 (dev + integration зэрэг → flaky) |
 | 2026-10-10 | §19 (Phase 6.2): DOC-001 (баримт кодоос хоцорсон) |
 | 2026-10-10 | §19: PROC-007 (заавар → `pnpm supabase:*`) |
 | 2026-10-10 | §19 (Phase 6.1): TEST-014 (`pnpm test` ↔ e2e, fixture, auth rate limit) |

@@ -48,7 +48,7 @@ pnpm supabase status -o env
 # Redis-г Docker-т ажиллуулах
 docker-compose -f docker-compose.dev.yml up -d
 
-# Prisma client үүсгэх (migration-уудыг supabase:start өөрөө хэрэглэсэн — `db:push` БҮҮ [MIG-001])
+# Prisma client үүсгэх (migration-уудыг supabase:start өөрөө хэрэглэсэн — Prisma `db push` хэрэглэхгүй [MIG-001]; шинэ migration: `pnpm db:migrate`)
 pnpm db:generate
 
 # admin@test.mn-ийг Supabase Auth-д үүсгэж core_users-тэй холбох (supabase:reset бүрийн дараа)

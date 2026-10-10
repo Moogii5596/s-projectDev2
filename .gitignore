@@ -54,6 +54,8 @@ playwright-report/
 test-results/
 # Phase 6.1: e2e fixture (token, нууц үг — түр)
 apps/e2e/.fixture.json
+# Phase 6.3: supabase/dev/rls_audit.sql-ийн гаралт (нэг удаагийн)
+rls_audit*.txt
 blob-report/
 
 # Linter & Formatter Caches (Хурдан ажиллахад зориулсан кэш файлууд)

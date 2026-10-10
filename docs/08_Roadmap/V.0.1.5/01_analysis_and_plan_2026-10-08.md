@@ -225,19 +225,34 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
   - [x] 6.2.8 A: local `.env` + `apps/core-kernel/.env` → `DATABASE_URL`=app_user, `SYSTEM_DATABASE_URL`=postgres (хуучин утга); `.env.example`, `docker/.env.vpc.example` анхдагч ижил
   - [x] Нэмэлт (11.5): root `docker-compose.yml`-д `SYSTEM_DATABASE_URL`, `CLUSTER_RESTART_*`; `.env.example`-д `CLUSTER_RESTART_*`, `PRISMA_LOG_LEVELS`
   - [x] Таны компьютер (20:38): `pnpm dev` → `DB role "app_user" — RLS идэвхтэй` ✅ · `pnpm test:e2e` **47/47** (app_user, 23с) ✅
-  - [ ] `pnpm test:integration` → 153/154: `mr-approval` "Approver submit → 403"-ийн бэлтгэл (`createDraftMr`) **500** — `pnpm dev`-тэй зэрэг ажилласан; cloud-д app_user горимд бүтэн suite 3/3 удаа 154/154, mr-approval+mr-crud 6/6 → давтагдахгүй. Дахин ажиллуулж [ERROR]-ийг авна
-- [ ] 6.3 Цэвэрлэгээ (устгахаас өмнө жагсаалтыг танд харуулна)
-  - [ ] 6.3.1 root `db:push` script хасах / `db:migrate`-ийг Supabase migration руу чиглүүлэх [MIG-001]
-  - [ ] 6.3.2 `_tmp_*`, `supabase/snippets/Untitled query 611.sql`, root `package-lock.json` (pnpm төсөл), root `rls_audit.txt`
-  - [ ] 6.3.3 root `lessons_learned.md` → `docs/lessons_learned.md`-тэй нэгтгэх/устгах
-  - [ ] 6.3.4 `$use` дурдсан тайлбар (`tenant-auth-guard`, `mr-crud` integration spec, `prisma-tenant-client.service.ts`)
-- [ ] 6.4 Эцсийн шалгалт: tsc · lint · unit · integration (2 горим) · e2e → `package.json` хувилбар `0.1.5` → `v0.1.5` git tag (таны компьютер дээр, таны зөвшөөрлөөр)
+  - [x] `pnpm test:integration` (20:47, `pnpm dev`-гүй): **154/154** ✅ — 20:35-ийн 1 алдаа = `pnpm dev`-тэй зэрэг ажилласан ачааллын flaky (→ 6.3.5 TEST-015). `[ERROR] … Authorization header байхгүй` г.м. мөрүүд = 401/403-ийг санаатай шалгадаг тест
+- [x] 6.3 Цэвэрлэгээ (батлагдсан 20:49). Device аудит: git цэвэр (`p6.2`), `_tmp_*` алга
+  - [x] 6.3.1 Root script [MIG-001]: `db:push` хасах; `db:migrate` = `supabase migration up` (Prisma `migrate deploy` биш — migration-ууд `supabase/migrations/`-д); local runbook/README-д тусгах
+  - [x] 6.3.2 Устгах (git-д бүртгэлтэй, ашиглагдахгүй): `supabase/snippets/Untitled query 611.sql` (→ `pnpm dev:test-user` орлосон), root `package-lock.json` (npm-ийн lock, pnpm төсөл — CI/Docker ашигладаггүй), root `rls_audit.txt` (4.8.1-ийн нэг удаагийн гаралт, 61KB); `.gitignore`-д `rls_audit*.txt`
+  - [x] 6.3.3 Root `lessons_learned.md` — аль хэдийн заагч (`docs/lessons_learned.md`) → хэвээр үлдээнэ (INDEX, sprint файлууд заадаг)
+  - [x] 6.3.4 Хуучирсан тайлбар: `$use` middleware → `inTenantTx` (`tenant-auth-guard`, `mr-crud` integration spec)
+  - [x] 6.3.5 `lessons_learned` TEST-015: integration-ийг `pnpm dev`-тэй зэрэг ажиллуулахад ачааллын flaky 500; backlog-д "MR дугаар олголт (max+1, 3 retry) → tenant-ийн advisory lock / sequence"
+  - [x] 6.3.6 Cloud: tsc ✅ · lint 0 алдаа · өөрчлөгдсөн 2 integration spec 18/18 (зөвхөн тайлбар) · нэмэлт: runbook §2-ийн "`pnpm db:push`-г дахин ажиллуулна" мөр (6.2-д үлдсэн) засав
+  - [x] Device: 8 файл (hash 8/8) + 3 устгасан (`package-lock.json`, snippet, `rls_audit.txt`) — git status: 8 M, 3 D
+  - [ ] Таны компьютер: `pnpm install` → `pnpm test` → `pnpm db:migrate` ("up to date")
+- [ ] 6.4 Release — нарийвчилсан (батлуулахаар хүлээж буй, 21:00)
+  - [ ] 6.4.1 🔴 CI засвар (`.github/workflows/ci.yml`) — 6.1-ийн нэр солилтын дагуу шинэчлээгүй [CI-004]:
+    - e2e: `pnpm --filter e2e test` → `test:e2e` (одоо "Missing script" → унана)
+    - Supabase key-ийг `supabase status -o env`-ээс авч `$GITHUB_ENV`-д (`SUPABASE_SERVICE_ROLE_KEY` огт байхгүй байсан → integration/fixture-ийн `auth.admin` ажиллахгүй)
+    - `DATABASE_URL` = app_user, `SYSTEM_DATABASE_URL` = postgres (local-тай ижил); web-shell `VITE_SUPABASE_*` env (e2e UI)
+    - Unit: `pnpm turbo test:unit` (зөвхөн core-kernel) → `pnpm test` (core-kernel + web-shell)
+  - [ ] 6.4.2 Хувилбар `0.1.5`: root, core-kernel, web-shell, mfe-requisitions, packages/* `package.json`; health endpoint-ийн хатуу `version: '1.0.0'` → package.json-оос (`auth.spec.ts`-ийн `'1.0.0'` шалгалтыг дагуулж)
+  - [ ] 6.4.3 Dedicated mode smoke (cloud): `DEPLOYMENT_MODE=dedicated DEDICATED_TENANT_SLUG=<slug>` → өөр Host-оор тухайн tenant, slug дутуу → апп эхлэхгүй
+  - [ ] 6.4.4 Эцсийн шалгалт (cloud): tsc · lint · unit · integration 2 горим · e2e · `pnpm build` · load test (app_user)
+  - [ ] 6.4.5 Баримт: CHANGELOG `[Unreleased]` → `[v0.1.5] — 2026-10-1x` + compare холбоос; project-status / INDEX / 00_index / VERSIONING-д "v0.1.5 ✅"; lessons CI-004
+  - [ ] 6.4.6 Таны компьютер: `pnpm install` → `pnpm test` → `pnpm test:integration` → `pnpm test:e2e` → `git add -A` → `git commit -m "release: v0.1.5"` → `git tag -a v0.1.5 -m "v0.1.5 — Tier 2 Enterprise VPC"` → `git push origin main --tags` → GitHub Actions ногоон эсэх
 
 ### Backlog (товлоогүй — шийдвэр шаардлагатай)
 - [x] ~~4.6 Frontend~~ → Phase 6.0 руу шилжсэн
 - [ ] Frontend component тест, `mfe-requisitions` stub
 - [ ] Integration Redis mock-ийг санах ойн (бичсэнээ уншдаг) болгох — cache алдааг тест барих [CACHE-001]
 - [ ] Давхар RESTRICTIVE policy-нуудыг цэвэрлэх (PERMISSIVE-тэй ижил нөхцөл)
+- [ ] MR дугаар олголт (`max+1`, 3 retry) → tenant-ийн advisory lock эсвэл sequence (зэрэгцээ ачаалалд давхцахгүй) [TEST-015]
 - [ ] Delegation-ийг MR батлалттай холбох (шийдвэр Б) — орлон гүйцэтгэгч алхмыг батлах
 - [ ] `WorkflowService.approveStep/rejectStep` (controller-гүй, role шалгалтгүй) — устгах эсвэл MR батлалттай нэгтгэх
 - [ ] Escalation: `escalationEnabled`-ийг шалгадаггүй; `currentStep = order - 1` (1-ээс эхэлсэн order гэж үздэг); escalate = алхам алгасах утга — бизнесийн шийдвэр
