@@ -235,7 +235,7 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
   - [x] 6.3.6 Cloud: tsc ✅ · lint 0 алдаа · өөрчлөгдсөн 2 integration spec 18/18 (зөвхөн тайлбар) · нэмэлт: runbook §2-ийн "`pnpm db:push`-г дахин ажиллуулна" мөр (6.2-д үлдсэн) засав
   - [x] Device: 8 файл (hash 8/8) + 3 устгасан (`package-lock.json`, snippet, `rls_audit.txt`) — git status: 8 M, 3 D
   - [ ] Таны компьютер: `pnpm install` → `pnpm test` → `pnpm db:migrate` ("up to date")
-- [x] 6.4 Release (батлагдсан 20:54) — cloud хэсэг дууссан
+- [x] 6.4 Release (батлагдсан 20:54) — ✅ **v0.1.5 гарсан (2026-10-10 21:17)**
   - [x] 6.4.1 🔴 CI засвар (`.github/workflows/ci.yml`) — 6.1-ийн нэр солилтын дагуу шинэчлээгүй [CI-004]:
     - e2e: `pnpm --filter e2e test` → `test:e2e` (одоо "Missing script" → унана)
     - Supabase key-ийг `supabase status -o env`-ээс авч `$GITHUB_ENV`-д (`SUPABASE_SERVICE_ROLE_KEY` огт байхгүй байсан → integration/fixture-ийн `auth.admin` ажиллахгүй)
@@ -252,8 +252,34 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
     - [x] Тест: integration — 30 зэрэгцээ үүсгэлт → 30×201, дугаар давхардалгүй, дараалсан; хуучин код дээр унахыг баталгаажуулах (before/after); unit (lock дуудагдсан)
     - [x] TEST-015-ийг засаж CONC-002 бүртгэх
     - [x] Шалгалт (cloud): хуучин код дээр шинэ тест УНАСАН / шинэ код ✅ · unit **514** · integration **155/155** × 2 горим · e2e **47/47** · tsc/lint ✅
-  - [ ] 6.4.6 Таны компьютер: `pnpm install` → `pnpm test` → `pnpm test:integration` → `pnpm test:e2e` → `git add -A` → `git commit -m "release: v0.1.5"` → `git tag -a v0.1.5 -m "v0.1.5 — Tier 2 Enterprise VPC"` → `git push origin main --tags` → GitHub Actions ногоон эсэх
+  - [x] 6.4.6 Таны компьютер (21:17): тестүүд ✅ → commit `382d003` "release: v0.1.5 — Tier 2 Enterprise VPC" → tag **`v0.1.5`** (= HEAD) → `main` = `origin/main` ✅
+  - [ ] GitHub Actions (CI-004-ийн дараах анхны бодит ажиллалт) — ногоон эсэхийг баталгаажуулах
 
+
+### v0.1.6 — Кемп пилот (таны компьютер, интернэтэд нээлттэй) — батлуулахаар хүлээж буй (2026-10-10 21:30)
+> Хүрээ: зөвхөн Кемп модуль, нэг байгууллага (бодит өгөгдөл). Байршил: таны Windows компьютер. Эхлэх: өнөөдөр.
+> **Шийдвэр (21:31):** домэйн алга → интернэт = **Tailscale Funnel** (үнэгүй, тогтмол `https://<компьютер>.<tailnet>.ts.net`, HTTPS автомат, router port нээхгүй; нөөц: Cloudflare quick tunnel — хаяг дахин асах бүрт солигдоно) · байгууллага **Sino Hydro**, slug `sinohydro` · **хувийн мэдээлэл орно** → backup шифрлэлт (7-Zip AES-256), BitLocker зөвлөмж, хэрэглэгчийн эрх хамгийн бага
+**A. Пилотыг dev/тестээс тусгаарлах**
+- [ ] A1 Тусдаа хавтас (`E:\MoogiiDev\Pilot\s-project` = `v0.1.5`/`v0.1.6` tag-ийн checkout) + тусдаа Supabase project (өөр port) — `supabase:reset`, integration/e2e пилотын өгөгдөлд хүрэхгүй
+**B. Код (cloud-д тестлээд `v0.1.6` tag)**
+- [ ] B1 `pnpm pilot:onboard` (tenant + OWNER + "Кемп админ") ба `pnpm pilot:user` (хэрэглэгч нэмэх / нууц үг солих) — dev:test-user-ийн загвар, зөвхөн local, unit тест
+- [ ] B2 Web-shell `VITE_MODULES=camp`: цэс зөвхөн Кемп, `/` → `/camp`; MR/SLA/Workflow/Delegation/Бараа… нуугдана
+- [ ] B3 `ESCALATION_CRON=off` (пилотод MR ашиглахгүй; escalation алхам алгасдаг асуудал backlog-д)
+- [ ] B4 Module Federation remote (`localhost:5174`)-ийг env-ээр сонголттой болгох (production build-д алдаа/mixed content гаргахгүй)
+**C. Production горимоор ажиллуулах (dev server биш)**
+- [ ] C1 Backend: `build` → `node dist/src/main` (`NODE_ENV=production`, `DEPLOYMENT_MODE=dedicated`, `DEDICATED_TENANT_SLUG`), Windows-д автоматаар асах (NSSM/pm2)
+- [ ] C2 Frontend: `vite build` → Caddy (нэг exe): статик SPA + `/api/*` → :3000 + `/auth/v1/{token,user,logout}` → Supabase Auth (бусад Supabase зам хаалттай)
+- [ ] C3 Интернэт: Tailscale Funnel → Caddy (зөвхөн нэг порт). 5432x, 54323 (Studio), 3000, 6379-ийг ХЭЗЭЭ Ч нээхгүй
+**D. Аюулгүй байдал**
+- [ ] D1 `app_user` нууц үг, `JWT_SECRET`; Supabase JWT secret-ийг солих боломжийг таны CLI хувилбар дээр шалгах (боломжгүй бол C2-ийн замын хязгаарлалт + эрсдэлийг баримтжуулах)
+- [ ] D2 Пилотын Supabase-д `enable_signup = false` (хэн ч бүртгүүлэх боломжгүй — хэрэглэгчийг зөвхөн B1-ээр)
+**E. Үйл ажиллагаа**
+- [ ] E1 Өдөр бүр `pg_dump` → 7-Zip AES-256 шифрлэсэн backup (Task Scheduler, 14 хоног; нууц үгийг тусад нь хадгална) + нэг удаа сэргээж туршина
+- [ ] E4 Хувийн мэдээлэл: BitLocker (дискний шифрлэлт), зөвхөн шаардлагатай хүнд эрх, пилотын хэрэглэгчдэд мэдэгдэх
+- [ ] E2 Компьютер: унтахгүй, Docker Desktop + backend + Caddy + tunnel автоматаар асна
+- [ ] E3 Runbook `docs/07_Tech_Stack_and_Environment/04_Pilot_Camp_Windows.md`
+**F. Шалгалт**
+- [ ] F1 Cloud: unit/integration/e2e + build · Таны компьютер: утаснаас (гадна сүлжээ) нэвтрэх → Кемп хуудсууд; Studio/DB/3000 гаднаас хүрэхгүйг шалгах
 ### Backlog (товлоогүй — шийдвэр шаардлагатай)
 - [x] ~~4.6 Frontend~~ → Phase 6.0 руу шилжсэн
 - [ ] Frontend component тест, `mfe-requisitions` stub
