@@ -2,6 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  // Phase 6.1.1: тестийн tenant/хэрэглэгчдийг автоматаар үүсгэж/устгана (helpers/fixture.ts)
+  globalSetup: './global-setup',
+  globalTeardown: './global-teardown',
   fullyParallel: false,           // Tenant isolation тест нэгэн зэрэг ажиллах боломжгүй
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 2 : 0,

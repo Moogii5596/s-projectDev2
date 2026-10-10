@@ -25,6 +25,9 @@
       "cache": false,
       "inputs": ["$TURBO_DEFAULT$"]
     },
+    "test:e2e": {
+      "cache": false
+    },
     "lint": {
       "dependsOn": ["^lint"]
     },

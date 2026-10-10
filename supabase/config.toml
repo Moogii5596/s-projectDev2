@@ -58,6 +58,12 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
+# Phase 6.1 (2026-10-10): e2e нэг ажиллалтад ~50 нэвтрэлт (fixture 13 + UI) — local-ийн анхдагч
+# sign_in_sign_ups = 30 / 5 мин / IP хүрэлцэхгүй (429). Зөвхөн local Supabase-д хамаарна.
+[auth.rate_limit]
+sign_in_sign_ups = 500
+token_refresh = 500
+
 [analytics]
 enabled = false
 port = 54327

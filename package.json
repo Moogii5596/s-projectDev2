@@ -21,7 +21,7 @@
     "supabase:status": "supabase status",
     "supabase:reset": "supabase db reset",
     "playwright:install": "node node_modules/@playwright/test/cli.js install chromium",
-    "e2e": "pnpm --filter e2e test",
+    "e2e": "pnpm --filter e2e test:e2e",
     "e2e:ui": "pnpm --filter e2e test:ui"
   },
   "devDependencies": {

@@ -52,6 +52,8 @@ apps/*/prisma/migrations/*.sql.bak
 # E2E Testing (Playwright тайлан болон үр дүнгүүд)
 playwright-report/
 test-results/
+# Phase 6.1: e2e fixture (token, нууц үг — түр)
+apps/e2e/.fixture.json
 blob-report/
 
 # Linter & Formatter Caches (Хурдан ажиллахад зориулсан кэш файлууд)

@@ -200,18 +200,20 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
   - [ ] Таны компьютер: `test:integration` (15 файл / 154)
   - ⚠️ Одоогийн `apps/e2e` requisition-flow / workflow-multistep нь admin@test.mn өөрийн MR-г батладаг → 6.1-д 2 хэрэглэгчтэй болгож засна
 Одоогийн байдал (v6 snapshot): `apps/e2e` — Playwright, 7 spec (auth, requisition-flow, workflow-multistep, multi-tenant, camp×3); `multi-tenant.spec.ts` нь `MULTI_TENANT_E2E` + гараар өгсөн `TENANT_B_TOKEN`-оос хамаарч ихэвчлэн skip болдог; Inventory/Vendor/Report-д e2e алга.
-- [ ] 6.1 E2E (Playwright) — нарийвчилсан (батлуулахаар хүлээж буй, 20:05)
-  - [ ] 6.1.0 Script: `pnpm test` нь e2e-г (Playwright, сервер асаадаг) ажиллуулдаг байсан (e2e-ийн `test` script) → e2e: `test` → `test:e2e`; turbo.json-д `test:e2e` (cache: false) — root `pnpm test:e2e` одоо task байхгүй тул эвдэрхий. Үр дүн: `pnpm test` = unit л, `pnpm test:e2e` = Playwright
-  - [ ] 6.1.1 Fixture: core-kernel `src/scripts/e2e-fixture.ts` (+ cli, unit тест; шинэ dependency-гүй — core-kernel-ийн Prisma + supabase-js), зөвхөн local:
+- [x] 6.1 E2E (Playwright) — батлагдсан 20:08, код дууссан
+  - [x] 6.1.0 Script: `pnpm test` нь e2e-г (Playwright, сервер асаадаг) ажиллуулдаг байсан (e2e-ийн `test` script) → e2e: `test` → `test:e2e`; turbo.json-д `test:e2e` (cache: false) — root `pnpm test:e2e` одоо task байхгүй тул эвдэрхий. Үр дүн: `pnpm test` = unit л, `pnpm test:e2e` = Playwright
+  - [x] 6.1.1 Fixture: core-kernel `src/scripts/e2e-fixture.ts` (+ cli, unit тест; шинэ dependency-гүй — core-kernel-ийн Prisma + supabase-js), зөвхөн local:
     - `setup` → 2 tenant (`e2e-a-<ts>`, `e2e-b-<ts>`) + хэрэглэгчид (A: REQUESTER, APPROVER×2, ADMIN; B: ADMIN) + DEV tenant (`test-tenant`)-д UI хэрэглэгчид (REQUESTER, APPROVER×2, ADMIN) → `apps/e2e/.fixture.json` (token, нууц үг, id; .gitignore)
     - `teardown` → tenant-ууд (cascade), DEV tenant-ийн e2e хэрэглэгчид, Auth хэрэглэгчид
     - e2e `global-setup.ts` / `global-teardown.ts` нь `pnpm --filter @s-project/core-kernel e2e:fixture` дуудна
-  - [ ] 6.1.2 `multi-tenant.spec.ts` дахин бичих (API, skip-гүй): A-ийн MR/definition B-д 404, жагсаалтад алга, B→A Host 403
-  - [ ] 6.1.3 `advanced-workflow.spec.ts` (API): A tenant-д ADMIN definition үүсгэнэ (amount_rules 2 алхам) + төсөв → өөрийгөө батлах 403, алхам 1/2 → 2/2 → APPROVED, төсөв SPENT; татгалзах → RELEASED
-  - [ ] 6.1.4 `modules-lite.spec.ts`: API (A/B тусгаарлалт, REQUESTER 403) + UI (DEV tenant: бараа/нийлүүлэгч/тайлан, REQUESTER-т товч алга)
-  - [ ] 6.1.5 Хуучин spec засах: `requisition-flow` / `workflow-multistep` → REQUESTER үүсгэж илгээнэ, APPROVER батлана/татгалзана (fixture хэрэглэгч, UI); 2 алхамт урсгал UI-д
-  - [ ] 6.1.6 `helpers/auth.helper.ts`: `loginAs(page, user)` fixture-ээс; camp spec-үүд admin@test.mn хэвээр (camp_e2e_grant.sql)
-  - [ ] 6.1.7 Cloud-д бүх e2e ажиллуулж шалгах → таны компьютер: `pnpm test:e2e`
+  - [x] 6.1.2 `multi-tenant.spec.ts` дахин бичих (API, skip-гүй): A-ийн MR/definition B-д 404, жагсаалтад алга, B→A Host 403
+  - [x] 6.1.3 `advanced-workflow.spec.ts` (API): тусдаа wf tenant-д ADMIN definition үүсгэнэ (amount_rules 2 алхам) + төсөв → өөрийгөө батлах 403, алхам 1/2 → 2/2 → APPROVED, төсөв SPENT; татгалзах → RELEASED
+  - [x] 6.1.4 `modules-lite.spec.ts`: API (A/B тусгаарлалт, REQUESTER 403) + UI (DEV tenant: бараа/нийлүүлэгч/тайлан, REQUESTER-т товч алга)
+  - [x] 6.1.5 Хуучин spec засах: `requisition-flow` / `workflow-multistep` → REQUESTER үүсгэж илгээнэ, APPROVER батлана/татгалзана (fixture хэрэглэгч, UI); 2 алхамт урсгал UI-д
+  - [x] 6.1.6 `helpers/fixture.ts`: `fixture()`, `headersFor(user, asTenant?)`, `createSubmittedMr`, `loginAsUser(page, user)`; `auth.helper.ts`-ийн `loginAs` (admin@test.mn) camp/auth spec-д хэвээр
+  - [x] 6.1.7 Cloud: **47/47** (0 skip; өмнө 26 ✅ / 3 ❌ / 2 skip) · teardown-ийн дараа e2e tenant/хэрэглэгч/MR/бараа 0 · core unit **510/510** (+4 fixture) · tsc/lint ✅
+  - [x] Нэмэлт: `supabase/config.toml` `[auth.rate_limit] sign_in_sign_ups = 500` (нэг ажиллалтад ~50 нэвтрэлт, анхдагч 30/5мин)
+  - [ ] Таны компьютер: `supabase stop` → `supabase start` (rate limit) → `pnpm test` (unit л) → `pnpm test:e2e`
 - [ ] 6.2 Баримт
   - [ ] 6.2.1 `docs/CHANGELOG.md` — v0.1.5 хэсэг (Phase 2–5: RLS runtime, SystemPrisma, outbox, SEC-002/003, API-001, cursor, cluster restart)
   - [ ] 6.2.2 `docs/project-status.md` шинэчлэх; `docs/INDEX.md` / `08_Roadmap/*/00_index` зөрүү засах

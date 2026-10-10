@@ -1,71 +1,56 @@
 import { test, expect } from '@playwright/test';
+import { createSubmittedMr, fixture, headersFor, url } from '../helpers/fixture';
 
 /**
- * Multi-tenant RLS тусгаарлалтын E2E тест.
- * Tenant A-ийн MR Tenant B-д харагдахгүй байх ёстой (RLS баталгаа).
- *
- * NOTE: Энэ тест 2 tenant байхыг шаардана — CI орчинд seed хийгдсэн байх ёстой.
- * Локал dev-д нэг tenant ашигладаг тул тест skip болно.
+ * Multi-tenant тусгаарлалт (API) — Phase 6.1.2
+ * Өмнө: `MULTI_TENANT_E2E` + гараар өгсөн `TENANT_B_TOKEN` шаарддаг тул бараг үргэлж skip болдог байв.
+ * Одоо fixture-ийн A, B tenant (globalSetup) → skip-гүй.
  */
+test.describe.serial('Multi-tenant тусгаарлалт (A ↔ B)', () => {
+  let mrId = '';
+  let defA = '';
 
-const TENANT_A = {
-  email: 'admin@test.mn',
-  password: 'test1234',
-  host: 'http://localhost:5173',
-};
-
-test.describe('Multi-tenant RLS тусгаарлалт', () => {
-  test.skip(!process.env['MULTI_TENANT_E2E'], 'MULTI_TENANT_E2E env set хийгдээгүй бол skip');
-
-  test('Tenant A MR Tenant B API-аар харагдахгүй', async ({ request }) => {
-    // 1. Tenant A-аар нэвтрэх, MR үүсгэх
-    const loginA = await request.post('http://localhost:3000/api/v1/auth/login', {
-      data: { email: TENANT_A.email, password: TENANT_A.password },
-      headers: { host: 'test-tenant.localhost' },
-    });
-    expect(loginA.ok()).toBeTruthy();
-    const { accessToken: tokenA } = await loginA.json() as { accessToken: string };
-
-    const createRes = await request.post('http://localhost:3000/api/v1/requisitions', {
-      data: { title: `Tenant A MR ${Date.now()}`, items: [] },
-      headers: {
-        Authorization: `Bearer ${tokenA}`,
-        host: 'test-tenant.localhost',
-      },
-    });
-    expect(createRes.ok()).toBeTruthy();
-    const { id: mrId } = await createRes.json() as { id: string };
-
-    // 2. Tenant B-ийн токеноор тухайн MR руу хандах → 403/404 хүлээнэ
-    const tenantBToken = process.env['TENANT_B_TOKEN'] ?? '';
-    const fetchRes = await request.get(`http://localhost:3000/api/v1/requisitions/${mrId}`, {
-      headers: {
-        Authorization: `Bearer ${tenantBToken}`,
-        host: 'tenant-b.localhost',
-      },
-    });
-    // RLS-ийн улмаас 403 эсвэл 404 буцна
-    expect([403, 404]).toContain(fetchRes.status());
+  test.beforeAll(async ({ request }) => {
+    mrId = await createSubmittedMr(request, 'aReq', { title: `${fixture().prefix} A MR`, amount: 10_000 });
+    const defs = await request.get(url('/workflow/definitions'), { headers: headersFor('aAdmin') });
+    expect(defs.status()).toBe(200);
+    defA = ((await defs.json()) as { id: string }[])[0].id;
   });
 
-  test('Tenant A жагсаалтад зөвхөн өөрийн MR харагдана', async ({ request }) => {
-    const loginA = await request.post('http://localhost:3000/api/v1/auth/login', {
-      data: { email: TENANT_A.email, password: TENANT_A.password },
-      headers: { host: 'test-tenant.localhost' },
-    });
-    const { accessToken: tokenA } = await loginA.json() as { accessToken: string };
+  test('B: жагсаалтад A-ийн MR, definition алга', async ({ request }) => {
+    const list = await request.get(url('/requisitions'), { headers: headersFor('bAdmin') });
+    expect(list.status()).toBe(200);
+    const body = (await list.json()) as { data: { id: string }[] };
+    expect(body.data.map((m) => m.id)).not.toContain(mrId);
 
-    const listRes = await request.get('http://localhost:3000/api/v1/requisitions', {
-      headers: {
-        Authorization: `Bearer ${tokenA}`,
-        host: 'test-tenant.localhost',
-      },
+    const defs = await request.get(url('/workflow/definitions'), { headers: headersFor('bAdmin') });
+    expect(((await defs.json()) as { id: string }[]).map((d) => d.id)).not.toContain(defA);
+  });
+
+  test('B: A-ийн MR-г id-аар унших / засах / батлах / татгалзах → 404', async ({ request }) => {
+    const h = { headers: headersFor('bAdmin') };
+    expect((await request.get(url(`/requisitions/${mrId}`), h)).status()).toBe(404);
+    expect((await request.put(url(`/requisitions/${mrId}`), { ...h, data: { title: 'hack' } })).status()).toBe(404);
+    expect((await request.post(url(`/requisitions/${mrId}/approve`), { ...h, data: {} })).status()).toBe(404);
+    expect((await request.post(url(`/requisitions/${mrId}/reject`), { ...h, data: { reason: 'x' } })).status()).toBe(404);
+  });
+
+  test('B ADMIN: A-ийн workflow definition засах → 404 [SEC-002]', async ({ request }) => {
+    const r = await request.put(url(`/workflow/definitions/${defA}`), {
+      headers: headersFor('bAdmin'),
+      data: { name: 'hacked', stepsConfig: [{ order: 1, role: 'APPROVER', quorum: 1 }] },
     });
-    expect(listRes.ok()).toBeTruthy();
-    const data = await listRes.json() as { items: Array<{ tenantId: string }> };
-    // Бүх MR test-tenant-д харьяалагдана
-    for (const mr of data.items) {
-      expect(mr.tenantId).toBe('00000000-0000-0000-0000-000000000003');
-    }
+    expect(r.status()).toBe(404);
+  });
+
+  test('B-ийн хэрэглэгч A-ийн Host-оор → 403 (гишүүн биш) [SEC-001]', async ({ request }) => {
+    const r = await request.get(url(`/requisitions/${mrId}`), { headers: headersFor('bReq', 'a') });
+    expect(r.status()).toBe(403);
+  });
+
+  test('A-ийн APPROVER → APPROVED (A дотор хэвийн ажиллана)', async ({ request }) => {
+    const r = await request.post(url(`/requisitions/${mrId}/approve`), { headers: headersFor('aAppr'), data: {} });
+    expect(r.status()).toBe(200);
+    expect(((await r.json()) as { status: string }).status).toBe('APPROVED');
   });
 });

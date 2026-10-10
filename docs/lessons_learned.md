@@ -1082,12 +1082,18 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 2. Тохиргоо (amount_rules г.м.) үүсгэдэг код байвал түүнийг **хэрэглэдэг** зам бий эсэхийг шалгана; холбогдоогүй service method = анхааруулга.
 3. Шинэ тестийг хуучин кодон дээр ажиллуулж (before/after) унахыг нь баталгаажуулна — энэ удаа хуучин код дээр 11/11 унасан.
 
+### [TEST-014] `pnpm test` нь E2E-г (Playwright, сервер асаадаг) хамт ажиллуулдаг байсан; e2e нь гараар бэлтгэсэн хэрэглэгч/token-оос хамаардаг байсан
+**Тохиолдсон:** `apps/e2e`-ийн script нэр `test` → turbo `test` task бүх багцад ажиллахад Playwright мөн асч (4–5 мин), unit тест сервергүй ажиллахгүй болсон; root `test:e2e` нь turbo task-гүй тул эвдэрхий. `multi-tenant.spec` нь `MULTI_TENANT_E2E` + гараар `TENANT_B_TOKEN` шаардаж үргэлж skip; MR урсгал нэг admin хэрэглэгч өөрийн MR-г батладаг байсан (SEC-004-ийн дараа унасан).
+**Шийдэл (Phase 6.1):** e2e script → `test:e2e` + turbo task (cache: false). Playwright globalSetup/Teardown → core-kernel `e2e:fixture` (tenant a/b/wf + DEV tenant-д REQUESTER/APPROVER/ADMIN, token; teardown нь tenant cascade + DEV tenant-ийн e2e MR, `prefix`-тэй бараа/нийлүүлэгч). Local Supabase `[auth.rate_limit] sign_in_sign_ups` 30 → 500 (нэг ажиллалтад ~50 нэвтрэлт).
+**Дүрэм:** Багцын `test` script = зөвхөн сервергүй unit тест. E2E өгөгдлийг тест өөрөө үүсгэж/устгана (гараар бэлтгэл, skip-ээр нуух хориотой). Төлөв өөрчилдөг урсгалыг дор хаяж 2 хэрэглэгчээр (үүсгэгч ≠ батлагч) шалгана.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §19 (Phase 6.1): TEST-014 (`pnpm test` ↔ e2e, fixture, auth rate limit) |
 | 2026-10-10 | §19 (Phase 6.0b): SEC-004 (MR батлалт workflow/role/өөрийгөө батлахыг шалгадаггүй) |
 | 2026-10-10 | §19 (Phase 6.0): PROC-006 (ижил staged нэр → хуучин агуулга), FE-005 (цэвэр логик API импортгүй), TEST-013 (harness headless_shell) |
 | 2026-10-10 | §18 (Phase 5): EVT-001, EVT-002/003, TEST-012 |
