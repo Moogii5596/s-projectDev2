@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { CreateDelegationDto, DelegationService } from './delegation.service';
 
@@ -17,7 +17,7 @@ export class DelegationController {
   }
 
   @Delete(':id')
-  revoke(@Req() req: FastifyRequest, @Param('id') id: string) {
+  revoke(@Req() req: FastifyRequest, @Param('id', ParseUUIDPipe) id: string) {
     return this.delegationService.revokeDelegation((req as any).user.tenantId, id);
   }
 }

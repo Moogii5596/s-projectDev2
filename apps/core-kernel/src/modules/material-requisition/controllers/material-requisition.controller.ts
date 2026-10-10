@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  ParseUUIDPipe,
   Query,
   Req,
   HttpCode,
@@ -46,7 +47,7 @@ export class MaterialRequisitionController {
 
   // GET /api/v1/requisitions/:id
   @Get(':id')
-  async findOne(@Req() req: FastifyRequest, @Param('id') id: string) {
+  async findOne(@Req() req: FastifyRequest, @Param('id', ParseUUIDPipe) id: string) {
     const user = (req as any).user;
     return this.mrService.findOne(user.tenantId, id);
   }
@@ -55,7 +56,7 @@ export class MaterialRequisitionController {
   @Put(':id')
   async update(
     @Req() req: FastifyRequest,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateMrDto,
   ) {
     const user = (req as any).user;
@@ -65,7 +66,7 @@ export class MaterialRequisitionController {
   // DELETE /api/v1/requisitions/:id
   @Delete(':id')
   @HttpCode(204)
-  async remove(@Req() req: FastifyRequest, @Param('id') id: string) {
+  async remove(@Req() req: FastifyRequest, @Param('id', ParseUUIDPipe) id: string) {
     const user = (req as any).user;
     return this.mrService.remove(user.tenantId, id, user.id);
   }
@@ -75,7 +76,7 @@ export class MaterialRequisitionController {
   @HttpCode(200)
   async submit(
     @Req() req: FastifyRequest,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SubmitMrDto,
   ) {
     const user = (req as any).user;
@@ -87,7 +88,7 @@ export class MaterialRequisitionController {
   @HttpCode(200)
   async approve(
     @Req() req: FastifyRequest,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ApproveMrDto,
   ) {
     const user = (req as any).user;
@@ -99,7 +100,7 @@ export class MaterialRequisitionController {
   @HttpCode(200)
   async reject(
     @Req() req: FastifyRequest,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RejectMrDto,
   ) {
     const user = (req as any).user;

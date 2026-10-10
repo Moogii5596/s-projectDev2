@@ -31,6 +31,8 @@ const USERS = {
   aReq: { tenant: 'a', role: UserRole.REQUESTER },
   aAppr: { tenant: 'a', role: UserRole.APPROVER },
   bAppr: { tenant: 'b', role: UserRole.APPROVER },
+  bAdmin: { tenant: 'b', role: UserRole.ADMIN }, // Phase 4.9.1: definition засах эрхтэй
+  aAdmin: { tenant: 'a', role: UserRole.ADMIN },
 } as const;
 type Who = keyof typeof USERS;
 
@@ -141,14 +143,43 @@ describe('🧱 MR — tenant тусгаарлалт', () => {
   });
 });
 
-describe('🧱 Workflow definition — tenant тусгаарлалт [SEC-002]', () => {
-  it('B: жагсаалтад A-ийн definition алга; A-ийн id-аар засах → 404, A-ийнх өөрчлөгдөхгүй', async () => {
+describe('🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003]', () => {
+  const RULES = { amount_rules: [{ min: 0, max: null, steps: [{ order: 1, role: 'APPROVER', quorum: 1 }] }] };
+
+  it('B: жагсаалтад A-ийн definition алга; B ADMIN A-ийн id-аар засах → 404, A-ийнх өөрчлөгдөхгүй', async () => {
     const list = await api().get('/api/v1/workflow/definitions').set(as('bAppr'));
     expect(list.status).toBe(200);
     expect(list.body.map((d: { id: string }) => d.id)).not.toContain(defA);
-    const put = await api().put(`/api/v1/workflow/definitions/${defA}`).set(as('bAppr'))
-      .send({ name: 'hacked', stepsConfig: [] });
+    const put = await api().put(`/api/v1/workflow/definitions/${defA}`).set(as('bAdmin'))
+      .send({ name: 'hacked', stepsConfig: RULES });
     expect(put.status).toBe(404);
     expect((await prismaAdmin.workflowDefinition.findUnique({ where: { id: defA } }))!.name).toBe('A-def');
+  });
+
+  it('APPROVER / REQUESTER → үүсгэх, засах 403 (өмнө нь гишүүн бүр чаддаг байсан)', async () => {
+    expect((await api().post('/api/v1/workflow/definitions').set(as('aReq')).send({ name: 'x', stepsConfig: RULES })).status).toBe(403);
+    expect((await api().put(`/api/v1/workflow/definitions/${defA}`).set(as('aAppr')).send({ name: 'x', stepsConfig: RULES })).status).toBe(403);
+    expect((await prismaAdmin.workflowDefinition.findUnique({ where: { id: defA } }))!.name).toBe('A-def');
+  });
+
+  it('body validation → 400 (байхгүй role, хоосон name, илүү талбар); UUID биш id → 400', async () => {
+    const bad = [
+      { name: 'x', stepsConfig: [{ order: 0, role: 'BOSS' }] },
+      { name: '  ', stepsConfig: RULES },
+      { name: 'x', stepsConfig: RULES, tenantId: tenantIds.b },
+    ];
+    for (const body of bad) {
+      expect((await api().post('/api/v1/workflow/definitions').set(as('aAdmin')).send(body)).status).toBe(400);
+    }
+    expect((await api().put('/api/v1/workflow/definitions/not-a-uuid').set(as('aAdmin')).send({ name: 'x', stepsConfig: RULES })).status).toBe(400);
+  });
+
+  it('A ADMIN → үүсгэх 201 (өөрийн tenant-д), засах 200', async () => {
+    const c = await api().post('/api/v1/workflow/definitions').set(as('aAdmin')).send({ name: 'A-new', stepsConfig: RULES, slaHours: 24 });
+    expect(c.status).toBe(201);
+    expect(c.body.tenantId).toBe(tenantIds.a);
+    const u = await api().put(`/api/v1/workflow/definitions/${c.body.id}`).set(as('aAdmin')).send({ name: 'A-new2', stepsConfig: RULES });
+    expect(u.status).toBe(200);
+    expect(u.body.name).toBe('A-new2');
   });
 });

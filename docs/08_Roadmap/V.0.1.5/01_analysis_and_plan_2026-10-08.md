@@ -156,16 +156,32 @@ pnpm --filter e2e exec tsx tests/cluster-check.ts
   - [x] **4.8.5 Тест ✅ (код)** — `test/helpers/db-urls.ts` (`ADMIN_DB_URL` = SYSTEM → DATABASE): 10 integration файлын бэлтгэл/цэвэрлэгээ RLS-ийг алгасна; `auth.integration` шалгалт/цэвэрлэгээ системийн холболтоор (өмнө нь буруу GUC `app.current_tenant_id`); шинэ `tenant-isolation-http.integration.spec.ts` (2 tenant, MR + workflow definition HTTP, **бодит** tenant lookup — patch-гүй)
     - 🔴 Олдсон+зассан [SEC-002]: `PUT /workflow/definitions/:id` нь `where: { id }` — **өөр tenant-ийн definition-ийг засах боломжтой байв** (одоогийн `postgres` горимд 200). Одоо tenant шүүлттэй → 404
     - Шалгалт: unit **468/468** · tsc ✅ · lint 0 алдаа · **бүтэн integration (12 файл / 133) PG16 + fake Supabase Auth + бодит Prisma дээр**: `app_user` горим **133/133**, `postgres` горим 133/133 · хуучин workflow-definition кодоор шинэ тест унасан (postgres: 200, app_user: 500)
-    - [ ] Таны компьютер: (1) `test` → `test:integration` (одоогийн .env) → (2) **.env шилжилт** → `test:integration` → `pnpm dev` гараар шалгах
+    - [x] Таны компьютер (17:33): (1) тест ✅ → (2) **.env шилжилт ✅** (`DATABASE_URL`=app_user, `SYSTEM_DATABASE_URL`=postgres) → integration + `pnpm dev` ✅ — **RLS runtime-д идэвхтэй**
 
-### Phase 5 — Sprint 10: Event Bus integration тест (2 session)
-- [ ] 5.1 MR → Workflow → Inventory → Budget chain тест
+### Phase 4.9 — Аюулгүй байдлын үлдэгдэл ✅ (код, батлагдсан 2026-10-10 17:35)
+- [x] 4.9.1 [SEC-003] Workflow definition: үүсгэх/засах = OWNER/ADMIN (`requireRole`), body = class DTO (`workflow-definition.dto.ts`: stepsConfig-ийн 2 хэлбэр, role ∈ UserRole, order/quorum/min/max, ≤20 алхам/дүрэм, илүү талбар → 400)
+- [x] 4.9.2 IDOR sweep: (а) статик — `where: { id }` бичилт бүрийг шалгасан (Camp/Budget/Vendor/Route/Delegation нь tenant-аар урьдчилан шалгадаг); `WorkflowService` instance + `mr_headers` sync + `PessimisticLockService` түгжээнд `tenant_id` нэмэв. (б) **автомат probe** `test/route-probe.integration.spec.ts` — Nest metadata-аас path параметртэй БҮХ route (≥40), санамсаргүй UUID / `not-a-uuid` → 2xx/5xx байх ёсгүй
+- [x] 4.9.3 Probe илрүүлсэн 8 × 500 → засав [API-001]: MR 6 route + delegation + routes `ParseUUIDPipe`; Camp загвар файлын `@Header` (xlsx Content-Type) нь 400-ийн JSON-ийг 500 болгож байв [HTTP-001]
+- [x] 4.9.4 Load test (cloud, PG16 + wasm Prisma + Redis, 1 worker, 10k MR, 100 conn × 15с) — харьцуулалт: `app_user` p99 **106ms** / 2021 req/s, cursor avg 21ms · `postgres` p99 107ms / 2206 req/s, cursor avg 16ms → DoD бүгд ✅; DB зам +~5ms (BEGIN + set_config + COMMIT)
+  - Шалгалт: unit **489/489** · tsc ✅ · lint 0 алдаа · integration **13 файл / 138** (`app_user` ба `postgres` хоёр горимд)
+  - [x] Таны компьютер (17:48): `test` → `test:integration` ✅
+
+### Phase 5 — Sprint 10: Event Bus (2 session)
+- [ ] 5.0 [EVT-001] Outbox poller: `FOR UPDATE SKIP LOCKED` + publish/шинэчлэлийг нэг transaction-д (давхар publish-ээс сэргийлэх)
+- [ ] 5.1 MR → Workflow → Budget → Outbox chain integration тест (Inventory-lite нь MR-тэй холбогдоогүй — шийдвэр 2026-10-08)
 - [ ] 5.2 Event idempotency + DLQ integration тест
 
 ### Phase 6 — Sprint 11: v0.1.5 Release (1 session)
-- [ ] 6.1 E2E: schema-isolation, advanced-workflow, modules
-- [ ] 6.2 CHANGELOG, project-status, `.env.example`, docker-compose
-- [ ] 6.3 `v0.1.5` git tag
+- [ ] 6.1 E2E (Playwright): advanced-workflow, modules, multi-tenant (schema-isolation-ийг хасна — шийдвэр B)
+- [ ] 6.2 Баримт: CHANGELOG, project-status, `00_index.md` зөрүү, `.env.example`, docker-compose/VPC runbook-д `app_user` + `SYSTEM_DATABASE_URL`, `app_user` нууц үг production-д
+- [ ] 6.3 Цэвэрлэгээ: root `db:push`/`db:migrate` script (MIG-001), `_tmp_*`, `supabase/snippets`, root `lessons_learned.md` давхар, хуучин `$use`-ийг дурдсан тестийн тайлбар
+- [ ] 6.4 `v0.1.5` git tag
+
+### Backlog (товлоогүй — шийдвэр шаардлагатай)
+- [ ] 4.6 Frontend: Inventory / Vendor / Report хуудас (энэ удаа алгассан)
+- [ ] Frontend component тест, `mfe-requisitions` stub
+- [ ] Integration Redis mock-ийг санах ойн (бичсэнээ уншдаг) болгох — cache алдааг тест барих [CACHE-001]
+- [ ] Давхар RESTRICTIVE policy-нуудыг цэвэрлэх (PERMISSIVE-тэй ижил нөхцөл)
 
 ## 4. Phase 2.2-ийн сонголтууд
 

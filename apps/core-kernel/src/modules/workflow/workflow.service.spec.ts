@@ -33,7 +33,7 @@ describe('WorkflowService', () => {
       $executeRaw: vi.fn().mockResolvedValue(1),
       workflowInstance: {
         create:              vi.fn(),
-        findUniqueOrThrow:   vi.fn(),
+        findFirstOrThrow:   vi.fn(),
         update:              vi.fn().mockResolvedValue({}),
       },
       workflowStepLog: {
@@ -67,7 +67,7 @@ describe('WorkflowService', () => {
 
   // ── Phase 4.8.3: actor resolution tenant transaction дотор ──
   it('approveStep: resolveUserId нь set_config-тэй transaction дотор (app_user + RLS)', async () => {
-    mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue({ id: INSTANCE_ID, currentStep: 0, definition: TWO_STEP_DEF, resolvedSteps: null, entityType: 'X', entityId: null });
+    mockTx.workflowInstance.findFirstOrThrow.mockResolvedValue({ id: INSTANCE_ID, currentStep: 0, definition: TWO_STEP_DEF, resolvedSteps: null, entityType: 'X', entityId: null });
     await service.approveStep({ authId: AUTH_ID, tenantId: TENANT_ID, instanceId: INSTANCE_ID });
     const firstSetConfig = mockTx.$executeRaw.mock.invocationCallOrder[0];
     const lookup = mockPrisma.coreUser.findFirst.mock.invocationCallOrder[0];
@@ -75,6 +75,8 @@ describe('WorkflowService', () => {
     expect(mockTx.$executeRaw.mock.calls[0][1]).toBe(TENANT_ID);
     expect(firstSetConfig).toBeLessThan(lookup);
     expect(mockPrisma.$transaction).toHaveBeenCalledTimes(2); // actor + алхам
+    // Phase 4.9.2: instance-ийг tenant шүүлттэй уншина
+    expect(mockTx.workflowInstance.findFirstOrThrow.mock.calls[0][0].where).toEqual({ id: INSTANCE_ID, tenantId: TENANT_ID });
   });
 
   // ── createInstance ──────────────────────────────────────────
@@ -115,7 +117,7 @@ describe('WorkflowService', () => {
   describe('approveStep()', () => {
     it('WorkflowStepLog нэмэгдэнэ, currentStep ахина (дунд алхам)', async () => {
       // currentStep=0, 2 алхамт definition → дараагийн алхам руу шилжинэ
-      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue({
+      mockTx.workflowInstance.findFirstOrThrow.mockResolvedValue({
         id: INSTANCE_ID, tenantId: TENANT_ID,
         currentStep: 0, status: 'PENDING',
         definition: { ...TWO_STEP_DEF },
@@ -148,7 +150,7 @@ describe('WorkflowService', () => {
 
     it('Бүх step дуусвал → status=APPROVED, mr_headers sync', async () => {
       // currentStep=1, 2 алхамт definition → сүүлийн алхам
-      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue({
+      mockTx.workflowInstance.findFirstOrThrow.mockResolvedValue({
         id: INSTANCE_ID, tenantId: TENANT_ID,
         currentStep: 1, status: 'PENDING',
         definition: { ...TWO_STEP_DEF },
@@ -170,7 +172,7 @@ describe('WorkflowService', () => {
     });
 
     it('RULE-13: actorId = core_users.id (authId биш)', async () => {
-      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue({
+      mockTx.workflowInstance.findFirstOrThrow.mockResolvedValue({
         id: INSTANCE_ID, tenantId: TENANT_ID,
         currentStep: 0, status: 'PENDING',
         definition: { ...TWO_STEP_DEF },
@@ -200,7 +202,7 @@ describe('WorkflowService', () => {
   // ── rejectStep ──────────────────────────────────────────────
   describe('rejectStep()', () => {
     it("status='REJECTED' болгоно, mr_headers sync", async () => {
-      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue({
+      mockTx.workflowInstance.findFirstOrThrow.mockResolvedValue({
         id: INSTANCE_ID, tenantId: TENANT_ID,
         currentStep: 0, status: 'PENDING',
       });
@@ -231,7 +233,7 @@ describe('WorkflowService', () => {
     });
 
     it('RULE-13: actorId = core_users.id (authId биш)', async () => {
-      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue({
+      mockTx.workflowInstance.findFirstOrThrow.mockResolvedValue({
         id: INSTANCE_ID, currentStep: 0, status: 'PENDING', tenantId: TENANT_ID,
       });
 
@@ -254,25 +256,25 @@ describe('WorkflowService', () => {
     };
 
     it('сүүлийн алхам батлагдвал onApproved(tx, tenant, MR id)', async () => {
-      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue(MR_INSTANCE);
+      mockTx.workflowInstance.findFirstOrThrow.mockResolvedValue(MR_INSTANCE);
       await service.approveStep({ authId: AUTH_ID, tenantId: TENANT_ID, instanceId: INSTANCE_ID });
       expect(mockLifecycle.onApproved).toHaveBeenCalledWith(mockTx, TENANT_ID, ENTITY_ID);
     });
 
     it('дунд алхам → onApproved дуудахгүй', async () => {
-      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue({ ...MR_INSTANCE, currentStep: 0 });
+      mockTx.workflowInstance.findFirstOrThrow.mockResolvedValue({ ...MR_INSTANCE, currentStep: 0 });
       await service.approveStep({ authId: AUTH_ID, tenantId: TENANT_ID, instanceId: INSTANCE_ID });
       expect(mockLifecycle.onApproved).not.toHaveBeenCalled();
     });
 
     it('reject → onRejected(tx, tenant, MR id)', async () => {
-      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue(MR_INSTANCE);
+      mockTx.workflowInstance.findFirstOrThrow.mockResolvedValue(MR_INSTANCE);
       await service.rejectStep({ authId: AUTH_ID, tenantId: TENANT_ID, instanceId: INSTANCE_ID });
       expect(mockLifecycle.onRejected).toHaveBeenCalledWith(mockTx, TENANT_ID, ENTITY_ID);
     });
 
     it('MR биш entity → hook дуудахгүй', async () => {
-      mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue({ ...MR_INSTANCE, entityType: 'OTHER' });
+      mockTx.workflowInstance.findFirstOrThrow.mockResolvedValue({ ...MR_INSTANCE, entityType: 'OTHER' });
       await service.approveStep({ authId: AUTH_ID, tenantId: TENANT_ID, instanceId: INSTANCE_ID });
       await service.rejectStep({ authId: AUTH_ID, tenantId: TENANT_ID, instanceId: INSTANCE_ID });
       expect(mockLifecycle.onApproved).not.toHaveBeenCalled();

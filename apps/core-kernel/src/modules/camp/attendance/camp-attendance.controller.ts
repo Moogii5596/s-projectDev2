@@ -1,5 +1,5 @@
-import { BadRequestException, Body, Controller, Delete, Get, Header, HttpCode, Param, ParseUUIDPipe, PayloadTooLargeException, Post, Query, Req } from '@nestjs/common';
-import type { FastifyRequest } from 'fastify';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, PayloadTooLargeException, Post, Query, Req, Res } from '@nestjs/common';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { reqUser } from '../common/camp-request';
 import { CampAttendanceService } from './camp-attendance.service';
 import { CampShiftsService } from './camp-shifts.service';
@@ -46,11 +46,15 @@ export class CampAttendanceController {
   ) {}
 
   // ── Ирцийн импорт ──
+  // Phase 4.9.3: @Header нь pipe-ийн өмнө тавигддаг → буруу campId-ийн 400 JSON xlsx Content-Type-тай болж Fastify 500 өгдөг байв.
+  // Header-ийг зөвхөн амжилттай үед handler дотор тавина.
   @Get('movement-imports/template')
-  @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-  @Header('Content-Disposition', 'attachment; filename="camp-attendance-template.xlsx"')
-  template(@Param('campId', uuid()) _campId: string) {
-    return this.attendance.template();
+  async template(@Param('campId', uuid()) _campId: string, @Res({ passthrough: true }) reply: FastifyReply) {
+    const file = await this.attendance.template();
+    reply
+      .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      .header('Content-Disposition', 'attachment; filename="camp-attendance-template.xlsx"');
+    return file;
   }
 
   @Post('movement-imports')

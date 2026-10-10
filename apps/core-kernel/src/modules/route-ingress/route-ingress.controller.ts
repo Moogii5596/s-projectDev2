@@ -2,6 +2,7 @@ import {
   Controller, Post, Delete,
   Param, Body, Req,
   HttpCode, HttpStatus,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { RouteIngressService } from './route-ingress.service';
 import { RegisterRouteDto } from './dto/register-route.dto';
@@ -27,7 +28,7 @@ export class RouteIngressController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   async deactivate(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Req() req: AuthRequest,
   ): Promise<{ ok: boolean }> {
     await this.svc.deactivateRoute(id, req.user.tenantId);

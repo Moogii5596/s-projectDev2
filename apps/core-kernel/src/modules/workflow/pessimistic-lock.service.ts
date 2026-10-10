@@ -36,7 +36,7 @@ export class PessimisticLockService {
       >`
         SELECT id, locked_by, status
         FROM workflow_instances
-        WHERE id = ${instanceId}::uuid
+        WHERE id = ${instanceId}::uuid AND tenant_id = ${tenantId}::uuid  -- Phase 4.9.2
         FOR UPDATE NOWAIT
       `;
 

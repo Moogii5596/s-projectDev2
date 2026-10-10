@@ -76,6 +76,9 @@
 | TEST-010 | Cloud-д Prisma engine татагдахгүй (403) | Harness: wasm engine + `@prisma/adapter-pg` (төсөлд орохгүй) |
 | SEC-002 | `update({ where: { id } })` — өөр tenant-ийн мөрийг id-аар засах | `updateMany({ where: { id, tenantId } })` → count 0 → 404; HTTP 2-tenant тест |
 | TEST-011 | Integration тест admin холболт = DATABASE_URL | `test/helpers/db-urls.ts` `ADMIN_DB_URL` (SYSTEM → DATABASE) |
+| SEC-003 | Workflow definition эрхгүй + body шалгалтгүй | `requireRole(OWNER/ADMIN)` + class DTO (interface → шалгагдахгүй) |
+| API-001 | `:id`-д `ParseUUIDPipe` алга → Prisma алдаа → 500 | Бүх UUID параметрт `ParseUUIDPipe`; route probe тест |
+| HTTP-001 | `@Header(Content-Type)` + алдаа → Fastify 500 | Файлын header-ийг handler дотор амжилттай үед |
 
 ---
 
@@ -1022,12 +1025,26 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 ### [TEST-011] Integration тестийн admin холболт `DATABASE_URL` байсан → app_user болгоход бэлтгэл эвдэрнэ
 **Шийдэл:** `test/helpers/db-urls.ts` — `ADMIN_DB_URL = SYSTEM_DATABASE_URL || DATABASE_URL`, `APP_USER_DB_URL`. Cloud-д бүтэн integration-ийг fake Supabase Auth (GoTrue-ийн 6 endpoint) + PG16 + wasm Prisma-аар (TEST-010) хоёр горимд ажиллуулж шалгасан.
 
+### [SEC-003] Workflow definition: эрхийн шалгалтгүй, body шалгалтгүй
+**Алдаа:** REQUESTER ч `POST/PUT /workflow/definitions` хийж батлах урсгалыг өөрчилж чаддаг байв. `WorkflowDefinitionInput` нь interface → ValidationPipe юу ч шалгадаггүй (`stepsConfig`-д байхгүй role → MR илгээхэд 500; `tenantId` зэрэг илүү талбар Prisma руу).
+**Шийдэл:** `requireRole(tx, tenant, authId, [OWNER, ADMIN])`; `WorkflowDefinitionDto` + `stepsConfigError()` (монгол, замтай мессеж). 2-tenant HTTP тест: REQUESTER/APPROVER → 403, буруу body → 400, ADMIN → 201/200.
+**Дүрэм:** Controller-ийн `@Body()` ҮРГЭЛЖ class DTO (interface/`unknown` биш). Тохиргоо өөрчилдөг endpoint бүрт role.
+
+### [API-001] UUID параметрт `ParseUUIDPipe` байхгүй → `not-a-uuid` → Prisma алдаа → 500 (8 route)
+**Илэрсэн:** `test/route-probe.integration.spec.ts` — Nest `DiscoveryService` + `PATH_METADATA/METHOD_METADATA`-аас path параметртэй бүх route-ийг цуглуулж, санамсаргүй UUID болон `not-a-uuid`-ээр дуудна. MR (6), delegation DELETE, routes DELETE → 500.
+**Шийдэл:** `@Param('id', ParseUUIDPipe)`. Probe нь шинэ route-ийг автоматаар хамардаг тул дахин гарвал тест унана.
+
+### [HTTP-001] `@Header('Content-Type', xlsx)` + validation алдаа → Fastify "invalid payload type" 500
+**Шалтгаан:** Nest-Fastify `@Header`-ийг pipe-ээс ӨМНӨ тавьдаг → `ParseUUIDPipe`-ийн 400 JSON xlsx Content-Type-тай → Fastify object serialize хийж чадахгүй → 500.
+**Шийдэл:** `@Res({ passthrough: true })` → амжилттай үед л `reply.header(...)`.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §17 (Phase 4.9): SEC-003, API-001, HTTP-001; route probe тест |
 | 2026-10-10 | §17 (Phase 4.8.5): SEC-002 (workflow definition cross-tenant update), TEST-011; RLS-004 шийдэл |
 | 2026-10-10 | §17 (Phase 4.8.3): RLS-007 (set_config transaction-ий гадна), CACHE-001 (MR cache), TEST-010 (Prisma wasm harness) |
 | 2026-10-10 | §17 (Phase 4.8.2): RLS-005 (буруу GUC policy), RLS-006 (`current_tenant_id` NULLIF) |

@@ -95,8 +95,9 @@ export class WorkflowService {
       // RULE-03
       await tx.$executeRaw`SELECT set_config('app.tenant_id', ${params.tenantId}, true)`;
 
-      const instance = await tx.workflowInstance.findUniqueOrThrow({
-        where:   { id: params.instanceId },
+      // Phase 4.9.2: tenant шүүлттэй (RLS-ийн хажуугаар код түвшинд ч)
+      const instance = await tx.workflowInstance.findFirstOrThrow({
+        where:   { id: params.instanceId, tenantId: params.tenantId },
         include: { definition: true },
       });
 
@@ -132,7 +133,7 @@ export class WorkflowService {
         await tx.$executeRaw`
           UPDATE mr_headers
           SET status = 'APPROVED', updated_at = now()
-          WHERE workflow_instance_id = ${params.instanceId}::uuid
+          WHERE workflow_instance_id = ${params.instanceId}::uuid AND tenant_id = ${params.tenantId}::uuid
         `;
 
         // Phase 4.1: төсөв SPENT (MR-ийн workflow бол)
@@ -183,8 +184,8 @@ export class WorkflowService {
       // RULE-03
       await tx.$executeRaw`SELECT set_config('app.tenant_id', ${params.tenantId}, true)`;
 
-      const instance = await tx.workflowInstance.findUniqueOrThrow({
-        where: { id: params.instanceId },
+      const instance = await tx.workflowInstance.findFirstOrThrow({
+        where: { id: params.instanceId, tenantId: params.tenantId }, // Phase 4.9.2
       });
 
       await tx.workflowStepLog.create({
@@ -211,7 +212,7 @@ export class WorkflowService {
       await tx.$executeRaw`
         UPDATE mr_headers
         SET status = 'REJECTED', updated_at = now()
-        WHERE workflow_instance_id = ${params.instanceId}::uuid
+        WHERE workflow_instance_id = ${params.instanceId}::uuid AND tenant_id = ${params.tenantId}::uuid
       `;
 
       // Phase 4.1: төсөв RELEASED (MR-ийн workflow бол)
