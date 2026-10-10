@@ -20,7 +20,7 @@ describe('TenantCacheService', () => {
 
     service = new TenantCacheService(
       mockRedis as unknown as import('ioredis').default,
-      mockPrisma as unknown as import('../db/prisma-tenant-client.service').PrismaTenantClientService,
+      mockPrisma as unknown as import('../db/system-prisma.service').SystemPrismaService,
     );
   });
 
@@ -72,7 +72,7 @@ describe('TenantCacheService.isMember()', () => {
     prisma = { $transaction: vi.fn().mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx)) };
     service = new TenantCacheService(
       redis as unknown as import('ioredis').default,
-      prisma as unknown as import('../db/prisma-tenant-client.service').PrismaTenantClientService,
+      prisma as unknown as import('../db/system-prisma.service').SystemPrismaService,
     );
   });
 
@@ -139,7 +139,7 @@ describe('Auth token cache (PERF-003)', () => {
     redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn().mockResolvedValue('OK'), del: vi.fn() };
     service = new TenantCacheService(
       redis as unknown as import('ioredis').default,
-      {} as unknown as import('../db/prisma-tenant-client.service').PrismaTenantClientService,
+      {} as unknown as import('../db/system-prisma.service').SystemPrismaService,
     );
   });
 

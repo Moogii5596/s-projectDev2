@@ -15,6 +15,7 @@
  */
 
 import { PrismaClient, UserRole, MrStatus } from '@prisma/client';
+import { ADMIN_DB_URL } from './helpers/db-urls';
 
 const TENANT_A_ID = '00000000-0000-0000-0000-000000000001';
 const TENANT_B_ID = '00000000-0000-0000-0000-000000000002';
@@ -31,7 +32,7 @@ let mrA2Id: string;
 let mrB1Id: string;
 
 // DATABASE_URL-аас port авч app_user URL үүсгэх
-const dbUrl = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+const dbUrl = ADMIN_DB_URL; // Phase 4.8.5: SYSTEM_DATABASE_URL → DATABASE_URL (RLS bypass)
 const APP_USER_URL = dbUrl.replace(
   /postgresql:\/\/[^@]+@/,
   'postgresql://app_user:change_in_production@',
@@ -40,7 +41,7 @@ const APP_USER_URL = dbUrl.replace(
 beforeAll(async () => {
   // Superuser connection (RLS bypass)
   prismaAdmin = new PrismaClient({
-    datasources: { db: { url: process.env.DATABASE_URL } },
+    datasources: { db: { url: ADMIN_DB_URL } }, // Phase 4.8.5
   });
   await prismaAdmin.$connect();
 

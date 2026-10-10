@@ -1,6 +1,6 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
-import { PrismaService } from '../../db/prisma.service';
+import { SystemPrismaService } from '../../db/system-prisma.service'; // Phase 4.8.4
 // RULE-02: Prisma Enum → @prisma/client-с import хийх
 import { TierType, UserRole, Prisma } from '@prisma/client';
 import type { CreateTenantDto } from './dto/create-tenant.dto';
@@ -13,7 +13,7 @@ export class TenantOnboardingService {
     process.env['SUPABASE_SERVICE_ROLE_KEY']!,
   );
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: SystemPrismaService) {}
 
   async createTenant(dto: CreateTenantDto) {
     // 1. Supabase Auth-д admin user үүсгэх → authId авах

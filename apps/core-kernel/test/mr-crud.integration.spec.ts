@@ -35,6 +35,7 @@ import { createRedisMock } from './helpers/redis-mock';
 import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { configureApp } from '../src/common/http/configure-app';
+import { ADMIN_DB_URL } from './helpers/db-urls';
 
 // ── Redis mock — нийтлэг helper [TEST-003] (апп-ын бүх Redis командтай) ──
 const redisMock = createRedisMock();
@@ -63,7 +64,7 @@ function makeTenantResolver() {
 beforeAll(async () => {
   // 1. Superuser Prisma — RLS bypass
   prismaAdmin = new PrismaClient({
-    datasources: { db: { url: process.env.DATABASE_URL } },
+    datasources: { db: { url: ADMIN_DB_URL } }, // Phase 4.8.5
   });
   await prismaAdmin.$connect();
 

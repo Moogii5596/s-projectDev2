@@ -5,11 +5,13 @@ import {
   ConflictException,
   InternalServerErrorException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PrismaTenantClientService } from '../db/prisma-tenant-client.service';
 import { inTenantTx } from '../db/tenant-tx';
+import { SystemPrismaService } from '../db/system-prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -33,6 +35,8 @@ export class AuthService {
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaTenantClientService,
+    // Phase 4.8.4: login — tenant тодорхойгүй (authId → core_users) тул системийн холболт
+    @Optional() private readonly system?: SystemPrismaService,
   ) {
     this.supabase = createClient(
       this.configService?.get<string>('SUPABASE_URL')
@@ -120,7 +124,7 @@ export class AuthService {
     }
 
     // core_users-ээс мэдээлэл авах (tenant_id-г мэдэхгүй тул direct query)
-    const coreUser = await this.prisma.coreUser.findUnique({
+    const coreUser = await (this.system ?? this.prisma).coreUser.findUnique({
       where: { authId: data.user.id },
     });
 

@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { Cron }       from '@nestjs/schedule';
-import { PrismaService }         from '../../db/prisma.service';
+import { SystemPrismaService } from '../../db/system-prisma.service'; // Phase 4.8.4
 import { RedisPublisherService }  from './redis-publisher.service';
 import { CloudEventsAdapter }    from './cloud-events.adapter';
 import { DlqService }            from './dlq.service';
@@ -12,7 +12,7 @@ const SOURCE      = '/s-project/core-kernel';
 @Injectable()
 export class OutboxPollerService {
   constructor(
-    private readonly prisma:     PrismaService,
+    private readonly prisma:     SystemPrismaService,
     private readonly publisher:  RedisPublisherService,
     private readonly dlqService: DlqService,
   ) {}

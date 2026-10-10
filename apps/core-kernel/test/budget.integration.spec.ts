@@ -26,6 +26,7 @@ import { createRedisMock } from './helpers/redis-mock';
 import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { configureApp } from '../src/common/http/configure-app';
+import { ADMIN_DB_URL } from './helpers/db-urls';
 
 const SLUG = `budget-it-${Date.now()}`;
 const HOST = `${SLUG}.example.com`;
@@ -37,7 +38,7 @@ const EMAILS = {
 };
 const OTHER_TENANT_ID = '00000000-0000-0000-0000-000000000002'; // tenant-b (0003 migration)
 
-const dbUrl = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+const dbUrl = ADMIN_DB_URL; // Phase 4.8.5: SYSTEM_DATABASE_URL → DATABASE_URL (RLS bypass)
 const APP_USER_URL = dbUrl.replace(/postgresql:\/\/[^@]+@/, 'postgresql://app_user:change_in_production@');
 
 let app: NestFastifyApplication;

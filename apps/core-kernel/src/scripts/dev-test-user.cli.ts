@@ -2,7 +2,7 @@
  * `pnpm dev:test-user [--email=admin@test.mn] [--password=test1234]` — Phase 3.6.5 [SEED-002]
  *
  * `supabase db reset`-ийн дараа ажиллуулна: Auth хэрэглэгчийг үүсгэж/нууц үгийг тохируулж,
- * core_users.auth_id-г холбоно. Root .env-ээс SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, DATABASE_URL уншина.
+ * core_users.auth_id-г холбоно. Root .env-ээс SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SYSTEM_DATABASE_URL (→ DATABASE_URL) уншина.
  * Зөвхөн local (localhost/127.0.0.1) орчинд.
  */
 import { existsSync, readFileSync } from 'node:fs';
@@ -25,7 +25,10 @@ async function main(): Promise<void> {
   loadEnv();
   const { email, password } = parseArgs(process.argv.slice(2), process.env);
   const supabaseUrl = assertLocalUrl('SUPABASE_URL', process.env.SUPABASE_URL);
-  const databaseUrl = assertLocalUrl('DATABASE_URL', process.env.DATABASE_URL);
+  // Phase 4.8.4: tenant-ээс өмнөх засвар (core_users.auth_id) — системийн холболт (app_user-д RLS context-гүй 0 мөр)
+  const databaseUrl = process.env.SYSTEM_DATABASE_URL?.trim()
+    ? assertLocalUrl('SYSTEM_DATABASE_URL', process.env.SYSTEM_DATABASE_URL)
+    : assertLocalUrl('DATABASE_URL', process.env.DATABASE_URL);
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY тохируулаагүй (.env)');
 

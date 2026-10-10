@@ -147,9 +147,16 @@ pnpm --filter e2e exec tsx tests/cluster-check.ts
     - Нэмэлт засвар [CACHE-001]: MR төлөв/эзэмшигчийн шалгалт 60с cache-ээс уншдаг, өөрчлөлтийн дараа cache цэвэрлэдэггүй байв → transaction доторх шинэ мөр + `invalidateTenant` (MR + workflow approve/reject)
     - Шалгалт: unit **458/458** · tsc ✅ · lint 0 алдаа · **бодит PG16 + бодит Prisma (wasm engine + pg adapter) harness**: `app_user`-ээр MR бүтэн урсгал **8/8** (хуучин кодоор **7/8 УНАСАН**), `postgres`-ээр 8/8 (одоогийн горим өөрчлөгдөөгүй) · mutation (`inTenantTx`-ээс set_config хасах) → unit 5 + harness 7 унасан
     - 4.8.4-т шилжих (системийн холболт): `TenantCacheService.getTenantId` (tenants), `AuthService.login`, `SuperAdminGuard`, `TenantOnboardingService`, `OutboxPollerService` + `DlqService`, `EscalationScheduler` (бүх tenant-ийг скан)
-    - [ ] Таны компьютер: `test` → `test:integration` (зан төлөв өөрчлөгдөхгүй — апп `postgres`-ээр хэвээр)
-  - [ ] **4.8.4 Хоёр холболт** — `DATABASE_URL` (хүсэлт) / `SYSTEM_DATABASE_URL` (onboarding, outbox, scheduler, guard lookup); эхэндээ хоёулаа `postgres`
-  - [ ] **4.8.5 Тест** — integration-ийг `app_user`-ээр, cross-tenant (MR, workflow) leakage
+    - [x] Таны компьютер (15:38): `test` → `test:integration` ✅
+  - [x] **4.8.4 Хоёр холболт ✅** — `db/system-prisma.service.ts` (`SystemPrismaService`, `SYSTEM_DATABASE_URL` → алга бол `DATABASE_URL`): `TenantCacheService`, `AuthService.login`, `SuperAdminGuard`, `TenantOnboardingService`, `OutboxPollerService`, `DlqService`, `EscalationScheduler`; `dev:test-user` мөн. `EnvConfig` URL шалгалт; эхлэхэд DB role BYPASSRLS эсэхийг лог (warn); `.env.example`, VPC env/compose
+    - Шалгалт: unit **466/466** · tsc ✅ · lint 0 алдаа · PG16 harness (DATABASE_URL=`app_user`, SYSTEM=`postgres`): системийн 6/6 (tenant lookup, membership, outbox 2 tenant, DLQ, escalation; app_user-ээр бол tenant олдохгүй / скан 0 — system хэрэгтэйг батлав) + MR урсгал 8/8
+    - Зан төлөв өөрчлөгдөхгүй: `SYSTEM_DATABASE_URL` тохируулаагүй → хоёр холболт хоёулаа `DATABASE_URL` (`postgres`)
+    - Олдвор (Phase 5): `OutboxPollerService` `FOR UPDATE SKIP LOCKED`-ийг transaction-гүй ажиллуулдаг → түгжээ тэр дороо суларч, олон worker-т нэг event давхар publish болох эрсдэлтэй [EVT-001 — засаагүй]
+    - [x] Таны компьютер (16:28): unit 466/466 · integration 127 ✅
+  - [x] **4.8.5 Тест ✅ (код)** — `test/helpers/db-urls.ts` (`ADMIN_DB_URL` = SYSTEM → DATABASE): 10 integration файлын бэлтгэл/цэвэрлэгээ RLS-ийг алгасна; `auth.integration` шалгалт/цэвэрлэгээ системийн холболтоор (өмнө нь буруу GUC `app.current_tenant_id`); шинэ `tenant-isolation-http.integration.spec.ts` (2 tenant, MR + workflow definition HTTP, **бодит** tenant lookup — patch-гүй)
+    - 🔴 Олдсон+зассан [SEC-002]: `PUT /workflow/definitions/:id` нь `where: { id }` — **өөр tenant-ийн definition-ийг засах боломжтой байв** (одоогийн `postgres` горимд 200). Одоо tenant шүүлттэй → 404
+    - Шалгалт: unit **468/468** · tsc ✅ · lint 0 алдаа · **бүтэн integration (12 файл / 133) PG16 + fake Supabase Auth + бодит Prisma дээр**: `app_user` горим **133/133**, `postgres` горим 133/133 · хуучин workflow-definition кодоор шинэ тест унасан (postgres: 200, app_user: 500)
+    - [ ] Таны компьютер: (1) `test` → `test:integration` (одоогийн .env) → (2) **.env шилжилт** → `test:integration` → `pnpm dev` гараар шалгах
 
 ### Phase 5 — Sprint 10: Event Bus integration тест (2 session)
 - [ ] 5.1 MR → Workflow → Inventory → Budget chain тест

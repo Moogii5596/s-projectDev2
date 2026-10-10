@@ -27,6 +27,7 @@ import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { CAMP_PERMISSION_CODES } from '../src/modules/camp/common/camp-permissions';
 import { toCampHttpError } from '../src/modules/camp/common/camp-errors';
 import { configureApp } from '../src/common/http/configure-app';
+import { ADMIN_DB_URL } from './helpers/db-urls';
 
 const STAMP = Date.now();
 const SLUG = `camp-it-${STAMP}`;
@@ -41,7 +42,7 @@ type Who = keyof typeof EMAILS;
 const OTHER_TENANT_ID = '00000000-0000-0000-0000-000000000002';
 const WEDNESDAY = '2026-10-07';
 
-const dbUrl = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+const dbUrl = ADMIN_DB_URL; // Phase 4.8.5: SYSTEM_DATABASE_URL → DATABASE_URL (RLS bypass)
 const APP_USER_URL = dbUrl.replace(/postgresql:\/\/[^@]+@/, 'postgresql://app_user:change_in_production@');
 
 let app: NestFastifyApplication;

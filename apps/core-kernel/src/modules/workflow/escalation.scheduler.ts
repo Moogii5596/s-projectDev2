@@ -2,14 +2,14 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../db/prisma.service';
+import { SystemPrismaService } from '../../db/system-prisma.service'; // Phase 4.8.4
 
 @Injectable()
 export class EscalationScheduler {
   private readonly logger = new Logger(EscalationScheduler.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly prisma: SystemPrismaService,
     private readonly events: EventEmitter2,
   ) {}
 

@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
-import { PrismaService } from '../../../db/prisma.service';
+import { SystemPrismaService } from '../../../db/system-prisma.service'; // Phase 4.8.4
 
 /**
  * SuperAdminGuard — Platform-level super admin эрх шалгах
@@ -19,7 +19,7 @@ export class SuperAdminGuard implements CanActivate {
     process.env['SUPABASE_ANON_KEY']!,
   );
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: SystemPrismaService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Record<string, unknown>>();

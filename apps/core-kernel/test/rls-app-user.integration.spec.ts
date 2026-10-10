@@ -11,9 +11,10 @@
  * ============================================================
  */
 import { Prisma, PrismaClient, TierType } from '@prisma/client';
+import { ADMIN_DB_URL } from './helpers/db-urls';
 
 const STAMP = Date.now();
-const dbUrl = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+const dbUrl = ADMIN_DB_URL; // Phase 4.8.5: SYSTEM_DATABASE_URL → DATABASE_URL (RLS bypass)
 const APP_USER_URL = dbUrl.replace(/postgresql:\/\/[^@]+@/, 'postgresql://app_user:change_in_production@');
 
 let prismaAdmin: PrismaClient;

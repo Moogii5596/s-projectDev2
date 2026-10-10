@@ -1,5 +1,6 @@
 import { AuthService } from '../src/auth/auth.service';
 import { PrismaTenantClientService } from '../src/db/prisma-tenant-client.service';
+import { SystemPrismaService } from '../src/db/system-prisma.service';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
@@ -8,6 +9,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 describe('AuthService Integration', () => {
   let authService: AuthService;
   let prisma: PrismaTenantClientService;
+  let system: SystemPrismaService; // Phase 4.8.5: шалгалт/цэвэрлэгээ (RLS bypass) + AuthService.login
   let supabaseAdmin: SupabaseClient;
 
   const TEST_TENANT_ID = '00000000-0000-0000-0000-000000000003';
@@ -21,7 +23,8 @@ describe('AuthService Integration', () => {
     } as any;
 
     prisma = new PrismaTenantClientService();
-    authService = new AuthService(configServiceMock, prisma);
+    system = new SystemPrismaService();
+    authService = new AuthService(configServiceMock, prisma, system);
 
     supabaseAdmin = createClient(
       process.env['SUPABASE_URL']!,
@@ -29,6 +32,7 @@ describe('AuthService Integration', () => {
     );
 
     await prisma.$connect();
+    await system.$connect();
   });
 
   afterAll(async () => {
@@ -43,13 +47,14 @@ describe('AuthService Integration', () => {
 
     // Cleanup core_users
     try {
-      await prisma.$executeRaw`SELECT set_config('app.current_tenant_id', ${TEST_TENANT_ID}, true)`;
-      await prisma.coreUser.deleteMany({
+      // Phase 4.8.5: системийн холболт (өмнө нь буруу GUC + тусдаа statement — app_user-д юу ч устгахгүй)
+      await system.coreUser.deleteMany({
         where: { email: TEST_EMAIL, tenantId: TEST_TENANT_ID },
       });
     } catch (_) { /* ignore */ }
 
     await prisma?.$disconnect();
+    await system?.$disconnect();
   });
 
   describe('register()', () => {
@@ -64,16 +69,12 @@ describe('AuthService Integration', () => {
       expect(result.user.tenantId).toBe(TEST_TENANT_ID);
 
       // core_users мөр үүссэн эсэхийг шалгах
-      await prisma.withTenantContext(
-        { tenantId: TEST_TENANT_ID, userId: result.user.id },
-        async () => {
-          const dbUser = await prisma.coreUser.findFirst({
-            where: { email: TEST_EMAIL, tenantId: TEST_TENANT_ID },
-          });
-          expect(dbUser).not.toBeNull();
-          expect(dbUser!.fullName).toBe('Integration Test');
-        },
-      );
+      // Phase 4.8.5: шалгалтыг системийн холболтоор (withTenantContext нь DB-д set_config хийдэггүй)
+      const dbUser = await system.coreUser.findFirst({
+        where: { email: TEST_EMAIL, tenantId: TEST_TENANT_ID },
+      });
+      expect(dbUser).not.toBeNull();
+      expect(dbUser!.fullName).toBe('Integration Test');
     });
 
     it('давхар email → ConflictException', async () => {

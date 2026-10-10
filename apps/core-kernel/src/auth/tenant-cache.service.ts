@@ -2,7 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { REDIS_CLIENT } from '../db/redis.module';
 import Redis from 'ioredis';
-import { PrismaTenantClientService } from '../db/prisma-tenant-client.service';
+import { SystemPrismaService } from '../db/system-prisma.service';
 
 const CACHE_TTL_SECONDS = 300; // 5 минут
 const CACHE_PREFIX = 'tenant:slug:';
@@ -48,7 +48,8 @@ export class TenantCacheService {
 
   constructor(
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-    private readonly prisma: PrismaTenantClientService,
+    // Phase 4.8.4: tenants (app_user-д эрхгүй) + membership — системийн холболт
+    private readonly prisma: SystemPrismaService,
   ) {}
 
   async getTenantId(slug: string): Promise<string | null> {

@@ -8,6 +8,8 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(3000),
   DATABASE_URL: z.string().url(),
+  // Phase 4.8.4: системийн холболт (BYPASSRLS). Тохируулаагүй → DATABASE_URL
+  SYSTEM_DATABASE_URL: z.string().url().optional(),
   DIRECT_URL: z.string().url(),
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
@@ -28,6 +30,7 @@ export class EnvConfig {
       NODE_ENV: this.configService?.get('NODE_ENV') ?? process.env['NODE_ENV'],
       PORT: this.configService?.get('PORT') ?? process.env['PORT'],
       DATABASE_URL: this.configService?.get('DATABASE_URL') ?? process.env['DATABASE_URL'],
+      SYSTEM_DATABASE_URL: (this.configService?.get('SYSTEM_DATABASE_URL') ?? process.env['SYSTEM_DATABASE_URL']) || undefined,
       DIRECT_URL: this.configService?.get('DIRECT_URL') ?? process.env['DIRECT_URL'],
       SUPABASE_URL: this.configService?.get('SUPABASE_URL') ?? process.env['SUPABASE_URL'],
       SUPABASE_SERVICE_ROLE_KEY: this.configService?.get('SUPABASE_SERVICE_ROLE_KEY') ?? process.env['SUPABASE_SERVICE_ROLE_KEY'],
@@ -71,6 +74,7 @@ export class EnvConfig {
   get NODE_ENV() { return this.env.NODE_ENV; }
   get PORT() { return this.env.PORT; }
   get DATABASE_URL() { return this.env.DATABASE_URL; }
+  get SYSTEM_DATABASE_URL() { return this.env.SYSTEM_DATABASE_URL ?? this.env.DATABASE_URL; }
   get DIRECT_URL() { return this.env.DIRECT_URL; }
   get SUPABASE_URL() { return this.env.SUPABASE_URL; }
   get SUPABASE_SERVICE_ROLE_KEY() { return this.env.SUPABASE_SERVICE_ROLE_KEY; }

@@ -74,6 +74,8 @@
 | RLS-007 | `set_config` transaction-ий гадна (`$use`, тусдаа statement) → үр дүнгүй | Tenant query бүр `inTenantTx` (`db/tenant-tx.ts`) |
 | CACHE-001 | Төлөв шалгалт cache-ээс, өөрчлөлтийн дараа invalidate-гүй | Шалгалт transaction доторх шинэ мөрөөс; бичсэний дараа `invalidateTenant` |
 | TEST-010 | Cloud-д Prisma engine татагдахгүй (403) | Harness: wasm engine + `@prisma/adapter-pg` (төсөлд орохгүй) |
+| SEC-002 | `update({ where: { id } })` — өөр tenant-ийн мөрийг id-аар засах | `updateMany({ where: { id, tenantId } })` → count 0 → 404; HTTP 2-tenant тест |
+| TEST-011 | Integration тест admin холболт = DATABASE_URL | `test/helpers/db-urls.ts` `ADMIN_DB_URL` (SYSTEM → DATABASE) |
 
 ---
 
@@ -853,6 +855,7 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 ### [RLS-004] 🔴 RESTRICTIVE-only policy + `app_user` эрхгүй → runtime дээр RLS огт ажилладаггүй
 **Илэрсэн:** Workflow хүснэгтүүд (`workflow_definitions`, `workflow_instances`, …) зөвхөн `AS RESTRICTIVE ... TO app_user` policy-тэй, `app_user`-д GRANT алга → цэвэр DB дээр `app_user`: `permission denied`; GRANT хийсэн ч RESTRICTIVE ганцаараа **0 мөр** (PostgreSQL permissive policy шаарддаг). Sprint 9 баримт ижил алдаатай загвар санал болгосон (+ байхгүй `s_project_app_user` role).
 **Бодит нөлөө:** App (local, compose, VPC runbook) postgres **superuser**-ээр холбогддог → RLS bypass. Tenant тусгаарлалт одоогоор код (`WHERE tenant_id`) + SEC-001-д тулгуурладаг.
+**Шийдэл (Phase 4.8, 2026-10-10):** 4.8.2 migration (49/49 хүснэгт) → 4.8.3 `inTenantTx` [RLS-007] → 4.8.4 `SystemPrismaService` (`SYSTEM_DATABASE_URL`) → 4.8.5 тест; `.env`: `DATABASE_URL`=app_user, `SYSTEM_DATABASE_URL`=postgres.
 **Phase 4 стандарт (шинэ хүснэгт бүр):** `ENABLE` + `FORCE` + `AS PERMISSIVE FOR ALL TO app_user USING/WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)` + `GRANT ... TO app_user`; service бүрийн transaction `set_config('app.tenant_id')`-оор эхэлнэ; integration тестэд `app_user`-ээр leakage шалгана.
 **Үлдсэн ажил:** app-ийг `app_user`-ээр ажиллуулах (хуучин хүснэгтүүдийн policy/GRANT засах, MR transaction-уудад set_config) — тусдаа phase (санал).
 
@@ -1005,9 +1008,19 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Эрсдэл:** Дэлгэрэнгүйг харсан (DRAFT cache-лэгдсэн) → submit → 60с дотор approve: cache-ийн DRAFT-аас болж 403 "Зөвхөн PENDING_APPROVAL…"; жагсаалт/дэлгэрэнгүй 60с хуучин. Workflow-ийн approve/reject `mr_headers`-ийг raw SQL-ээр өөрчилдөг ч MR cache мэдэхгүй.
 **Шийдэл:** Шалгалт `loadOne(tx)` — transaction доторх шинэ мөр; create/update/remove/submit/approve/reject болон `WorkflowService.approveStep/rejectStep`-ийн дараа `cache.invalidateTenant` (алдаа → warn, үр дүнг буцаахгүй).
 **Дүрэм:** Cache зөвхөн уншиж харуулахад; бизнесийн шийдвэр (төлөв, эрх) DB-ийн шинэ мөрөөс. Бичсэн service бүр cache-ээ цэвэрлэнэ.
+**Яагаад integration тест бариагүй:** `test/helpers/redis-mock.ts`-ийн `get` үргэлж `null` (cache miss) — cache-ийн хуучирсан утгын алдааг integration тест хэзээ ч харахгүй. Cache-тэй урсгалыг санах ойн cache-тэй (бичсэнээ уншдаг) harness-аар шалгана.
 
 ### [TEST-010] Cloud орчинд Prisma query engine татагдахгүй (binaries.prisma.sh 403) — бодит DB-тэй Prisma тест хийх арга
 **Шийдэл (зөвхөн шалгалтын harness, төсөлд орохгүй):** `previewFeatures = ["driverAdapters"]`-тай schema-г тусдаа хавтсанд generate → `wasm.js`-ийн engine loader-ийг `fs.readFileSync(query_engine_bg.wasm)` болгох → `@prisma/adapter-pg` (pg Pool) → vitest alias `@prisma/client` → shim. Үр дүн: бодит service код + бодит PostgreSQL 16 + `app_user` RLS.
+
+### [SEC-002] 🔴 `PUT /workflow/definitions/:id` — өөр tenant-ийн workflow definition-ийг засах боломжтой байсан
+**Илэрсэн (4.8.5):** `WorkflowDefinitionService.update` нь set_config хийдэг ч `tx.workflowDefinition.update({ where: { id } })` — tenant шүүлтгүй. Апп `postgres` (BYPASSRLS)-ээр ажилладаг тул RLS хамгаалдаггүй → Tenant B-ийн хэрэглэгч A-ийн definition-ийн id-г мэдвэл засна (шинэ HTTP тест: **200**). `app_user` горимд RLS хаах ч P2025 → 500.
+**Шийдэл:** `updateMany({ where: { id, tenantId } })` → `count === 0` → 404, дараа нь `findFirstOrThrow({ id, tenantId })`. `test/tenant-isolation-http.integration.spec.ts` (2 tenant, MR + definition: жагсаалт, унших, засах, батлах, татгалзах → 404; гишүүн биш Host → 403).
+**Дүрэм:** Update/delete-ийн `where`-д ҮРГЭЛЖ `tenantId` (эсвэл ижил transaction-д tenant-аар шалгасан мөр). RLS бол хоёр дахь хамгаалалт. Шинэ endpoint бүрт 2-tenant HTTP тест.
+**Олдвор (засаагүй — дараагийн шат):** `WorkflowDefinitionController`-д эрхийн шалгалт алга (REQUESTER ч definition үүсгэж/засна), `WorkflowDefinitionInput` нь interface → body validation алга.
+
+### [TEST-011] Integration тестийн admin холболт `DATABASE_URL` байсан → app_user болгоход бэлтгэл эвдэрнэ
+**Шийдэл:** `test/helpers/db-urls.ts` — `ADMIN_DB_URL = SYSTEM_DATABASE_URL || DATABASE_URL`, `APP_USER_DB_URL`. Cloud-д бүтэн integration-ийг fake Supabase Auth (GoTrue-ийн 6 endpoint) + PG16 + wasm Prisma-аар (TEST-010) хоёр горимд ажиллуулж шалгасан.
 
 ---
 
@@ -1015,6 +1028,7 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §17 (Phase 4.8.5): SEC-002 (workflow definition cross-tenant update), TEST-011; RLS-004 шийдэл |
 | 2026-10-10 | §17 (Phase 4.8.3): RLS-007 (set_config transaction-ий гадна), CACHE-001 (MR cache), TEST-010 (Prisma wasm harness) |
 | 2026-10-10 | §17 (Phase 4.8.2): RLS-005 (буруу GUC policy), RLS-006 (`current_tenant_id` NULLIF) |
 | 2026-10-10 | §16 (Phase 3.6): CURSOR-001, BUILD-001, CLUSTER-001, LOG-001, PROC-005; SEED-002 → `pnpm dev:test-user` |

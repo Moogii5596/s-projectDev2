@@ -29,6 +29,23 @@ export class PrismaTenantClientService extends PrismaClient implements OnModuleI
   async onModuleInit() {
     await this.$connect();
     this.logger.log('✅ Database connected');
+    await this.logRlsMode();
+  }
+
+  /** Phase 4.8.4: DATABASE_URL-ийн role RLS-ийг алгасдаг эсэхийг эхлэхэд мэдэгдэнэ */
+  private async logRlsMode(): Promise<void> {
+    try {
+      const [r] = await this.$queryRaw<{ role: string; bypass: boolean }[]>`
+        SELECT current_user::text AS role, (rolsuper OR rolbypassrls) AS bypass FROM pg_roles WHERE rolname = current_user`;
+      if (!r) return;
+      if (r.bypass) {
+        this.logger.warn(`DB role "${r.role}" BYPASSRLS — RLS хүсэлтийн түвшинд идэвхгүй (зорилго: DATABASE_URL → app_user, Phase 4.8)`);
+      } else {
+        this.logger.log(`DB role "${r.role}" — RLS идэвхтэй`);
+      }
+    } catch (err) {
+      this.logger.warn(`DB role шалгаж чадсангүй: ${(err as Error).message}`);
+    }
   }
 
   async onModuleDestroy() {

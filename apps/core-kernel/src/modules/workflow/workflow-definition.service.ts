@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, WorkflowDefinition } from '@prisma/client';
 import { PrismaService } from '../../db/prisma.service';
 import { CacheService } from '../../cache/cache.service';
@@ -43,7 +43,11 @@ export class WorkflowDefinitionService {
   async update(tenantId: string, id: string, input: WorkflowDefinitionInput) {
     const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
-      return tx.workflowDefinition.update({ where: { id }, data: input });
+      // Phase 4.8.5 [SEC-002]: өмнө нь `where: { id }` — өөр tenant-ийн definition-ийг id-аар засах боломжтой байсан
+      // (апп postgres/BYPASSRLS-ээр). Одоо tenant шүүлттэй; олдохгүй → 404 (app_user-д RLS ч мөн хаана)
+      const res = await tx.workflowDefinition.updateMany({ where: { id, tenantId }, data: input });
+      if (res.count === 0) throw new NotFoundException('Workflow definition олдсонгүй');
+      return tx.workflowDefinition.findFirstOrThrow({ where: { id, tenantId } });
     });
     await this.cache.invalidateTenant(tenantId);
     return result;
