@@ -87,6 +87,10 @@
 | FE-006 | Module Federation remote route-гүй ч эхлэхдээ ачаалагдана | Хэрэглэхгүй бол remote-ийг build-оос хасах (alias stub) |
 | PS-001 | Windows PowerShell 5.1: BOM, native stderr, Start-Process, cmd давхарга | UTF-8 BOM; native дуудлагад түр `Continue`; `node` шууд; pwsh-оор parse + shim тест |
 | PROC-008 | `pkill -f "[x]yz"` ч ижил командад `xyz` бичвэрийг агуулбал өөрийгөө алав | pkill-ийг тусдаа, бусад бичвэргүй дуудлагад |
+| PROC-009 | Шинэ clone-д `init` → Supabase CLI алга (`pnpm install` дараагийн алхамд байсан) | Суулгах скриптийг ХООСОН clone-оос туршина; хамаарлыг эхэнд шалгаж/суулгана |
+| FE-007 | API 401 → `/login` redirect ч локал session үлдсэн → /login ↔ нүүр төгсгөлгүй | 401-д эхлээд `signOut({scope:'local'})`; logout = `local` |
+| OPS-003 | Supabase `[auth.email] enable_signup=false` → "Email logins are disabled" | Бүртгэл хаах = зөвхөн `[auth] enable_signup=false`; auth тохиргоог бодит GoTrue-гаар нэвтэрч шалгах |
+| PROC-010 | `.ps1`-ийн `$env:` өөрчлөлт хэрэглэгчийн цонхонд үлдэв (NODE_ENV=production → devDeps алгассан) | Скрипт дуусахад орчныг буцаах; `pnpm install`-ийг NODE_ENV-гүй |
 
 ---
 
@@ -1161,12 +1165,37 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Тохиолдсон:** Нэг Bash дуудлагад script-ийг heredoc-оор бичээд (дотор нь `dist/src/main.js`, `caddy run` бичвэр) дараа нь `pkill -f "[d]ist/src/main.js"` → bracket pattern өөрийгөө таарахгүй ч **командын бусад хэсэг** таарсан → exit 144.
 **Дүрэм:** pkill-ийг бусад бичвэргүй тусдаа дуудлагаар; урт скриптийг файлд бичээд тусад нь ажиллуулна. Cloud tool дуудлага дуусахад энгийн child процессыг устгадаг → урт ажиллах зүйлийг `setsid` + үр дүнг файлд.
 
+### [PROC-009] Пилот `init` шинэ clone дээр унав: `'supabase' is not recognized`
+**Тохиолдсон (таны машин, 2026-10-10 22:55):** Runbook-ийн дараалал `init` → `build` байсан ч `pnpm install` зөвхөн `build`-д. Шинэ clone-д `node_modules` алга → `pnpm exec supabase` олдсонгүй. Cloud тестийн test root-д `node_modules`-ийг symlink-ээр бэлэн холбосон тул илрээгүй.
+**Шийдэл:** `init` нь `node_modules/.bin/supabase(.cmd)` алга бол `pnpm install --frozen-lockfile` хийнэ; `Invoke-Supabase` CLI алга бол ойлгомжтой алдаа. Runbook §4-д `pnpm install`.
+**Дүрэм:** Суулгах/байршуулах скриптийг **хоосон (шинэ clone)** төлөвөөс эхлэн туршина — тестийн орчинд "бэлэн" зүйл (node_modules, build, .env) байвал тэмдэглэж, тэдгүйгээр нэг удаа ажиллуулна.
+
+### [PROC-010] 🔴 `pilot.ps1` `.env`-ийг таны PowerShell цонхны орчинд үлдээсэн
+**Тохиолдсон (таны машин, 22:56):** `.\pilot.ps1 check` → `Set-Item env:` нь процессын орчныг өөрчилдөг тул скрипт дууссаны дараа ч цонхонд `NODE_ENV=production`, пилотын `DATABASE_URL` г.м. үлдсэн. Дараагийн `pnpm install` → "devDependencies: skipped because NODE_ENV is set to production" → Supabase CLI алга. Илүү аюултай нь: тэр цонхонд dev-ийн `pnpm test:integration`/`pnpm dev` ажиллуулбал **пилотын DB** руу холбогдоно. Cloud тест скрипт бүрийг тусдаа `pwsh -File` процессоор ажиллуулдаг байсан тул илрээгүй.
+**Шийдэл:** Main эхлэхэд орчны snapshot → дуусахад (алдаатай ч) буцаана (`Restore-Environment`); `Install-NodeDeps` нь `NODE_ENV`-гүй ажиллана. Тест: нэг pwsh session-д check (амжилт) / init (алдаа)-ын дараа `NODE_ENV`, `DATABASE_URL` хоосон, өмнөх хувьсагч хэвээр; install үед `NODE_ENV=[]`.
+**Дүрэм:** Хэрэглэгчийн shell-д `.\script.ps1`-ээр ажиллах скрипт орчныг өөрчилбөл заавал буцаана; тестийг хэрэглэгчийн ажиллуулах хэлбэрээр (нэг session-д дараалан) хийнэ.
+
+### [OPS-003] 🔴 Пилотод нэвтрэх боломжгүй: "Email logins are disabled"
+**Тохиолдсон (таны машин, 23:09):** `deploy/pilot/supabase/config.toml`-д бүртгэл хаах гэж `[auth] enable_signup = false` дээр нэмж `[auth.email] enable_signup = false` тавьсан. Supabase CLI-д сүүлийнх нь имэйл provider-ийг бүхэлд нь (`GOTRUE_EXTERNAL_EMAIL_ENABLED=false`) унтраадаг → admin API-аар үүссэн хэрэглэгч ч нэвтэрч чадахгүй. Cloud-д fake GoTrue ашигласан (бодит Supabase image татах боломжгүй) тул илрээгүй.
+**Шийдэл:** `[auth.email] enable_signup = true` (тайлбартай); бүртгэлийг `[auth] enable_signup = false` (`GOTRUE_DISABLE_SIGNUP`) + Caddy `/auth/v1/signup` 404 хаана.
+**Дүрэм:** Тохиргооны түлхүүрийн нэрээр утгыг нь бүү таамагла — баримтаас (эсвэл бодит орчинд нэвтэрч) шалгана. Mock/fake-аар туршсан тохиргоо бүрийг "бодит орчинд шалгаагүй" гэж тэмдэглэж, бодит орчны эхний алхамд шалгах жагсаалтад оруулна.
+
+### [FE-007] 🔴 Пилот: `/camp` ↔ `/login` хооронд төгсгөлгүй шилжилт (интернэт тасарч сэргэсний дараа)
+**Тохиолдсон (таны утас/компьютер, 23:34):** Серверт session хүчингүй болсон (сүлжээ тасрахад refresh амжаагүй, өөр төхөөрөмжөөс logout — анхдагч `signOut()` = **global** бүх төхөөрөмжийг цуцална, эсвэл restore-ийн дараа `auth.sessions` цэвэрлэгдсэн) ч браузерийн localStorage-д session үлдсэн. API 401 → axios interceptor `window.location.href = '/login'` (session-ийг устгахгүй) → LoginPage локал session-оор "нэвтэрсэн" гэж үзэж `/camp` → 401 → … Cloud-д хуучин кодоор давтахад 6 сек-д **295** шилжилт.
+**Яагаад тестэд илрээгүй:** e2e нь нэвтэрсэн session-ийг серверт хүчингүй болгодог кейсгүй байсан.
+**Шийдэл:** `lib/unauthorized.ts` — 401 → `supabase.auth.signOut({ scope: 'local' })` → `/login` (аль хэдийн тэнд бол шилжихгүй); "Гарах" товч `scope: 'local'` (бусад төхөөрөмжийг гаргахгүй). Unit 3 + браузерын давталтын тест (шинэ код: 4 шилжилт, `/login`, localStorage цэвэр).
+**Дүрэм:** Auth-ийн урсгалд "серверт session хүчингүй, клиентэд хүчинтэй" кейсийг заавал шалгана; redirect хийхээс өмнө тухайн шалтгааныг (локал төлөв) цэвэрлэнэ, redirect бүрт "аль хэдийн тэнд бол" хамгаалалт.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §20: FE-007 (/login ↔ /camp давталт) |
+| 2026-10-10 | §20: OPS-003 (auth.email enable_signup) |
+| 2026-10-10 | §20: PROC-010 (`.ps1` орчин цонхонд үлдсэн) |
+| 2026-10-10 | §20: PROC-009 (шинэ clone-д pnpm install алга) |
 | 2026-10-10 | §20 (v0.1.6 Кемп пилот): SEC-005 (auth/register), SEC-006 (Supabase env() → demo нууц), FE-006 (MFE remote), OPS-001/002, PS-001, TEST-016, PROC-008 |
 | 2026-10-10 | §19 (Phase 6.4.7): CONC-002 (зэрэгцээ MR дугаар), TEST-015 дүгнэлт засав |
 | 2026-10-10 | §19 (Phase 6.4): CI-004 (CI script/env хоцорсон) |

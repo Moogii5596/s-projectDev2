@@ -89,6 +89,7 @@ notepad .env
 ## 4. Анхны асаалт
 
 ```powershell
+pnpm install --frozen-lockfile     # шинэ clone-д заавал (Supabase CLI = devDependency); v0.1.6.1+-д init өөрөө хийнэ
 .\deploy\pilot\pilot.ps1 init     # migration хуулах, Redis + Supabase асаах (анх удаа image татна), app_user нууц үг
 .\deploy\pilot\pilot.ps1 build    # pnpm install, Prisma, backend + web build (Кемп цэс)
 .\deploy\pilot\pilot.ps1 start    # backend + Caddy
@@ -242,6 +243,8 @@ Start-ScheduledTask 'S-Project Pilot'
 | `backend эхэлсэнгүй` | `run\logs\backend.err.log`. Ихэвчлэн `.env` эсвэл DB (Docker асаагүй) |
 | `Docker Desktop ажиллахгүй` | Docker Desktop-ийг нээнэ; `run` 15 мин хүлээнэ |
 | Funnel хаяг нээгдэхгүй | `tailscale status` (нэвтэрсэн?), `tailscale funnel status`, `pilot.ps1 status` (gateway health) |
+| `/login` ↔ `/camp` төгсгөлгүй шилжинэ | v0.1.6.1-ээс өмнөх build (FE-007). Түр: сайтын өгөгдлийг устгах (🔒 → Site settings → Delete data) |
+| Нэвтрэх → "Email logins are disabled" | `config.toml`-д `[auth.email] enable_signup = false` (OPS-003) → `true`; `pilot.ps1 stop -All` → `start` |
 | Нэвтрэх → "Invalid login credentials" | Нууц үг буруу → `pilot.ps1 user … --reset-password` |
 | Нэвтэрсэн ч 403 | Хэрэглэгч идэвхгүй, эсвэл өөр байгууллагын email |
 | Олон удаа буруу нэвтэрсний дараа 429 | Supabase Auth хязгаар (5 мин) — Caddy-ийн ард бүх хүсэлт нэг IP тул байгууллагад хуваалцна; хүлээнэ |

@@ -197,6 +197,7 @@ function Test-JwtHs256([string] $jwt, [string] $secret) {
 
 # ── Supabase ─────────────────────────────────────────────────
 function Invoke-Supabase([string[]] $Arguments, [switch] $Capture, [switch] $AllowFail) {
+  if (-not (Test-NodeDeps)) { Stop-Pilot2 'Supabase CLI алга (node_modules) → pnpm install --frozen-lockfile, эсвэл pilot.ps1 init' }
   $a = @('exec', 'supabase') + $Arguments + @('--workdir', $PilotDir)
   Push-Location $Root
   try { return Invoke-Native -Exe 'pnpm' -Arguments $a -Capture:$Capture -AllowFail:$AllowFail } finally { Pop-Location }
@@ -701,9 +702,28 @@ function Invoke-Check {
   }
 }
 
+# Шинэ clone-д node_modules алга → Supabase CLI (devDependency) ч алга (PROC-009)
+function Test-NodeDeps {
+  $bin = Join-Path (Join-Path $Root 'node_modules') '.bin'
+  return (Test-Path (Join-Path $bin 'supabase.cmd')) -or (Test-Path (Join-Path $bin 'supabase'))
+}
+
+function Install-NodeDeps {
+  Write-Step 'pnpm install'
+  # NODE_ENV=production (.env) үед pnpm devDependency-г (Supabase CLI, TypeScript, Vite…) алгасдаг/устгадаг (PROC-010)
+  $prevNodeEnv = $env:NODE_ENV
+  Remove-Item env:NODE_ENV -ErrorAction SilentlyContinue
+  Push-Location $Root
+  try { Invoke-Native 'pnpm' @('install', '--frozen-lockfile') | Out-Null } finally {
+    Pop-Location
+    if ($prevNodeEnv) { $env:NODE_ENV = $prevNodeEnv }
+  }
+}
+
 function Invoke-Init {
   $cfg = Import-PilotEnv
   Assert-PilotEnv $cfg
+  if (-not (Test-NodeDeps)) { Install-NodeDeps }
   Sync-Migrations
   Wait-Docker
   Start-PilotRedis
@@ -722,8 +742,7 @@ function Invoke-Build {
   Assert-KeysSecure $keys $cfg['SUPABASE_AUTH_JWT_SECRET']
   Push-Location $Root
   try {
-    Write-Step 'pnpm install'
-    Invoke-Native 'pnpm' @('install', '--frozen-lockfile') | Out-Null
+    Install-NodeDeps
     Write-Step 'Prisma client'
     Invoke-Native 'pnpm' @('db:generate') | Out-Null
     Write-Step 'Backend build'
@@ -757,6 +776,20 @@ function Invoke-AdminCli([string] $sub) {
 }
 
 # ── Main ─────────────────────────────────────────────────────
+# .env-ийг процессын орчинд оруулдаг → скрипт дуусахад буцаана. Эс бөгөөс таны PowerShell цонхонд пилотын
+# DATABASE_URL, NODE_ENV=production г.м. үлдэж, дараагийн pnpm / тест пилотын DB руу холбогдоно (PROC-010).
+$EnvSnapshot = @{}
+foreach ($e in (Get-ChildItem env:)) { $EnvSnapshot[$e.Name] = $e.Value }
+
+function Restore-Environment {
+  foreach ($e in @(Get-ChildItem env:)) {
+    if (-not $EnvSnapshot.ContainsKey($e.Name)) { Remove-Item -Path "env:$($e.Name)" -ErrorAction SilentlyContinue }
+  }
+  foreach ($k in $EnvSnapshot.Keys) {
+    if ((Get-Item -Path "env:$k" -ErrorAction SilentlyContinue).Value -ne $EnvSnapshot[$k]) { Set-Item -Path "env:$k" -Value $EnvSnapshot[$k] }
+  }
+}
+
 try {
   switch ($Command) {
     'check' { Invoke-Check }
@@ -793,5 +826,7 @@ try {
   }
 } catch {
   Write-Host $_.Exception.Message -ForegroundColor Red
+  Restore-Environment
   exit 1
 }
+Restore-Environment

@@ -42,8 +42,9 @@ export function useAuth() {
     if (error) throw error
   }
 
+  // FE-007: зөвхөн энэ төхөөрөмж ('global' анхдагч нь бусад төхөөрөмжийн session-ийг ч цуцалдаг)
   const signOut = async () => {
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'local' })
   }
 
   return { ...state, signIn, signOut }

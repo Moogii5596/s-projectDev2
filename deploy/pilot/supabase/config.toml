@@ -6,7 +6,7 @@
 # Dev (54321-54329, project "s-project")-тэй зэрэг ажиллана: портууд 553xx, project_id өөр.
 # АЮУЛГҮЙ БАЙДАЛ (интернэтэд нээлттэй пилот):
 #   - auth.jwt_secret — ӨӨРИЙН нууц (local demo secret олон нийтэд ил → anon/service key хуурамчаар үүсгэж болно)
-#   - enable_signup = false — хэрэглэгчийг ЗӨВХӨН `pnpm pilot:onboard` / `pnpm pilot:user`
+#   - [auth] enable_signup = false (DISABLE_SIGNUP) — хэрэглэгчийг ЗӨВХӨН `pnpm pilot:onboard` / `pnpm pilot:user`
 #   - Studio, Storage, Realtime, Inbucket, Edge, Analytics — унтраалттай (пилотод хэрэггүй, халдлагын гадаргуу)
 #   - Эдгээр портууд интернэтэд НЭЭГДЭХГҮЙ: Funnel → зөвхөн Caddy (127.0.0.1:8088); Windows Firewall дүрэм (runbook)
 # ============================================================
@@ -73,6 +73,8 @@ sign_in_sign_ups = 120
 token_refresh = 300
 
 [auth.email]
-enable_signup = false
+# АНХААР: энэ нь "имэйлээр бүртгүүлэх" биш, ИМЭЙЛ PROVIDER-ийг бүхэлд нь (нэвтрэлт ч) асаана/унтраана
+# (GOTRUE_EXTERNAL_EMAIL_ENABLED). false → "Email logins are disabled" (OPS-003). Бүртгэлийг [auth] enable_signup = false хаадаг.
+enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false

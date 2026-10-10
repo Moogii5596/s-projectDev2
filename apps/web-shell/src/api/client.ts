@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { supabase } from '../lib/supabase'
+import { handleUnauthorized } from '../lib/unauthorized'
 
 // VITE_API_BASE_URL хоосон бол '' (same origin) → Vite proxy '/api' → localhost:3000
 // Тиймээс CORS алдаа гарахгүй
@@ -22,12 +23,17 @@ apiClient.interceptors.request.use(async (config) => {
   return config
 })
 
-// Response interceptor: 401 → login redirect
+// Response interceptor: 401 → локал session устгаад /login [FE-007]
+// (зөвхөн redirect хийвэл localStorage-ийн хүчингүй session-оор /login ↔ нүүр хуудас төгсгөлгүй давтагддаг байсан)
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      window.location.href = '/login'
+      await handleUnauthorized({
+        signOutLocal: () => supabase.auth.signOut({ scope: 'local' }),
+        currentPath: () => window.location.pathname,
+        redirect: (path) => { window.location.href = path },
+      })
     }
     return Promise.reject(error)
   },
