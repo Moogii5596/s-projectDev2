@@ -1,6 +1,7 @@
 # S Project — Баримт Бичгийн Жагсаалт
 
-> Шинэчлэгдсэн: 2026-10-10 (Кемп модуль нэмсэн) | **Одоогийн хувилбар: `v0.4.0`**
+> Шинэчлэгдсэн: 2026-10-10 (v0.1.5 release бэлтгэл) | **Одоогийн хувилбар: `v0.1.0`** · `v0.1.5` — release бэлтгэл
+> Хувилбарын дугаарлалт: `docs/VERSIONING.md` (хуучин v0.1.0~v0.4.0 нэрлэлт нэгдэж `v0.1.0` болсон)
 
 ---
 
@@ -9,9 +10,10 @@
 | Файл | Агуулга |
 |------|---------|
 | `docs/08_Roadmap/00_rules_and_context.md` | **RULE-01~20** — Sprint эхлэхдээ ЗААВАЛ уншина |
-| `docs/lessons_learned.md` | **Нэгтгэсэн алдааны сургамж** — 20+ тохиолдол, бүтэцтэй |
-| `docs/project-status.md` | Одоогийн явц, `v0.4.0` |
-| `docs/CHANGELOG.md` | SemVer changelog v0.1.0 → v0.4.0 |
+| `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md` | **Одоогийн төлөвлөгөө** — Phase 0–6, шийдвэрүүд, шалгалтын тоо |
+| `docs/lessons_learned.md` | **Нэгтгэсэн алдааны сургамж** (ганц үндсэн файл) — §11–19 = v0.1.5 (RLS, SEC-001~004, EVT, TEST, PROC) |
+| `docs/project-status.md` | Одоогийн явц, тест ажиллуулах заавар, backlog |
+| `docs/CHANGELOG.md` | SemVer changelog — `[Unreleased] v0.1.5` (⚠️ зан төлөвийн өөрчлөлт) |
 | `docs/VERSIONING.md` | Хувилбаржуулалтын бодлого |
 
 ---
@@ -22,34 +24,34 @@
 
 | Файл | Агуулга |
 |------|---------|
-| `docs/project-status.md` | Одоогийн явц, хувилбар, архитектурын гол шийдлүүд |
-| `docs/CHANGELOG.md` | SemVer стандарт changelog `v0.1.0 → v0.4.0` ✨ |
-| `docs/VERSIONING.md` | `v0.x.x` хувилбаржуулалтын бодлого, дүрэм ✨ |
-| `docs/lessons_learned.md` | **Нэгтгэсэн** алдааны сургамж (MVP + Sprint 5) ✨ |
+| `docs/project-status.md` | Одоогийн явц, хувилбар, архитектурын гол шийдлүүд, тест командууд |
+| `docs/CHANGELOG.md` | SemVer стандарт changelog |
+| `docs/VERSIONING.md` | `v0.x.x` хувилбаржуулалтын бодлого, дүрэм |
+| `docs/lessons_learned.md` | **Нэгтгэсэн** алдааны сургамж (root `lessons_learned.md` = заагч) |
 | `docs/lessons_learned_MVP.md` | Нарийвчилсан MVP алдааны тэмдэглэл (архив) |
 
-### Даалгаврын баримт бичиг
+### Аюулгүй байдал / үйл ажиллагаа (v0.1.5)
 
 | Файл | Агуулга |
 |------|---------|
-| `docs/tasks/task.md` | Ерөнхий даалгаврын жагсаалт |
-| `docs/tasks/taskmvp4.md` | MVP4 даалгаварууд |
-| `docs/tasks/taskmvp5.md` | MVP5 даалгаварууд ✅ |
+| `docs/02_System_Architecture/ADR-001_Tenant_Isolation.md` | Tenant тусгаарлалт (B) + **§4.1 RLS runtime** (`app_user` / `SYSTEM_DATABASE_URL`) |
+| `docs/03_Data_Models_and_Security/03_Module_Template.md` | Шинэ модуль: migration/RLS, `inTenantTx`, тест |
+| `docs/07_Tech_Stack_and_Environment/02_Local_Supabase_Docker_Windows.md` | Local орчин, `.env`, **тест командууд** (unit / integration / e2e + fixture) |
+| `docs/07_Tech_Stack_and_Environment/03_Enterprise_VPC_Deployment.md` | VPC runbook, **§5.5 app_user нууц үг + RLS аудит** |
+| `supabase/dev/rls_audit.sql` | RLS аудит (зөвхөн уншина) |
 
 ---
 
 ## 📁 Sprint баримт бичиг (`docs/08_Roadmap/`)
 
-| Файл | Агуулга | Хувилбар | Статус |
+| Хавтас / файл | Агуулга | Хувилбар | Статус |
 |------|---------|----------|--------|
-| `00_rules_and_context.md` | **RULE-01~20**, Codebase state | v0.4.0 | ✅ Шинэчлэгдсэн |
-| `sprint_0_foundation.md` | Pre-flight fix | v0.5.0 | 🔜 |
-| `sprint_1_ingress.md` | Dynamic Route Ingress | v0.6.0 | 🔜 |
-| `sprint_2_workflow.md` | Workflow Engine | v0.7.0 | 🔜 |
-| `sprint_3_eventbus.md` | Event Bus + DLQ | v0.8.0 | 🔜 |
-| `sprint_4_onboarding.md` | MFE + Tenant Onboarding | v0.9.0 | 🔜 |
-| `sprint_5_production.md` | E2E & CI/CD | v0.4.0 | ✅ Дууссан |
-| `02_v1_sprint_implementation_plan.md` | Sprint индекс | — | ✅ |
+| `00_rules_and_context.md` | **RULE-01~20**, Codebase state | — | ✅ |
+| `01_Development_Roadmap.md` | Урт хугацааны roadmap | — | — |
+| `V.0.1.0/` (`sprint_0` … `sprint_5`, `02_v1_sprint_implementation_plan.md`) | Tier 1 Core System | `v0.1.0` | ✅ Дууссан |
+| `V.0.1.5/00_index.md` | Sprint 6–11 индекс, явцын хуваарь | `v0.1.5` | 🚧 Sprint 11 |
+| `V.0.1.5/01_analysis_and_plan_2026-10-08.md` | Шинжилгээ + Phase 0–6 (бодит хэрэгжилт) | `v0.1.5` | 🚧 Phase 6 |
+| `V.0.1.5/sprint_6` … `sprint_11` | Анхны sprint төлөвлөгөө (sprint_6 орлогдсон — ADR-001) | `v0.1.5` | түүхэн |
 
 ---
 
@@ -102,15 +104,13 @@
 
 ---
 
-## 🚀 MVP / Sprint Явц
+## 🚀 Хувилбарын явц (SemVer — `VERSIONING.md`)
 
-| Хувилбар | Нэр | Статус | Үндсэн зүйл |
-|----------|-----|--------|-------------|
-| `v0.1.0` | MVP 1–3 | ✅ Дууссан | Auth, DB, RLS, MR backend |
-| `v0.2.0` | MVP 4 | ✅ Дууссан | Integration tests, RULE-01~13 |
-| `v0.3.0` | MVP 5 | ✅ Дууссан | Frontend UI, Submit/Approve/Reject |
-| `v0.4.0` | Sprint 5 | ✅ **Одоогийн** | E2E Playwright, CI/CD, Docker |
-| `v0.5.0` | Sprint 0 | 🔜 | Pre-flight fix |
-| `v1.0.0` | Production | 🎯 Зорилго | Full production release |
+| Хувилбар | Нэр | Статус |
+|----------|-----|--------|
+| `v0.1.0` | Tier 1 Core System (MVP 1–5 + Sprint 0–5 нэгдсэн) | ✅ Дууссан |
+| `v0.1.5` | Tier 2 Enterprise VPC (+ Кемп V1, Budget/Inventory/Vendor/Report) | 🚧 Release бэлтгэл |
+| `v0.2.0` | Tier 3 Air-Gapped | 📋 |
+| `v1.0.0` | Production | 🎯 Зорилго |
 
 ✨ = 2026-09-21 шинэчлэгдсэн/нэмэгдсэн файл

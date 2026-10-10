@@ -72,6 +72,24 @@ psql "postgresql://postgres:<pw>@<host>:5432/postgres" -v ON_ERROR_STOP=1 \
 Үүсгэнэ: `tenants` (tier2) + `core_users` (owner, RULE-13) + default advanced workflow.
 Idempotent — дахин ажиллуулж болно. Сүүлд `acme | tier2 | t | 1 | 1` гэж харагдана.
 
+## 5.5 RLS: апп-ыг `app_user`-ээр (v0.1.5, Phase 4.8)
+
+Апп `DATABASE_URL`-ээр **`app_user`** (NOBYPASSRLS) холбогдоход RLS бодитоор ажиллана; tenant-ээс өмнөх / бүх tenant-ийн
+ажил (tenant lookup, login, outbox, DLQ, escalation) **`SYSTEM_DATABASE_URL`** (`postgres`)-ээр.
+
+```bash
+# 1) app_user-ийн анхдагч нууц үгийг (0002_rls_policies: change_in_production) СОЛИХ — заавал
+psql "postgresql://postgres:<pw>@<host>:5432/postgres" -v ON_ERROR_STOP=1 \
+  -c "ALTER ROLE app_user WITH PASSWORD '<урт санамсаргүй>';"
+
+# 2) RLS аудит (зөвхөн уншина) — хураангуй: tenant хүснэгт бүр OK, асуудалтай 0
+psql "postgresql://postgres:<pw>@<host>:5432/postgres" -f supabase/dev/rls_audit.sql
+```
+
+`docker/.env.vpc`: `DATABASE_URL=postgresql://app_user:<шинэ>@…`, `SYSTEM_DATABASE_URL=postgresql://postgres:<pw>@…`,
+`DIRECT_URL` = postgres (migration). `SYSTEM_DATABASE_URL` хоосон бол апп бүхэлдээ `DATABASE_URL`-ээр ажиллана —
+`app_user` үед tenant олдохгүй (бүх API 403) тул хоёуланг нь заавал бөглөнө.
+
 ## 6. Stack асаах
 
 ```bash
@@ -86,18 +104,22 @@ docker compose -p s-vpc-acme --env-file docker/.env.vpc -f docker/docker-compose
 ## 7. Шалгах
 
 ```bash
-docker compose -p s-vpc-acme logs backend | grep "Deployment mode"
+docker compose -p s-vpc-acme logs backend | grep -E "Deployment mode|DB role"
 #  → Deployment mode: dedicated (tenant=acme)
+#  → DB role "app_user" — RLS идэвхтэй      (WARN `BYPASSRLS — RLS хүсэлтийн түвшинд идэвхгүй` гарвал DATABASE_URL нь postgres байна)
 curl -s http://<host>/api/v1/health
 ```
 
 Browser-оор `http://<host>` → 4-р алхмын admin-аар нэвтэрнэ → MR үүсгэх.
+> v0.1.5 [SEC-004]: MR үүсгэгч өөрөө батлахгүй — батлалтыг шалгахад өөр хэрэглэгч (APPROVER/ADMIN) хэрэгтэй.
 
 | Шинж тэмдэг | Шалтгаан |
 |---|---|
 | Backend эхлэхгүй, `DEDICATED_TENANT_SLUG` алдаа | Slug байхгүй / буруу хэлбэр |
 | Нэвтэрсний дараа бүх API **403 "Tenant ... олдсонгүй"** | 5-р алхам хийгдээгүй эсвэл slug зөрсөн |
 | **401 Token хүчингүй** | Frontend өөр Supabase-ийн key-тэй build хийгдсэн → `--build` |
+| Бүх API **403 "Tenant олдсонгүй"**, лог `DB role "app_user"` | `SYSTEM_DATABASE_URL` хоосон (app_user `tenants`-ийг уншиж чадахгүй) → §5.5 |
+| Backend эхлэхгүй, `password authentication failed for user "app_user"` | §5.5-ийн нууц үг ↔ `DATABASE_URL` зөрсөн |
 
 ## 8. Шинэчлэх (upgrade)
 

@@ -213,12 +213,19 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
   - [x] 6.1.6 `helpers/fixture.ts`: `fixture()`, `headersFor(user, asTenant?)`, `createSubmittedMr`, `loginAsUser(page, user)`; `auth.helper.ts`-ийн `loginAs` (admin@test.mn) camp/auth spec-д хэвээр
   - [x] 6.1.7 Cloud: **47/47** (0 skip; өмнө 26 ✅ / 3 ❌ / 2 skip) · teardown-ийн дараа e2e tenant/хэрэглэгч/MR/бараа 0 · core unit **510/510** (+4 fixture) · tsc/lint ✅
   - [x] Нэмэлт: `supabase/config.toml` `[auth.rate_limit] sign_in_sign_ups = 500` (нэг ажиллалтад ~50 нэвтрэлт, анхдагч 30/5мин)
-  - [ ] Таны компьютер: `supabase stop` → `supabase start` (rate limit) → `pnpm test` (unit л) → `pnpm test:e2e`
-- [ ] 6.2 Баримт
-  - [ ] 6.2.1 `docs/CHANGELOG.md` — v0.1.5 хэсэг (Phase 2–5: RLS runtime, SystemPrisma, outbox, SEC-002/003, API-001, cursor, cluster restart)
-  - [ ] 6.2.2 `docs/project-status.md` шинэчлэх; `docs/INDEX.md` / `08_Roadmap/*/00_index` зөрүү засах
-  - [ ] 6.2.3 `docs/07_.../03_Enterprise_VPC_Deployment.md` + `02_Local_Supabase_Docker_Windows.md`: `app_user` / `SYSTEM_DATABASE_URL`, production-д `app_user` нууц үг солих SQL, RLS шалгах (`rls_audit.sql`)
-  - [ ] 6.2.4 `ADR-001_Tenant_Isolation.md`-д шийдвэр B-г тэмдэглэх
+  - [x] Таны компьютер (20:28): `pnpm test` unit л — 510 + 45, **6 сек** (өмнө 4м51с) · `pnpm test:e2e` **47/47** (1.2 мин), fixture үүсгэж/цэвэрлэв ✅
+- [x] 6.2 Баримт (батлагдсан 20:29; 6.2.8 = A) — зөвхөн баримт/тохиргооны жишээ, код өөрчлөхгүй [DOC-001]
+  - [x] 6.2.1 `docs/CHANGELOG.md`: хуучин "Нэмэгдэх зүйлс" (schema-per-tenant гэх мэт хэрэгжээгүй төлөвлөгөө) → бодит v0.1.5: Added / Changed (⚠️ MR батлалт workflow-оор [SEC-004], RLS runtime `app_user` + `SYSTEM_DATABASE_URL`, `pnpm test` ↔ `test:e2e`) / Security & Fixed (SEC-001~004, API-001, HTTP-001, CACHE-001, EVT-001~003, CURSOR-001) / Тест (тоо). Огноо 6.4-д
+  - [x] 6.2.2 `docs/project-status.md`: одоогийн хувилбар, модулиуд, тестийн тоо, тест ажиллуулах заавар (unit / integration / e2e + fixture), мэдэгдэж буй backlog
+  - [x] 6.2.3 `V.0.1.5/00_index.md`: Sprint 9–11 төлөв, хуучирсан "Техникийн суурь" мод (бодит зам, `@@schema()` мөр хасах); `sprint_11_release.md`: хийгдсэн/орлогдсон алхмыг тэмдэглэх (бодит e2e файл, dedicated-mode smoke → 6.4)
+  - [x] 6.2.4 `ADR-001`: RLS runtime (апп `app_user` NOBYPASSRLS, системийн ажил `SYSTEM_DATABASE_URL`) хэсэг нэмэх
+  - [x] 6.2.5 `03_Enterprise_VPC_Deployment.md`: `app_user` нууц үг солих SQL, `DATABASE_URL`=app_user / `SYSTEM_DATABASE_URL`=postgres, `supabase/dev/rls_audit.sql`-ээр шалгах, "DB role app_user — RLS идэвхтэй" лог
+  - [x] 6.2.6 `02_Local_Supabase_Docker_Windows.md` + `README.md`: `pnpm test` / `test:integration` / `test:e2e` (fixture, auth rate limit, `pnpm supabase:*` [PROC-007]), хуучин "9 passed / 2 skipped" → 47; `.env.example` тайлбар шинэчлэх
+  - [x] 6.2.7 `docs/INDEX.md`: шинэ баримтын холбоос (ADR, Module_Template, lessons §16–19)
+  - [x] 6.2.8 A: local `.env` + `apps/core-kernel/.env` → `DATABASE_URL`=app_user, `SYSTEM_DATABASE_URL`=postgres (хуучин утга); `.env.example`, `docker/.env.vpc.example` анхдагч ижил
+  - [x] Нэмэлт (11.5): root `docker-compose.yml`-д `SYSTEM_DATABASE_URL`, `CLUSTER_RESTART_*`; `.env.example`-д `CLUSTER_RESTART_*`, `PRISMA_LOG_LEVELS`
+  - [x] Таны компьютер (20:38): `pnpm dev` → `DB role "app_user" — RLS идэвхтэй` ✅ · `pnpm test:e2e` **47/47** (app_user, 23с) ✅
+  - [ ] `pnpm test:integration` → 153/154: `mr-approval` "Approver submit → 403"-ийн бэлтгэл (`createDraftMr`) **500** — `pnpm dev`-тэй зэрэг ажилласан; cloud-д app_user горимд бүтэн suite 3/3 удаа 154/154, mr-approval+mr-crud 6/6 → давтагдахгүй. Дахин ажиллуулж [ERROR]-ийг авна
 - [ ] 6.3 Цэвэрлэгээ (устгахаас өмнө жагсаалтыг танд харуулна)
   - [ ] 6.3.1 root `db:push` script хасах / `db:migrate`-ийг Supabase migration руу чиглүүлэх [MIG-001]
   - [ ] 6.3.2 `_tmp_*`, `supabase/snippets/Untitled query 611.sql`, root `package-lock.json` (pnpm төсөл), root `rls_audit.txt`

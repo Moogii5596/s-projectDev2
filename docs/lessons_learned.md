@@ -1087,12 +1087,24 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл (Phase 6.1):** e2e script → `test:e2e` + turbo task (cache: false). Playwright globalSetup/Teardown → core-kernel `e2e:fixture` (tenant a/b/wf + DEV tenant-д REQUESTER/APPROVER/ADMIN, token; teardown нь tenant cascade + DEV tenant-ийн e2e MR, `prefix`-тэй бараа/нийлүүлэгч). Local Supabase `[auth.rate_limit] sign_in_sign_ups` 30 → 500 (нэг ажиллалтад ~50 нэвтрэлт).
 **Дүрэм:** Багцын `test` script = зөвхөн сервергүй unit тест. E2E өгөгдлийг тест өөрөө үүсгэж/устгана (гараар бэлтгэл, skip-ээр нуух хориотой). Төлөв өөрчилдөг урсгалыг дор хаяж 2 хэрэглэгчээр (үүсгэгч ≠ батлагч) шалгана.
 
+### [PROC-007] Танд өгөх зааварт глобал `supabase` команд бичсэн → PowerShell "not recognized"
+**Тохиолдсон:** 6.1-ийн заавар `supabase stop` / `supabase start` гэж бичигдсэн; CLI нь root devDependency тул глобал PATH-д алга (ENV-00x).
+**Шийдэл:** `pnpm supabase:stop` → `pnpm supabase:start` (root script).
+**Дүрэм:** Танд өгөх команд бүрийг төслийн `package.json` script-ээс (эсвэл `pnpm <bin>`) авна — глобал суулгалт гэж үзэхгүй; заавар бичихээс өмнө `docs/07_.../02_Local_Supabase_Docker_Windows.md`-ийн командтай тулгана.
+
+### [DOC-001] Баримт кодоос хоцорсон: runbook `pnpm db:push` зөвлөдөг (MIG-001-тэй зөрчилдөнө), INDEX `v0.4.0`, CHANGELOG-д хэрэгжээгүй төлөвлөгөө
+**Тохиолдсон (Phase 6.2 аудит):** `02_Local_Supabase_Docker_Windows.md` §1.6 + README "Migration ажиллуулах: `pnpm db:push`"; `docs/INDEX.md` хуучин дугаарлалт (`v0.4.0`) ба байхгүй `docs/tasks/*`; CHANGELOG `[Unreleased]` = schema-per-tenant (цуцлагдсан); `00_index.md` Sprint 9–11 "хүлээгдэж байна"; `.env.example`/VPC жишээ `postgres` (RLS алгасна); `CLUSTER_RESTART_*`, `SYSTEM_DATABASE_URL` root compose-д алга.
+**Шийдэл:** 6.2-оор бүгдийг бодит төлөвтэй тааруулав; `.env.example` анхдагч = `app_user` + `SYSTEM_DATABASE_URL`.
+**Дүрэм:** Зан төлөв/команд/env өөрчилсөн phase бүрийн checklist-д "баримт: README, runbook, `.env.example`, CHANGELOG" мөр заавал байна; release-ийн өмнө `grep`-ээр хуучирсан команд (db:push г.м.) хайна.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §19 (Phase 6.2): DOC-001 (баримт кодоос хоцорсон) |
+| 2026-10-10 | §19: PROC-007 (заавар → `pnpm supabase:*`) |
 | 2026-10-10 | §19 (Phase 6.1): TEST-014 (`pnpm test` ↔ e2e, fixture, auth rate limit) |
 | 2026-10-10 | §19 (Phase 6.0b): SEC-004 (MR батлалт workflow/role/өөрийгөө батлахыг шалгадаггүй) |
 | 2026-10-10 | §19 (Phase 6.0): PROC-006 (ижил staged нэр → хуучин агуулга), FE-005 (цэвэр логик API импортгүй), TEST-013 (harness headless_shell) |

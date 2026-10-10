@@ -1,6 +1,6 @@
 # V.0.1.5 — Sprint Implementation Plan Index
 
-> Үүсгэсэн: 2026-09-21 | Шинэчлэгдсэн: 2026-10-08
+> Үүсгэсэн: 2026-09-21 | Шинэчлэгдсэн: 2026-10-10
 > **Энэ файл бүх sprint файлуудын индекс юм.**
 > Claude Sprint ажил эхлэхдээ хэрэгтэй файлаа тусад нь уншина — context хэмнэнэ.
 
@@ -57,36 +57,36 @@
 Sprint 6  │ Tenant Isolation (B)       │ [x] ✅ ADR-001 хэрэгжсэн — 2026-10-08 (dedicated mode)
 Sprint 7  │ Advanced Approval Workflow │ [x] ✅ Дууссан (кодоор баталгаажсан 2026-10-08)
 Sprint 8  │ Performance & Scaling      │ [x] ✅ Дууссан — DoD 4/4 баталгаажсан 2026-10-08 (p99 57ms, 3360 req/s)
-Sprint 9  │ 4 Нэмэлт Модуль           │ [ ] ⏳ Хүлээгдэж байна
-Sprint 10 │ Event Bus Integration Test │ [ ] ⏳ Хүлээгдэж байна
-Sprint 11 │ Release Hardening          │ [ ] ⏳ Хүлээгдэж байна
+Sprint 9  │ 4 Нэмэлт Модуль           │ [x] ✅ Budget + Inventory/Vendor/Report (хөнгөн) + frontend — 2026-10-10 (Phase 4, 6.0)
+          │  + RLS runtime / аюулгүй  │ [x] ✅ app_user + SYSTEM_DATABASE_URL (4.8), SEC-002/003 (4.9), SEC-004 (6.0b)
+Sprint 10 │ Event Bus Integration Test │ [x] ✅ Outbox засвар + гинж тест — 2026-10-10 (Phase 5)
+Sprint 11 │ Release Hardening          │ [~] 🚧 E2E ✅ (6.1) · баримт (6.2) · цэвэрлэгээ (6.3) · tag (6.4)
 ```
 
 ---
 
-## Техникийн Суурь (v0.1.0-оос өвлөнө)
-
-Дараах бүтэц **өөрчлөгдөхгүй**, sprint бүр нь дээр нь давхарлана:
+## Техникийн Суурь (бодит бүтэц, 2026-10-10)
 
 ```
 apps/core-kernel/
   src/
-    auth/           ← TenantAuthGuard, TenantContextInterceptor (RULE-07)
+    auth/           ← TenantAuthGuard (membership, token cache), TenantCacheService, TenantContextInterceptor (RULE-07)
+    db/             ← PrismaTenantClientService (DATABASE_URL), SystemPrismaService (SYSTEM_DATABASE_URL), tenant-tx.ts (inTenantTx)
     gateway/        ← DynamicIngressRouterService, DrainingInterceptor
-    workflow/       ← WorkflowEngineModule, WorkflowService
-    events/         ← OutboxPoller, EventBusService, DLQ
-    modules/        ← MaterialRequisitionModule (← шинэ модулиуд эндэд нэмэгдэнэ)
-    tenant/         ← TenantOnboardingService, RBAC
-  prisma/
-    schema.prisma   ← @@schema() нэмэгдэнэ (v0.1.5)
+    config/         ← deployment-mode, rate-limit, cluster-restart, prisma-log, env.config
+    modules/        ← material-requisition (mr-approval.ts), workflow, event-bus, budget, inventory, vendor, report,
+                      mr-lifecycle, camp, tenant-admin, route-ingress, health
+    scripts/        ← dev:test-user, e2e:fixture
+  prisma/schema.prisma   ← public schema (schema-per-tenant цуцлагдсан — ADR-001)
+  test/             ← *.integration.spec.ts (helpers/db-urls.ts, redis-mock.ts)
 supabase/
-  migrations/       ← YYYYMMDD_*.sql (нэмэгдэнэ)
-apps/web-shell/
-  src/
-    pages/          ← шинэ хуудасууд нэмэгдэнэ
-packages/
-  design-system/   ← хуваалцсан компонентууд
+  migrations/       ← YYYYMMDDNNN_*.sql · dev/ (rls_audit, seed_perf_10k_mr, camp_e2e_grant)
+apps/web-shell/src/ ← pages/, modules/{camp,inventory,vendor,report}/, lib/ (цэвэр функц + vitest)
+apps/e2e/           ← tests/*.spec.ts, global-setup/teardown (fixture), helpers/fixture.ts
+packages/           ← shared-types, prisma-rls-extension
 ```
+
+> Шинэ модуль нэмэх загвар: `docs/03_Data_Models_and_Security/03_Module_Template.md`
 
 ---
 

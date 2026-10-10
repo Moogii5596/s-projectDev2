@@ -9,12 +9,39 @@
 
 ## [Unreleased] — v0.1.5 (Tier 2: Enterprise VPC)
 
-### Нэмэгдэх зүйлс
-- Schema-per-tenant / DB-per-tenant isolation
-- Advanced approval workflow (мөнгөний хэмжээ, delegation, escalation)
-- Inventory, Budget, Vendor, Report модулиуд
-- Performance: Redis caching, cursor pagination, rate limiting
-- Event Bus integration тест (cross-module chain)
+> Огноог `v0.1.5` tag тавихад (Phase 6.4) бичнэ. Дэлгэрэнгүй: `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md`,
+> алдааны шалтгаан/шийдэл: `docs/lessons_learned.md` §11–19.
+
+### ⚠️ Зан төлөвийн өөрчлөлт (шинэчлэхээс өмнө унших)
+- **MR батлалт workflow-оор [SEC-004]:** `POST /requisitions/:id/approve|reject` нь одоо идэвхтэй алхмын role (эсвэл OWNER/ADMIN)-ийг шаардана; **MR үүсгэгч өөрөө батлах/татгалзахгүй**; amount_rules-ийн олон алхам, quorum дагагдана (завсрын алхамд MR `PENDING_APPROVAL` хэвээр). Нэг хэрэглэгчээр "үүсгээд батлах" урсгал ажиллахаа больсон — дор хаяж 2 хэрэглэгч (REQUESTER + APPROVER) хэрэгтэй.
+- **RLS runtime:** апп `DATABASE_URL`-ээр `app_user` (NOBYPASSRLS) холбогдоход RLS бодитоор идэвхтэй; tenant-ээс өмнөх/бүх tenant-ийн ажил (tenant lookup, login, super-admin, onboarding, outbox, DLQ, escalation) `SYSTEM_DATABASE_URL`-ээр. Тохируулаагүй бол хоёулаа `DATABASE_URL` (өмнөх зан төлөв).
+- **Workflow definition:** үүсгэх/засах = OWNER/ADMIN; body шалгалттай (буруу role/бүтэц → 400).
+- **Скрипт:** `pnpm test` = зөвхөн unit (сервергүй); Playwright → `pnpm test:e2e` / `pnpm e2e`.
+
+### Нэмэгдсэн
+- **Tenant isolation (ADR-001, шийдвэр B):** shared = RLS; Enterprise VPC = тусдаа DB + deploy (`DEPLOYMENT_MODE=dedicated`, `DEDICATED_TENANT_SLUG`), `docker/docker-compose.vpc.yml`, `docker/vpc/bootstrap_dedicated_tenant.sql`, runbook. Schema-per-tenant (Sprint 6) цуцлагдсан.
+- **Advanced workflow:** amount_rules routing, олон алхам + quorum, SLA бүртгэл (шийдэгдсэн алхам `COMPLETED`), escalation scheduler, delegation (API). MR дэлгэрэнгүйд алхмын явц ("Алхам 1/2"), товч зөвхөн эрхтэй хүнд.
+- **Модулиуд:** Budget (хугацаа, хуваарилалт, MR submit → COMMITTED / approve → SPENT / reject → RELEASED), Inventory-lite (cursor, бага үлдэгдэл, атомик тохируулга), Vendor-lite, Report-lite (JSON + CSV, UTF-8 BOM). Web-shell хуудас: `/inventory`, `/vendors`, `/reports`.
+- **Кемп модуль V1** — доорх тусдаа хэсэг.
+- **Performance:** Redis cache (MR, inventory, auth token — SHA-256, single-flight), cursor pagination (`idx_mr_headers_cursor`), tenant rate limit (`RATE_LIMIT_SHORT/MEDIUM/LONG`, Redis алдаанд fail-open), cluster crash-loop backoff (`CLUSTER_RESTART_*`).
+- **Event bus:** transactional outbox — event бүр `FOR UPDATE SKIP LOCKED` transaction-д, тогтвортой CloudEvent id (at-least-once), retry backoff 30с/120с → DLQ.
+- **Хэрэгсэл:** `pnpm dev:test-user`, `supabase/dev/rls_audit.sql`, `supabase/dev/seed_perf_10k_mr.sql`, `apps/e2e/tests/load-test.ts`, `cluster-check.ts`, `PRISMA_LOG_LEVELS`, e2e fixture (`pnpm --filter @s-project/core-kernel e2e:fixture`).
+- **Migration:** `20261008001_revert_schema_per_tenant`, `20261008002_budget`, `20261008003_inventory_vendor_lite`, `20261010003_mr_cursor_index`, `20261010004_rls_app_user` (+ Кемп 8).
+
+### Аюулгүй байдал / Засагдсан
+- **SEC-001** өөр tenant-ийн Host-оор гишүүн биш хэрэглэгч нэвтэрдэг байсан → 403 (membership шалгалт).
+- **SEC-002** өөр tenant-ийн workflow definition-ийг засах боломжтой байсан → 404.
+- **SEC-003** workflow definition: эрх, body шалгалтгүй байсан.
+- **SEC-004** MR батлалт role / өөрийгөө батлах / workflow алхмыг шалгадаггүй байсан; батлагдсан MR-ийн SLA PENDING үлдэж escalate болдог байсан.
+- **RLS-004~007** RLS policy (RESTRICTIVE-only, буруу GUC, `current_tenant_id()` хоосон утга, `set_config` transaction-ийн гадна) → PERMISSIVE TO app_user + `inTenantTx`.
+- **CACHE-001** MR төлөв/эзэмшигчийн шалгалт cache-ээс; **EVT-001~003** outbox давхар publish, retry бүрт шинэ id; **API-001/HTTP-001** UUID биш id → 500; **CURSOR-001** буруу cursor → 500; **PERF-003** auth шалгалт хүсэлт бүрт (p99 1974ms → 57ms); **RL-001** Redis алдаа → бүх хүсэлт унах.
+- CI: `test:unit` script, `supabase db push` хасав, ESLint тохиргоо.
+
+### Тест (2026-10-10)
+- Unit: core-kernel **510**, web-shell **45**
+- Integration: **15 файл / 154** — `app_user` (RLS) ба `postgres` хоёр горимд
+- Playwright e2e: **47** (0 skip) — fixture тест бүрийн өгөгдлийг өөрөө үүсгэж/устгана
+- Load (10k MR, 100 conn): p99 57ms / 3360 req/s (local), `app_user` горимд p99 106ms (cloud, 1 worker)
 
 ### Нэмэгдсэн — Кемп модуль V1 (2026-10-10) ✅
 > Төлөвлөгөө/ERD v4: `docs/08_Roadmap/camp_module/01_plan_and_erd.md`. V1 = Шат 1–4 + Шат 8 (frontend) + Шат 9 (баримт).

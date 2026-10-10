@@ -4,6 +4,20 @@
 > **Working dir:** `apps/e2e/` + `docs/` + root
 > **Хамаарал:** Sprint 6–10 бүгд дууссан байх
 
+> **Төлөв (2026-10-10) — бодит хэрэгжилт `01_analysis_and_plan_2026-10-08.md` → Phase 6.** Доорх алхмууд анхны төлөвлөгөө (түүхэн):
+>
+> | Алхам | Бодит |
+> |---|---|
+> | 11.1.1 dedicated-mode | Unit: `deployment-mode.spec.ts` (17) + guard dedicated тест ✅ · e2e smoke → 6.4 (гараар) |
+> | 11.1.2 advanced-workflow | ✅ `apps/e2e/tests/advanced-workflow.spec.ts` (API) + `workflow-multistep.spec.ts` (UI, 2 алхам). Role нь `APPROVER`/`ADMIN` (DEPT_MANAGER г.м. role системд алга) |
+> | 11.1.3 modules | ✅ `apps/e2e/tests/modules-lite.spec.ts` (API + UI) |
+> | — multi-tenant | ✅ `multi-tenant.spec.ts` skip-гүй (fixture) |
+> | 11.2 CHANGELOG | ✅ `[Unreleased] — v0.1.5` (огноо → 6.4) |
+> | 11.3 project-status | ✅ |
+> | 11.4 git tag | → 6.4 |
+> | 11.5 Docker / `.env.example` | ✅ `SYSTEM_DATABASE_URL`, `RATE_LIMIT_*`, `CLUSTER_RESTART_*` (`.env.example`, `docker/.env.vpc.example`, compose) · `docker-compose up` → 6.4 |
+> | 11.6 Index | ✅ |
+
 ---
 
 ## Алхам 11.1 — E2E Тест Шинэчлэх (Playwright)

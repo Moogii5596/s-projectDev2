@@ -1,6 +1,6 @@
 # 02 — Local орчин: Supabase + Redis on Docker (Windows)
 
-> Шинэчлэгдсэн: 2026-10-08 (шинэ машин дээр бүрэн туршсан) | Холбоотой: `README.md` → Quick Start, `supabase/config.toml`, `docker-compose.dev.yml`, `docs/lessons_learned.md` §12
+> Шинэчлэгдсэн: 2026-10-10 (v0.1.5: `app_user` холболт, тест командууд) · 2026-10-08 (шинэ машин дээр бүрэн туршсан) | Холбоотой: `README.md` → Quick Start, `supabase/config.toml`, `docker-compose.dev.yml`, `docs/lessons_learned.md` §12
 
 S Project-ийн local хөгжүүлэлтэд **хоёр бүлэг контейнер** Docker Desktop дээр ажиллана:
 
@@ -87,15 +87,17 @@ $web = (Get-Content apps\web-shell\.env.example -Raw) -replace 'your_supabase_an
 [IO.File]::WriteAllText("$PWD\apps\web-shell\.env", $web, $utf8)
 ```
 
+> **DB холболт (v0.1.5):** `.env.example` → `DATABASE_URL` = **`app_user`** (RLS идэвхтэй, production-тэй ижил), `SYSTEM_DATABASE_URL` = `postgres`, `DIRECT_URL` = `postgres` (Prisma migrate). `pnpm dev` асахад `DB role "app_user" — RLS идэвхтэй` гарна. Хуучин `.env` (DATABASE_URL = postgres) ч ажиллана — RLS алгасагдаж WARN лог гарна.
+
 ### 1.6 Prisma + Redis + dev
 ```powershell
-pnpm db:generate
-pnpm db:push                  # "Your database is now in sync" — migration-ууд DB-г аль хэдийн үүсгэсэн
+pnpm db:generate              # Prisma Client (DB-д юу ч бичихгүй)
+pnpm dev:test-user            # admin@test.mn-ийг Supabase Auth-д үүсгэж core_users-тэй холбоно (reset бүрийн дараа)
 docker-compose -f docker-compose.dev.yml up -d
 pnpm dev
 ```
 
-> ⚠️ `db:push` **"data loss" / "Do you want to ignore the warning(s)?"** гэж асуувал **`N`** — Prisma schema-д байхгүй хүснэгтүүд (workflow гэх мэт) устаж болзошгүй. Prisma schema ба `supabase/migrations/`-ийн зөрүүг эхлээд шалгана.
+> ⚠️ **`pnpm db:push` БҮҮ ажиллуул** [MIG-001] — DB-г `supabase/migrations/*.sql` (`pnpm supabase:start` / `supabase:reset` автоматаар) үүсгэнэ; `db push` RLS policy, GRANT, тусгай index-ийг устгах/зөрүүлэх эрсдэлтэй. Шинэ migration: `pnpm exec supabase migration up` → `pnpm db:generate`.
 
 ---
 
@@ -110,7 +112,19 @@ pnpm dev
 | `pnpm supabase:reset` | DB-г устгаад `supabase/migrations/*.sql` + `seed.sql`-ийг дахин ажиллуулна | ⚠️ **БҮГДИЙГ УСТГАНА** |
 | `docker-compose -f docker-compose.dev.yml up -d` / `down` | Redis асаах / зогсоох | Хадгална |
 | `pnpm db:generate` | Prisma Client үүсгэнэ | — |
-| `pnpm db:push` | Prisma schema-г DB-тэй sync хийнэ | Schema өөрчилнө |
+| `pnpm exec supabase migration up` | Шинэ migration-ийг хэрэглэнэ (auth хэрэглэгчийг устгахгүй) | Schema өөрчилнө |
+
+### Тест
+
+| Команд | Юу | Шаардлага |
+|---|---|---|
+| `pnpm test` | Unit (core-kernel + web-shell), сервергүй, ~10с | — |
+| `pnpm test:integration` | NestJS + бодит DB (15 файл) | Supabase асаалттай, `.env` |
+| `pnpm test:e2e` (= `pnpm e2e`) | Playwright: backend + web-shell-ийг өөрөө асаана; **fixture** нь 3 tenant + 13 хэрэглэгчийг үүсгээд, дуусахад устгана | Supabase, Redis, `.env`, `pnpm playwright:install` |
+| `pnpm e2e:ui` | Playwright UI горим | ижил |
+
+> E2E нэг ажиллалтад ~50 нэвтрэлт хийдэг → `supabase/config.toml`-д `[auth.rate_limit] sign_in_sign_ups = 500` (анхдагч 30/5 мин). `config.toml` өөрчлөгдсөний дараа `pnpm supabase:stop` → `pnpm supabase:start`.
+> Кемп e2e: `supabase/dev/camp_e2e_grant.sql` (admin@test.mn → Кемп админ). E2E тасарсан бол `apps/e2e/.fixture.json` үлдэнэ → дараагийн ажиллалт эхлэхэд шинээр үүсгэнэ; хуучныг устгах: `pnpm --filter @s-project/core-kernel e2e:fixture teardown --in=apps/e2e/.fixture.json`.
 
 ### Өглөө
 ```powershell
@@ -174,6 +188,10 @@ SUPABASE_URL="http://host.docker.internal:54321"
 | Auth: `Invalid API key` / JWT алдаа | `.env`-д `sb_publishable_…` шинэ key орсон | `supabase status -o env`-ийн `ANON_KEY` (`eyJ…`) ашиглах |
 | `npm warn Unknown env config "node-linker"` | `.npmrc`-ийн pnpm тохиргоог npx уншсан | Хор хөнөөлгүй — үл тооно |
 | Docker Desktop маш их RAM | WSL2 хязгааргүй | `%UserProfile%\.wslconfig` → `[wsl2]` `memory=6GB` → `wsl --shutdown` |
+| `password authentication failed for user "app_user"` | `DATABASE_URL`-ийн нууц үг ≠ migration-ий (local `change_in_production`) | `.env.example`-ийн мөрийг хуулах |
+| `pnpm dev` дараа бүх API 403 "Tenant олдсонгүй" | `DATABASE_URL` = app_user, `SYSTEM_DATABASE_URL` алга | `.env`-д `SYSTEM_DATABASE_URL` (postgres) нэмэх |
+| E2E: `Request rate limit reached` / 429 нэвтрэлт | Supabase Auth rate limit (анхдагч 30/5 мин) | `config.toml` `[auth.rate_limit]` → `pnpm supabase:stop` → `start` |
+| `'supabase' is not recognized` (`supabase stop` гэж бичсэн) | CLI глобал биш, root devDependency | `pnpm supabase:stop` / `pnpm supabase:start` [PROC-007] |
 
 ---
 
@@ -183,11 +201,13 @@ SUPABASE_URL="http://host.docker.internal:54321"
 - [ ] `docker ps` алдаагүй
 - [ ] `node -v` ≥ 20, `pnpm -v` = 9.12.0
 - [ ] `pnpm install` → `pnpm supabase --version`
-- [ ] `pnpm supabase:start` → 15 migration + seed → "Started"
+- [ ] `pnpm supabase:start` → 28 migration + seed → "Started"
 - [ ] http://127.0.0.1:54323 Studio нээгдэнэ
 - [ ] `.env`, `apps/core-kernel/.env`, `apps/web-shell/.env` — key нь `eyJ…`-ээр эхэлнэ
-- [ ] `pnpm db:push` → "Your database is now in sync"
+- [ ] `pnpm db:generate` → `pnpm dev:test-user` → "✅ admin@test.mn"
 - [ ] `docker-compose -f docker-compose.dev.yml up -d` → Redis
 - [ ] `pnpm dev` → core-kernel DB, Redis-тэй холбогдоно
 - [ ] `pnpm playwright:install` → Chromium (E2E-д заавал) [ENV-007]
-- [ ] `pnpm e2e` → 9 passed / 2 skipped
+- [ ] `pnpm test` → бүгд ✅ (unit л, ~10с)
+- [ ] `pnpm test:integration` → 15 файл ✅
+- [ ] `pnpm test:e2e` → 47 passed (0 skip)

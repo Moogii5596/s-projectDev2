@@ -1,6 +1,6 @@
 # S Project — Төслийн Явцын Тэмдэглэл
 
-> Шинэчлэгдсэн: 2026-10-10 | **Одоогийн хувилбар: `v0.1.0`** | **Дараагийн хувилбар: `v0.1.5`**
+> Шинэчлэгдсэн: 2026-10-10 | **Одоогийн хувилбар: `v0.1.0`** | **`v0.1.5` — release бэлтгэл (Phase 6)**
 > SemVer бодлого: `docs/VERSIONING.md` | Changelog: `docs/CHANGELOG.md`
 
 ---
@@ -32,7 +32,12 @@ Redis:     redis://localhost:6379
 ```
 
 **Tenant:** `test-tenant` (id: `00000000-0000-0000-0000-000000000003`)
-**Test user:** `admin@test.mn` / `test1234` (role: approver)
+**Test user:** `admin@test.mn` / `test1234` (role: approver) — `pnpm dev:test-user`-ээр Auth-тай холбоно.
+> ⚠️ [SEC-004]-ийн дараа MR үүсгэгч өөрөө батлахгүй — гараар шалгахад 2 дахь хэрэглэгч (APPROVER/ADMIN) хэрэгтэй.
+> E2E өөрийн хэрэглэгчдийг (REQUESTER / APPROVER / ADMIN, 3 tenant) автоматаар үүсгэж устгадаг (доор «Тест ажиллуулах»).
+
+**DB холболт (Phase 4.8):** `DATABASE_URL` = `app_user` (NOBYPASSRLS → RLS идэвхтэй), `SYSTEM_DATABASE_URL` = `postgres`
+(tenant lookup, login, outbox, escalation г.м. бүх tenant-ийн ажил). Апп асахад лог: `DB role "app_user" — RLS идэвхтэй`.
 
 ---
 
@@ -41,7 +46,7 @@ Redis:     redis://localhost:6379
 | Хувилбар | Нэр | Статус | Огноо |
 |----------|-----|--------|-------|
 | **`v0.1.0`** | **Tier 1 Core System (MVP + V1)** | **✅ ДУУССАН** | **2026-09-21** |
-| `v0.1.5` | Tier 2 Enterprise VPC | 🔜 ДАРААГИЙН | — |
+| `v0.1.5` | Tier 2 Enterprise VPC | 🚧 RELEASE БЭЛТГЭЛ (код ✅, Phase 6.2–6.4) | — |
 | `v0.2.0` | Tier 3 Air-Gapped / Offline-First | 📋 ТӨЛӨВЛӨСӨН | — |
 | `v0.3.0+` | Нэмэлт хөгжүүлэлт | 📋 ИРЭЭДҮЙ | — |
 | `v1.0.0` | Public Production Launch | 🎯 ЗОРИЛГО | — |
@@ -87,6 +92,37 @@ Redis:     redis://localhost:6379
 
 ---
 
+## v0.1.5 — Төлөв (2026-10-10)
+
+| Хэсэг | Төлөв |
+|---|---|
+| Tenant isolation — ADR-001 (B): shared RLS + Enterprise VPC (`DEPLOYMENT_MODE=dedicated`) | ✅ |
+| RLS runtime: `app_user` + `SYSTEM_DATABASE_URL`, `inTenantTx`, `rls_audit.sql` | ✅ |
+| Advanced workflow: amount_rules, олон алхам + quorum, SLA, escalation, delegation (API); MR батлалт workflow-оор [SEC-004] | ✅ |
+| Performance: Redis cache, cursor, rate limit, auth token cache, cluster backoff | ✅ |
+| Модулиуд: Budget, Inventory-lite, Vendor-lite, Report-lite (+ web-shell `/inventory`, `/vendors`, `/reports`) | ✅ |
+| Event bus: transactional outbox (SKIP LOCKED, тогтвортой CloudEvent id, retry → DLQ) | ✅ |
+| Кемп модуль V1 | ✅ (доор) |
+| Release: баримт (6.2), цэвэрлэгээ (6.3), эцсийн шалгалт + tag (6.4) | 🚧 |
+
+### Тест ажиллуулах
+
+| Команд | Юу | Шаардлага | Сүүлийн үр дүн |
+|---|---|---|---|
+| `pnpm test` | Unit (core-kernel + web-shell) | — (сервергүй) | 510 + 45 ✅ |
+| `pnpm test:integration` | NestJS + бодит DB | `pnpm supabase:start`, `.env` | 15 файл / 154 ✅ |
+| `pnpm test:e2e` | Playwright (backend + web-shell-ийг өөрөө асаана) | Supabase, `.env` | 47 ✅ (0 skip) |
+| `pnpm --filter e2e exec tsx tests/load-test.ts` | Load (100 conn) | backend асаалттай, 10k seed | p99 57ms |
+
+- E2E fixture: Playwright globalSetup → `pnpm --filter @s-project/core-kernel e2e:fixture setup` (3 tenant + 13 хэрэглэгч, token) → `apps/e2e/.fixture.json`; globalTeardown бүгдийг устгана. Зөвхөн local.
+- Нэг ажиллалтад ~50 нэвтрэлт → `supabase/config.toml` `[auth.rate_limit] sign_in_sign_ups = 500` (өөрчилсний дараа `pnpm supabase:stop` → `pnpm supabase:start`).
+- Кемп e2e: `supabase/dev/camp_e2e_grant.sql` (admin@test.mn → Кемп админ).
+
+### Backlog (v0.1.5-ийн дараа)
+Delegation-ийг MR батлалттай холбох · `WorkflowService.approveStep/rejectStep` (ашиглагдахгүй) · escalation (`escalationEnabled`, order 1-ээс гэж үздэг, алхам алгасах утга) · MR үүсгэх UI-д нэгж үнэ · frontend component тест · санах ойн Redis mock · давхар RESTRICTIVE policy
+
+---
+
 ## Кемп модуль — V1 ✅ ДУУССАН (2026-10-10) · V2 хүлээгдэж буй
 
 > Төлөвлөгөө/ERD v4: `docs/08_Roadmap/camp_module/01_plan_and_erd.md` · Changelog: `[Unreleased]` → «Кемп модуль V1»
@@ -110,8 +146,9 @@ Redis:     redis://localhost:6379
 
 ### TenantAuthGuard flow
 ```
-Bearer JWT → supabase.auth.getUser() → tenantSlug (host header)
-  → TenantCacheService (Redis 5min TTL → DB fallback)
+Bearer JWT → supabase.auth.getUser() (Redis token cache, SHA-256, ≤60с) → tenantSlug (host header; dedicated → DEDICATED_TENANT_SLUG)
+  → TenantCacheService (Redis 5min TTL → SYSTEM DB fallback)
+  → membership (core_users, is_active) — гишүүн биш → 403 [SEC-001]
   → request.user = { id: authId, tenantId, tenantSlug }
 ```
 
@@ -134,12 +171,11 @@ authId (Supabase UUID) → core_users.findFirst({ authId, tenantId })
 
 ### RLS context (RULE-04)
 ```typescript
-// ЗААВАЛ нэгдсэн transaction дотор
-await prisma.$transaction(async tx => {
-  await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
-  return tx.model.findFirst(...);
-});
+// ЗААВАЛ нэгдсэн transaction дотор — helper: src/db/tenant-tx.ts
+await inTenantTx(prisma, tenantId, async (tx) => tx.model.findFirst({ where: { id, tenantId } }));
+// = prisma.$transaction(tx => { set_config('app.tenant_id', tenantId, true); ... })
 ```
+> `app_user`-ээр холбогдоход context-гүй query 0 мөр буцаана (алдаа биш!) — шинэ модуль: `docs/03_Data_Models_and_Security/03_Module_Template.md`.
 
 ### Vite proxy (CORS-гүй) (RULE-19)
 ```
@@ -162,8 +198,9 @@ esbuild (default) → decorator metadata дэмждэггүй → БҮХИЙ Л 
 - [x] **v0.1.5.1:** Tenant isolation — **ADR-001 (B, 2026-10-08):** shared = RLS, Enterprise VPC = тусдаа DB/deploy (`DEPLOYMENT_MODE=dedicated`)
 - [x] **v0.1.5.2:** Advanced approval workflow (мөнгөний хэмжээ, delegation, escalation)
 - [x] **v0.1.5.3:** Performance — Redis caching, cursor pagination, rate limiting
-- [ ] **v0.1.5.4:** Inventory, Budget, Vendor, Report модулиуд
-- [ ] **v0.1.5.5:** Event Bus integration тест (cross-module chain)
+- [x] **v0.1.5.4:** Inventory, Budget, Vendor, Report модулиуд (хөнгөн + frontend)
+- [x] **v0.1.5.5:** Event Bus integration тест (cross-module chain) + outbox засвар
+- [x] **v0.1.5.6:** E2E (fixture, multi-tenant, олон алхамт батлалт, модулиуд) · [ ] баримт, цэвэрлэгээ, `v0.1.5` tag
 - [x] **Кемп модуль V1** (2026-10-10) · [ ] **Кемп модуль V2** — Шат 5–7 (`camp_module/01_plan_and_erd.md` → «V2»)
 
 > Дэлгэрэнгүй төлөвлөгөө: `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md`

@@ -60,6 +60,22 @@ request бүрт `SET search_path` хийх замаар тусгаарлаха�
 `DELETE /api/v1/admin/tenants/:id/enterprise-schema`, `GET /api/v1/admin/tenants/:id/schema-health`
 (frontend/E2E-д ашиглагдаагүй байсан).
 
+## 4.1 RLS runtime-д (Phase 4.8, 2026-10-10)
+
+"RLS идэвхтэй" гэдэг нь апп RLS-ийг алгасдаггүй role-оор холбогдоход л үнэн. Supabase-ийн `postgres` нь BYPASSRLS тул
+v0.1.0–4.7 хүртэл policy-нууд зөвхөн тестэд ажиллаж байв ([RLS-004~007]). Одоо:
+
+| Холболт | Role | Хэрэглэгч | Зориулалт |
+|---|---|---|---|
+| `DATABASE_URL` | `app_user` (NOBYPASSRLS) | `PrismaTenantClientService` | Tenant-ийн бүх хүсэлт — `inTenantTx` (`set_config('app.tenant_id')` + query нэг transaction) |
+| `SYSTEM_DATABASE_URL` | `postgres` (BYPASSRLS) | `SystemPrismaService` | Tenant-ээс өмнөх / бүх tenant-ийн ажил: tenant lookup, membership, login, super-admin, onboarding, outbox, DLQ, escalation |
+
+- Policy загвар: `ENABLE` + `FORCE` + `AS PERMISSIVE FOR ALL TO app_user USING/WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)` + `GRANT` (`20261010004_rls_app_user.sql`, `03_Module_Template.md`).
+- Код түвшинд ч `where: { id, tenantId }` (defense in depth — [SEC-002]).
+- Шалгалт: `supabase/dev/rls_audit.sql`, `test/rls-app-user.integration.spec.ts` (49 хүснэгт × 3 context), integration бүхэлдээ `app_user` ба `postgres` хоёр горимд.
+- `SYSTEM_DATABASE_URL` тохируулаагүй бол хоёулаа `DATABASE_URL` (буцаах боломжтой). Апп асахдаа role-ийг логлоно.
+- Dedicated (VPC) deploy-д ижил: `docs/07_Tech_Stack_and_Environment/03_Enterprise_VPC_Deployment.md` §5.5.
+
 ## 5. Эрсдэл ба дараагийн алхам
 
 - Enterprise харилцагч олшрох тусам deploy-ийн тоо өснө → v0.2.0+ дээр deploy automation (IaC) хэрэгтэй.

@@ -48,11 +48,11 @@ pnpm supabase status -o env
 # Redis-г Docker-т ажиллуулах
 docker-compose -f docker-compose.dev.yml up -d
 
-# Prisma client үүсгэх
+# Prisma client үүсгэх (migration-уудыг supabase:start өөрөө хэрэглэсэн — `db:push` БҮҮ [MIG-001])
 pnpm db:generate
 
-# Migration ажиллуулах
-pnpm db:push
+# admin@test.mn-ийг Supabase Auth-д үүсгэж core_users-тэй холбох (supabase:reset бүрийн дараа)
+pnpm dev:test-user
 
 # Development server асаах
 pnpm dev
@@ -61,11 +61,15 @@ pnpm dev
 ### 5. Тест ажиллуулах
 
 ```bash
-# Unit тестүүд
+# Unit тестүүд (сервергүй, ~10с)
 pnpm test
 
 # Integration тестүүд (Supabase ажиллаж байх ёстой)
 pnpm test:integration
+
+# E2E (Playwright) — backend + web-shell-ийг өөрөө асааж, тестийн tenant/хэрэглэгчдийг үүсгээд устгана
+pnpm playwright:install   # анх удаа
+pnpm test:e2e
 
 # Coverage
 pnpm --filter @s-project/core-kernel test:coverage
