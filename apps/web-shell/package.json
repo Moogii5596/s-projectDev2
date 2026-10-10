@@ -1,6 +1,6 @@
 {
   "name": "@s-project/web-shell",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "S Project Web Shell — React + Vite Frontend",
   "type": "module",

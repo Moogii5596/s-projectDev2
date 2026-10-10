@@ -13,6 +13,34 @@ _(одоогоор алга)_
 
 ---
 
+## [v0.1.6] — 2026-10-10 — Кемп пилот (нэг Windows машин, интернэтэд нээлттэй) ✅
+
+> Runbook: `docs/07_Tech_Stack_and_Environment/04_Pilot_Camp_Windows.md` · Төлөвлөгөө: `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md` (v0.1.6)
+> Сургамж: `docs/lessons_learned.md` §20
+
+### ⚠️ Зан төлөвийн өөрчлөлт
+- **`POST /api/v1/auth/register` [SEC-005]:** зөвхөн OWNER/ADMIN; tenant = нэвтэрсэн хэрэглэгчийнх (Host header-ээс биш). UI ашигладаггүй.
+
+### Нэмэгдсэн
+- **`deploy/pilot/`** — пилотын бүх зүйл: `pilot.ps1` (check / init / build / start / run (watchdog) / stop / status / onboard / user / backup / restore / firewall / install-tasks), тусдаа Supabase project `s-project-pilot` (553xx, өөрийн JWT нууц, бүртгэл хаалттай, Studio унтраалттай), `Caddyfile` (нэг гарц: SPA + `/api` + Supabase Auth-ийн 3 зам, CSP), тусдаа Redis (127.0.0.1:56379), `.env.pilot.example`.
+- **Хэрэглэгч удирдах CLI:** `pilot-admin` (`pnpm pilot:onboard` / `pnpm pilot:user`): байгууллага + OWNER + Кемп админ; хэрэглэгч нэмэх, role/кемпийн роль, нууц үг сэргээх, идэвхгүй болгох (Redis membership cache шууд цэвэрлэнэ).
+- **Нөөц/сэргээлт:** өгөгдөл (`public` + `auth.users/identities`) → 7-Zip AES-256, 14 хоног; restore нь migration тулгаж, тоог шалгана.
+- **Web-shell `VITE_MODULES`** (`all` | `camp` | таслалаар): цэс/route/нүүр хуудас; `VITE_SUPABASE_URL=same-origin`; `mfe` идэвхгүй бол Module Federation remote build-оос хасагдана, `VITE_MFE_REQUISITIONS_URL`.
+- **`ESCALATION_CRON=off`** — автомат escalation унтраах.
+
+### Аюулгүй байдал / Засагдсан
+- **SEC-005** нэвтэрсэн дурын хэрэглэгч (VIEWER ч) service key-ээр шинэ бүртгэл (REQUESTER) үүсгэдэг байсан.
+- **SEC-006** Supabase CLI `env()` хоосон үед demo JWT нууцаар асдаг — `pilot.ps1` түлхүүрийн гарын үсгийг шалгаж зогсооно.
+- **FE-006** идэвхгүй MFE remote (`localhost:5174`) апп эхлэхэд ачаалагддаг байсан.
+
+### Тест (2026-10-10)
+- Unit: core-kernel **528**, web-shell **51**
+- Integration: **15 файл / 159** — `app_user` ба `postgres` хоёр горимд
+- Playwright e2e: **47**
+- Пилот: Caddy-гаар UI (OWNER, VIEWER + Кемп менежер), `pilot.ps1`-ийн бүх команд, restore (54 хүснэгт md5 ижил)
+
+---
+
 ## [v0.1.5] — 2026-10-10 — Tier 2: Enterprise VPC ✅
 
 > Дэлгэрэнгүй: `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md`,

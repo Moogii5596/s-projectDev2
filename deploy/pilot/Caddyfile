@@ -1,0 +1,73 @@
+# ============================================================
+# S Project — v0.1.6 Кемп пилот: нэг гарц (reverse proxy)
+#
+#   Интернэт → Tailscale Funnel (HTTPS, https://<машин>.<tailnet>.ts.net) → 127.0.0.1:8088 (энэ Caddy)
+#     /api/*                                      → backend (127.0.0.1:3100)
+#     /auth/v1/token, /auth/v1/user, /auth/v1/logout → Supabase Auth (Kong 127.0.0.1:55321) — ЗӨВХӨН нэвтрэлт
+#     бусад /auth/*, /rest/*, /storage/*, /realtime/*, /pg/* … → 404 (Supabase-ийн бусад API интернэтэд хаалттай)
+#     бусад бүх зам                                 → web-shell build (SPA, index.html fallback)
+#
+# Ажиллуулах: deploy/pilot/pilot.ps1 start (PILOT_WEB_ROOT-ийг тохируулна). Шалгах: caddy validate --config Caddyfile
+# ============================================================
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+:{$PILOT_HTTP_PORT:8088} {
+	bind 127.0.0.1
+
+	encode zstd gzip
+
+	request_body {
+		max_size 20MB
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Strict-Transport-Security "max-age=31536000"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		-Server
+	}
+
+	@auth path /auth/v1/token /auth/v1/user /auth/v1/logout
+	handle @auth {
+		reverse_proxy 127.0.0.1:{$PILOT_SUPABASE_PORT:55321}
+	}
+
+	@blocked path /auth/* /rest/* /storage/* /realtime/* /graphql/* /pg/* /functions/* /analytics/*
+	handle @blocked {
+		respond 404
+	}
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:{$PILOT_API_PORT:3100}
+	}
+
+	# Hash-тай build файлууд: байхгүй бол 404 (index.html буцаавал шинэчлэлийн дараа хуучин chunk "MIME type" алдаа өгнө)
+	handle /assets/* {
+		root * {$PILOT_WEB_ROOT}
+		@found file
+		header @found Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	handle {
+		root * {$PILOT_WEB_ROOT}
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output file {$PILOT_LOG_DIR:./logs}/caddy-access.log {
+			roll_size 20MiB
+			roll_keep 10
+		}
+		format json
+	}
+}

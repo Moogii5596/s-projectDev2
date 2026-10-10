@@ -1,6 +1,6 @@
 {
   "name": "s-project",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "S Project — Multi-Tenant Supply Chain Management Platform",
   "scripts": {
@@ -14,6 +14,8 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "db:generate": "cd apps/core-kernel && npx prisma generate",
     "dev:test-user": "pnpm --filter @s-project/core-kernel dev:test-user",
+    "pilot:onboard": "pnpm --silent --filter @s-project/core-kernel pilot onboard",
+    "pilot:user": "pnpm --silent --filter @s-project/core-kernel pilot user",
     "db:migrate": "supabase migration up",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",

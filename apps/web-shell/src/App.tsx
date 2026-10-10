@@ -13,6 +13,7 @@ import CampRoutes from './modules/camp/CampRoutes';
 import InventoryPage from './modules/inventory/InventoryPage';
 import VendorsPage from './modules/vendor/VendorsPage';
 import ReportPage from './modules/report/ReportPage';
+import { HOME_PATH, isEnabled } from './config/enabled-modules';
 
 // Sprint 4: Module Federation — React.lazy + dynamic import
 // mfe-requisitions remote-оос ачаалагдана (port 5174)
@@ -29,31 +30,38 @@ export default function App() {
       {/* Protected */}
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/requisitions" replace />} />
-          <Route path="/requisitions" element={<MRListPage />} />
-          <Route path="/requisitions/new" element={<MRCreatePage />} />
-          <Route path="/requisitions/:id" element={<MRDetailPage />} />
-          <Route path="/admin/approval-sla" element={<ApprovalSlaPage />} />
-          <Route path="/admin/workflow-definitions" element={<WorkflowDefinitionPage />} />
-          <Route path="/admin/delegations" element={<DelegationPage />} />
+          {/* v0.1.6: VITE_MODULES-оор шүүнэ (пилот = зөвхөн camp → нүүр /camp) */}
+          <Route path="/" element={<Navigate to={HOME_PATH} replace />} />
+          {isEnabled('mr') && (
+            <>
+              <Route path="/requisitions" element={<MRListPage />} />
+              <Route path="/requisitions/new" element={<MRCreatePage />} />
+              <Route path="/requisitions/:id" element={<MRDetailPage />} />
+              <Route path="/admin/approval-sla" element={<ApprovalSlaPage />} />
+              <Route path="/admin/workflow-definitions" element={<WorkflowDefinitionPage />} />
+              <Route path="/admin/delegations" element={<DelegationPage />} />
+            </>
+          )}
 
           {/* Phase 6.0: хөнгөн модулиуд (Inventory / Vendor / Report) */}
-          <Route path="/inventory" element={<InventoryPage />} />
-          <Route path="/vendors" element={<VendorsPage />} />
-          <Route path="/reports" element={<ReportPage />} />
+          {isEnabled('inventory') && <Route path="/inventory" element={<InventoryPage />} />}
+          {isEnabled('vendors') && <Route path="/vendors" element={<VendorsPage />} />}
+          {isEnabled('reports') && <Route path="/reports" element={<ReportPage />} />}
 
           {/* Шат 8: Кемп модуль (V1) */}
-          <Route path="/camp/*" element={<CampRoutes />} />
+          {isEnabled('camp') && <Route path="/camp/*" element={<CampRoutes />} />}
 
           {/* Sprint 4: MFE Remote — /mfe route */}
-          <Route
-            path="/mfe/*"
-            element={
-              <Suspense fallback={<div>MFE ачааллаж байна...</div>}>
-                <RequisitionApp />
-              </Suspense>
-            }
-          />
+          {isEnabled('mfe') && (
+            <Route
+              path="/mfe/*"
+              element={
+                <Suspense fallback={<div>MFE ачааллаж байна...</div>}>
+                  <RequisitionApp />
+                </Suspense>
+              }
+            />
+          )}
         </Route>
       </Route>
 

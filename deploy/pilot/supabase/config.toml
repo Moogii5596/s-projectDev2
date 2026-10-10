@@ -1,0 +1,78 @@
+# ============================================================
+# S Project — v0.1.6 Кемп пилот: ТУСДАА Supabase (dev-ээс тусгаарласан)
+# Ажиллуулах: deploy/pilot/pilot.ps1 (supabase ... --workdir deploy/pilot)
+# migrations/ — pilot.ps1 нь ../../supabase/migrations-оос хуулна (gitignored)
+#
+# Dev (54321-54329, project "s-project")-тэй зэрэг ажиллана: портууд 553xx, project_id өөр.
+# АЮУЛГҮЙ БАЙДАЛ (интернэтэд нээлттэй пилот):
+#   - auth.jwt_secret — ӨӨРИЙН нууц (local demo secret олон нийтэд ил → anon/service key хуурамчаар үүсгэж болно)
+#   - enable_signup = false — хэрэглэгчийг ЗӨВХӨН `pnpm pilot:onboard` / `pnpm pilot:user`
+#   - Studio, Storage, Realtime, Inbucket, Edge, Analytics — унтраалттай (пилотод хэрэггүй, халдлагын гадаргуу)
+#   - Эдгээр портууд интернэтэд НЭЭГДЭХГҮЙ: Funnel → зөвхөн Caddy (127.0.0.1:8088); Windows Firewall дүрэм (runbook)
+# ============================================================
+project_id = "s-project-pilot"
+
+[api]
+enabled = true
+port = 55321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 55322
+shadow_port = 55320
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 55329
+
+[db.seed]
+# 0003 migration нь tenant-a/b, test-tenant үүсгэдэг (хэрэглэгчгүй) — seed.sql (dev хэрэглэгчид) АЖИЛЛАХГҮЙ
+enabled = false
+
+[realtime]
+enabled = false
+
+[studio]
+# Хэрэгтэй үед түр: enabled = true → pilot.ps1 restart (http://127.0.0.1:55323, интернэтэд нээхгүй)
+enabled = false
+port = 55323
+
+[local_smtp]
+enabled = false
+port = 55324
+
+[storage]
+enabled = false
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false
+port = 55327
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:8088"
+additional_redirect_urls = []
+jwt_expiry = 3600
+# root .env-ийн SUPABASE_AUTH_JWT_SECRET (32+ тэмдэгт) — pilot.ps1 орчинд тохируулна
+jwt_secret = "env(SUPABASE_AUTH_JWT_SECRET)"
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = false
+enable_anonymous_sign_ins = false
+minimum_password_length = 12
+
+[auth.rate_limit]
+# Caddy-ийн ард бүх хүсэлт нэг IP-ээс ирнэ → нийт байгууллагад хуваалцсан хязгаар (5 мин тутам)
+sign_in_sign_ups = 120
+token_refresh = 300
+
+[auth.email]
+enable_signup = false
+double_confirm_changes = true
+enable_confirmations = false

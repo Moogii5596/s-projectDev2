@@ -82,6 +82,11 @@
 | EVT-001 | `FOR UPDATE SKIP LOCKED` transaction-гүй → түгжээ шууд суларна → давхар publish | Event бүр: lock → publish → UPDATE нэг transaction-д |
 | EVT-002 | Retry бүрт CloudEvent id шинэ | Outbox-д хадгалсан `cloud_event_id`-аар publish (`fromOutbox`) |
 | TEST-012 | `client.$queryRaw`-г monkeypatch → tx доторх query transaction-аас гарна | Instrument хийх бол tx-ийг биш, publisher/mock-ийг |
+| SEC-005 | Нэвтэрсэн дурын хэрэглэгч service key-ээр бүртгэл үүсгэдэг endpoint | Хэрэглэгч үүсгэх = OWNER/ADMIN, tenant = нэвтэрсэн хэрэглэгчийнх (Host биш) |
+| SEC-006 | Supabase CLI `env(X)` хоосон → demo JWT нууцаар чимээгүй асна | Асаасны дараа anon/service key-ийн HMAC-ийг шалгах (`pilot.ps1`) |
+| FE-006 | Module Federation remote route-гүй ч эхлэхдээ ачаалагдана | Хэрэглэхгүй бол remote-ийг build-оос хасах (alias stub) |
+| PS-001 | Windows PowerShell 5.1: BOM, native stderr, Start-Process, cmd давхарга | UTF-8 BOM; native дуудлагад түр `Continue`; `node` шууд; pwsh-оор parse + shim тест |
+| PROC-008 | `pkill -f "[x]yz"` ч ижил командад `xyz` бичвэрийг агуулбал өөрийгөө алав | pkill-ийг тусдаа, бусад бичвэргүй дуудлагад |
 
 ---
 
@@ -1113,10 +1118,56 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 
 ---
 
+## 20. v0.1.6 — Кемп пилот (2026-10-10)
+
+### [SEC-005] 🔴 `POST /api/v1/auth/register`: нэвтэрсэн ДУРЫН хэрэглэгч (VIEWER ч) шинэ бүртгэл үүсгэдэг байсан
+**Тохиолдсон (пилот бэлтгэхэд илэрсэн):** Endpoint нь global `TenantAuthGuard`-аар зөвхөн "нэвтэрсэн гишүүн" эсэхийг шалгаад, tenant-ийг **Host header**-ээс (localhost → `DEV_TENANT_SLUG`) авч `auth.admin.createUser` (service key — `enable_signup=false`-ийг тойрно) + `core_users` REQUESTER үүсгэдэг. Үр дагавар: VIEWER өөртөө REQUESTER бүртгэл үүсгэж эрхээ нэмнэ; пилотод нээлттэй бүртгэлийг хаасан ч арын хаалга үлдэнэ. UI ашигладаггүй тул анзаарагдаагүй.
+**Шийдэл:** дуудагч OWNER/ADMIN (идэвхтэй) байх ёстой, tenant = `req.user.tenantId`. Тест: unit 6 + integration 4 (VIEWER/REQUESTER/APPROVER → 403, бүртгэл үүсэхгүй; ADMIN → 201 өөрийн tenant-д; өөр Host → 403). Хуучин код дээр unit 6/6, integration 3/4 унасан.
+**Дүрэм:** Release/байршуулалтын өмнө бүх controller-ийн endpoint-уудыг "хэн дуудаж чадах вэ" гэж жагсааж шалгана; service key ашигладаг endpoint бүр role шалгалт + тест-тэй. Tenant-ийг Host-оос дахин тооцоолохгүй — guard-ийн `req.user.tenantId`.
+
+### [SEC-006] Supabase CLI: `auth.jwt_secret = "env(X)"` — X хоосон бол алдаагүйгээр **demo нууцаар** асдаг
+**Тохиолдсон (cloud-д CLI 2.120-оор туршихад):** `X=short` → "Must be at least 16 characters" алдаа; харин X огт байхгүй → алдаагүй үргэлжилнэ (анхдагч demo нууц). Demo нууц олон нийтэд ил → хэн ч service_role JWT үүсгэж бүх өгөгдлийг уншина.
+**Шийдэл:** `pilot.ps1` Supabase-ийг өөрөө `.env`-ийн нууцтай асаана; асаасны дараа `supabase status`-ийн ANON/SERVICE key-ийн HS256 гарын үсгийг demo нууцаар шалгаж таарвал **зогсооно**, `.env`-ийн нууцаар таарахгүй бол анхааруулна. Web build-д шингэсэн anon key одоогийнхтой таарахгүй бол (нууц солигдсон) асахгүй.
+**Дүрэм:** Аюулгүй байдлын тохиргоог "тохируулсан" гэж бүү итгэ — үр дүнг (гарсан түлхүүр, header, хариу) шалгадаг автомат шалгалт бичнэ.
+
+### [FE-006] Module Federation remote нь route идэвхгүй байсан ч апп эхлэхэд ачаалагдана
+**Тохиолдсон:** `VITE_MODULES=camp` build-д `/mfe` route-гүй ч `@module-federation/vite` runtime эхлэхдээ `http://localhost:5174/assets/remoteEntry.js`-ийг татах гэж оролдсон (CSP хааж консолд 6 алдаа; хэрэглэгчийн төхөөрөмж localhost руу хүсэлт илгээнэ). Headless браузерын тестээр (хүсэлтийн host-уудыг бүртгэж) илэрсэн.
+**Шийдэл:** `vite.config.ts` — `mfe` идэвхгүй бол `remotes: {}` + `mfe_requisitions/RequisitionApp` → `MfeDisabled.tsx` alias. Дараа нь хүсэлт зөвхөн same-origin, консол цэвэр.
+**Дүрэм:** Production build-ийг браузераар нээж **гарч буй бүх хүсэлтийн host** ба консолын алдааг шалгана (зөвхөн хуудас харагдах нь хангалтгүй).
+
+### [OPS-001] SPA fallback `/assets/*`-д ч index.html буцаадаг
+**Тохиолдсон:** Caddy `try_files {path} /index.html` бүх замд → байхгүй `/assets/x.js` → 200 text/html. Шинэ build-ийн дараа хуучин tab хуучин chunk-ийг дуудахад "MIME type" алдаа, оношлоход хэцүү.
+**Шийдэл:** `/assets/*` — зөвхөн `file_server` (байхгүй → 404, байвал `immutable` cache); бусад зам → index.html (`no-cache`).
+
+### [PS-001] Windows PowerShell 5.1-д ажиллах скрипт бичих
+**Тохиолдсон / урьдчилан сэргийлсэн (`pilot.ps1`):**
+1. BOM-гүй UTF-8 `.ps1`-ийг 5.1 ANSI гэж уншина → кирилл мөр эвдэрч parse алдаа → файл **UTF-8 BOM**-той.
+2. `$ErrorActionPreference='Stop'` + native командын stderr (`2>&1`/`2>$null`) → 5.1 terminating error → native дуудлагын үед түр `Continue`, амжилтыг `$LASTEXITCODE`-оор.
+3. Native гаралт функцийн буцаах утгад холилдоно → харуулах гаралтыг `| Out-Host`.
+4. `Start-Process -ArgumentList` зайтай замыг хашилтгүй нийлүүлнэ → гараар хашилт; `-WindowStyle` зөвхөн Windows-д.
+5. `Join-Path a b c` (3 аргумент), `??`, `&&`, `$IsWindows` — PS7-д л байна.
+6. `pnpm.cmd` → cmd.exe давхарга (кирилл/`=` эрсдэл) → админ CLI-г `node …/tsx/dist/cli.mjs`-ээр шууд.
+7. Олдсон алдаа: `check` нь `.env`-ийг (PILOT_CADDY/PILOT_7Z) уншихаас ӨМНӨ програм хайсан.
+**Тест:** cloud-д pwsh 7.4 + docker/supabase/pnpm **shim** + бодит PG/Caddy/7-Zip/backend-ээр бүх командыг (check/init/build/start/run/status/user/onboard/backup/restore/stop, demo нууц, нууц солигдсон, анхдагч app_user нууц үг) ажиллуулав; restore-ийн дараа 54 хүснэгтийн md5 ижил. 5.1-ийг шууд ажиллуулах боломжгүй тул дээрх дүрмийг grep-ээр шалгав; Task Scheduler/Firewall командыг таны машин дээр шалгана.
+
+### [OPS-002] `supabase stop --no-backup` = бүх өгөгдөл устна; `db reset` = migration-оос шинээр
+**Дүрэм:** Пилот/production-д `stop` (data volume хадгална) л; `--no-backup`, `db reset`-ийг зөвхөн restore урсгал (нөөцийг тулгасны дараа) ашиглана. Нөөц = өгөгдөл (`--data-only`), schema = ижил tag-ийн migration — restore эхлэхээс өмнө migration жагсаалтыг тулгаж, зөрвөл юу ч устгахгүй.
+
+### [TEST-016] Redis mock coverage тест CLI script-ийн `redis.connect()`-ийг барьсан
+**Тохиолдсон:** TEST-003-ын scan нь `src/**`-ийг бүхэлд нь уншдаг → `src/scripts/pilot-admin.cli.ts` (апп-д ачаалагддаггүй) → `connect` mock-д алга гэж унав.
+**Шийдэл:** scan-аас `src/scripts`-ийг тодорхой (тайлбартай) хасав — хувьсагчийн нэр сольж тойрохгүй.
+
+### [PROC-008] `pkill -f "[x]yz"` ч өөрийн shell-ийг алав (cloud harness)
+**Тохиолдсон:** Нэг Bash дуудлагад script-ийг heredoc-оор бичээд (дотор нь `dist/src/main.js`, `caddy run` бичвэр) дараа нь `pkill -f "[d]ist/src/main.js"` → bracket pattern өөрийгөө таарахгүй ч **командын бусад хэсэг** таарсан → exit 144.
+**Дүрэм:** pkill-ийг бусад бичвэргүй тусдаа дуудлагаар; урт скриптийг файлд бичээд тусад нь ажиллуулна. Cloud tool дуудлага дуусахад энгийн child процессыг устгадаг → урт ажиллах зүйлийг `setsid` + үр дүнг файлд.
+
+---
+
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §20 (v0.1.6 Кемп пилот): SEC-005 (auth/register), SEC-006 (Supabase env() → demo нууц), FE-006 (MFE remote), OPS-001/002, PS-001, TEST-016, PROC-008 |
 | 2026-10-10 | §19 (Phase 6.4.7): CONC-002 (зэрэгцээ MR дугаар), TEST-015 дүгнэлт засав |
 | 2026-10-10 | §19 (Phase 6.4): CI-004 (CI script/env хоцорсон) |
 | 2026-10-10 | §19 (Phase 6.3): TEST-015 (dev + integration зэрэг → flaky) |

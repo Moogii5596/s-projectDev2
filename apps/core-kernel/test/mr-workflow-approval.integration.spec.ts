@@ -326,3 +326,28 @@ it('төсөв: SPENT нийлбэр зөв (small-2 300k + big-1 5M + admin-own
   const a = await prismaAdmin.budgetAllocation.findUniqueOrThrow({ where: { id: allocationId } });
   expect(Number(a.spentAmount)).toBe(5_500_000);
 });
+
+// ── SEC-005 (v0.1.6): POST /auth/register — зөвхөн OWNER/ADMIN, tenant = нэвтэрсэн хэрэглэгчийнх ──
+describe('SEC-005 POST /auth/register', () => {
+  const reg = (who: Who, email: string, host = HOST) =>
+    api().post('/api/v1/auth/register').set({ ...as(who), Host: host }).send({ email, password: 'Password1234!', fullName: 'SEC-005' });
+
+  it.each(['viewer', 'req', 'appr1'] as Who[])('%s → 403, Auth/core хэрэглэгч үүсэхгүй', async (who) => {
+    const email = `sec005-${who}-${STAMP}@example.com`;
+    const r = await reg(who, email);
+    expect(r.status).toBe(403);
+    expect(await prismaAdmin.coreUser.count({ where: { email } })).toBe(0);
+  });
+
+  it('admin → 201, өөрийн tenant-д REQUESTER (Host-оор өөр tenant сонгож чадахгүй — guard 403)', async () => {
+    const email = `sec005-ok-${STAMP}@example.com`;
+    const r = await reg('admin', email);
+    expect(r.status).toBe(201);
+    const u = await prismaAdmin.coreUser.findFirstOrThrow({ where: { email } });
+    authIds.push(u.authId);
+    expect(u).toMatchObject({ tenantId, role: 'REQUESTER' });
+
+    const other = await reg('admin', `sec005-x-${STAMP}@example.com`, 'test-tenant.example.com');
+    expect(other.status).toBe(403);
+  });
+});

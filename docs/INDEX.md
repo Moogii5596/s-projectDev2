@@ -1,6 +1,6 @@
 # S Project — Баримт Бичгийн Жагсаалт
 
-> Шинэчлэгдсэн: 2026-10-10 (v0.1.5 release бэлтгэл) | **Одоогийн хувилбар: `v0.1.5`** (2026-10-10)
+> Шинэчлэгдсэн: 2026-10-10 (v0.1.5 release бэлтгэл) | **Одоогийн хувилбар: `v0.1.6`** (2026-10-10, Кемп пилот)
 > Хувилбарын дугаарлалт: `docs/VERSIONING.md` (хуучин v0.1.0~v0.4.0 нэрлэлт нэгдэж `v0.1.0` болсон)
 
 ---
@@ -11,9 +11,9 @@
 |------|---------|
 | `docs/08_Roadmap/00_rules_and_context.md` | **RULE-01~20** — Sprint эхлэхдээ ЗААВАЛ уншина |
 | `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md` | **Одоогийн төлөвлөгөө** — Phase 0–6, шийдвэрүүд, шалгалтын тоо |
-| `docs/lessons_learned.md` | **Нэгтгэсэн алдааны сургамж** (ганц үндсэн файл) — §11–19 = v0.1.5 (RLS, SEC-001~004, EVT, TEST, PROC) |
+| `docs/lessons_learned.md` | **Нэгтгэсэн алдааны сургамж** (ганц үндсэн файл) — §11–19 = v0.1.5 (RLS, SEC-001~004, EVT, TEST, PROC), §20 = v0.1.6 пилот (SEC-005/006, PS-001) |
 | `docs/project-status.md` | Одоогийн явц, тест ажиллуулах заавар, backlog |
-| `docs/CHANGELOG.md` | SemVer changelog — `[Unreleased] v0.1.5` (⚠️ зан төлөвийн өөрчлөлт) |
+| `docs/CHANGELOG.md` | SemVer changelog — `[v0.1.6]` Кемп пилот, `[v0.1.5]` (⚠️ зан төлөвийн өөрчлөлт) |
 | `docs/VERSIONING.md` | Хувилбаржуулалтын бодлого |
 
 ---
@@ -38,6 +38,7 @@
 | `docs/03_Data_Models_and_Security/03_Module_Template.md` | Шинэ модуль: migration/RLS, `inTenantTx`, тест |
 | `docs/07_Tech_Stack_and_Environment/02_Local_Supabase_Docker_Windows.md` | Local орчин, `.env`, **тест командууд** (unit / integration / e2e + fixture) |
 | `docs/07_Tech_Stack_and_Environment/03_Enterprise_VPC_Deployment.md` | VPC runbook, **§5.5 app_user нууц үг + RLS аудит** |
+| `docs/07_Tech_Stack_and_Environment/04_Pilot_Camp_Windows.md` | **v0.1.6 Кемп пилот**: нэг Windows машин, Tailscale Funnel, `deploy/pilot/pilot.ps1`, нөөц/сэргээлт |
 | `supabase/dev/rls_audit.sql` | RLS аудит (зөвхөн уншина) |
 
 ---
@@ -96,7 +97,8 @@
 
 ### 07 — Технологийн стек
 - `01_Tech_Stack_Decision.md`
-- `03_Enterprise_VPC_Deployment.md` — Enterprise VPC (`DEPLOYMENT_MODE=dedicated`) байршуулах runbook ✨
+- `03_Enterprise_VPC_Deployment.md` — Enterprise VPC (`DEPLOYMENT_MODE=dedicated`) байршуулах runbook
+- `04_Pilot_Camp_Windows.md` — Кемп пилот (v0.1.6): нэг машин, интернэтэд Tailscale Funnel-ээр ✨
 - `02_Local_Supabase_Docker_Windows.md` — Supabase + Redis-г Docker дээр асаах, port, `.env`, Windows алдаанууд
 
 ### 08 — Хөгжүүлэлтийн төлөвлөгөө

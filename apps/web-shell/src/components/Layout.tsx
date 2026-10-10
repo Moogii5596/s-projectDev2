@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
+import { HOME_PATH, isEnabled } from '../config/enabled-modules'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -27,18 +28,22 @@ export default function Layout() {
       <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2">
         <span
           className="text-lg font-bold text-gray-900 cursor-pointer"
-          onClick={() => navigate('/requisitions')}
+          onClick={() => navigate(HOME_PATH)}
         >
           S Project
         </span>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <button onClick={() => navigate('/camp')} className={navCls('/camp')}>Кемп</button>
-          <button onClick={() => navigate('/inventory')} className={navCls('/inventory')}>Бараа</button>
-          <button onClick={() => navigate('/vendors')} className={navCls('/vendors')}>Нийлүүлэгч</button>
-          <button onClick={() => navigate('/reports')} className={navCls('/reports')}>Тайлан</button>
-          <button onClick={() => navigate('/admin/approval-sla')} className="text-sm text-gray-600 hover:text-blue-600">SLA</button>
-          <button onClick={() => navigate('/admin/workflow-definitions')} className="text-sm text-gray-600 hover:text-blue-600">Workflow</button>
-          <button onClick={() => navigate('/admin/delegations')} className="text-sm text-gray-600 hover:text-blue-600">Delegation</button>
+          {isEnabled('camp') && <button onClick={() => navigate('/camp')} className={navCls('/camp')}>Кемп</button>}
+          {isEnabled('inventory') && <button onClick={() => navigate('/inventory')} className={navCls('/inventory')}>Бараа</button>}
+          {isEnabled('vendors') && <button onClick={() => navigate('/vendors')} className={navCls('/vendors')}>Нийлүүлэгч</button>}
+          {isEnabled('reports') && <button onClick={() => navigate('/reports')} className={navCls('/reports')}>Тайлан</button>}
+          {isEnabled('mr') && (
+            <>
+              <button onClick={() => navigate('/admin/approval-sla')} className="text-sm text-gray-600 hover:text-blue-600">SLA</button>
+              <button onClick={() => navigate('/admin/workflow-definitions')} className="text-sm text-gray-600 hover:text-blue-600">Workflow</button>
+              <button onClick={() => navigate('/admin/delegations')} className="text-sm text-gray-600 hover:text-blue-600">Delegation</button>
+            </>
+          )}
           <span className="text-sm text-gray-500">{user?.email}</span>
           <button
             onClick={handleSignOut}

@@ -13,7 +13,16 @@ export class EscalationScheduler {
     private readonly events: EventEmitter2,
   ) {}
 
+  /**
+   * 15 минут бүр. v0.1.6: `ESCALATION_CRON=off` → cron алгасна (пилот: escalation алхам алгасах асуудал
+   * backlog-д — шийдэгдэх хүртэл автомат escalation унтраана). Тест `checkOverdueSla()`-ийг шууд дуудна.
+   */
   @Cron('*/15 * * * *')
+  async onTick(): Promise<void> {
+    if (process.env.ESCALATION_CRON?.trim().toLowerCase() === 'off') return;
+    await this.checkOverdueSla();
+  }
+
   async checkOverdueSla(): Promise<number> {
     const overdue = await this.prisma.workflowSlaLog.findMany({
       where: { status: 'PENDING', dueAt: { lt: new Date() } },

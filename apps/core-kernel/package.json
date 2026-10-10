@@ -1,6 +1,6 @@
 {
   "name": "@s-project/core-kernel",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "S Project Core Kernel — API Gateway, Auth, Module Registry",
   "scripts": {
@@ -17,6 +17,7 @@
     "test:load": "pnpm --filter e2e exec tsx tests/load-test.ts",
     "dev:test-user": "tsx src/scripts/dev-test-user.cli.ts",
     "e2e:fixture": "tsx src/scripts/e2e-fixture.cli.ts",
+    "pilot": "tsx src/scripts/pilot-admin.cli.ts",
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {

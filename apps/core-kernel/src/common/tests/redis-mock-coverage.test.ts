@@ -11,10 +11,13 @@ import { createRedisMock } from '../../../test/helpers/redis-mock';
 const SRC = resolve(__dirname, '../..');
 const REDIS_CALL = /\b(?:this\.)?redis\.([a-zA-Z]+)\(/g;
 
+// src/scripts — CLI (pilot-admin, e2e-fixture г.м.): апп-д ачаалагддаггүй, integration mock-оор ажилладаггүй (v0.1.6)
+const EXCLUDED_DIRS = new Set([resolve(SRC, 'scripts')]);
+
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const p = join(dir, name);
-    if (statSync(p).isDirectory()) return walk(p);
+    if (statSync(p).isDirectory()) return EXCLUDED_DIRS.has(p) ? [] : walk(p);
     return /\.ts$/.test(name) && !/\.(spec|test)\.ts$/.test(name) ? [p] : [];
   });
 }

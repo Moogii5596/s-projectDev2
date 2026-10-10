@@ -1,6 +1,7 @@
 import { useState, FormEvent, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { HOME_PATH } from '../config/enabled-modules'
 
 export default function LoginPage() {
   const { signIn, user, loading } = useAuth()
@@ -10,10 +11,10 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // Нэвтэрсэн хэрэглэгч /login-д ирвэл /requisitions руу чиглүүлнэ
+  // Нэвтэрсэн хэрэглэгч /login-д ирвэл нүүр (HOME_PATH) руу чиглүүлнэ
   useEffect(() => {
     if (!loading && user) {
-      navigate('/requisitions', { replace: true })
+      navigate(HOME_PATH, { replace: true })
     }
   }, [user, loading, navigate])
 
@@ -24,7 +25,7 @@ export default function LoginPage() {
 
     try {
       await signIn(email, password)
-      navigate('/requisitions')
+      navigate(HOME_PATH)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Нэвтрэхэд алдаа гарлаа')
     } finally {

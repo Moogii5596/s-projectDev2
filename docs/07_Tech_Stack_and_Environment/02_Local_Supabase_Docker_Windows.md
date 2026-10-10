@@ -13,6 +13,8 @@ NestJS (`core-kernel`) болон frontend (`web-shell`) нь контейнер
 
 > Supabase-д зориулж тусдаа `docker-compose` бичихгүй — CLI өөрөө контейнерүүдийг удирдана.
 
+> **v0.1.6 Кемп пилот** нь ЭНЭ машин дээр тусдаа хавтсанд (`E:\MoogiiDev\Pilot\s-project`), тусдаа Supabase (`s-project-pilot`, 553xx), Redis (56379), backend (3100)-аар зэрэг ажиллана → `04_Pilot_Camp_Windows.md`. Dev-ийн `pnpm supabase:stop` пилотыг зогсоохгүй; **`supabase stop --all` хэрэглэхгүй** (пилотыг ч зогсооно).
+
 ---
 
 ## 1. Шинэ машин дээр анх тохируулах (GitHub-аас clone хийсний дараа)

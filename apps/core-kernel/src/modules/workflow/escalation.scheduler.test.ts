@@ -80,4 +80,14 @@ describe('EscalationScheduler', () => {
       nextStepOrder: 2, nextRole: 'FINANCE_MANAGER', nextAssigneeId: 'finance-id',
     }));
   });
+
+  it('onTick: ESCALATION_CRON=off → алгасна; тохируулаагүй → шалгана (v0.1.6)', async () => {
+    prisma.workflowSlaLog.findMany.mockResolvedValue([]);
+    vi.stubEnv('ESCALATION_CRON', ' OFF ');
+    await scheduler.onTick();
+    expect(prisma.workflowSlaLog.findMany).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+    await scheduler.onTick();
+    expect(prisma.workflowSlaLog.findMany).toHaveBeenCalledTimes(1);
+  });
 });

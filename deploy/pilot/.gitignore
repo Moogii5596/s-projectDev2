@@ -1,0 +1,5 @@
+# pilot.ps1-ийн үүсгэдэг файлууд
+supabase/migrations/
+supabase/.temp/
+supabase/.branches/
+run/

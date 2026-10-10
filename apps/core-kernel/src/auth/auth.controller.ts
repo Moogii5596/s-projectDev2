@@ -8,14 +8,17 @@ import {
   HttpCode,
   HttpStatus,
   Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { TenantAuthGuard } from './tenant-auth.guard';
 import { TenantContextInterceptor } from './tenant-context.interceptor';
-import { TenantCacheService } from './tenant-cache.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import type { RequestUser } from '@s-project/shared-types';
+
+/** SEC-005 (v0.1.6): хэрэглэгч үүсгэх эрхтэй role-ууд */
+export const REGISTER_ROLES = ['OWNER', 'ADMIN'] as const;
 
 interface FastifyRequest {
   user?: RequestUser;
@@ -24,21 +27,25 @@ interface FastifyRequest {
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly tenantCacheService: TenantCacheService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   /**
    * POST /api/v1/auth/register
-   * Шинэ хэрэглэгч бүртгэх
-   * Host header-ээс tenant тодорхойлно
+   * Өөрийн байгууллагад шинэ хэрэглэгч (REQUESTER) үүсгэх — ЗӨВХӨН OWNER/ADMIN.
+   *
+   * SEC-005 (v0.1.6): өмнө нь нэвтэрсэн ДУРЫН хэрэглэгч (VIEWER ч) дуудаж, Host header-ээр сонгосон tenant-д
+   * service key-ээр шинэ бүртгэл үүсгэж чаддаг байсан → VIEWER → REQUESTER эрх нэмэгдэл, `enable_signup=false`-ийг тойрох.
+   * Одоо: tenant = нэвтэрсэн хэрэглэгчийн tenant (guard), дуудагч OWNER/ADMIN байх ёстой.
    */
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() dto: RegisterDto, @Req() req: FastifyRequest) {
-    const tenantId = await this.resolveTenantId(req);
-    return this.authService.register(dto, tenantId);
+    const caller = req.user!;
+    const me = await this.authService.getMe(caller.id, caller.tenantId);
+    if (!me.isActive || !(REGISTER_ROLES as readonly string[]).includes(me.role)) {
+      throw new ForbiddenException('Хэрэглэгч үүсгэх эрхгүй (OWNER/ADMIN)');
+    }
+    return this.authService.register(dto, caller.tenantId);
   }
 
   /**
@@ -62,26 +69,5 @@ export class AuthController {
   async me(@Req() req: FastifyRequest) {
     const user = req.user!;
     return this.authService.getMe(user.id, user.tenantId);
-  }
-
-  // ── Туслах: host-ээс tenant_id авах ────────────────────────
-  private async resolveTenantId(req: FastifyRequest): Promise<string> {
-    const host = req.headers['host'] ?? '';
-    let slug: string;
-
-    if (host.includes('localhost') || host.includes('127.0.0.1')) {
-      slug = process.env.DEV_TENANT_SLUG ?? 'test-tenant';
-    } else {
-      const parts = host.split('.');
-      slug = parts.length >= 3 ? parts[0] : 'test-tenant';
-    }
-
-    const tenantId = await this.tenantCacheService?.getTenantId(slug) ?? null;
-    if (!tenantId) {
-      const { ForbiddenException } = await import('@nestjs/common');
-      throw new ForbiddenException(`Tenant "${slug}" олдсонгүй`);
-    }
-
-    return tenantId;
   }
 }

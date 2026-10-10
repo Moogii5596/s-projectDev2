@@ -70,7 +70,8 @@ export interface CoreUserStore {
 
 const PER_PAGE = 200;
 
-async function findAuthUserId(admin: AuthAdminLike, email: string): Promise<string | null> {
+/** Supabase Auth-аас email-ээр (хуудаслаж) хайна — pilot-admin ч ашиглана */
+export async function findAuthUserId(admin: Pick<AuthAdminLike, 'listUsers'>, email: string): Promise<string | null> {
   const target = email.toLowerCase();
   for (let page = 1; page <= 1000; page += 1) {
     const { data, error } = await admin.listUsers({ page, perPage: PER_PAGE });
