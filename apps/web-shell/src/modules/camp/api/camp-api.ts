@@ -1,21 +1,37 @@
 import apiClient from '../../../api/client'
 import type {
+  AdjustmentReason,
   Building,
   Camp,
   CampSettings,
   CampUser,
   Crew,
   Department,
+  Direction,
+  Employee,
+  EmployeeStatus,
+  ImportConfirmResult,
+  ImportHeader,
+  ImportPreview,
   MealLocation,
+  MealType,
+  Movement,
   MyPermissions,
   Organization,
   OrgServiceType,
   OrgType,
+  Page,
   PermissionDef,
+  Presence,
   Role,
   Room,
+  RoomAllocation,
+  RoomBoard,
   RoomStatus,
+  ShiftAdjustment,
+  ShiftCalendar,
   ShiftSegment,
+  ShiftType,
   UserRole,
 } from './types'
 
@@ -80,6 +96,73 @@ export const campApi = {
   createCrew: (campId: string, body: { code: string; name?: string | null; rosterAnchorDate: string }) => post<Crew>(campUrl(campId, '/crews'), body),
   updateCrew: (campId: string, id: string, body: { name?: string | null; rosterAnchorDate?: string; isActive?: boolean }) =>
     patch<Crew>(campUrl(campId, `/crews/${id}`), body),
+
+  // ── Ажилтан ────────────────────────────────────────────────
+  employees: (campId: string, q: EmployeeQuery) => get<Page<Employee>>(campUrl(campId, '/employees'), q),
+  createEmployee: (campId: string, body: EmployeeInput) => post<Employee>(campUrl(campId, '/employees'), body),
+  updateEmployee: (campId: string, id: string, body: Partial<EmployeeInput> & { status?: EmployeeStatus }) =>
+    patch<Employee>(campUrl(campId, `/employees/${id}`), body),
+
+  // ── Ирц ────────────────────────────────────────────────────
+  /** Загвар xlsx (JWT-тэй тул blob-оор татна) */
+  importTemplate: async (campId: string): Promise<Blob> =>
+    (await apiClient.get<Blob>(campUrl(campId, '/movement-imports/template'), { responseType: 'blob' })).data,
+  /**
+   * multipart: Content-Type-ийг 'multipart/form-data' болгож өгнө — client-ийн анхдагч 'application/json' үлдвэл
+   * axios FormData-г JSON болгон хувиргана. Browser boundary-г өөрөө нэмнэ.
+   */
+  uploadImport: async (campId: string, file: File): Promise<ImportPreview> => {
+    const form = new FormData()
+    form.append('file', file)
+    return (await apiClient.post<ImportPreview>(campUrl(campId, '/movement-imports'), form, { headers: { 'Content-Type': 'multipart/form-data' } })).data
+  },
+  imports: (campId: string) => get<ImportHeader[]>(campUrl(campId, '/movement-imports')),
+  confirmImport: (campId: string, id: string) => post<ImportConfirmResult>(campUrl(campId, `/movement-imports/${id}/confirm`)),
+  cancelImport: (campId: string, id: string) => post<unknown>(campUrl(campId, `/movement-imports/${id}/cancel`)),
+  movements: (campId: string, q: { from: string; to: string; employeeId?: string }) => get<Movement[]>(campUrl(campId, '/movements'), q),
+  createMovement: (campId: string, body: { employeeId: string; date: string; direction: Direction; meals?: MealType[]; shift?: ShiftType }) =>
+    post<unknown>(campUrl(campId, '/movements'), body),
+  deleteMovement: (campId: string, id: string) => del<unknown>(campUrl(campId, `/movements/${id}`)),
+
+  // ── Ээлж ───────────────────────────────────────────────────
+  shiftCalendar: (campId: string, q: { from: string; to: string; departmentId?: string; crewId?: string }) =>
+    get<ShiftCalendar>(campUrl(campId, '/shift-calendar'), q),
+  shiftAdjustments: (campId: string, q: { from: string; to: string; employeeId?: string }) => get<ShiftAdjustment[]>(campUrl(campId, '/shift-adjustments'), q),
+  createShiftAdjustments: (
+    campId: string,
+    body: { employeeIds: string[]; startDate: string; endDate: string; shift: ShiftType; reasonType: AdjustmentReason; reason?: string | null },
+  ) => post<{ created: number }>(campUrl(campId, '/shift-adjustments'), body),
+  deleteShiftAdjustment: (campId: string, id: string) => del<unknown>(campUrl(campId, `/shift-adjustments/${id}`)),
+
+  // ── Өрөө ───────────────────────────────────────────────────
+  roomBoard: (campId: string, date: string) => get<RoomBoard>(campUrl(campId, '/room-board'), { date }),
+  roomAllocations: (campId: string, q: { date?: string; roomId?: string; employeeId?: string }) => get<RoomAllocation[]>(campUrl(campId, '/room-allocations'), q),
+  allocateRoom: (campId: string, body: { employeeId: string; roomId: string; startDate: string; replaceCurrent?: boolean }) =>
+    post<unknown>(campUrl(campId, '/room-allocations'), body),
+  endAllocation: (campId: string, id: string, endDate: string) => post<unknown>(campUrl(campId, `/room-allocations/${id}/end`), { endDate }),
+
+  // ── Хоол ───────────────────────────────────────────────────
+  presence: (campId: string, date: string) => get<Presence>(campUrl(campId, '/presence'), { date }),
+}
+
+export interface EmployeeQuery {
+  cursor?: string
+  limit?: number
+  q?: string
+  departmentId?: string
+  crewId?: string
+  organizationId?: string
+  status?: EmployeeStatus
+}
+
+export interface EmployeeInput {
+  organizationId: string
+  departmentId: string
+  crewId?: string | null
+  employeeCode: string
+  fullName: string
+  position?: string | null
+  phone?: string | null
 }
 
 export interface OrganizationInput {

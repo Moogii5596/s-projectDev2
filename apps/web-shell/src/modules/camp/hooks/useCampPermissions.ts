@@ -18,6 +18,25 @@ export const campKeys = {
   rooms: (campId: string) => ['camp', campId, 'rooms'] as const,
   departments: (campId: string) => ['camp', campId, 'departments'] as const,
   crews: (campId: string) => ['camp', campId, 'crews'] as const,
+  employees: (campId: string) => ['camp', campId, 'employees'] as const,
+  imports: (campId: string) => ['camp', campId, 'imports'] as const,
+  movements: (campId: string) => ['camp', campId, 'movements'] as const,
+  calendar: (campId: string) => ['camp', campId, 'calendar'] as const,
+  adjustments: (campId: string) => ['camp', campId, 'adjustments'] as const,
+  roomBoard: (campId: string) => ['camp', campId, 'room-board'] as const,
+  allocations: (campId: string) => ['camp', campId, 'allocations'] as const,
+  presence: (campId: string) => ['camp', campId, 'presence'] as const,
+  /** Ирц/ээлж/өрөө өөрчлөгдөхөд хамааралтай бүх харагдац */
+  operational: (campId: string) =>
+    [
+      ['camp', campId, 'movements'],
+      ['camp', campId, 'calendar'],
+      ['camp', campId, 'adjustments'],
+      ['camp', campId, 'room-board'],
+      ['camp', campId, 'allocations'],
+      ['camp', campId, 'presence'],
+      ['camp', campId, 'imports'],
+    ] as const,
 }
 
 /**

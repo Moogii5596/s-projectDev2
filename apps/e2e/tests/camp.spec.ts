@@ -26,6 +26,9 @@ async function openCamp(page: Page) {
     throw new Error('admin@test.mn-д кемпийн эрх алга — supabase/dev/camp_e2e_grant.sql-ийг ажиллуулна уу (README тэмдэглэл)');
   }
   await page.getByRole('link', { name: new RegExp(CAMP_NAME) }).click();
+  // кемп нээгдэхэд анхдагч хэсэг = Ирц (багц 2); тохиргоо руу шилжинэ
+  await page.waitForURL('**/attendance');
+  await page.getByRole('link', { name: 'Тохиргоо', exact: true }).click();
   await page.waitForURL('**/settings');
 }
 

@@ -144,3 +144,167 @@ export interface UserRole {
   role: { id: string; name: string; isSystem: boolean }
   camp: { id: string; code: string; name: string } | null
 }
+
+// ── Шат 8 багц 2: ажилтан, ирц, ээлж, өрөө, хоол ─────────────
+export type EmployeeStatus = 'ACTIVE' | 'INACTIVE'
+export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'NIGHT'
+export type Direction = 'ARRIVAL' | 'DEPARTURE'
+export type MovementKind = 'ROSTER' | 'OFF_ROSTER'
+export type ImportStatus = 'PREVIEW' | 'CONFIRMED' | 'CANCELLED'
+export type AdjustmentReason = 'EARLY_ARRIVAL' | 'SHIFT_CHANGE' | 'OTHER'
+export type ShiftSource = 'ADJUSTMENT' | 'PATTERN' | 'UNIFORM_PATTERN' | 'UNKNOWN'
+export type DayPresence = 'ARRIVAL' | 'DEPARTURE' | 'FULL_DAY'
+
+export interface Employee {
+  id: string
+  employeeCode: string
+  fullName: string
+  position: string | null
+  phone: string | null
+  status: EmployeeStatus
+  organizationId: string
+  departmentId: string
+  crewId: string | null
+  createdAt: string
+  updatedAt: string
+  organization: { name: string }
+  department: { code: string; name: string }
+  crew: { code: string } | null
+}
+
+export interface Page<T> {
+  data: T[]
+  nextCursor: string | null
+  hasMore: boolean
+}
+
+export interface ImportRow {
+  row: number
+  employeeCode: string
+  employeeId: string | null
+  date: string | null
+  direction: Direction | null
+  kind: MovementKind | null
+  meals: MealType[] | null
+  shift: ShiftType | null
+  errors: string[]
+}
+
+export interface ImportHeader {
+  id: string
+  fileName: string
+  status: ImportStatus
+  totalRows: number
+  okRows: number
+  errorRows: number
+  createdAt: string
+  confirmedAt?: string | null
+}
+
+export interface ImportPreview {
+  import: ImportHeader
+  rows: ImportRow[]
+  summary: { arrivals: number; departures: number; offRoster: number; shiftAdjustments: number; errorRows: number }
+}
+
+export interface ImportConfirmResult {
+  status: 'CONFIRMED'
+  movements: number
+  newStays: number
+  closedStays: number
+  adjustments: number
+}
+
+/** CONFIRM 409 үед: { message, errors: [{ row, employeeCode, messages }] } */
+export interface ImportRowError {
+  row: number
+  employeeCode: string
+  messages: string[]
+}
+
+export interface Movement {
+  id: string
+  movementDate: string
+  direction: Direction
+  kind: MovementKind
+  meals: MealType[]
+  importId: string | null
+  createdAt: string
+  employee: { id: string; employeeCode: string; fullName: string; department: { code: string }; crew: { code: string } | null }
+}
+
+export interface ShiftAdjustment {
+  id: string
+  startDate: string
+  endDate: string
+  shift: ShiftType
+  reasonType: AdjustmentReason
+  reason: string | null
+  createdAt: string
+  employee: { id: string; employeeCode: string; fullName: string }
+  createdByUser: { email: string; fullName: string | null }
+}
+
+export interface CalendarCell {
+  date: string
+  shift: ShiftType | null
+  source: ShiftSource
+  dayNo: number | null
+  presence: DayPresence | null
+}
+
+export interface ShiftCalendar {
+  from: string
+  to: string
+  days: string[]
+  employees: { id: string; employeeCode: string; fullName: string; departmentCode: string; crewCode: string | null; cells: CalendarCell[] }[]
+}
+
+export interface RoomAllocation {
+  id: string
+  startDate: string
+  endDate: string | null
+  room: { id: string; roomNo: string; building: { code: string } }
+  employee: { id: string; employeeCode: string; fullName: string; crew: { code: string } | null }
+}
+
+export interface BoardOccupant {
+  id: string
+  employeeCode: string
+  fullName: string
+  crewCode: string | null
+  presentTonight: boolean
+}
+
+export interface BoardRoom {
+  id: string
+  roomNo: string
+  floor: number | null
+  capacity: number
+  roomStatus: RoomStatus
+  building: { code: string; name: string }
+  allocatedCount: number
+  presentCount: number
+  occupancy: 'VACANT' | 'PARTIAL' | 'FULL'
+  overCapacity: boolean
+  occupants: BoardOccupant[]
+}
+
+export interface RoomBoard {
+  date: string
+  rooms: BoardRoom[]
+  totals: { rooms: number; capacity: number; present: number; vacant: number; full: number }
+  unassigned: { id: string; employeeCode: string; fullName: string; departmentCode: string; crewCode: string | null }[]
+}
+
+export interface Presence {
+  date: string
+  presentCount: number
+  lines: { mealType: MealType; mealLocationId: string | null; mealLocationName: string | null; count: number }[]
+  breakdown: { departmentCode: string; group: string; mealType: MealType; mealLocationId: string | null; count: number }[]
+  personDays: string
+  warnings: {
+    unknownShift: { employeeId: string; employeeCode: string; fullName: string; departmentCode: string }[]
+    noDefaultMealLocation: boolean
+  }
+}

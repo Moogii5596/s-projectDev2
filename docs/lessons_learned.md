@@ -60,6 +60,8 @@
 | PRISMA-003 | Prisma алдааны текст `\"` escape-тэй | хэвийн болгох + SQLSTATE-ээр таних |
 | CONC-001 | Snapshot бичих ↔ дэд мөр өөрчлөх race | эцэг мөрийг `FOR SHARE`; төлвийг эхэлж сольж дараа нь унш |
 | PROC-003 | Тасарсан оролдлогын файл үлдэж холилдсон | эхлэхийн өмнө `git status`; "updated" хариу = дохио |
+| TEST-008 | Playwright шошго дэд мөрөөр таарна | `exact: true`, `{' '}`, `scope="col"`; e2e-г dry-run |
+| TEST-009 | Interception multipart файлгүй | upload-ийг бодит HTTP (proxy → echo)-ээр шалгах; axios FormData Content-Type |
 
 ---
 
@@ -919,10 +921,23 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 
 ---
 
+### [TEST-008] Playwright: `getByLabel`/`getByRole(name)` анхдагчаар том жижиг үсэг үл харгалзсан ДЭД мөр хайдаг
+**Тохиолдсон:** Шат 8 багц 2 — хуурамч API-тай браузерын шалгалт, e2e dry-run. `getByLabel('Өрөө')` нь "Одоогийн өрөөг …" checkbox болон dialog-ийн `aria-label`-тай ("Өрөө шилжүүлэх") давхцаж strict mode алдаа өгсөн; `'Эхлэх огноо'`, `'Ээлж'` (↔ "Хэлтэс, ээлж" холбоос), `'1-р өдөр'` (↔ "11-р өдөр") мөн адил. `<span>{code}</span>{name}` хоорондоо зайгүй тул нэр "E1Бат" болж regex таараагүй. `<th>` нь `scope`-гүй үед columnheader гэж танигдаагүй.
+**Шийдэл:** Тогтмол шошгод `{ exact: true }`; нэр/кодын хооронд `{' '}`; хүснэгтийн толгойд `scope="col"`; давтагдах элементэд (өрөөгүй ажилтны chip) `role="group"` + `aria-label`.
+**Дүрэм:** e2e/UI тест бичихдээ богино шошгыг ЗААВАЛ `exact`; spec-ийг таны машинд өгөхөөс өмнө хуурамч backend дээр dry-run хийнэ (энэ удаа spec-ийн 2 selector-ийн алдааг илрүүлсэн).
+
+### [TEST-009] Playwright route interception multipart файлын агуулгыг дамжуулдаггүй (`postDataBuffer` хоосон)
+**Тохиолдсон:** Шат 8 багц 2 — xlsx upload-ийн mock шалгалт "file талбар/xlsx алга" гэж унасан; бодит алдаа биш (CDP файл blob-ийг interception-д өгдөггүй).
+**Шийдэл:** Upload-ийг `route.continue()`-ээр vite proxy → жижиг echo сервер (localhost:3000) руу бодитоор илгээж байт, boundary, файлын нэрийг шалгасан (6512 байт xlsx → 6750 байт multipart). UI урсгалын mock нь зөвхөн Content-Type-ийг шалгана. Мөн axios-ийн анхдагч `Content-Type: application/json` FormData-г JSON болгодог тул upload-д `'multipart/form-data'` гэж тодорхой өгсөн (boundary-г browser нэмнэ).
+**Дүрэм:** Файл илгээх хүсэлтийг mock interception-ээр биш бодит HTTP-ээр шалгана; axios-ийн JSON анхдагчтай client-ээр FormData илгээхдээ Content-Type-ийг тодорхой заана.
+
+---
+
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §15: TEST-008 (Playwright шошгын дэд мөр), TEST-009 (interception multipart) |
 | 2026-10-10 | §15: PROC-003 (тасарсан оролдлогын үлдэгдэл файл) |
 | 2026-10-09 | §15: CONC-001 (засвар хаах ↔ сэлбэг race, trigger `FOR SHARE`); VALID-001 дүрэм (3) хэрэгжсэн (`configureApp`) |
 | 2026-10-09 | §15: VALID-001 (implicit conversion → boolean query буруу) |

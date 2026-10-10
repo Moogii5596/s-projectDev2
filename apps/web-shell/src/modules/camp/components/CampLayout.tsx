@@ -4,8 +4,13 @@ import { campApi } from '../api/camp-api'
 import { campKeys } from '../hooks/useCampPermissions'
 import { Badge, ErrorBox, Loading } from './ui'
 
-/** Кемп тус бүрийн хэсгүүд (Шат 8 V1). Багц 2–3-т ирц, өрөө, хоол, хөрөнгө, засвар нэмэгдэнэ */
+/** Кемп тус бүрийн хэсгүүд (Шат 8 V1): өдөр тутмын ажиллагаа эхэнд, тохиргоо сүүлд. Багц 3-т хөрөнгө, засвар нэмэгдэнэ */
 export const CAMP_SECTIONS: { to: string; label: string }[] = [
+  { to: 'attendance', label: 'Ирц' },
+  { to: 'shifts', label: 'Ээлж' },
+  { to: 'rooms', label: 'Өрөөний самбар' },
+  { to: 'meals', label: 'Хоол' },
+  { to: 'employees', label: 'Ажилтан' },
   { to: 'settings', label: 'Тохиргоо' },
   { to: 'facilities', label: 'Байр, өрөө' },
   { to: 'departments', label: 'Хэлтэс, ээлж' },

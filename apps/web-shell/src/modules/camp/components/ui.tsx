@@ -159,7 +159,7 @@ export function Table({ head, children }: { head: ReactNode[]; children: ReactNo
         <thead className="bg-gray-50 text-gray-600">
           <tr>
             {head.map((h, i) => (
-              <th key={i} className="text-left font-medium px-3 py-2 whitespace-nowrap">
+              <th key={i} scope="col" className="text-left font-medium px-3 py-2 whitespace-nowrap">
                 {h}
               </th>
             ))}
