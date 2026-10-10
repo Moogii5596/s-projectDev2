@@ -1,11 +1,13 @@
 import { Prisma } from '@prisma/client';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { PrismaService }          from '../../db/prisma.service';
 import { PessimisticLockService } from './pessimistic-lock.service';
 import { resolveUserId }          from '../../common/helpers/resolve-user-id.helper';
 import { EventBusService }        from '../event-bus/event-bus.service';
 import { EventTypes }             from '../event-bus/interfaces/cloud-event.interface';
 import { MrLifecycleService }     from '../mr-lifecycle/mr-lifecycle.service';
+import { CacheService }           from '../../cache/cache.service';
+import { inTenantTx }             from '../../db/tenant-tx';
 
 export interface CreateInstanceParams {
   tenantId:     string;
@@ -37,7 +39,21 @@ export class WorkflowService {
     private readonly lockSvc:      PessimisticLockService,
     private readonly eventBusSvc:  EventBusService,
     private readonly lifecycle:    MrLifecycleService,  // Phase 4: MR батлах 2 дахь зам
+    @Optional() private readonly cache?: CacheService,  // Phase 4.8.3: mr_headers-ийн төлөв өөрчлөгдөхөд MR cache цэвэрлэх [CACHE-001]
   ) {}
+
+  /** Phase 4.8.3: core_users хандалт tenant transaction дотор (app_user + RLS) */
+  private resolveActorId(authId: string, tenantId: string): Promise<string> {
+    return inTenantTx(this.prisma, tenantId, (tx) => resolveUserId(tx, authId, tenantId));
+  }
+
+  private async invalidateMrCache(tenantId: string): Promise<void> {
+    try {
+      await this.cache?.invalidateTenant(tenantId);
+    } catch {
+      /* cache алдаа нь workflow-ийн үр дүнг өөрчлөхгүй (TTL 60с) */
+    }
+  }
 
   /**
    * Шинэ workflow instance үүсгэх (PENDING төлөвтэй)
@@ -70,12 +86,12 @@ export class WorkflowService {
    */
   async approveStep(params: ApproveStepParams) {
     // RULE-13: authId → core_users.id
-    const actorId = await resolveUserId(this.prisma, params.authId, params.tenantId);
+    const actorId = await this.resolveActorId(params.authId, params.tenantId);
 
     // Pessimistic lock
     await this.lockSvc.acquireLock(params.instanceId, actorId, params.tenantId);
 
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // RULE-03
       await tx.$executeRaw`SELECT set_config('app.tenant_id', ${params.tenantId}, true)`;
 
@@ -144,6 +160,8 @@ export class WorkflowService {
         });
       }
     });
+    await this.invalidateMrCache(params.tenantId);
+    return result;
   }
 
   /**
@@ -156,12 +174,12 @@ export class WorkflowService {
    */
   async rejectStep(params: RejectStepParams) {
     // RULE-13
-    const actorId = await resolveUserId(this.prisma, params.authId, params.tenantId);
+    const actorId = await this.resolveActorId(params.authId, params.tenantId);
 
     // Pessimistic lock
     await this.lockSvc.acquireLock(params.instanceId, actorId, params.tenantId);
 
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // RULE-03
       await tx.$executeRaw`SELECT set_config('app.tenant_id', ${params.tenantId}, true)`;
 
@@ -210,5 +228,7 @@ export class WorkflowService {
         data:        { instanceId: params.instanceId, actorId, comment: params.comment },
       });
     });
+    await this.invalidateMrCache(params.tenantId);
+    return result;
   }
 }

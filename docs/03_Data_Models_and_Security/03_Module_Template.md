@@ -43,7 +43,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON <items> TO app_user;                 -- 
 tests/<module>.service.test.ts
 ```
 
-Service-ийн заавал хэв маяг:
+Service-ийн заавал хэв маяг (нийтлэг хувилбар: `import { inTenantTx } from '../../db/tenant-tx'` — Phase 4.8.3 [RLS-007]):
 
 ```ts
 private inTenantTx<T>(tenantId: string, fn: (tx: Prisma.TransactionClient) => Promise<T>) {

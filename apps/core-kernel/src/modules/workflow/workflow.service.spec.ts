@@ -47,6 +47,8 @@ describe('WorkflowService', () => {
         findFirst: vi.fn().mockResolvedValue({ id: CORE_USER_ID }),
       },
     };
+    // Phase 4.8.3: resolveUserId нь tenant transaction (tx) дотор — tx.coreUser = ижил mock
+    mockTx.coreUser = mockPrisma.coreUser;
     mockLockSvc = {
       acquireLock:  vi.fn().mockResolvedValue({}),
       releaseLock:  vi.fn().mockResolvedValue(undefined),
@@ -61,6 +63,18 @@ describe('WorkflowService', () => {
     mockLifecycle = { onApproved: vi.fn().mockResolvedValue(undefined), onRejected: vi.fn().mockResolvedValue(undefined) };
 
     service = new WorkflowService(mockPrisma as never, mockLockSvc as never, mockEventBusSvc as never, mockLifecycle as never);
+  });
+
+  // ── Phase 4.8.3: actor resolution tenant transaction дотор ──
+  it('approveStep: resolveUserId нь set_config-тэй transaction дотор (app_user + RLS)', async () => {
+    mockTx.workflowInstance.findUniqueOrThrow.mockResolvedValue({ id: INSTANCE_ID, currentStep: 0, definition: TWO_STEP_DEF, resolvedSteps: null, entityType: 'X', entityId: null });
+    await service.approveStep({ authId: AUTH_ID, tenantId: TENANT_ID, instanceId: INSTANCE_ID });
+    const firstSetConfig = mockTx.$executeRaw.mock.invocationCallOrder[0];
+    const lookup = mockPrisma.coreUser.findFirst.mock.invocationCallOrder[0];
+    expect(mockTx.$executeRaw.mock.calls[0][0].join('?')).toContain("set_config('app.tenant_id'");
+    expect(mockTx.$executeRaw.mock.calls[0][1]).toBe(TENANT_ID);
+    expect(firstSetConfig).toBeLessThan(lookup);
+    expect(mockPrisma.$transaction).toHaveBeenCalledTimes(2); // actor + алхам
   });
 
   // ── createInstance ──────────────────────────────────────────
@@ -150,8 +164,9 @@ describe('WorkflowService', () => {
           data: expect.objectContaining({ status: 'APPROVED' }),
         }),
       );
-      // mr_headers sync ($executeRaw дуудагдсан — set_config + UPDATE)
-      expect(mockTx.$executeRaw).toHaveBeenCalledTimes(2);
+      // mr_headers sync ($executeRaw дуудагдсан — set_config (actor tx) + set_config (алхам tx) + UPDATE — Phase 4.8.3)
+      expect(mockTx.$executeRaw).toHaveBeenCalledTimes(3);
+      expect(mockTx.$executeRaw.mock.calls[2][0].join('?')).toContain('UPDATE mr_headers');
     });
 
     it('RULE-13: actorId = core_users.id (authId биш)', async () => {
@@ -210,8 +225,9 @@ describe('WorkflowService', () => {
           }),
         }),
       );
-      // mr_headers sync ($executeRaw: set_config + UPDATE)
-      expect(mockTx.$executeRaw).toHaveBeenCalledTimes(2);
+      // mr_headers sync ($executeRaw: set_config (actor tx) + set_config (алхам tx) + UPDATE — Phase 4.8.3)
+      expect(mockTx.$executeRaw).toHaveBeenCalledTimes(3);
+      expect(mockTx.$executeRaw.mock.calls[2][0].join('?')).toContain('UPDATE mr_headers');
     });
 
     it('RULE-13: actorId = core_users.id (authId биш)', async () => {

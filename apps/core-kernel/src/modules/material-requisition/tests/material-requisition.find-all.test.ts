@@ -13,13 +13,20 @@ const C_AT = new Date('2026-10-10T00:00:05.000Z');
 const mk = (i: number) => ({ id: `0192a3b4-0000-7000-8000-00000000000${i}`, createdAt: new Date(Date.UTC(2026, 9, 10, 0, 0, 5 - i)) });
 
 describe('MaterialRequisitionService.findAll (cursor)', () => {
-  let prisma: { mrHeader: { findMany: ReturnType<typeof vi.fn> }; $transaction: ReturnType<typeof vi.fn> };
+  let prisma: {
+    mrHeader: { findMany: ReturnType<typeof vi.fn> };
+    tx: { $executeRaw: ReturnType<typeof vi.fn> };
+    $transaction: ReturnType<typeof vi.fn>;
+  };
   let cache: { buildKey: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> };
   let svc: MaterialRequisitionService;
   const q = (v: Partial<QueryMrDto>) => Object.assign(new QueryMrDto(), v);
 
   beforeEach(() => {
-    prisma = { mrHeader: { findMany: vi.fn().mockResolvedValue([]) }, $transaction: vi.fn() };
+    const mrHeader = { findMany: vi.fn().mockResolvedValue([]) };
+    const tx = { mrHeader, $executeRaw: vi.fn().mockResolvedValue(1) };
+    // Phase 4.8.3: бүх query tenant transaction (set_config) дотор
+    prisma = { mrHeader, tx, $transaction: vi.fn((fn: (t: typeof tx) => unknown) => Promise.resolve(fn(tx))) as ReturnType<typeof vi.fn> };
     cache = { buildKey: vi.fn().mockReturnValue('k'), get: vi.fn().mockResolvedValue(null), set: vi.fn() };
     svc = new MaterialRequisitionService(prisma as never, {} as never, cache as never, {} as never);
   });
@@ -42,6 +49,8 @@ describe('MaterialRequisitionService.findAll (cursor)', () => {
       OR: [{ createdAt: { lt: C_AT } }, { id: { lt: C_ID } }],
     });
     expect(args.orderBy).toEqual([{ createdAt: 'desc' }, { id: 'desc' }]);
+    expect(prisma.tx.$executeRaw.mock.calls[0][1]).toBe(T); // set_config(app.tenant_id)
+    expect(prisma.tx.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(prisma.mrHeader.findMany.mock.invocationCallOrder[0]);
     expect(args.take).toBe(3);
     expect(res).toMatchObject({ hasMore: true, nextCursor: encodeCursor(mk(2).id, mk(2).createdAt) });
     expect((res as { data: unknown[] }).data).toHaveLength(2);

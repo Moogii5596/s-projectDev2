@@ -27,7 +27,12 @@ describe('ApprovalSlaService', () => {
       },
     };
 
-    const result = await new ApprovalSlaService(prisma as never).getReport('tenant-id', from, to);
+    // Phase 4.8.3: tenant transaction (set_config эхэлж)
+    const tx = { ...prisma, $executeRaw: vi.fn().mockResolvedValue(1) };
+    const client = { $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)) };
+    const result = await new ApprovalSlaService(client as never).getReport('tenant-id', from, to);
+    expect(tx.$executeRaw.mock.calls[0][1]).toBe('tenant-id');
+    expect(tx.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(prisma.workflowSlaLog.findMany.mock.invocationCallOrder[0]);
 
     expect(result.summary).toEqual(expect.objectContaining({
       total: 2, completed_on_time: 1, escalated: 1, avg_completion_hours: 12,

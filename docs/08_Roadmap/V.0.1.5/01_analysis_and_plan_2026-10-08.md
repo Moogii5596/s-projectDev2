@@ -142,7 +142,12 @@ pnpm --filter e2e exec tsx tests/cluster-check.ts
   - [x] **4.8.2 Migration ✅** `20261010004_rls_app_user.sql`: 10 хүснэгтэд PERMISSIVE `tenant_isolation_*` + GRANT; буруу GUC-тэй `approval_logs_tenant_isolation` устгав [RLS-005]; `current_tenant_id()` NULLIF [RLS-006]; `extensions` USAGE. `tenants`/`super_admins` → app_user эрхгүй (системийн холболт). **Апп-ын зан төлөв өөрчлөгдөхгүй** (апп `postgres`-ээр хэвээр)
     - Шалгалт (PG16): аудит **49/49**, давтан ажиллуулах ✅, app_user 11/11 (49 хүснэгт × 3 context, cross-tenant бичих татгалзав, tenants эрхгүй); migration-гүй DB дээр ижил тест УНАСАН (хүчинтэй тест) · `test/rls-app-user.integration.spec.ts` (шинэ)
     - [ ] Таны компьютер: `migration up` → `db:generate` → `test:integration` → аудит дахин (хураангуй 49 / 2 / 0)
-  - [ ] **4.8.3 Код** — MR, workflow, event-bus, auth: tenant query → `set_config` transaction; үр дүнгүй `$use` хасах
+    - [x] Таны компьютер (15:21): `migration up` → integration ✅ → аудит **49 / 2 / 0** ✅
+  - [x] **4.8.3 Код ✅** — `db/tenant-tx.ts` (`inTenantTx`): **MR service бүхэлдээ** (create/list/detail/update/remove/submit/approve/reject — өмнө нь нэг ч query context-гүй), `WorkflowService` actor lookup, `ApprovalSlaService`, `AuthService.register` (set_config ба create тусдаа statement байсан); үр дүнгүй `$use` устгав [RLS-007]
+    - Нэмэлт засвар [CACHE-001]: MR төлөв/эзэмшигчийн шалгалт 60с cache-ээс уншдаг, өөрчлөлтийн дараа cache цэвэрлэдэггүй байв → transaction доторх шинэ мөр + `invalidateTenant` (MR + workflow approve/reject)
+    - Шалгалт: unit **458/458** · tsc ✅ · lint 0 алдаа · **бодит PG16 + бодит Prisma (wasm engine + pg adapter) harness**: `app_user`-ээр MR бүтэн урсгал **8/8** (хуучин кодоор **7/8 УНАСАН**), `postgres`-ээр 8/8 (одоогийн горим өөрчлөгдөөгүй) · mutation (`inTenantTx`-ээс set_config хасах) → unit 5 + harness 7 унасан
+    - 4.8.4-т шилжих (системийн холболт): `TenantCacheService.getTenantId` (tenants), `AuthService.login`, `SuperAdminGuard`, `TenantOnboardingService`, `OutboxPollerService` + `DlqService`, `EscalationScheduler` (бүх tenant-ийг скан)
+    - [ ] Таны компьютер: `test` → `test:integration` (зан төлөв өөрчлөгдөхгүй — апп `postgres`-ээр хэвээр)
   - [ ] **4.8.4 Хоёр холболт** — `DATABASE_URL` (хүсэлт) / `SYSTEM_DATABASE_URL` (onboarding, outbox, scheduler, guard lookup); эхэндээ хоёулаа `postgres`
   - [ ] **4.8.5 Тест** — integration-ийг `app_user`-ээр, cross-tenant (MR, workflow) leakage
 

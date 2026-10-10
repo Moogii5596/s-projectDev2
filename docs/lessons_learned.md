@@ -71,6 +71,9 @@
 | PROC-005 | Хуучин snapshot дээр ажиллах эрсдэл (хавтас зөөгдсөн, өөр session өөрчилсөн) | Ажил эхлэхийн өмнө төхөөрөмжөөс шинэ snapshot + hash-ийн manifest |
 | RLS-005 | Policy буруу GUC нэр (`app.current_tenant_id`) уншсан | Бүх policy `app.tenant_id`; аудит §7-оор нөхцөлийг шалгах |
 | RLS-006 | `current_tenant_id()` `''::uuid` → алдаа | `NULLIF(..., '')::uuid` — context-гүй = 0 мөр |
+| RLS-007 | `set_config` transaction-ий гадна (`$use`, тусдаа statement) → үр дүнгүй | Tenant query бүр `inTenantTx` (`db/tenant-tx.ts`) |
+| CACHE-001 | Төлөв шалгалт cache-ээс, өөрчлөлтийн дараа invalidate-гүй | Шалгалт transaction доторх шинэ мөрөөс; бичсэний дараа `invalidateTenant` |
+| TEST-010 | Cloud-д Prisma engine татагдахгүй (403) | Harness: wasm engine + `@prisma/adapter-pg` (төсөлд орохгүй) |
 
 ---
 
@@ -993,12 +996,26 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** `NULLIF(current_setting('app.tenant_id', true), '')::uuid` (+ `SET search_path` — SECURITY DEFINER). PG16 дээр 49 хүснэгт × (context-гүй, `''`, tenant) алдаагүй.
 **Дүрэм:** GUC → uuid хөрвүүлэлт ҮРГЭЛЖ `NULLIF(..., '')`.
 
+### [RLS-007] `set_config` нь transaction-ий ГАДНА → app_user-д RLS 0 мөр (MR модуль бүхэлдээ)
+**Илэрсэн (4.8.3):** `PrismaTenantClientService`-ийн `$use` middleware `this.$executeRaw(set_config(..., true))`-г тусдаа statement болгон дууддаг — `is_local=true` тул тэр statement дуусахад л арилна, дараагийн query-д хүрдэггүй (+ query бүрт 2 илүү round-trip). Үүнд найдсан **MR service-ийн 16 query бүгд context-гүй**; `AuthService.register` set_config ба create-ийг тусдаа дууддаг; `WorkflowService` actor lookup, `ApprovalSlaService` transaction-гүй. Апп `postgres` (BYPASSRLS)-ээр ажилладаг тул илрээгүй.
+**Шийдэл:** `db/tenant-tx.ts` `inTenantTx(prisma, tenantId, fn)` — set_config + бүх query нэг transaction. MR service бүхэлд нь шилжүүлэв, `$use` устгав. PG16 + бодит Prisma-аар `app_user`: хуучин код 7/8 унасан → шинэ 8/8.
+**Дүрэм:** Tenant хүснэгтэд хандах query бүр `inTenantTx`/`camp-tx` дотор. `this.prisma.<model>`-ийг transaction-гүй ашиглахгүй (зөвхөн системийн холболт — 4.8.4).
+
+### [CACHE-001] MR төлөв/эзэмшигчийн шалгалт 60с cache-ээс, өөрчлөлтийн дараа cache цэвэрлэдэггүй байсан
+**Эрсдэл:** Дэлгэрэнгүйг харсан (DRAFT cache-лэгдсэн) → submit → 60с дотор approve: cache-ийн DRAFT-аас болж 403 "Зөвхөн PENDING_APPROVAL…"; жагсаалт/дэлгэрэнгүй 60с хуучин. Workflow-ийн approve/reject `mr_headers`-ийг raw SQL-ээр өөрчилдөг ч MR cache мэдэхгүй.
+**Шийдэл:** Шалгалт `loadOne(tx)` — transaction доторх шинэ мөр; create/update/remove/submit/approve/reject болон `WorkflowService.approveStep/rejectStep`-ийн дараа `cache.invalidateTenant` (алдаа → warn, үр дүнг буцаахгүй).
+**Дүрэм:** Cache зөвхөн уншиж харуулахад; бизнесийн шийдвэр (төлөв, эрх) DB-ийн шинэ мөрөөс. Бичсэн service бүр cache-ээ цэвэрлэнэ.
+
+### [TEST-010] Cloud орчинд Prisma query engine татагдахгүй (binaries.prisma.sh 403) — бодит DB-тэй Prisma тест хийх арга
+**Шийдэл (зөвхөн шалгалтын harness, төсөлд орохгүй):** `previewFeatures = ["driverAdapters"]`-тай schema-г тусдаа хавтсанд generate → `wasm.js`-ийн engine loader-ийг `fs.readFileSync(query_engine_bg.wasm)` болгох → `@prisma/adapter-pg` (pg Pool) → vitest alias `@prisma/client` → shim. Үр дүн: бодит service код + бодит PostgreSQL 16 + `app_user` RLS.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §17 (Phase 4.8.3): RLS-007 (set_config transaction-ий гадна), CACHE-001 (MR cache), TEST-010 (Prisma wasm harness) |
 | 2026-10-10 | §17 (Phase 4.8.2): RLS-005 (буруу GUC policy), RLS-006 (`current_tenant_id` NULLIF) |
 | 2026-10-10 | §16 (Phase 3.6): CURSOR-001, BUILD-001, CLUSTER-001, LOG-001, PROC-005; SEED-002 → `pnpm dev:test-user` |
 | 2026-10-10 | §15: PROC-004 (Python CRLF → LF) |

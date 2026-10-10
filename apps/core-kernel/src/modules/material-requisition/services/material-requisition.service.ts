@@ -17,7 +17,20 @@ import { CacheService } from '../../../cache/cache.service';
 import { CursorPaginationResult } from '../../../common/dto/cursor-pagination.dto';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
 import { MrLifecycleService } from '../../mr-lifecycle/mr-lifecycle.service';
+import { inTenantTx, TenantTx } from '../../../db/tenant-tx';
 
+const MR_DETAIL_INCLUDE = {
+  items: { orderBy: { lineNumber: 'asc' } },
+  requester: { select: { fullName: true, email: true } },
+} satisfies Prisma.MrHeaderInclude;
+
+type MrDetail = Prisma.MrHeaderGetPayload<{ include: typeof MR_DETAIL_INCLUDE }>;
+
+/**
+ * Phase 4.8.3 (2026-10-10): бүх DB хандалт `inTenantTx` (set_config + query нэг transaction) дотор —
+ * app `app_user`-ээр холбогдоход RLS ажиллана [RLS-004]. Төлөв/эзэмшигчийн шалгалт cache-ээс биш
+ * transaction доторх ШИНЭ мөрөөс, өөрчлөлтийн дараа tenant-ийн MR cache-ийг цэвэрлэнэ [CACHE-001].
+ */
 @Injectable()
 export class MaterialRequisitionService {
   private readonly logger = new Logger(MaterialRequisitionService.name);
@@ -30,12 +43,10 @@ export class MaterialRequisitionService {
   ) {}
 
   // ────────────────────────────────────────────────
-  // PRIVATE: Supabase authId → core_users.id хөрвүүлэх
-  // TenantAuthGuard: request.user.id = Supabase auth UUID (authId)
-  // MrHeader.requesterId FK → CoreUser.id (PostgreSQL UUID) → энд хөрвүүлнэ
+  // PRIVATE: Supabase authId → core_users.id (RULE-13) — tenant transaction дотор
   // ────────────────────────────────────────────────
-  private async resolveUserId(tenantId: string, authId: string): Promise<string> {
-    const user = await this.prisma.coreUser.findFirst({
+  private async resolveUserId(tx: TenantTx, tenantId: string, authId: string): Promise<string> {
+    const user = await tx.coreUser.findFirst({
       where: { authId, tenantId },
       select: { id: true },
     });
@@ -45,13 +56,29 @@ export class MaterialRequisitionService {
     return user.id;
   }
 
+  /** Transaction доторх шинэ мөр (cache биш) — төлөв/эзэмшигч шалгахад */
+  private async loadOne(tx: TenantTx, tenantId: string, id: string): Promise<MrDetail> {
+    const header = await tx.mrHeader.findFirst({ where: { id, tenantId }, include: MR_DETAIL_INCLUDE });
+    if (!header) {
+      throw new NotFoundException(`MR олдсонгүй (id: ${id})`);
+    }
+    return header;
+  }
+
+  /** [CACHE-001] MR өөрчлөгдсөний дараа tenant-ийн жагсаалт/дэлгэрэнгүй cache-ийг цэвэрлэнэ */
+  private async invalidate(tenantId: string): Promise<void> {
+    try {
+      await this.cache.invalidateTenant(tenantId);
+    } catch (err) {
+      // Cache алдаа нь бичсэн өгөгдлийг буцаахгүй (TTL 60с дотор өөрөө шинэчлэгдэнэ)
+      this.logger.warn(`MR cache invalidate алдаа: ${(err as Error).message}`);
+    }
+  }
+
   // ────────────────────────────────────────────────
   // CREATE
   // ────────────────────────────────────────────────
   async create(tenantId: string, authId: string, dto: CreateMrDto) {
-    // authId (Supabase UUID) → core_users.id (PostgreSQL UUID)
-    const requesterId = await this.resolveUserId(tenantId, authId);
-
     const totalAmount = dto.items.reduce(
       (sum, item) => sum + item.quantity * (item.unitPrice ?? 0),
       0,
@@ -60,36 +87,41 @@ export class MaterialRequisitionService {
     let header;
     let mrNumber = '';
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      mrNumber = await this.generateMrNumber(tenantId);
       try {
-        header = await this.prisma.mrHeader.create({
-          data: {
-            tenantId,
-            mrNumber,
-            title: dto.title,
-            status: MrStatus.DRAFT,
-            requesterId,
-            department: dto.department,
-            requiredDate: dto.requiredDate ? new Date(dto.requiredDate) : null,
-            totalAmount: new Prisma.Decimal(totalAmount),
-            notes: dto.notes,
-            items: {
-              create: dto.items.map((item, idx) => ({
-                tenantId,
-                lineNumber: idx + 1,
-                description: item.description,
-                quantity: new Prisma.Decimal(item.quantity),
-                unitOfMeasure: item.unitOfMeasure ?? 'EA',
-                unitPrice: new Prisma.Decimal(item.unitPrice ?? 0),
-                notes: item.notes,
-              })),
+        // P2002 нь PostgreSQL transaction-ийг таслах тул оролдлого бүр ШИНЭ transaction
+        header = await inTenantTx(this.prisma, tenantId, async (tx) => {
+          // authId (Supabase UUID) → core_users.id (PostgreSQL UUID)
+          const requesterId = await this.resolveUserId(tx, tenantId, authId);
+          mrNumber = await this.generateMrNumber(tx, tenantId);
+          return tx.mrHeader.create({
+            data: {
+              tenantId,
+              mrNumber,
+              title: dto.title,
+              status: MrStatus.DRAFT,
+              requesterId,
+              department: dto.department,
+              requiredDate: dto.requiredDate ? new Date(dto.requiredDate) : null,
+              totalAmount: new Prisma.Decimal(totalAmount),
+              notes: dto.notes,
+              items: {
+                create: dto.items.map((item, idx) => ({
+                  tenantId,
+                  lineNumber: idx + 1,
+                  description: item.description,
+                  quantity: new Prisma.Decimal(item.quantity),
+                  unitOfMeasure: item.unitOfMeasure ?? 'EA',
+                  unitPrice: new Prisma.Decimal(item.unitPrice ?? 0),
+                  notes: item.notes,
+                })),
+              },
             },
-          },
-          include: {
-            items: {
-              orderBy: { lineNumber: 'asc' },
+            include: {
+              items: {
+                orderBy: { lineNumber: 'asc' },
+              },
             },
-          },
+          });
         });
         break;
       } catch (error) {
@@ -105,6 +137,7 @@ export class MaterialRequisitionService {
       throw new Error(`MR дугаар үүсгэж чадсангүй: ${mrNumber}`);
     }
 
+    await this.invalidate(tenantId);
     this.logger.log(`MR created: ${mrNumber} (tenant: ${tenantId})`);
     return header;
   }
@@ -141,11 +174,13 @@ export class MaterialRequisitionService {
           { id: order === 'desc' ? { lt: id } : { gt: id } },
         ],
       };
-      const items = await this.prisma.mrHeader.findMany({
-        where,
-        orderBy: [{ createdAt: order }, { id: order }],
-        take: limit + 1,
-      });
+      const items = await inTenantTx(this.prisma, tenantId, (tx) =>
+        tx.mrHeader.findMany({
+          where,
+          orderBy: [{ createdAt: order }, { id: order }],
+          take: limit + 1,
+        }),
+      );
       const hasMore = items.length > limit;
       const data = hasMore ? items.slice(0, limit) : items;
       const lastItem = data[data.length - 1];
@@ -166,15 +201,15 @@ export class MaterialRequisitionService {
       tenantId,
       ...(query.status ? { status: query.status } : {}),
     };
-    const [data, total] = await this.prisma.$transaction([
-      this.prisma.mrHeader.findMany({
+    const [data, total] = await inTenantTx(this.prisma, tenantId, async (tx) => [
+      await tx.mrHeader.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
-      this.prisma.mrHeader.count({ where }),
-    ]);
+      await tx.mrHeader.count({ where }),
+    ] as const);
 
     const result = { data, total, page, limit };
     await this.cache.set(cacheKey, result, 60);
@@ -184,34 +219,12 @@ export class MaterialRequisitionService {
   // ────────────────────────────────────────────────
   // FIND ONE
   // ────────────────────────────────────────────────
-  async findOne(
-    tenantId: string,
-    id: string,
-  ): Promise<Prisma.MrHeaderGetPayload<{
-    include: {
-      items: { orderBy: { lineNumber: 'asc' } };
-      requester: { select: { fullName: true; email: true } };
-    };
-  }>> {
+  async findOne(tenantId: string, id: string): Promise<MrDetail> {
     const cacheKey = this.cache.buildKey('mr', tenantId, 'detail', id);
-    const cached = await this.cache.get<Awaited<ReturnType<MaterialRequisitionService['findOne']>>>(cacheKey);
+    const cached = await this.cache.get<MrDetail>(cacheKey);
     if (cached) return cached;
 
-    const header = await this.prisma.mrHeader.findFirst({
-      where: { id, tenantId },
-      include: {
-        items: {
-          orderBy: { lineNumber: 'asc' },
-        },
-        requester: {
-          select: { fullName: true, email: true },
-        },
-      },
-    });
-
-    if (!header) {
-      throw new NotFoundException(`MR олдсонгүй (id: ${id})`);
-    }
+    const header = await inTenantTx(this.prisma, tenantId, (tx) => this.loadOne(tx, tenantId, id));
 
     await this.cache.set(cacheKey, header, 60);
     return header;
@@ -226,40 +239,41 @@ export class MaterialRequisitionService {
     authId: string,
     dto: UpdateMrDto,
   ) {
-    // authId (Supabase UUID) → core_users.id (PostgreSQL UUID)
-    const requesterId = await this.resolveUserId(tenantId, authId);
+    const updated = await inTenantTx(this.prisma, tenantId, async (tx) => {
+      // authId (Supabase UUID) → core_users.id (PostgreSQL UUID)
+      const requesterId = await this.resolveUserId(tx, tenantId, authId);
+      const existing = await this.loadOne(tx, tenantId, id);
 
-    const existing = await this.findOne(tenantId, id);
+      if (existing.status !== MrStatus.DRAFT) {
+        throw new ForbiddenException('DRAFT статуст л засварлах боломжтой');
+      }
+      if (existing.requesterId !== requesterId) {
+        throw new ForbiddenException('Зөвхөн үүсгэгч засварлах боломжтой');
+      }
 
-    if (existing.status !== MrStatus.DRAFT) {
-      throw new ForbiddenException('DRAFT статуст л засварлах боломжтой');
-    }
-    if (existing.requesterId !== requesterId) {
-      throw new ForbiddenException('Зөвхөн үүсгэгч засварлах боломжтой');
-    }
+      const common = {
+        ...(dto.title ? { title: dto.title } : {}),
+        ...(dto.department !== undefined ? { department: dto.department } : {}),
+        ...(dto.requiredDate !== undefined
+          ? { requiredDate: dto.requiredDate ? new Date(dto.requiredDate) : null }
+          : {}),
+        ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+        version: { increment: 1 },
+      };
 
-    if (dto.items) {
-      const totalAmount = dto.items.reduce(
-        (sum, item) => sum + item.quantity * (item.unitPrice ?? 0),
-        0,
-      );
-
-      const updated = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      if (dto.items) {
+        const totalAmount = dto.items.reduce(
+          (sum, item) => sum + item.quantity * (item.unitPrice ?? 0),
+          0,
+        );
         await tx.mrItem.deleteMany({ where: { headerId: id } });
-
         return tx.mrHeader.update({
           where: { id },
           data: {
-            ...(dto.title ? { title: dto.title } : {}),
-            ...(dto.department !== undefined ? { department: dto.department } : {}),
-            ...(dto.requiredDate !== undefined
-              ? { requiredDate: dto.requiredDate ? new Date(dto.requiredDate) : null }
-              : {}),
-            ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+            ...common,
             totalAmount: new Prisma.Decimal(totalAmount),
-            version: { increment: 1 },
             items: {
-              create: dto.items!.map((item, idx) => ({
+              create: dto.items.map((item, idx) => ({
                 tenantId,
                 lineNumber: idx + 1,
                 description: item.description,
@@ -274,45 +288,40 @@ export class MaterialRequisitionService {
             items: { orderBy: { lineNumber: 'asc' } },
           },
         });
+      }
+
+      return tx.mrHeader.update({
+        where: { id },
+        data: common,
+        include: {
+          items: { orderBy: { lineNumber: 'asc' } },
+        },
       });
-
-      return updated;
-    }
-
-    return this.prisma.mrHeader.update({
-      where: { id },
-      data: {
-        ...(dto.title ? { title: dto.title } : {}),
-        ...(dto.department !== undefined ? { department: dto.department } : {}),
-        ...(dto.requiredDate !== undefined
-          ? { requiredDate: dto.requiredDate ? new Date(dto.requiredDate) : null }
-          : {}),
-        ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
-        version: { increment: 1 },
-      },
-      include: {
-        items: { orderBy: { lineNumber: 'asc' } },
-      },
     });
+
+    await this.invalidate(tenantId);
+    return updated;
   }
 
   // ────────────────────────────────────────────────
   // REMOVE
   // ────────────────────────────────────────────────
   async remove(tenantId: string, id: string, authId: string) {
-    // authId (Supabase UUID) → core_users.id (PostgreSQL UUID)
-    const requesterId = await this.resolveUserId(tenantId, authId);
+    await inTenantTx(this.prisma, tenantId, async (tx) => {
+      // authId (Supabase UUID) → core_users.id (PostgreSQL UUID)
+      const requesterId = await this.resolveUserId(tx, tenantId, authId);
+      const existing = await this.loadOne(tx, tenantId, id);
 
-    const existing = await this.findOne(tenantId, id);
+      if (existing.status !== MrStatus.DRAFT) {
+        throw new ForbiddenException('DRAFT статуст л устгах боломжтой');
+      }
+      if (existing.requesterId !== requesterId) {
+        throw new ForbiddenException('Зөвхөн үүсгэгч устгах боломжтой');
+      }
 
-    if (existing.status !== MrStatus.DRAFT) {
-      throw new ForbiddenException('DRAFT статуст л устгах боломжтой');
-    }
-    if (existing.requesterId !== requesterId) {
-      throw new ForbiddenException('Зөвхөн үүсгэгч устгах боломжтой');
-    }
-
-    await this.prisma.mrHeader.delete({ where: { id } });
+      await tx.mrHeader.delete({ where: { id } });
+    });
+    await this.invalidate(tenantId);
     this.logger.log(`MR deleted: ${id} (tenant: ${tenantId})`);
   }
 
@@ -320,17 +329,17 @@ export class MaterialRequisitionService {
   // SUBMIT
   // ────────────────────────────────────────────────
   async submit(tenantId: string, id: string, authId: string, dto: SubmitMrDto) {
-    const requesterId = await this.resolveUserId(tenantId, authId);
-    const existing = await this.findOne(tenantId, id);
+    const updated = await inTenantTx(this.prisma, tenantId, async (tx) => {
+      const requesterId = await this.resolveUserId(tx, tenantId, authId);
+      const existing = await this.loadOne(tx, tenantId, id);
 
-    if (existing.status !== MrStatus.DRAFT) {
-      throw new ForbiddenException('Зөвхөн DRAFT MR илгээх боломжтой');
-    }
-    if (existing.requesterId !== requesterId) {
-      throw new ForbiddenException('Зөвхөн үүсгэгч илгээх боломжтой');
-    }
+      if (existing.status !== MrStatus.DRAFT) {
+        throw new ForbiddenException('Зөвхөн DRAFT MR илгээх боломжтой');
+      }
+      if (existing.requesterId !== requesterId) {
+        throw new ForbiddenException('Зөвхөн үүсгэгч илгээх боломжтой');
+      }
 
-    const updated = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const header = await tx.mrHeader.update({
         where: { id },
         data: {
@@ -408,32 +417,32 @@ export class MaterialRequisitionService {
       return header;
     });
 
+    await this.invalidate(tenantId);
     this.logger.log(`MR submitted: ${updated.mrNumber} (tenant: ${tenantId})`);
     return updated;
   }
 
   // ────────────────────────────────────────────────
-  // APPROVE
+  // APPROVE / REJECT
   // ────────────────────────────────────────────────
   async approve(tenantId: string, id: string, authId: string, dto: ApproveMrDto) {
-    const approverId = await this.resolveUserId(tenantId, authId);
+    const result = await inTenantTx(this.prisma, tenantId, async (tx) => {
+      const approverId = await this.resolveUserId(tx, tenantId, authId);
 
-    // Idempotency шалгах: status шалгалтаас ӨМНӨ — давхар approve 200 буцаах
-    const existingLog = await this.prisma.approvalLog.findUnique({
-      where: { mrId_approverId_action: { mrId: id, approverId, action: 'APPROVED' } },
-    });
-    if (existingLog) {
-      this.logger.log(`MR approve idempotent: ${id} (approver: ${approverId})`);
-      return this.findOne(tenantId, id);
-    }
+      // Idempotency шалгах: status шалгалтаас ӨМНӨ — давхар approve 200 буцаах
+      const existingLog = await tx.approvalLog.findUnique({
+        where: { mrId_approverId_action: { mrId: id, approverId, action: 'APPROVED' } },
+      });
+      if (existingLog) {
+        this.logger.log(`MR approve idempotent: ${id} (approver: ${approverId})`);
+        return { idempotent: true as const, header: await this.loadOne(tx, tenantId, id) };
+      }
 
-    const existing = await this.findOne(tenantId, id);
+      const existing = await this.loadOne(tx, tenantId, id);
+      if (existing.status !== MrStatus.PENDING_APPROVAL) {
+        throw new ForbiddenException('Зөвхөн PENDING_APPROVAL статуст батлах боломжтой');
+      }
 
-    if (existing.status !== MrStatus.PENDING_APPROVAL) {
-      throw new ForbiddenException('Зөвхөн PENDING_APPROVAL статуст батлах боломжтой');
-    }
-
-    const updated = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const header = await tx.mrHeader.update({
         where: { id },
         data: {
@@ -468,35 +477,33 @@ export class MaterialRequisitionService {
         },
       });
 
-      return header;
+      return { idempotent: false as const, header };
     });
 
-    this.logger.log(`MR approved: ${updated.mrNumber} (tenant: ${tenantId})`);
-    return updated;
+    if (result.idempotent) return result.header;
+    await this.invalidate(tenantId);
+    this.logger.log(`MR approved: ${result.header.mrNumber} (tenant: ${tenantId})`);
+    return result.header;
   }
 
-  // ────────────────────────────────────────────────
-  // REJECT
-  // ────────────────────────────────────────────────
   async reject(tenantId: string, id: string, authId: string, dto: RejectMrDto) {
-    const approverId = await this.resolveUserId(tenantId, authId);
+    const result = await inTenantTx(this.prisma, tenantId, async (tx) => {
+      const approverId = await this.resolveUserId(tx, tenantId, authId);
 
-    // Idempotency шалгах: status шалгалтаас ӨМНӨ — давхар reject 200 буцаах
-    const existingLog = await this.prisma.approvalLog.findUnique({
-      where: { mrId_approverId_action: { mrId: id, approverId, action: 'REJECTED' } },
-    });
-    if (existingLog) {
-      this.logger.log(`MR reject idempotent: ${id} (approver: ${approverId})`);
-      return this.findOne(tenantId, id);
-    }
+      // Idempotency шалгах: status шалгалтаас ӨМНӨ — давхар reject 200 буцаах
+      const existingLog = await tx.approvalLog.findUnique({
+        where: { mrId_approverId_action: { mrId: id, approverId, action: 'REJECTED' } },
+      });
+      if (existingLog) {
+        this.logger.log(`MR reject idempotent: ${id} (approver: ${approverId})`);
+        return { idempotent: true as const, header: await this.loadOne(tx, tenantId, id) };
+      }
 
-    const existing = await this.findOne(tenantId, id);
+      const existing = await this.loadOne(tx, tenantId, id);
+      if (existing.status !== MrStatus.PENDING_APPROVAL) {
+        throw new ForbiddenException('Зөвхөн PENDING_APPROVAL статуст татгалзах боломжтой');
+      }
 
-    if (existing.status !== MrStatus.PENDING_APPROVAL) {
-      throw new ForbiddenException('Зөвхөн PENDING_APPROVAL статуст татгалзах боломжтой');
-    }
-
-    const updated = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const header = await tx.mrHeader.update({
         where: { id },
         data: {
@@ -530,20 +537,22 @@ export class MaterialRequisitionService {
         },
       });
 
-      return header;
+      return { idempotent: false as const, header };
     });
 
-    this.logger.log(`MR rejected: ${updated.mrNumber} (tenant: ${tenantId})`);
-    return updated;
+    if (result.idempotent) return result.header;
+    await this.invalidate(tenantId);
+    this.logger.log(`MR rejected: ${result.header.mrNumber} (tenant: ${tenantId})`);
+    return result.header;
   }
 
   // ────────────────────────────────────────────────
-  // PRIVATE: mrNumber генерэх
+  // PRIVATE: mrNumber генерэх (tenant transaction дотор)
   // ────────────────────────────────────────────────
-  private async generateMrNumber(tenantId: string): Promise<string> {
+  private async generateMrNumber(tx: TenantTx, tenantId: string): Promise<string> {
     const year = new Date().getFullYear();
 
-    const lastMr = await this.prisma.mrHeader.findFirst({
+    const lastMr = await tx.mrHeader.findFirst({
       where: {
         tenantId,
         mrNumber: { startsWith: `MR-${year}-` },

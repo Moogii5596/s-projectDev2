@@ -9,6 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PrismaTenantClientService } from '../db/prisma-tenant-client.service';
+import { inTenantTx } from '../db/tenant-tx';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -70,19 +71,18 @@ export class AuthService {
 
     // 2. core_users-д sync — tenant RLS context-тэй
     try {
-      await this.prisma.$executeRaw`
-        SELECT set_config('app.tenant_id', ${tenantId}, true)
-      `;
-
-      const coreUser = await this.prisma.coreUser.create({
-        data: {
-          tenantId,
-          authId: authUser.id,
-          email: dto.email,
-          fullName: dto.fullName ?? null,
-          role: 'REQUESTER',
-        },
-      });
+      // Phase 4.8.3: set_config + create НЭГ transaction-д (өмнө нь тусдаа statement → app_user-д RLS татгалзана)
+      const coreUser = await inTenantTx(this.prisma, tenantId, (tx) =>
+        tx.coreUser.create({
+          data: {
+            tenantId,
+            authId: authUser.id,
+            email: dto.email,
+            fullName: dto.fullName ?? null,
+            role: 'REQUESTER',
+          },
+        }),
+      );
 
       // 3. Login токен авах
       const token = await this.getAccessToken(dto.email, dto.password);

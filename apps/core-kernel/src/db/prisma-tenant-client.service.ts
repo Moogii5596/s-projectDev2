@@ -21,22 +21,9 @@ export class PrismaTenantClientService extends PrismaClient implements OnModuleI
       log: resolvePrismaLogLevels(),
     });
 
-    // RLS middleware — Prisma query бүрт tenant_id тохируулна
-    this.$use(async (params, next) => {
-      // ⚠️ ЗААВАЛ: executeRaw/queryRaw-г дахин дуудвал infinite loop үүснэ!
-      // $executeRaw доорх мөрүүд нь $use-г дахин trigger хийдэг тул энэ guard хэрэгтэй.
-      if (params.action === 'executeRaw' || params.action === 'queryRaw') {
-        return next(params);
-      }
-
-      const ctx = tenantStorage.getStore();
-      if (ctx) {
-        await this.$executeRaw`SELECT set_config('app.tenant_id', ${ctx.tenantId}, true)`;
-        await this.$executeRaw`SELECT set_config('app.user_id', ${ctx.userId}, true)`;
-      }
-
-      return next(params);
-    });
+    // Phase 4.8.3: өмнөх `$use` middleware УСТСАН — set_config-ийг transaction-ий ГАДНА (тусдаа statement)
+    // дууддаг байсан тул дараагийн query-д хүрдэггүй (үр дүнгүй) + query бүрт 2 нэмэлт round-trip.
+    // Tenant өгөгдөл = `inTenantTx` (db/tenant-tx.ts) эсвэл camp-tx [RLS-004].
   }
 
   async onModuleInit() {
@@ -50,8 +37,8 @@ export class PrismaTenantClientService extends PrismaClient implements OnModuleI
   }
 
   /**
-   * Tenant context-тэй transaction ажиллуулна
-   * RLS policy-г баталгаажуулахад заавал энийг ашиглах
+   * AsyncLocalStorage-д tenant context тавина (route-ingress гэх мэт `tenantStorage`-оос уншдаг код).
+   * ⚠️ DB-д set_config ХИЙХГҮЙ — RLS-д `inTenantTx` ашигла (Phase 4.8.3).
    */
   async withTenantContext<T>(
     context: TenantContext,

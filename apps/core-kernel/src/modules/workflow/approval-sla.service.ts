@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../db/prisma.service';
+import { inTenantTx } from '../../db/tenant-tx';
 
 export interface ApprovalSlaReport {
   summary: {
@@ -43,11 +44,14 @@ export class ApprovalSlaService {
   async getReport(tenantId: string, from?: Date, to?: Date): Promise<ApprovalSlaReport> {
     const end = to ?? new Date();
     const start = from ?? new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const logs = await this.prisma.workflowSlaLog.findMany({
-      where: { tenantId, createdAt: { gte: start, lte: end } },
-      include: { instance: { include: { definition: true } } },
-      orderBy: { stepOrder: 'asc' },
-    });
+    // Phase 4.8.3: tenant transaction (app_user + RLS)
+    const logs = await inTenantTx(this.prisma, tenantId, (tx) =>
+      tx.workflowSlaLog.findMany({
+        where: { tenantId, createdAt: { gte: start, lte: end } },
+        include: { instance: { include: { definition: true } } },
+        orderBy: { stepOrder: 'asc' },
+      }),
+    );
 
     const completed = logs.filter((log) => log.status === 'COMPLETED' && log.completedAt);
     const completedOnTime = completed.filter((log) => log.completedAt! <= log.dueAt);

@@ -43,7 +43,7 @@ beforeAll(async () => {
   tenantB = (await prismaAdmin.tenant.create({ data: { name: 'RLS B', slug: `rls-b-${STAMP}`, tier: TierType.TIER1 } })).id;
   tables = (
     await prismaAdmin.$queryRaw<{ relname: string }[]>`
-      SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      SELECT c.relname::text AS relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind = 'r'
         AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped)
       ORDER BY 1`
