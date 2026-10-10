@@ -1,6 +1,6 @@
 # S Project — Төслийн Явцын Тэмдэглэл
 
-> Шинэчлэгдсэн: 2026-10-10 | **Одоогийн хувилбар: `v0.1.0`** | **`v0.1.5` — release бэлтгэл (Phase 6)**
+> Шинэчлэгдсэн: 2026-10-10 | **Одоогийн хувилбар: `v0.1.5`** (2026-10-10) | **Дараагийн: `v0.2.0`**
 > SemVer бодлого: `docs/VERSIONING.md` | Changelog: `docs/CHANGELOG.md`
 
 ---
@@ -46,7 +46,7 @@ Redis:     redis://localhost:6379
 | Хувилбар | Нэр | Статус | Огноо |
 |----------|-----|--------|-------|
 | **`v0.1.0`** | **Tier 1 Core System (MVP + V1)** | **✅ ДУУССАН** | **2026-09-21** |
-| `v0.1.5` | Tier 2 Enterprise VPC | 🚧 RELEASE БЭЛТГЭЛ (код ✅, Phase 6.2–6.4) | — |
+| **`v0.1.5`** | **Tier 2 Enterprise VPC** | **✅ ДУУССАН** | **2026-10-10** |
 | `v0.2.0` | Tier 3 Air-Gapped / Offline-First | 📋 ТӨЛӨВЛӨСӨН | — |
 | `v0.3.0+` | Нэмэлт хөгжүүлэлт | 📋 ИРЭЭДҮЙ | — |
 | `v1.0.0` | Public Production Launch | 🎯 ЗОРИЛГО | — |
@@ -103,16 +103,16 @@ Redis:     redis://localhost:6379
 | Модулиуд: Budget, Inventory-lite, Vendor-lite, Report-lite (+ web-shell `/inventory`, `/vendors`, `/reports`) | ✅ |
 | Event bus: transactional outbox (SKIP LOCKED, тогтвортой CloudEvent id, retry → DLQ) | ✅ |
 | Кемп модуль V1 | ✅ (доор) |
-| Release: баримт (6.2), цэвэрлэгээ (6.3), эцсийн шалгалт + tag (6.4) | 🚧 |
+| Release: баримт (6.2), цэвэрлэгээ (6.3), CI засвар + хувилбар 0.1.5 + шалгалт (6.4) | ✅ |
 
 ### Тест ажиллуулах
 
 | Команд | Юу | Шаардлага | Сүүлийн үр дүн |
 |---|---|---|---|
-| `pnpm test` | Unit (core-kernel + web-shell) | — (сервергүй) | 510 + 45 ✅ |
+| `pnpm test` | Unit (core-kernel + web-shell) | — (сервергүй) | 512 + 45 ✅ |
 | `pnpm test:integration` | NestJS + бодит DB | `pnpm supabase:start`, `.env` | 15 файл / 154 ✅ |
 | `pnpm test:e2e` | Playwright (backend + web-shell-ийг өөрөө асаана) | Supabase, `.env` | 47 ✅ (0 skip) |
-| `pnpm --filter e2e exec tsx tests/load-test.ts` | Load (100 conn) | backend асаалттай, 10k seed | p99 57ms |
+| `pnpm --filter e2e exec tsx tests/load-test.ts` | Load (100 conn) | backend асаалттай, 10k seed | p99 57ms (local) / 90ms (`app_user`, cloud) |
 
 - E2E fixture: Playwright globalSetup → `pnpm --filter @s-project/core-kernel e2e:fixture setup` (3 tenant + 13 хэрэглэгч, token) → `apps/e2e/.fixture.json`; globalTeardown бүгдийг устгана. Зөвхөн local.
 - Нэг ажиллалтад ~50 нэвтрэлт → `supabase/config.toml` `[auth.rate_limit] sign_in_sign_ups = 500` (өөрчилсний дараа `pnpm supabase:stop` → `pnpm supabase:start`).
@@ -200,7 +200,7 @@ esbuild (default) → decorator metadata дэмждэггүй → БҮХИЙ Л 
 - [x] **v0.1.5.3:** Performance — Redis caching, cursor pagination, rate limiting
 - [x] **v0.1.5.4:** Inventory, Budget, Vendor, Report модулиуд (хөнгөн + frontend)
 - [x] **v0.1.5.5:** Event Bus integration тест (cross-module chain) + outbox засвар
-- [x] **v0.1.5.6:** E2E (fixture, multi-tenant, олон алхамт батлалт, модулиуд) · [ ] баримт, цэвэрлэгээ, `v0.1.5` tag
+- [x] **v0.1.5.6:** E2E (fixture, multi-tenant, олон алхамт батлалт, модулиуд) · баримт, цэвэрлэгээ, CI · ✅ **`v0.1.5` (2026-10-10)**
 - [x] **Кемп модуль V1** (2026-10-10) · [ ] **Кемп модуль V2** — Шат 5–7 (`camp_module/01_plan_and_erd.md` → «V2»)
 
 > Дэлгэрэнгүй төлөвлөгөө: `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md`

@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { SkipAuth } from '../../common/decorators/skip-auth.decorator';
+import { APP_VERSION } from '../../config/app-version';
 
 @Controller('health')
 export class HealthController {
@@ -8,7 +9,7 @@ export class HealthController {
   check() {
     return {
       status: 'ok',
-      version: '1.0.0',
+      version: APP_VERSION,
       timestamp: new Date().toISOString(),
     };
   }

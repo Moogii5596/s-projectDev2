@@ -7,9 +7,15 @@
 
 ---
 
-## [Unreleased] — v0.1.5 (Tier 2: Enterprise VPC)
+## [Unreleased]
 
-> Огноог `v0.1.5` tag тавихад (Phase 6.4) бичнэ. Дэлгэрэнгүй: `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md`,
+_(одоогоор алга)_
+
+---
+
+## [v0.1.5] — 2026-10-10 — Tier 2: Enterprise VPC ✅
+
+> Дэлгэрэнгүй: `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md`,
 > алдааны шалтгаан/шийдэл: `docs/lessons_learned.md` §11–19.
 
 ### ⚠️ Зан төлөвийн өөрчлөлт (шинэчлэхээс өмнө унших)
@@ -38,10 +44,13 @@
 - CI: `test:unit` script, `supabase db push` хасав, ESLint тохиргоо.
 
 ### Тест (2026-10-10)
-- Unit: core-kernel **510**, web-shell **45**
+- Unit: core-kernel **512**, web-shell **45**
 - Integration: **15 файл / 154** — `app_user` (RLS) ба `postgres` хоёр горимд
 - Playwright e2e: **47** (0 skip) — fixture тест бүрийн өгөгдлийг өөрөө үүсгэж/устгана
-- Load (10k MR, 100 conn): p99 57ms / 3360 req/s (local), `app_user` горимд p99 106ms (cloud, 1 worker)
+- Load (10k MR, 100 conn × 15с): p99 57ms / 3360 req/s (local, 4 worker) · `app_user` (RLS) горимд p99 **90ms** / 2416 req/s, cursor max 28ms (cloud, 1 worker)
+- Dedicated mode smoke: slug дутуу → эхлэхгүй; өөр Host → тохируулсан tenant (200); өөр tenant-ийн хэрэглэгч → 403
+- CI (`.github/workflows/ci.yml`): Supabase key `status -o env`-ээс, `app_user` + `SYSTEM_DATABASE_URL`, `pnpm test`, `pnpm test:e2e` (+ test user, camp grant) [CI-004]
+- `/api/v1/health`, `/healthz` → `version: "0.1.5"` (`APP_VERSION` = package.json)
 
 ### Нэмэгдсэн — Кемп модуль V1 (2026-10-10) ✅
 > Төлөвлөгөө/ERD v4: `docs/08_Roadmap/camp_module/01_plan_and_erd.md`. V1 = Шат 1–4 + Шат 8 (frontend) + Шат 9 (баримт).
@@ -112,12 +121,13 @@
 | SemVer | Хуучин нэр | Тайлбар | Төлөв |
 |---|---|---|---|
 | **v0.1.0** | MVP + v1.0 | Tier 1 Core System | ✅ ДУУССАН |
-| **v0.1.5** | v1.5 | Tier 2 Enterprise VPC | 🔜 ДАРААГИЙН |
+| **v0.1.5** | v1.5 | Tier 2 Enterprise VPC | ✅ 2026-10-10 |
 | **v0.2.0** | v2.0 | Tier 3 Air-Gapped | 📋 ТӨЛӨВЛӨСӨН |
 | **v0.3.0+** | — | Нэмэлт хөгжүүлэлт | 📋 ИРЭЭДҮЙ |
 | **v1.0.0** | Production | Олон нийтэд гаргах | 🎯 ЗОРИЛГО |
 
 ---
 
-[Unreleased]: https://github.com/your-org/s-project/compare/v0.1.0...HEAD
-[v0.1.0]: https://github.com/your-org/s-project/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Moogii5596/s-projectDev2/compare/v0.1.5...HEAD
+[v0.1.5]: https://github.com/Moogii5596/s-projectDev2/releases/tag/v0.1.5
+[v0.1.0]: тэмдэглэгээ (git tag) тавигдаагүй — v0.1.0 нь `v0.1.5`-ийн өмнөх түүх

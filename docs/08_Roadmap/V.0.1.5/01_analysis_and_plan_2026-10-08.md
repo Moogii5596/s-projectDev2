@@ -235,16 +235,17 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
   - [x] 6.3.6 Cloud: tsc ✅ · lint 0 алдаа · өөрчлөгдсөн 2 integration spec 18/18 (зөвхөн тайлбар) · нэмэлт: runbook §2-ийн "`pnpm db:push`-г дахин ажиллуулна" мөр (6.2-д үлдсэн) засав
   - [x] Device: 8 файл (hash 8/8) + 3 устгасан (`package-lock.json`, snippet, `rls_audit.txt`) — git status: 8 M, 3 D
   - [ ] Таны компьютер: `pnpm install` → `pnpm test` → `pnpm db:migrate` ("up to date")
-- [ ] 6.4 Release — нарийвчилсан (батлуулахаар хүлээж буй, 21:00)
-  - [ ] 6.4.1 🔴 CI засвар (`.github/workflows/ci.yml`) — 6.1-ийн нэр солилтын дагуу шинэчлээгүй [CI-004]:
+- [x] 6.4 Release (батлагдсан 20:54) — cloud хэсэг дууссан
+  - [x] 6.4.1 🔴 CI засвар (`.github/workflows/ci.yml`) — 6.1-ийн нэр солилтын дагуу шинэчлээгүй [CI-004]:
     - e2e: `pnpm --filter e2e test` → `test:e2e` (одоо "Missing script" → унана)
     - Supabase key-ийг `supabase status -o env`-ээс авч `$GITHUB_ENV`-д (`SUPABASE_SERVICE_ROLE_KEY` огт байхгүй байсан → integration/fixture-ийн `auth.admin` ажиллахгүй)
     - `DATABASE_URL` = app_user, `SYSTEM_DATABASE_URL` = postgres (local-тай ижил); web-shell `VITE_SUPABASE_*` env (e2e UI)
     - Unit: `pnpm turbo test:unit` (зөвхөн core-kernel) → `pnpm test` (core-kernel + web-shell)
-  - [ ] 6.4.2 Хувилбар `0.1.5`: root, core-kernel, web-shell, mfe-requisitions, packages/* `package.json`; health endpoint-ийн хатуу `version: '1.0.0'` → package.json-оос (`auth.spec.ts`-ийн `'1.0.0'` шалгалтыг дагуулж)
-  - [ ] 6.4.3 Dedicated mode smoke (cloud): `DEPLOYMENT_MODE=dedicated DEDICATED_TENANT_SLUG=<slug>` → өөр Host-оор тухайн tenant, slug дутуу → апп эхлэхгүй
-  - [ ] 6.4.4 Эцсийн шалгалт (cloud): tsc · lint · unit · integration 2 горим · e2e · `pnpm build` · load test (app_user)
-  - [ ] 6.4.5 Баримт: CHANGELOG `[Unreleased]` → `[v0.1.5] — 2026-10-1x` + compare холбоос; project-status / INDEX / 00_index / VERSIONING-д "v0.1.5 ✅"; lessons CI-004
+  - [x] 6.4.2 Хувилбар `0.1.5`: root, core-kernel, web-shell, mfe-requisitions, packages/* `package.json`; health endpoint-ийн хатуу `version: '1.0.0'` → package.json-оос (`auth.spec.ts`-ийн `'1.0.0'` шалгалтыг дагуулж)
+  - [x] 6.4.3 Dedicated mode smoke (cloud): `DEPLOYMENT_MODE=dedicated DEDICATED_TENANT_SLUG=<slug>` → өөр Host-оор тухайн tenant, slug дутуу → апп эхлэхгүй
+  - [x] 6.4.4 Эцсийн шалгалт (cloud): tsc · lint · unit · integration 2 горим · e2e · `pnpm build` · load test (app_user)
+  - [x] 6.4.5 Баримт: CHANGELOG `[Unreleased]` → `[v0.1.5] — 2026-10-1x` + compare холбоос; project-status / INDEX / 00_index / VERSIONING-д "v0.1.5 ✅"; lessons CI-004
+  - Үр дүн (cloud): tsc (core-kernel, web-shell, mfe, e2e) ✅ · lint 0 алдаа · unit **512** + 45 · integration **154/154** × 2 горим · e2e **47/47** · build (nest, web-shell, mfe) ✅ · load (`app_user`, 10k): p99 **90ms**, 2416 req/s, алдаа 0, cache 100%, cursor max 28ms · dedicated smoke 4/4 · CI YAML parse ✅ (GitHub дээр ажиллуулаагүй)
   - [ ] 6.4.6 Таны компьютер: `pnpm install` → `pnpm test` → `pnpm test:integration` → `pnpm test:e2e` → `git add -A` → `git commit -m "release: v0.1.5"` → `git tag -a v0.1.5 -m "v0.1.5 — Tier 2 Enterprise VPC"` → `git push origin main --tags` → GitHub Actions ногоон эсэх
 
 ### Backlog (товлоогүй — шийдвэр шаардлагатай)

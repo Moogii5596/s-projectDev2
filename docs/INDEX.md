@@ -1,6 +1,6 @@
 # S Project — Баримт Бичгийн Жагсаалт
 
-> Шинэчлэгдсэн: 2026-10-10 (v0.1.5 release бэлтгэл) | **Одоогийн хувилбар: `v0.1.0`** · `v0.1.5` — release бэлтгэл
+> Шинэчлэгдсэн: 2026-10-10 (v0.1.5 release бэлтгэл) | **Одоогийн хувилбар: `v0.1.5`** (2026-10-10)
 > Хувилбарын дугаарлалт: `docs/VERSIONING.md` (хуучин v0.1.0~v0.4.0 нэрлэлт нэгдэж `v0.1.0` болсон)
 
 ---
@@ -49,8 +49,8 @@
 | `00_rules_and_context.md` | **RULE-01~20**, Codebase state | — | ✅ |
 | `01_Development_Roadmap.md` | Урт хугацааны roadmap | — | — |
 | `V.0.1.0/` (`sprint_0` … `sprint_5`, `02_v1_sprint_implementation_plan.md`) | Tier 1 Core System | `v0.1.0` | ✅ Дууссан |
-| `V.0.1.5/00_index.md` | Sprint 6–11 индекс, явцын хуваарь | `v0.1.5` | 🚧 Sprint 11 |
-| `V.0.1.5/01_analysis_and_plan_2026-10-08.md` | Шинжилгээ + Phase 0–6 (бодит хэрэгжилт) | `v0.1.5` | 🚧 Phase 6 |
+| `V.0.1.5/00_index.md` | Sprint 6–11 индекс, явцын хуваарь | `v0.1.5` | ✅ Дууссан |
+| `V.0.1.5/01_analysis_and_plan_2026-10-08.md` | Шинжилгээ + Phase 0–6 (бодит хэрэгжилт) | `v0.1.5` | ✅ |
 | `V.0.1.5/sprint_6` … `sprint_11` | Анхны sprint төлөвлөгөө (sprint_6 орлогдсон — ADR-001) | `v0.1.5` | түүхэн |
 
 ---
@@ -109,7 +109,7 @@
 | Хувилбар | Нэр | Статус |
 |----------|-----|--------|
 | `v0.1.0` | Tier 1 Core System (MVP 1–5 + Sprint 0–5 нэгдсэн) | ✅ Дууссан |
-| `v0.1.5` | Tier 2 Enterprise VPC (+ Кемп V1, Budget/Inventory/Vendor/Report) | 🚧 Release бэлтгэл |
+| `v0.1.5` | Tier 2 Enterprise VPC (+ Кемп V1, Budget/Inventory/Vendor/Report) | ✅ 2026-10-10 |
 | `v0.2.0` | Tier 3 Air-Gapped | 📋 |
 | `v1.0.0` | Production | 🎯 Зорилго |
 

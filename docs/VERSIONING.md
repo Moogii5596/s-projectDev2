@@ -33,7 +33,7 @@ MAJOR.MINOR.PATCH
 | SemVer | Хуучин нэр | Тайлбар | Tier | Төлөв |
 |---|---|---|---|---|
 | **v0.1.0** | MVP + v1.0 | Core System — Tier 1 Production Ready | Tier 1 | ✅ ДУУССАН |
-| **v0.1.5** | v1.5 | Enterprise VPC — Schema/DB isolation | Tier 2 | 🔜 ДАРААГИЙН |
+| **v0.1.5** | v1.5 | Enterprise VPC — RLS + dedicated deploy (ADR-001) | Tier 2 | ✅ 2026-10-10 |
 | **v0.2.0** | v2.0 | Air-Gapped / Offline-First | Tier 3 | 📋 ТӨЛӨВЛӨСӨН |
 | **v0.3.0+** | — | Нэмэлт хөгжүүлэлт (Plugin, API SDK, Analytics) | All | 📋 ИРЭЭДҮЙ |
 | **v1.0.0** | Production | Олон нийтэд гаргах | All | 🎯 ЗОРИЛГО |

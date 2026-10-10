@@ -1102,12 +1102,18 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Дүрэм:** Integration / e2e ажиллуулахдаа `pnpm dev`-ийг зогсооно. Flaky алдааны үед эхлээд `… 2>&1 | Select-String -Pattern "\[ERROR\]|P20|Transaction|FAIL|Tests " -Context 0,4`-оор шалтгааныг авна. `[ERROR] … Authorization header / Token хүчингүй / Tenant олдсонгүй / харьяалагдахгүй` = 401/403-ийг санаатай шалгадаг тестийн хэвийн лог.
 **Backlog:** MR дугаар олголтыг tenant-ийн advisory lock (Кемпийн `ZAS-` дугаартай адил) эсвэл sequence болгох.
 
+### [CI-004] Script-ийн нэр солиход CI-г шинэчлээгүй; CI-ийн env local-аас хоцорсон
+**Тохиолдсон (6.4 төлөвлөхөд илэрсэн):** 6.1-д e2e `test` → `test:e2e` болгосон боловч `.github/workflows/ci.yml` нь `pnpm --filter e2e test` хэвээр (→ "Missing script"). Мөн CI-д `SUPABASE_SERVICE_ROLE_KEY` огт байгаагүй (integration-ийн `auth.admin.createUser`, e2e fixture ажиллахгүй), `JWT_SECRET` 18 тэмдэгт (`EnvConfig` min 32 → апп эхлэхгүй), e2e job-д Prisma generate / admin@test.mn / кемпийн эрх / `VITE_SUPABASE_*` алга, unit нь зөвхөн core-kernel (`turbo test:unit`). Өөрөөр хэлбэл CI өмнөөс улаан байсан байх магадлалтай.
+**Шийдэл (6.4.1):** workflow-level env (`app_user` + `SYSTEM_DATABASE_URL`, 32+ JWT), "Supabase env" алхам (`supabase status -o env` → `$GITHUB_ENV`, service key mask), `pnpm test`, e2e: `db:generate` + `dev:test-user` + `camp_e2e_grant.sql` (supabase_admin) + `pnpm test:e2e`.
+**Дүрэм:** package.json script / env / шаардлагатай урьдчилсан алхам өөрчлөгдөх бүрт `grep -rn "<хуучин нэр>" .github docker apps/*/Dockerfile` хийнэ; шинэ env хувьсагч → `.env.example` + CI + compose гурвууланд нэг дор. CI-г push хийсний дараа ногоон эсэхийг шалгахгүйгээр release хийхгүй.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §19 (Phase 6.4): CI-004 (CI script/env хоцорсон) |
 | 2026-10-10 | §19 (Phase 6.3): TEST-015 (dev + integration зэрэг → flaky) |
 | 2026-10-10 | §19 (Phase 6.2): DOC-001 (баримт кодоос хоцорсон) |
 | 2026-10-10 | §19: PROC-007 (заавар → `pnpm supabase:*`) |

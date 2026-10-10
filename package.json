@@ -1,6 +1,6 @@
 {
   "name": "s-project",
-  "version": "0.0.1",
+  "version": "0.1.5",
   "private": true,
   "description": "S Project — Multi-Tenant Supply Chain Management Platform",
   "scripts": {

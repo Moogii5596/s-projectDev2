@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { APP_VERSION } from '../config/app-version';
 
 @Injectable()
 export class AppService {
@@ -6,7 +7,7 @@ export class AppService {
     return {
       status: 'ok',
       service: 'core-kernel',
-      version: process.env.npm_package_version ?? '0.1.0',
+      version: APP_VERSION,
       timestamp: new Date().toISOString(),
       uptime: Math.floor(process.uptime()),
     };

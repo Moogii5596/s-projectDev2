@@ -60,7 +60,7 @@ Sprint 8  │ Performance & Scaling      │ [x] ✅ Дууссан — DoD 4/4 
 Sprint 9  │ 4 Нэмэлт Модуль           │ [x] ✅ Budget + Inventory/Vendor/Report (хөнгөн) + frontend — 2026-10-10 (Phase 4, 6.0)
           │  + RLS runtime / аюулгүй  │ [x] ✅ app_user + SYSTEM_DATABASE_URL (4.8), SEC-002/003 (4.9), SEC-004 (6.0b)
 Sprint 10 │ Event Bus Integration Test │ [x] ✅ Outbox засвар + гинж тест — 2026-10-10 (Phase 5)
-Sprint 11 │ Release Hardening          │ [~] 🚧 E2E ✅ (6.1) · баримт (6.2) · цэвэрлэгээ (6.3) · tag (6.4)
+Sprint 11 │ Release Hardening          │ [x] ✅ E2E (6.1) · баримт (6.2) · цэвэрлэгээ (6.3) · CI + 0.1.5 (6.4) — 2026-10-10
 ```
 
 ---
