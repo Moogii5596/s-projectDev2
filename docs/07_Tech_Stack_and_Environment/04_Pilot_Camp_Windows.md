@@ -227,6 +227,17 @@ git checkout v0.1.x
 Start-ScheduledTask 'S-Project Pilot'
 ```
 
+### 13б. Hotfix (P0) — `release/v0.1` салбар (2026-10-11 шийдвэр D2)
+v0.1 хаагдсан; `main` дээр v0.2 хөгжиж байгаа тул пилотын P0 засварыг **dev хавтсанд** `release/v0.1` салбарт хийнэ:
+```powershell
+git switch release/v0.1        # анх: git switch -c release/v0.1 v0.1.6.1 ; git push -u origin release/v0.1
+# … засвар + тест (pnpm test, test:integration, test:e2e) …
+git commit -am "fix: <P0 тайлбар> (FB-xx)"
+git tag v0.1.7 ; git push origin release/v0.1 --tags
+git switch main ; git merge release/v0.1   # засварыг v0.2-т ч оруулна
+```
+Пилот дээр §13-ийн алхмаар `git checkout v0.1.7`.
+
 ## 14. Хориотой
 
 - Пилотын хавтсанд `pnpm supabase:start|stop|reset`, `pnpm dev`, `pnpm test*`, `pnpm dev:test-user`.

@@ -1,6 +1,6 @@
 # Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD · v4
 
-> 2026-10-09 · Төлөв: **ERD v4 · V1 ДУУССАН (Шат 1–4, 8, 9 — 2026-10-10) · V2 хүлээгдэж буй (Шат 5–7, D8)** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
+> 2026-10-09 · Төлөв: **ERD v4 · V1 ДУУССАН (Шат 1–4, 8, 9 — 2026-10-10) · V2 хүлээгдэж буй (Шат 5–7, D8)** · Хувилбар: БҮРЭН (production) · Өмнөх: `../_archive/camp_module/01_plan_and_erd.v1–v3.md` · **V2 → v0.2** (`../V.0.2/00_backlog_and_tech_debt.md` V2-01…06)
 > Мөрдөх: `docs/08_Roadmap/00_rules_and_context.md` (RULE-01~20), `docs/03_Data_Models_and_Security/03_Module_Template.md`,
 > lessons_learned [RLS-004] (PERMISSIVE TO app_user + FORCE + GRANT), [MIG-001] (`prisma db push` ХОРИОТОЙ — зөвхөн supabase migration)
 

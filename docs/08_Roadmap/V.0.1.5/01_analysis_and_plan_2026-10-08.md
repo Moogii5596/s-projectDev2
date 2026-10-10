@@ -1,5 +1,7 @@
 # Төслийн Шинжилгээ ба Хөгжүүлэлтийн Төлөвлөгөө — 2026-10-08
 
+> 🔒 **v0.1 ХААГДСАН (2026-10-11, `v0.1.6.1`).** Энэ файл түүхэн бичлэг. Үлдсэн ажил («Backlog», V2) → `../V.0.2/00_backlog_and_tech_debt.md`, төлөвлөгөө → `../V.0.2/01_plan_draft.md`.
+
 > Хувилбар: v0.1.0 ✅ → v0.1.5 (Tier 2 Enterprise VPC) 🔄
 > Төлөв: **БАТЛАГДСАН 2026-10-08** · Phase 0–1 ✅ · Phase 2 ✅ · Phase 2.8 ✅ · Phase 2.9 ✅ (integration 47/47) · Phase 3 ✅ (Sprint 8 DoD 4/4) · Phase 3.7 ✅ · Phase 3.6 ✅ (код) · Phase 4 ✅
 > **Шийдвэр (2026-10-08):** B — Schema-per-tenant цуцлах; shared tenant = RLS, Enterprise VPC = тусдаа DB/deploy
@@ -281,13 +283,13 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
 - [x] E1 `pilot.ps1 backup|restore`: `pg_dump --data-only` (public + auth.users/identities) → 7-Zip AES-256 (`-mhe`), 14 хоног; restore = migration тулгалт → `db reset` → truncate → `pg_restore` → тоо тулгалт. Cloud: 54 хүснэгт md5 ижил сэргэсэн
 - [x] E2 `pilot.ps1 install-tasks`: нэвтрэхэд `run` (watchdog), өдөр бүр 02:00 backup; тэжээлийн тохиргоо runbook-д
 - [x] E2b `install-tasks`, `powercfg`; дахин асаалтын тест — автоматаар асав
-- [ ] E1b Бодит Supabase дээр `backup` → `restore` дадлага (баталгаажуулах)
-- [ ] E4 Хувийн мэдээлэл: BitLocker, зөвхөн шаардлагатай хүнд эрх, пилотын хэрэглэгчдэд мэдэгдэх
+- [x] E1b Бодит Supabase дээр `backup` → `restore` дадлага (2026-10-11)
+- [x] E4 Хувийн мэдээлэл: BitLocker, нууц үгийн менежер (2026-10-11); хэрэглэгчдэд мэдэгдэх → `docs/pilot-test-guide.md` §6
 - [x] E3 Runbook `docs/07_Tech_Stack_and_Environment/04_Pilot_Camp_Windows.md`
 **F. Шалгалт**
 - [x] F1a Cloud: unit core-kernel 528 · web-shell 51 · integration 159/159 (`app_user` + `postgres`) · e2e 47/47 · build · Caddy-гаар UI (OWNER, VIEWER+CAMP_MANAGER: 12 кемп хуудас, CSP алдаагүй, зөвхөн same-origin) · `pilot.ps1` бүх команд (docker/supabase shim + бодит PG/Caddy/7-Zip/pwsh 7.4)
 - [x] F1b `v0.1.6` → суулгах явцад олдсон 4 алдааг засаж `v0.1.6.1`: PROC-009 (`init` → `pnpm install`), PROC-010 (`.ps1` орчин цонхонд үлдсэн), OPS-003 (`[auth.email] enable_signup` → нэвтрэлт хаагдсан), FE-007 (401 → `/login` ↔ `/camp` давталт) — lessons §20
-### Backlog (товлоогүй — шийдвэр шаардлагатай)
+### Backlog (товлоогүй) → 🔒 2026-10-11: бүгд `../V.0.2/00_backlog_and_tech_debt.md`-д ID-тай шилжсэн (WF-01…05, QA-01…08)
 - [x] ~~4.6 Frontend~~ → Phase 6.0 руу шилжсэн
 - [ ] Frontend component тест, `mfe-requisitions` stub
 - [ ] Integration Redis mock-ийг санах ойн (бичсэнээ уншдаг) болгох — cache алдааг тест барих [CACHE-001]
