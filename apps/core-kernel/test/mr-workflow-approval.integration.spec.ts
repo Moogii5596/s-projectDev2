@@ -306,6 +306,22 @@ describe('🗂 Хуучин MR (workflow instance-гүй)', () => {
   });
 });
 
+describe('🔢 MR дугаар [CONC-002]', () => {
+  it('нэг tenant-д 30 зэрэгцээ үүсгэлт → бүгд 201, дугаар давхардалгүй, цувралаар', async () => {
+    const before = await prismaAdmin.mrHeader.count({ where: { tenantId, mrNumber: { startsWith: `MR-${new Date().getFullYear()}-` } } });
+    const rs = await Promise.all(
+      Array.from({ length: 30 }, (_, i) =>
+        api().post('/api/v1/requisitions').set(as(i % 2 ? 'req' : 'appr1'))
+          .send({ title: `conc-${i}`, items: [{ description: 'x', quantity: 1, unitPrice: 1 }] }),
+      ),
+    );
+    expect(rs.map((r) => r.status)).toEqual(Array(30).fill(201));
+    const nums = rs.map((r) => Number(String(r.body.mrNumber).split('-').pop())).sort((a, b) => a - b);
+    expect(new Set(nums).size).toBe(30);
+    expect(nums).toEqual(Array.from({ length: 30 }, (_, i) => before + 1 + i));
+  }, 60_000);
+});
+
 it('төсөв: SPENT нийлбэр зөв (small-2 300k + big-1 5M + admin-own 200k)', async () => {
   const a = await prismaAdmin.budgetAllocation.findUniqueOrThrow({ where: { id: allocationId } });
   expect(Number(a.spentAmount)).toBe(5_500_000);

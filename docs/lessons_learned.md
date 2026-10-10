@@ -1097,10 +1097,14 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** 6.2-оор бүгдийг бодит төлөвтэй тааруулав; `.env.example` анхдагч = `app_user` + `SYSTEM_DATABASE_URL`.
 **Дүрэм:** Зан төлөв/команд/env өөрчилсөн phase бүрийн checklist-д "баримт: README, runbook, `.env.example`, CHANGELOG" мөр заавал байна; release-ийн өмнө `grep`-ээр хуучирсан команд (db:push г.м.) хайна.
 
-### [TEST-015] `pnpm test:integration`-ийг `pnpm dev`-тэй зэрэг ажиллуулахад ачааллын flaky 500
-**Тохиолдсон (20:35):** 154-өөс 1 (`mr-approval` — бэлтгэлийн `createDraftMr` → 500); `pnpm dev`-гүй дахин → 154/154; cloud-д бүтэн suite 3/3, 2 файл зэрэг 6/6 давтагдаагүй. Integration 15 файл зэрэг (fork бүр NestJS app + Prisma pool) + dev server-ийн cron/pool нэг DB-д → холболт/transaction хүлээлт эсвэл MR дугаар (`max+1`, 3 retry) давхцал гэж үзэв (шалтгааныг log-оор баталж чадаагүй — vitest TUI `[ERROR]`-ийг дарж бичсэн).
-**Дүрэм:** Integration / e2e ажиллуулахдаа `pnpm dev`-ийг зогсооно. Flaky алдааны үед эхлээд `… 2>&1 | Select-String -Pattern "\[ERROR\]|P20|Transaction|FAIL|Tests " -Context 0,4`-оор шалтгааныг авна. `[ERROR] … Authorization header / Token хүчингүй / Tenant олдсонгүй / харьяалагдахгүй` = 401/403-ийг санаатай шалгадаг тестийн хэвийн лог.
-**Backlog:** MR дугаар олголтыг tenant-ийн advisory lock (Кемпийн `ZAS-` дугаартай адил) эсвэл sequence болгох.
+### [TEST-015] ⚠️ Буруу дүгнэлт: давтагдсан integration алдааг "ачааллын flaky" гэж үзсэн → бодит нь [CONC-002]
+**Тохиолдсон:** 20:35-д `mr-approval`-ийн `createDraftMr` → 500. `pnpm dev`-гүй дахин ажиллуулахад давсан, cloud-д давтагдаагүй тул "dev + integration зэрэг → flaky" гэж бүртгэв. 21:04-т ӨӨР тестэд ижил 500 дахин гарав → зэрэгцээ үүсгэлтийг тусгайлан туршихад (30 хүсэлт) 22 нь унасан.
+**Дүрэм:** Нэг удаа давсан нь "flaky" гэсэн нотолгоо биш. Алдааны үйлдлийг (энд: MR үүсгэх) өөрөө тусгаарлаж зэрэгцээ/давтан ачаалалд шалгаж, шалтгааныг log/кодоор батлаагүй бол "flaky" гэж хаахгүй. `[ERROR] … Authorization header / Token хүчингүй / Tenant олдсонгүй / харьяалагдахгүй` = 401/403-ийг санаатай шалгадаг тестийн хэвийн лог.
+
+### [CONC-002] 🔴 Нэг tenant-д зэрэгцээ MR үүсгэхэд 500 (дугаар давхцал), retry ажилладаггүй
+**Тохиолдсон:** `generateMrNumber` = `findFirst(orderBy: mrNumber desc)` + 1 (READ COMMITTED) → зэрэгцээ transaction ижил дугаар → `uq (tenant_id, mr_number)` P2002. Retry нөхцөл `Array.isArray(meta.target) && target.includes('mr_number')` → Prisma-ийн зарим орчинд `target = null` → retry огт хийгдээгүй → 500. Cloud: 30 зэрэгцээ POST → 201×8, 500×22. Нэмэлт далд алдаа: текст эрэмбэ → 9999-ийн дараа `MR-2026-10000` < `MR-2026-9999` → дугаар давхцана. Integration-д `mr-approval` + `mr-crud` нэг test-tenant-д зэрэг үүсгэдэг тул үе үе унадаг байв (Phase 4.8.3-аас хойш).
+**Шийдэл (6.4.7):** `pg_advisory_xact_lock(hashtext('mr-number:<tenant>:<он>'))` → `max(substring(mr_number FROM '^MR-YYYY-([0-9]+)$')::int) + 1` (Кемпийн ZAS дугаартай ижил). Retry нөхцөл: `P2002` ба (target алга эсвэл `mr_?number`). Тест: integration 30 зэрэгцээ → 30×201, дараалсан (хуучин код дээр УНАСАН); unit (lock эхэлж, тоон max).
+**Дүрэм:** "max+1" дугаарлалт бүр advisory lock эсвэл sequence-тэй байна; Prisma алдааны `meta`-д (target, modelName) найдахгүй — `code`-оор шийднэ. Дугаар/давхардалтай код бүрт зэрэгцээ integration тест заавал.
 
 ### [CI-004] Script-ийн нэр солиход CI-г шинэчлээгүй; CI-ийн env local-аас хоцорсон
 **Тохиолдсон (6.4 төлөвлөхөд илэрсэн):** 6.1-д e2e `test` → `test:e2e` болгосон боловч `.github/workflows/ci.yml` нь `pnpm --filter e2e test` хэвээр (→ "Missing script"). Мөн CI-д `SUPABASE_SERVICE_ROLE_KEY` огт байгаагүй (integration-ийн `auth.admin.createUser`, e2e fixture ажиллахгүй), `JWT_SECRET` 18 тэмдэгт (`EnvConfig` min 32 → апп эхлэхгүй), e2e job-д Prisma generate / admin@test.mn / кемпийн эрх / `VITE_SUPABASE_*` алга, unit нь зөвхөн core-kernel (`turbo test:unit`). Өөрөөр хэлбэл CI өмнөөс улаан байсан байх магадлалтай.
@@ -1113,6 +1117,7 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §19 (Phase 6.4.7): CONC-002 (зэрэгцээ MR дугаар), TEST-015 дүгнэлт засав |
 | 2026-10-10 | §19 (Phase 6.4): CI-004 (CI script/env хоцорсон) |
 | 2026-10-10 | §19 (Phase 6.3): TEST-015 (dev + integration зэрэг → flaky) |
 | 2026-10-10 | §19 (Phase 6.2): DOC-001 (баримт кодоос хоцорсон) |

@@ -244,10 +244,12 @@ export class MaterialRequisitionService {
         });
         break;
       } catch (error) {
+        // Phase 6.4.7 [CONC-002]: advisory lock-ийн дараа давхцал гарах ёсгүй — энэ нь хамгаалалт.
+        // Өмнө `target.includes('mr_number')` → зарим Prisma орчинд target = null → retry хийгддэггүй байв.
+        const target = error instanceof Prisma.PrismaClientKnownRequestError ? error.meta?.target : undefined;
         const isMrNumberConflict = error instanceof Prisma.PrismaClientKnownRequestError
           && error.code === 'P2002'
-          && Array.isArray(error.meta?.target)
-          && error.meta.target.includes('mr_number');
+          && (!Array.isArray(target) || target.some((t) => /mr_?number/i.test(String(t))));
         if (!isMrNumberConflict || attempt === 2) throw error;
       }
     }
@@ -740,27 +742,23 @@ export class MaterialRequisitionService {
   // ────────────────────────────────────────────────
   // PRIVATE: mrNumber генерэх (tenant transaction дотор)
   // ────────────────────────────────────────────────
+  /**
+   * Phase 6.4.7 [CONC-002]: tenant + он тус бүрд advisory lock (transaction дуустал) → дугаар цувралаар.
+   * Өмнө `max+1` (READ COMMITTED) → нэг tenant-д зэрэгцээ үүсгэлт ижил дугаар авч P2002 → 500
+   * (30 зэрэгцээ хүсэлтээс 22 нь унасан). Мөн `orderBy: mrNumber desc` нь текстээр эрэмбэлдэг тул
+   * 9999-ээс хойш ('MR-2026-10000' < 'MR-2026-9999') дугаар давхцах байсан → тоон max.
+   * Кемпийн ZAS дугаартай ижил загвар (camp-maintenance.service.ts).
+   */
   private async generateMrNumber(tx: TenantTx, tenantId: string): Promise<string> {
     const year = new Date().getFullYear();
-
-    const lastMr = await tx.mrHeader.findFirst({
-      where: {
-        tenantId,
-        mrNumber: { startsWith: `MR-${year}-` },
-      },
-      orderBy: { mrNumber: 'desc' },
-      select: { mrNumber: true },
-    });
-
-    let seq = 1;
-    if (lastMr) {
-      const parts = lastMr.mrNumber.split('-');
-      const lastSeq = parseInt(parts[parts.length - 1], 10);
-      if (!isNaN(lastSeq)) {
-        seq = lastSeq + 1;
-      }
-    }
-
-    return `MR-${year}-${String(seq).padStart(4, '0')}`;
+    const prefix = `MR-${year}-`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`mr-number:${tenantId}:${year}`}))`;
+    const rows = await tx.$queryRaw<{ max: number | null }[]>`
+      SELECT max(substring(mr_number FROM ${`^${prefix}([0-9]+)$`})::int) AS max
+      FROM mr_headers
+      WHERE tenant_id = ${tenantId}::uuid AND mr_number LIKE ${`${prefix}%`}
+    `;
+    const seq = Number(rows[0]?.max ?? 0) + 1;
+    return `${prefix}${String(seq).padStart(4, '0')}`;
   }
 }

@@ -246,6 +246,12 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
   - [x] 6.4.4 Эцсийн шалгалт (cloud): tsc · lint · unit · integration 2 горим · e2e · `pnpm build` · load test (app_user)
   - [x] 6.4.5 Баримт: CHANGELOG `[Unreleased]` → `[v0.1.5] — 2026-10-1x` + compare холбоос; project-status / INDEX / 00_index / VERSIONING-д "v0.1.5 ✅"; lessons CI-004
   - Үр дүн (cloud): tsc (core-kernel, web-shell, mfe, e2e) ✅ · lint 0 алдаа · unit **512** + 45 · integration **154/154** × 2 горим · e2e **47/47** · build (nest, web-shell, mfe) ✅ · load (`app_user`, 10k): p99 **90ms**, 2416 req/s, алдаа 0, cache 100%, cursor max 28ms · dedicated smoke 4/4 · CI YAML parse ✅ (GitHub дээр ажиллуулаагүй)
+  - [x] **6.4.7 🔴 [CONC-002] Нэг tenant-д зэрэгцээ MR үүсгэхэд 500** (21:05 таны integration дахин унасан → cloud-д давтан гаргав: 30 зэрэгцээ POST → **201×8, 500×22**, бүгд P2002 `mr_number`). TEST-015-ийн "flaky" дүгнэлт буруу — бодит алдаа (батлагдсан 21:08, засагдсан)
+    - Шалтгаан: `generateMrNumber` = `max(mr_number)+1` (READ COMMITTED) → зэрэгцээ transaction ижил дугаар; retry-ийн нөхцөл `meta.target.includes('mr_number')` → энэ орчинд `target: null` → retry огт хийгдэхгүй, 3 оролдлого ч хангалтгүй
+    - [x] Засвар: `generateMrNumber`-ийн өмнө `pg_advisory_xact_lock(hashtext('mr-number:<tenant>:<он>'))` (Кемпийн ZAS дугаартай ижил загвар) → дугаар tenant+он дотор цувралаар; P2002 retry-г хамгаалалт болгон үлдээж нөхцөлийг `code === 'P2002'` + MrHeader болгох
+    - [x] Тест: integration — 30 зэрэгцээ үүсгэлт → 30×201, дугаар давхардалгүй, дараалсан; хуучин код дээр унахыг баталгаажуулах (before/after); unit (lock дуудагдсан)
+    - [x] TEST-015-ийг засаж CONC-002 бүртгэх
+    - [x] Шалгалт (cloud): хуучин код дээр шинэ тест УНАСАН / шинэ код ✅ · unit **514** · integration **155/155** × 2 горим · e2e **47/47** · tsc/lint ✅
   - [ ] 6.4.6 Таны компьютер: `pnpm install` → `pnpm test` → `pnpm test:integration` → `pnpm test:e2e` → `git add -A` → `git commit -m "release: v0.1.5"` → `git tag -a v0.1.5 -m "v0.1.5 — Tier 2 Enterprise VPC"` → `git push origin main --tags` → GitHub Actions ногоон эсэх
 
 ### Backlog (товлоогүй — шийдвэр шаардлагатай)
@@ -253,7 +259,7 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
 - [ ] Frontend component тест, `mfe-requisitions` stub
 - [ ] Integration Redis mock-ийг санах ойн (бичсэнээ уншдаг) болгох — cache алдааг тест барих [CACHE-001]
 - [ ] Давхар RESTRICTIVE policy-нуудыг цэвэрлэх (PERMISSIVE-тэй ижил нөхцөл)
-- [ ] MR дугаар олголт (`max+1`, 3 retry) → tenant-ийн advisory lock эсвэл sequence (зэрэгцээ ачаалалд давхцахгүй) [TEST-015]
+- [~] MR дугаар олголт → 6.4.7 [CONC-002]
 - [ ] Delegation-ийг MR батлалттай холбох (шийдвэр Б) — орлон гүйцэтгэгч алхмыг батлах
 - [ ] `WorkflowService.approveStep/rejectStep` (controller-гүй, role шалгалтгүй) — устгах эсвэл MR батлалттай нэгтгэх
 - [ ] Escalation: `escalationEnabled`-ийг шалгадаггүй; `currentStep = order - 1` (1-ээс эхэлсэн order гэж үздэг); escalate = алхам алгасах утга — бизнесийн шийдвэр

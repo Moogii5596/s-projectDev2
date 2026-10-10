@@ -109,8 +109,8 @@ Redis:     redis://localhost:6379
 
 | Команд | Юу | Шаардлага | Сүүлийн үр дүн |
 |---|---|---|---|
-| `pnpm test` | Unit (core-kernel + web-shell) | — (сервергүй) | 512 + 45 ✅ |
-| `pnpm test:integration` | NestJS + бодит DB | `pnpm supabase:start`, `.env` | 15 файл / 154 ✅ |
+| `pnpm test` | Unit (core-kernel + web-shell) | — (сервергүй) | 514 + 45 ✅ |
+| `pnpm test:integration` | NestJS + бодит DB | `pnpm supabase:start`, `.env` | 15 файл / 155 ✅ |
 | `pnpm test:e2e` | Playwright (backend + web-shell-ийг өөрөө асаана) | Supabase, `.env` | 47 ✅ (0 skip) |
 | `pnpm --filter e2e exec tsx tests/load-test.ts` | Load (100 conn) | backend асаалттай, 10k seed | p99 57ms (local) / 90ms (`app_user`, cloud) |
 

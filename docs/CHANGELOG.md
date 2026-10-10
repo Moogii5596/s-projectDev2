@@ -40,12 +40,13 @@ _(одоогоор алга)_
 - **SEC-003** workflow definition: эрх, body шалгалтгүй байсан.
 - **SEC-004** MR батлалт role / өөрийгөө батлах / workflow алхмыг шалгадаггүй байсан; батлагдсан MR-ийн SLA PENDING үлдэж escalate болдог байсан.
 - **RLS-004~007** RLS policy (RESTRICTIVE-only, буруу GUC, `current_tenant_id()` хоосон утга, `set_config` transaction-ийн гадна) → PERMISSIVE TO app_user + `inTenantTx`.
+- **CONC-002** нэг tenant-д зэрэгцээ MR үүсгэхэд дугаар давхцаж 500 (30-аас 22) → tenant+он advisory lock, тоон max (9999-ийн дараах давхцал ч засагдсан).
 - **CACHE-001** MR төлөв/эзэмшигчийн шалгалт cache-ээс; **EVT-001~003** outbox давхар publish, retry бүрт шинэ id; **API-001/HTTP-001** UUID биш id → 500; **CURSOR-001** буруу cursor → 500; **PERF-003** auth шалгалт хүсэлт бүрт (p99 1974ms → 57ms); **RL-001** Redis алдаа → бүх хүсэлт унах.
 - CI: `test:unit` script, `supabase db push` хасав, ESLint тохиргоо.
 
 ### Тест (2026-10-10)
-- Unit: core-kernel **512**, web-shell **45**
-- Integration: **15 файл / 154** — `app_user` (RLS) ба `postgres` хоёр горимд
+- Unit: core-kernel **514**, web-shell **45**
+- Integration: **15 файл / 155** — `app_user` (RLS) ба `postgres` хоёр горимд
 - Playwright e2e: **47** (0 skip) — fixture тест бүрийн өгөгдлийг өөрөө үүсгэж/устгана
 - Load (10k MR, 100 conn × 15с): p99 57ms / 3360 req/s (local, 4 worker) · `app_user` (RLS) горимд p99 **90ms** / 2416 req/s, cursor max 28ms (cloud, 1 worker)
 - Dedicated mode smoke: slug дутуу → эхлэхгүй; өөр Host → тохируулсан tenant (200); өөр tenant-ийн хэрэглэгч → 403
