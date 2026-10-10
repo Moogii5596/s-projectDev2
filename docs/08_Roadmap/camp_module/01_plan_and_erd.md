@@ -1,6 +1,6 @@
 # Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD · v4
 
-> 2026-10-09 · Төлөв: **ERD v4 батлагдсан · V1: Шат 1–4 ДУУССАН → Шат 8 (Frontend) код ДУУССАН (багц 3-ын e2e хэрэглэгчийн машин дээр) → Шат 9 · Шат 5–7 → V2 (D8)** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
+> 2026-10-09 · Төлөв: **ERD v4 батлагдсан · V1: Шат 1–4 ДУУССАН → Шат 8 (Frontend) ДУУССАН → Шат 9 · Шат 5–7 → V2 (D8)** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
 > Мөрдөх: `docs/08_Roadmap/00_rules_and_context.md` (RULE-01~20), `docs/03_Data_Models_and_Security/03_Module_Template.md`,
 > lessons_learned [RLS-004] (PERMISSIVE TO app_user + FORCE + GRANT), [MIG-001] (`prisma db push` ХОРИОТОЙ — зөвхөн supabase migration)
 
@@ -285,7 +285,7 @@ erDiagram
 - [x] 8.B2e2e `apps/e2e/tests/camp-ops.spec.ts` 7/7 + `camp.spec.ts` 6/6 ✅ (2026-10-10, хэрэглэгчийн машин дээр)
 - [x] 8.6 Хөрөнгө (ангилал, шилжүүлэх, актлах), засвар + сэлбэг (өрөө түгжих сонголт, зардлын урьдчилсан тооцоо). Засварын дэлгэрэнгүй = тусдаа хуудас `/camp/:campId/maintenance/:id`; хөрөнгийн дэлгэрэнгүй = modal; хаахаас өмнө нийт зардлыг харуулж баталгаажуулна; мөнгийг string-ээс float-гүй форматлана (`lib/money.ts`)
 - [x] 8.7 `tsc --noEmit` + eslint + `vite build` + vitest 27 + хуурамч API-тай браузер (1400px + 390px, хэвтээ гүйлгээгүй) + e2e dry-run 7/7 (`camp-assets.spec.ts`) + багц 1–2-ын dry-run 13/13
-- [ ] 8.B3e2e `apps/e2e/tests/camp-assets.spec.ts` 7/7 + `camp.spec.ts` + `camp-ops.spec.ts` — хэрэглэгчийн машин дээр
+- [x] 8.B3e2e `apps/e2e/tests/camp-assets.spec.ts` 7/7 + `camp.spec.ts` 6/6 + `camp-ops.spec.ts` 7/7 = 20/20 ✅; type-check, vitest 27/27 (2026-10-10, хэрэглэгчийн машин дээр)
 
 ### Шат 9 — Баримт (V1)
 - [ ] 9.1 `CHANGELOG.md`, `00_rules_and_context.md` (RULE-12-ийг [RLS-004]-тэй нийцүүлэх)
