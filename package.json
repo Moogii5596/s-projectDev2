@@ -14,6 +14,7 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "db:push": "cd apps/core-kernel && npx prisma db push",
     "db:generate": "cd apps/core-kernel && npx prisma generate",
+    "dev:test-user": "pnpm --filter @s-project/core-kernel dev:test-user",
     "db:migrate": "cd apps/core-kernel && npx prisma migrate deploy",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",

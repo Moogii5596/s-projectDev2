@@ -338,9 +338,10 @@ describe('CampEmployeesService (Шат 2.4)', () => {
   it('list: cursor → (createdAt < c) OR (createdAt = c AND id < cid); сүүлийн хуудас → nextCursor null', async () => {
     const c = new Date('2026-10-09T00:00:05.000Z');
     s.tx.campEmployee.findMany.mockResolvedValueOnce([{ id: 'e9', createdAt: c }]);
-    const page = await svc.list('t1', 'a1', 'c1', { cursor: encodeCursor('e5', c) });
+    const e5 = '00000000-0000-0000-0000-0000000000e5'; // [3.6.3] cursor id нь UUID байх ёстой
+    const page = await svc.list('t1', 'a1', 'c1', { cursor: encodeCursor(e5, c) });
     expect(s.tx.campEmployee.findMany.mock.calls[0][0].where.AND).toEqual([
-      { OR: [{ createdAt: { lt: c } }, { createdAt: c, id: { lt: 'e5' } }] },
+      { OR: [{ createdAt: { lt: c } }, { createdAt: c, id: { lt: e5 } }] },
     ]);
     expect(page).toMatchObject({ hasMore: false, nextCursor: null });
   });

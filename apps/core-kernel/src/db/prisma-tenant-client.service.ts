@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { AsyncLocalStorage } from 'async_hooks';
+import { resolvePrismaLogLevels } from '../config/prisma-log';
 
 export interface TenantContext {
   tenantId: string;
@@ -16,9 +17,8 @@ export class PrismaTenantClientService extends PrismaClient implements OnModuleI
 
   constructor() {
     super({
-      log: process.env.NODE_ENV === 'development'
-        ? ['warn', 'error']   // 'query' log-г хасав — RAM хэмнэнэ
-        : ['warn', 'error'],
+      // Phase 3.6.6: PRISMA_LOG_LEVELS (default warn,error). 'query' log RAM их иддэг — production-д бүү асаа
+      log: resolvePrismaLogLevels(),
     });
 
     // RLS middleware — Prisma query бүрт tenant_id тохируулна

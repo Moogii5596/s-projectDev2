@@ -1,6 +1,6 @@
 # S Project — Төслийн Явцын Тэмдэглэл
 
-> Шинэчлэгдсэн: 2026-10-08 | **Одоогийн хувилбар: `v0.1.0`** | **Дараагийн хувилбар: `v0.1.5`**
+> Шинэчлэгдсэн: 2026-10-10 | **Одоогийн хувилбар: `v0.1.0`** | **Дараагийн хувилбар: `v0.1.5`**
 > SemVer бодлого: `docs/VERSIONING.md` | Changelog: `docs/CHANGELOG.md`
 
 ---
@@ -87,6 +87,25 @@ Redis:     redis://localhost:6379
 
 ---
 
+## Кемп модуль — V1 ✅ ДУУССАН (2026-10-10) · V2 хүлээгдэж буй
+
+> Төлөвлөгөө/ERD v4: `docs/08_Roadmap/camp_module/01_plan_and_erd.md` · Changelog: `[Unreleased]` → «Кемп модуль V1»
+
+| Хэсэг | Төлөв |
+|---|---|
+| Шат 1 — DB (8 migration, RLS = PERMISSIVE TO app_user [RLS-004]) | ✅ |
+| Шат 2 — Эрх, мастер өгөгдөл, тохиргоо | ✅ |
+| Шат 3 — Ирц (xlsx импорт), ээлж, өрөө, хоолны суурь тоо | ✅ |
+| Шат 4 — Хөрөнгө, засвар + сэлбэг, засвар хаахад зардал | ✅ |
+| Шат 8 — Frontend (web-shell `/camp/*`, 3 багц) | ✅ e2e 20/20, vitest 27 |
+| Шат 9 — Баримт | ✅ |
+| Шат 5–7 — Гэрээ/үнэ, бохир ус/хог + хоолны захиалга, зардлын тайлан | ⏸ V2 (D8) — DB/Prisma/эрхийн код бэлэн |
+
+**E2E урьдчилсан нөхцөл:** `supabase/dev/camp_e2e_grant.sql` (admin@test.mn → Кемп админ) — файлын толгойд Windows-ын ажиллуулах заавар [ENV-009].
+**Кемп модулийн хүрээ:** backend `apps/core-kernel/src/modules/camp/`, frontend `apps/web-shell/src/modules/camp/`, e2e `apps/e2e/tests/camp*.spec.ts`.
+
+---
+
 ## Архитектурын гол шийдлүүд
 
 ### TenantAuthGuard flow
@@ -145,6 +164,7 @@ esbuild (default) → decorator metadata дэмждэггүй → БҮХИЙ Л 
 - [x] **v0.1.5.3:** Performance — Redis caching, cursor pagination, rate limiting
 - [ ] **v0.1.5.4:** Inventory, Budget, Vendor, Report модулиуд
 - [ ] **v0.1.5.5:** Event Bus integration тест (cross-module chain)
+- [x] **Кемп модуль V1** (2026-10-10) · [ ] **Кемп модуль V2** — Шат 5–7 (`camp_module/01_plan_and_erd.md` → «V2»)
 
 > Дэлгэрэнгүй төлөвлөгөө: `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md`
 

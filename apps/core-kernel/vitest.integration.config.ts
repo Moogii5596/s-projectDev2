@@ -25,6 +25,8 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.integration.spec.ts', 'test/**/*.integration.spec.ts'],
     testTimeout: 30000,
+    // [3.6.6] Санаатай давхардлын (409) `prisma:error` чимээг нуух. Барьж аваагүй алдаа → filter-ийн [ERROR] лог хэвээр
+    env: { PRISMA_LOG_LEVELS: process.env.PRISMA_LOG_LEVELS ?? 'warn' },
     hookTimeout: 60000,
     pool: 'forks',
     poolOptions: {

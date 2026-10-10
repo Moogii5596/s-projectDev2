@@ -48,6 +48,7 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
+-- ✅ ХЯЛБАР АРГА (Phase 3.6.5): `pnpm dev:test-user` — доорх 1–2-ыг автоматаар хийнэ (зөвхөн local) [SEED-002]
 -- SETUP CHECKLIST (manual steps after `supabase db reset`):
 -- 1. Supabase Studio → Auth → Users → admin@test.mn нэвтрэх эрх шалгах
 --    Байхгүй бол: Studio → Add user → email: admin@test.mn, password: test1234

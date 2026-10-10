@@ -5,6 +5,7 @@ import { Logger } from '@nestjs/common';
 import { AppModule } from './app/app.module';
 import { EnvConfig } from './config/env.config';
 import { configureApp } from './common/http/configure-app';
+import { RestartPolicy, resolveRestartPolicyOptions, startClusterPrimary } from './config/cluster-restart';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -30,13 +31,8 @@ const workers = Number.parseInt(process.env.NODE_CLUSTER_WORKERS ?? '1', 10);
 
 if (cluster.isPrimary && workers > 1) {
   console.log(`Master PID ${process.pid} — spawning ${workers} workers`);
-  for (let index = 0; index < workers; index += 1) cluster.fork();
-  // Phase 3.4: apps/e2e/tests/cluster-check.ts энэ мөрөөр worker-уудыг танина
-  cluster.on('online', (worker) => console.log(`Worker ${worker.process.pid} online`));
-  cluster.on('exit', (worker) => {
-    console.warn(`Worker ${worker.process.pid} died — restarting`);
-    cluster.fork();
-  });
+  // Phase 3.6.4: crash-loop backoff (config/cluster-restart.ts). Ганц унасан worker → шууд, давтагдвал 1с→30с
+  startClusterPrimary(cluster, workers, new RestartPolicy(resolveRestartPolicyOptions()));
 } else {
   bootstrap().catch((err) => {
     console.error('Failed to start Core Kernel:', err);

@@ -165,6 +165,7 @@ model MrHeader {
 
   @@unique([tenantId, mrNumber])
   @@index([tenantId, status])
+  @@index([tenantId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_mr_headers_cursor") // Phase 3.6.1 (20261010003)
   @@map("mr_headers")
 }
 

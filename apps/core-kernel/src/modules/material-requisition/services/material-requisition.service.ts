@@ -119,20 +119,26 @@ export class MaterialRequisitionService {
     | { data: MrHeader[]; total: number; page: number; limit: number }
     | CursorPaginationResult<MrHeader>
   > {
+    // [3.6.3] Буруу cursor → 400 (cache/DB-д хүрэхээс өмнө). Өмнө нь UUID биш id → Prisma алдаа → 500
+    const cursor = query.cursor ? decodeCursor(query.cursor) : null;
+
     const cacheKey = this.cache.buildKey('mr', tenantId, 'list', JSON.stringify(query));
     const cached = await this.cache.get<Awaited<ReturnType<MaterialRequisitionService['findAll']>>>(cacheKey);
     if (cached) return cached;
 
-    if (query.cursor) {
-      const { id, createdAt } = decodeCursor(query.cursor);
+    if (cursor) {
+      const { id, createdAt } = cursor;
       const order = query.order ?? 'desc';
       const limit = query.limit ?? 20;
+      // [3.6.1] Index-д ээлтэй: created_at <= c AND (created_at < c OR id < cid)
+      //   → idx_mr_headers_cursor (tenant_id, created_at DESC, id DESC)-ийн range scan (asc бол эсрэгээр)
       const where: Prisma.MrHeaderWhereInput = {
         tenantId,
         ...(query.status ? { status: query.status } : {}),
+        createdAt: order === 'desc' ? { lte: createdAt } : { gte: createdAt },
         OR: [
           { createdAt: order === 'desc' ? { lt: createdAt } : { gt: createdAt } },
-          { createdAt, id: order === 'desc' ? { lt: id } : { gt: id } },
+          { id: order === 'desc' ? { lt: id } : { gt: id } },
         ],
       };
       const items = await this.prisma.mrHeader.findMany({

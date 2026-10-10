@@ -1,7 +1,7 @@
 # Төслийн Шинжилгээ ба Хөгжүүлэлтийн Төлөвлөгөө — 2026-10-08
 
 > Хувилбар: v0.1.0 ✅ → v0.1.5 (Tier 2 Enterprise VPC) 🔄
-> Төлөв: **БАТЛАГДСАН 2026-10-08** · Phase 0–1 ✅ · Phase 2 ✅ · Phase 2.8 ✅ · Phase 2.9 ✅ (integration 47/47) · Phase 3 ✅ (Sprint 8 DoD 4/4) · Phase 3.7 ✅ · Phase 3.6 батлуулах
+> Төлөв: **БАТЛАГДСАН 2026-10-08** · Phase 0–1 ✅ · Phase 2 ✅ · Phase 2.8 ✅ · Phase 2.9 ✅ (integration 47/47) · Phase 3 ✅ (Sprint 8 DoD 4/4) · Phase 3.7 ✅ · Phase 3.6 ✅ (код) · Phase 4 ✅
 > **Шийдвэр (2026-10-08):** B — Schema-per-tenant цуцлах; shared tenant = RLS, Enterprise VPC = тусдаа DB/deploy
 
 ## 1. Одоогийн бодит төлөв (кодоос шалгасан)
@@ -99,11 +99,15 @@ pnpm --filter @s-project/core-kernel build
 pnpm --filter e2e exec tsx tests/cluster-check.ts
 ```
 
-### Phase 3.6 — Санал (БАТЛУУЛАХ) — Phase 3-ын явцад илэрсэн
-- [ ] 3.6.1 **Cursor pagination index:** `(tenant_id, created_at DESC, id DESC)` + query-д `createdAt <= cursor` нөхцөл. PostgreSQL 16, 100k мөр: **23ms → 0.14ms** (Index Scan). Одоогийн OR нөхцөл index range ашиглаж чадахгүй (index л нэмэхэд 26ms)
-- [ ] 3.6.2 `core-kernel` `start` script `node dist/main` → `node dist/src/main` (build гаралт `dist/src/`; Dockerfile аль хэдийн зөв)
-- [ ] 3.6.3 Буруу `cursor` → 500 буцааж байна (`decodeCursor` энгийн `Error` шиддэг) → 400 `BadRequestException`
-- [ ] 3.6.4 Cluster crash loop: worker эхлэхгүй бол master хязгааргүй, саатуулгүй fork хийдэг (энд 12с-д 11 удаа) → backoff + N удаа дараа master зогсох
+### Phase 3.6 — Жижиг засварууд ✅ хэрэгжсэн (2026-10-10, батлагдсан 11:47 — "B, дараа нь A")
+- [x] 3.6.1 **MR cursor index** `idx_mr_headers_cursor (tenant_id, created_at DESC, id DESC)` (`20261010003_mr_cursor_index.sql`) + WHERE `created_at <= c AND (created_at < c OR id < cid)` (asc эсрэгээр). PG16 10k мөр: Seq Scan + Sort **2.68ms → Index Scan 0.035ms**
+- [x] 3.6.2 `start` → `node dist/src/main` [BUILD-001]
+- [x] 3.6.3 Буруу cursor → **400** (`decodeCursor`: base64/JSON, id = UUID, огноо) — MR + Inventory + Camp бүгдэд [CURSOR-001]
+- [x] 3.6.4 Cluster crash-loop backoff: 0 → 1с → 2с … 30с, disconnect-ийг асаахгүй; **бууж өгөхгүй** (эрүүл worker-уудыг унагахгүй) [CLUSTER-001]
+- [x] 3.6.5 `pnpm dev:test-user [--email= --password=]` — Auth хэрэглэгч үүсгэх/нууц үг + `core_users.auth_id` холбох; зөвхөн local; core_user-гүй / олон tenant → Auth-д юу ч хийхгүй [SEED-002]
+- [x] 3.6.6 (нэмэлт) Integration гаралтын `prisma:error` чимээ → `PRISMA_LOG_LEVELS` (integration = `warn`) [LOG-001]
+  - Шалгалт: unit **457/457** (бохир env-ээр ч) · mutation **9/9** · tsc ✅ · lint 0 алдаа · PG16: 27 migration + seed, cursor walk 6/6 (desc/asc × статус, ижил created_at), EXPLAIN ✅, dev:test-user SQL 2/2 · GoTrue mock (supabase-js): үүсгэх → дахин ажиллуулахад шинэчлэх (250 хэрэглэгч, 2 хуудас) ✅ · `pnpm start` + backoff бодитоор ✅
+  - [x] Таны компьютер (2026-10-10 12:14): `migration up` → `db:generate` → `test` → `test:integration` → `pnpm dev:test-user` ✅
 
 ### Phase 3.7 — Auth token cache (A) ✅ хэрэгжсэн (2026-10-08)
 > 3.5-ийн анхны хэмжилт (таны компьютер): p99 = 1974ms ❌, 154 req/s, non-2xx 3268 (429 = 0) ❌, cache hit 100% ✅, cursor → 401 ❌.
@@ -121,7 +125,7 @@ pnpm --filter e2e exec tsx tests/cluster-check.ts
 - [x] **4.0** Суурь: `MrLifecycleService` (MR батлах 2 зам: MR service + WorkflowService), `requireRole` helper, RLS стандарт
 - [x] **4.1** Budget: migration `20261008002_budget.sql` + Prisma + `/api/v1/budget` (periods, allocations, check) + submit commit / approve SPENT / reject RELEASED
   - Шалгалт: unit 210/210 · mutation 5/5 (+ сул assertion засав) · PostgreSQL 16 (app_user, RLS): migration 17/17, RLS 5 сценари, SQL 10 сценари (зэрэгцээ `FOR UPDATE` ✅) · AppModule DI ✅ · tsc/lint ✅
-  - [ ] Таны компьютер: `supabase migration up` → `db:generate` → `test` + `test:integration` (`budget.integration.spec.ts`)
+  - [x] Таны компьютер: budget integration **59/59 ✅**
 - [x] **Шийдвэр (17:47):** шинэ модулиуд = платформ батлах **хөнгөн** модуль (1 хүснэгт, хамгийн бага API); frontend энэ удаа алгасна
 - [x] **4.1 баталгаажуулалт:** integration **59/59 ✅** (таны компьютер, TEST-005/006 засварын дараа)
 - [x] **4.2 Inventory-lite ✅** — `inventory_items` · `GET/POST /inventory/items` (cursor + lowStock + Redis cache), `PATCH /inventory/items/:id/adjust` (атомик, сөрөг болохгүй)
@@ -130,10 +134,17 @@ pnpm --filter e2e exec tsx tests/cluster-check.ts
 - [x] **4.5 Integration** — `test/modules-lite.integration.spec.ts` (эрх, cursor, adjust, CSV, RLS app_user)
 - [x] **4.7 Загвар** — `docs/03_Data_Models_and_Security/03_Module_Template.md`
   - Шалгалт: unit **230/230** (бохир env-ээр ч) · mutation 6/6 · PostgreSQL 16 (app_user, RLS): migration 18/18, RLS 5, SQL 10 сценари (cursor 25→3 хуудас давхардалгүй, **зэрэгцээ 10 хасалт → яг 5**) · бүтэн AppModule-ийн route 11/11 · tsc/lint ✅
-  - [ ] Таны компьютер: `supabase migration up` → `db:generate` → `test` + `test:integration`
+  - [x] Таны компьютер (2026-10-10): integration **10 файл / 123 тест ✅** (modules-lite 9/9, budget 12/12)
 - [~] **4.6 Frontend** — энэ удаа алгассан (шийдвэр 17:50)
 - [x] **Хасагдсан** (анхны sprint_9-ээс): агуулахын байршил, нөөцлөлт/MR мөр холболт, үнийн санал, Excel (`exceljs`), тусдаа chain тест
-- [ ] **4.8 (санал)** RLS runtime: app-ийг `app_user`-ээр ажиллуулах — хуучин хүснэгтүүдийн policy/GRANT + MR transaction set_config
+- [ ] **4.8 RLS runtime (батлагдсан 2026-10-10 12:20)** — app-ийг `app_user`-ээр ажиллуулах, шат бүрт тест ногоон
+  - [x] **4.8.1 Аудит** — `supabase/dev/rls_audit.sql` (зөвхөн уншина). Таны DB (12:19) = PG16 хуулбар: 52 хүснэгт / 49 tenant / **39 зөв**, NO_GRANT 10, PERMISSIVE-гүй 9; `postgres` = BYPASSRLS (superuser биш) → апп RLS-ийг алгасдаг нь батлагдсан
+  - [x] **4.8.2 Migration ✅** `20261010004_rls_app_user.sql`: 10 хүснэгтэд PERMISSIVE `tenant_isolation_*` + GRANT; буруу GUC-тэй `approval_logs_tenant_isolation` устгав [RLS-005]; `current_tenant_id()` NULLIF [RLS-006]; `extensions` USAGE. `tenants`/`super_admins` → app_user эрхгүй (системийн холболт). **Апп-ын зан төлөв өөрчлөгдөхгүй** (апп `postgres`-ээр хэвээр)
+    - Шалгалт (PG16): аудит **49/49**, давтан ажиллуулах ✅, app_user 11/11 (49 хүснэгт × 3 context, cross-tenant бичих татгалзав, tenants эрхгүй); migration-гүй DB дээр ижил тест УНАСАН (хүчинтэй тест) · `test/rls-app-user.integration.spec.ts` (шинэ)
+    - [ ] Таны компьютер: `migration up` → `db:generate` → `test:integration` → аудит дахин (хураангуй 49 / 2 / 0)
+  - [ ] **4.8.3 Код** — MR, workflow, event-bus, auth: tenant query → `set_config` transaction; үр дүнгүй `$use` хасах
+  - [ ] **4.8.4 Хоёр холболт** — `DATABASE_URL` (хүсэлт) / `SYSTEM_DATABASE_URL` (onboarding, outbox, scheduler, guard lookup); эхэндээ хоёулаа `postgres`
+  - [ ] **4.8.5 Тест** — integration-ийг `app_user`-ээр, cross-tenant (MR, workflow) leakage
 
 ### Phase 5 — Sprint 10: Event Bus integration тест (2 session)
 - [ ] 5.1 MR → Workflow → Inventory → Budget chain тест

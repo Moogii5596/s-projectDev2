@@ -32,16 +32,21 @@
 ### 🔷 Migration дүрмүүд
 
 - **RULE-11** Migration бүхэнд → `uuid_generate_v7()` ЗААВАЛ. `gen_random_uuid()` / `uuid_generate_v4()` ХОРИГЛОНО.
-- **RULE-12** RLS Policy pattern — БҮГД ЭНЭ ЗАГВАР:
+- **RULE-12** RLS Policy pattern — БҮГД ЭНЭ ЗАГВАР ([RLS-004], 2026-10-10 засварласан):
   ```sql
   ALTER TABLE my_table ENABLE ROW LEVEL SECURITY;
   ALTER TABLE my_table FORCE ROW LEVEL SECURITY;
-  CREATE POLICY rls_my_table_tenant ON my_table
-    AS RESTRICTIVE FOR ALL TO s_project_app_user
+  CREATE POLICY tenant_isolation_my_table ON my_table
+    AS PERMISSIVE FOR ALL TO app_user
     USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
     WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid);
+  GRANT SELECT, INSERT, UPDATE, DELETE ON my_table TO app_user;
   ```
-  `current_tenant_id()` функц **байхгүй** — ХЭЗЭЭ Ч ашиглаж болохгүй.
+  - ❌ `AS RESTRICTIVE` ГАНЦААРАА → PostgreSQL permissive policy шаарддаг тул **0 мөр** буцаана.
+  - ❌ `s_project_app_user` role **байхгүй** — зөв role нь `app_user`. GRANT-гүй бол `permission denied`.
+  - `current_tenant_id()` функц **байхгүй** — ХЭЗЭЭ Ч ашиглаж болохгүй.
+  - Дэлгэрэнгүй загвар: `docs/03_Data_Models_and_Security/03_Module_Template.md` §1. Жишээ: кемпийн migration-ууд (`camp_apply_tenant_rls()` helper, `20261009001_camp_rbac.sql`).
+  - Хэрэгжсэн хуучин migration-ыг (RESTRICTIVE) checksum-аас болж засахгүй — шинэ migration-оор нэмж засна.
 - **RULE-15** Enum/type өөрчлөх migration ДАРААЛАЛ — ЯАГААД ЧΗΩ ЭНЭ ДАРААЛАЛ:
   ```sql
   -- 1. Partial index DROP (WHERE clause-тай)

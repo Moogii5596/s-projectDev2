@@ -62,6 +62,15 @@
 | PROC-003 | Тасарсан оролдлогын файл үлдэж холилдсон | эхлэхийн өмнө `git status`; "updated" хариу = дохио |
 | TEST-008 | Playwright шошго дэд мөрөөр таарна | `exact: true`, `{' '}`, `scope="col"`; e2e-г dry-run |
 | TEST-009 | Interception multipart файлгүй | upload-ийг бодит HTTP (proxy → echo)-ээр шалгах; axios FormData Content-Type |
+| FE-004 | Шат 8 UI: lint/validation/mobile/Tailwind | react-hooks disable-гүй; `noValidate`; `min-w-0`/`grid-cols-1`; `inputSmCls`; `window.prompt` хориотой |
+| PROC-004 | Python текст горим CRLF → LF болгосон | `open(p, newline='')`; засварын дараа `git diff --stat` мөрийн тоог шалгах |
+| CURSOR-001 | Cursor-ийн id шалгаагүй → `::uuid` → 500 | `decodeCursor` UUID шалгаж 400 шиднэ (`common/utils/cursor`) |
+| BUILD-001 | `start` = `dist/main`, build = `dist/src/main` | tsconfig `include` test-ийг агуулбал гаралт `dist/src/`; script-ийг build хийж ажиллуулж шалгах |
+| CLUSTER-001 | Worker унахад саатуулгүй fork (crash loop) | `RestartPolicy` backoff 0→1с→…→30с; disconnect-ийг дахин асаахгүй |
+| LOG-001 | Барьж авсан Prisma алдаа `prisma:error` лог | `PRISMA_LOG_LEVELS`; integration = `warn` |
+| PROC-005 | Хуучин snapshot дээр ажиллах эрсдэл (хавтас зөөгдсөн, өөр session өөрчилсөн) | Ажил эхлэхийн өмнө төхөөрөмжөөс шинэ snapshot + hash-ийн manifest |
+| RLS-005 | Policy буруу GUC нэр (`app.current_tenant_id`) уншсан | Бүх policy `app.tenant_id`; аудит §7-оор нөхцөлийг шалгах |
+| RLS-006 | `current_tenant_id()` `''::uuid` → алдаа | `NULLIF(..., '')::uuid` — context-гүй = 0 мөр |
 
 ---
 
@@ -831,7 +840,7 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Алдаа:** load test → `Supabase нэвтрэлт амжилтгүй (400): Invalid login credentials`; нэвтэрсэн ч SEC-001 → 403.
 **Шийдэл (гараар, reset бүрийн дараа):** Studio → Authentication → Add user (`admin@test.mn` / `test1234`, Auto Confirm) →
 `docker exec -i $db psql -U postgres -d postgres -c "UPDATE core_users c SET auth_id = u.id FROM auth.users u WHERE u.email = c.email AND c.email = 'admin@test.mn';"`
-**Цаашид:** `pnpm dev:test-user` script (Phase 3.6.5 — санал).
+**Цаашид:** ✅ `pnpm dev:test-user` (Phase 3.6.5, 2026-10-10) — reset бүрийн дараа энэ ганц команд (Auth хэрэглэгч үүсгэх/нууц үг тохируулах + `core_users.auth_id` холбох, зөвхөн local).
 
 
 ---
@@ -932,12 +941,68 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** Upload-ийг `route.continue()`-ээр vite proxy → жижиг echo сервер (localhost:3000) руу бодитоор илгээж байт, boundary, файлын нэрийг шалгасан (6512 байт xlsx → 6750 байт multipart). UI урсгалын mock нь зөвхөн Content-Type-ийг шалгана. Мөн axios-ийн анхдагч `Content-Type: application/json` FormData-г JSON болгодог тул upload-д `'multipart/form-data'` гэж тодорхой өгсөн (boundary-г browser нэмнэ).
 **Дүрэм:** Файл илгээх хүсэлтийг mock interception-ээр биш бодит HTTP-ээр шалгана; axios-ийн JSON анхдагчтай client-ээр FormData илгээхдээ Content-Type-ийг тодорхой заана.
 
+### [FE-004] Шат 8 frontend — хуурамч API-тай браузерын шалгалтаар илэрсэн UI алдаанууд (хэрэглэгчид хүрэхээс өмнө зассан)
+**Тохиолдсон:** Шат 8 багц 1–2 (cloud дээр tsc/eslint + 1400px/390px браузер шалгалт).
+1. `// eslint-disable-next-line react-hooks/exhaustive-deps` → web-shell-ийн eslint-д react-hooks plugin **байхгүй** тул "Definition for rule … was not found" алдаа. **Шийдэл:** ийм comment бичихгүй; dependency-г зөв өгөх эсвэл логикийг effect-ээс гаргах.
+2. Браузерын native validation (`required`, `type=number`) **англи** мессеж харуулсан. **Шийдэл:** form-д `noValidate`, шалгалтыг монгол мессежтэйгээр өөрсдөө (эсвэл backend-ийн монгол алдааг `ErrorBox`-оор).
+3. 390px-д хэвтээ гүйлгээ гарсан (grid, урт товч, nav). **Шийдэл:** `grid-cols-1 sm:grid-cols-N`, Card-д `min-w-0`, товчинд `whitespace-nowrap`, nav `flex-wrap`/`overflow-x-auto`; хүснэгт card дотроо гүйлгэгдэнэ.
+4. Tailwind class давхцал (`inputCls` + `py-1 text-sm` → аль нь ялах нь CSS-ийн дарааллаас хамаарна). **Шийдэл:** тусдаа `inputSmCls` хувилбар.
+5. `window.prompt` (нэр засах) — тест хийх боломжгүй, mobile-д муу. **Шийдэл:** inline засвар.
+**Дүрэм:** UI багц бүрийг хэрэглэгчид өгөхөөс өмнө 1400px + 390px-д `scrollWidth ≤ innerWidth` шалгаж, screenshot-оор нүдээр харна; native dialog/validation ашиглахгүй.
+
+### [PROC-004] Баримт засахад Python `open()` текст горим CRLF файлыг бүхэлд нь LF болгосон
+**Тохиолдсон:** Шат 9 — `CHANGELOG.md`, `project-status.md`, `00_rules_and_context.md` (CRLF) дээр хэдхэн мөр нэмэхэд `git diff --stat` 387/328/168 мөр өөрчлөгдсөн гэж харуулсан (universal newlines уншихдаа `\r\n` → `\n`, бичихдээ `\n`). Төхөөрөмж рүү хадгалахаас ӨМНӨ илэрсэн.
+**Шийдэл:** Мөрийн төгсгөлийг сэргээсэн (`sed 's/$/\r/'`) → diff зөвхөн нэмсэн мөрүүд.
+**Дүрэм:** Засварлах скриптэд `open(p, newline='')`; засварын дараа `git diff --stat`-ийн мөрийн тоо нь бодит өөрчлөлттэй таарч байгааг заавал шалгана (CRLF: `App.tsx`, `Layout.tsx`, `web-shell/package.json`, эдгээр 3 баримт).
+
+## 16. Phase 3.6 — Жижиг засварууд (2026-10-10)
+
+### [CURSOR-001] Буруу `cursor` → 500 (MR), UUID биш id-тай cursor → 500 (бүх raw SQL cursor)
+**Алдаа:** `decodeCursor` энгийн `Error` шиддэг байсан → MR `findAll` барьдаггүй → **500**. Inventory/Camp `try/catch`-аар 400 болгодог ч JSON нь зөв, `id` нь UUID биш cursor (`{"id":"x",...}`) шалгалтаас давж `${id}::uuid` / Prisma uuid талбарт хүрээд **500**.
+**Шийдэл:** `decodeCursor` өөрөө `BadRequestException('cursor буруу байна')` шиднэ: base64/JSON, `id` = UUID, `createdAt` = огноо. `BadRequestException` нь `Error`-ийн удамшил тул хуучин `try { decodeCursor } catch { throw 400 }` хэв маяг ажилласаар. MR-д cursor-ийг cache/DB-ээс ӨМНӨ decode хийнэ. UUID биш id ашигласан 2 unit тестийг UUID болгосон.
+**Дүрэм:** Хэрэглэгчээс ирсэн утга DB-д cast (`::uuid`, `::timestamptz`) болж орох бол cast-ын өмнө форматыг шалгаж 400 буцаана.
+
+### [BUILD-001] `pnpm start` ажилладаггүй байсан (`node dist/main` ↔ build гаралт `dist/src/main.js`)
+**Шалтгаан:** `apps/core-kernel/tsconfig.json`-ийн `include` нь `src` + `test` → `nest build` гаралт `dist/src/`, `dist/test/`. Dockerfile-ууд `dist/src/main.js` (зөв), харин package.json `start` хуучин зам.
+**Шийдэл:** `"start": "node dist/src/main"`. Шалгалт: build → `pnpm start` (`NODE_CLUSTER_WORKERS=2`) → master + worker-ууд асав.
+**Дүрэм:** Script/зам өөрчлөхдөө build хийж бодитоор ажиллуулж шалгана.
+
+### [CLUSTER-001] Worker эхлэхгүй (DB/Redis/.env) бол master саатуулгүй fork хийдэг байсан (crash loop)
+**Шийдэл:** `config/cluster-restart.ts` — `RestartPolicy`: 60с цонхонд 1 дэх унасан → шууд (cluster-check-ийн сценари хэвээр), дараагийнх 1с, 2с, 4с … **30с** (env: `CLUSTER_RESTART_BASE_MS/MAX_MS/WINDOW_MS`). `disconnect()`-ээр санаатай зогсоосон worker-ийг дахин асаахгүй. Лог форматыг (`Worker N online` / `Worker N died`) cluster-check.ts-ийн regex-д тааруулж үлдээсэн.
+**Шийдвэр:** Анхны санал "N удаа дараа master зогсох" байсан ч **бууж өгөхгүй** хувилбарыг сонгосон — нэг worker-ийн давтагдах алдаа эрүүл worker-уудыг унагахгүй; хамгийн ихдээ 30с тутам оролдоно.
+**Шалгалт:** build хийсэн app-ийг DB-гүй ажиллуулахад: 0 → 300 → 600 → 1200 → 2000ms (тест тохиргоо) — өмнө нь 12с-д 11+ удаа fork.
+
+### [LOG-001] Integration гаралтад `prisma:error … Unique constraint failed` — тест давсан ч алдаатай мэт
+**Шалтгаан:** Prisma `log: ['error']` үед кодоор БАРЬЖ АВСАН алдааг ч (P2002 → 409, MR дугаарын дахин оролдлого) консол руу бичдэг. Тест санаатайгаар давхардал үүсгэдэг.
+**Шийдэл:** `PRISMA_LOG_LEVELS` (default `warn,error` — production өөрчлөгдөхгүй; `none`; жагсаалт). `vitest.integration.config.ts` → `warn`. Барьж аваагүй алдаа exception → тестийн filter `[ERROR]` лог / HTTP 500-аар харагдсаар.
+
+### [PROC-005] Хуучин snapshot дээр ажиллах эрсдэл — төсөл зөөгдсөн, өөр session (Camp) олон файл өөрчилсөн
+**Илэрсэн:** Phase 3.6 эхлэхэд таны төсөл `E:\MoogiiDev\s-project` → `E:\MoogiiDev\Dev\s-project` зөөгдсөн, Camp модуль (Шат 1–9) нэмэгдсэн байв (unit 230 → 424, migration 18 → 27). Cloud дахь өмнөх ажлын хуулбар (v5) хуучирсан.
+**Шийдэл:** Төхөөрөмжөөс бүтэн snapshot (node_modules-гүй tar) авч шинэ ажлын хавтас үүсгэсэн; baseline (unit/tsc/lint) ажиллуулж байж эхэлсэн; deploy-ийн өмнө өөрчлөх файл бүрийн hash-ийг snapshot-той тулгана.
+**Дүрэм:** Phase/багц бүрийг төхөөрөмжийн одоогийн төлвөөс эхлүүлнэ; өмнөх cloud хуулбарыг хэзээ ч шууд deploy хийхгүй.
+
+## 17. Phase 4.8 — RLS runtime (2026-10-10)
+
+### [RLS-005] `approval_logs` PERMISSIVE policy буруу GUC (`app.current_tenant_id`)-г уншдаг байсан
+**Илэрсэн:** 4.8.1 аудит (§7 policy нөхцөл). Код хаана ч `app.current_tenant_id`-г тохируулдаггүй (стандарт = `app.tenant_id`, RULE-04) → app_user-ээр бол `approval_logs` үргэлж 0 мөр (эрх нээгдсэн ч). Policy `TO PUBLIC` байсан.
+**Шийдэл:** `20261010004`: policy-г устгаж стандарт `tenant_isolation_approval_logs` (PERMISSIVE TO app_user) нэмэв.
+**Дүрэм:** Шинэ policy-г `camp_apply_tenant_rls` / Module Template-ийн загвараар л бичнэ; GUC нэрийг гараар бичихгүй. Migration-ийн дараа `rls_audit.sql`-ийг ажиллуулж §3 (verdict), §7 (нөхцөл)-ийг шалгана.
+
+### [RLS-006] `current_tenant_id()` — context тохируулаагүй үед 0 мөр биш АЛДАА (RLS-003 давтагдсан)
+**Шалтгаан:** `COALESCE(current_setting('app.tenant_id', true), '')::uuid` → `''::uuid` → `invalid input syntax for type uuid`. `core_users`, `mr_headers`, `mr_items`, `outbox_events`-ийн policy үүнийг ашигладаг.
+**Шийдэл:** `NULLIF(current_setting('app.tenant_id', true), '')::uuid` (+ `SET search_path` — SECURITY DEFINER). PG16 дээр 49 хүснэгт × (context-гүй, `''`, tenant) алдаагүй.
+**Дүрэм:** GUC → uuid хөрвүүлэлт ҮРГЭЛЖ `NULLIF(..., '')`.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-10 | §17 (Phase 4.8.2): RLS-005 (буруу GUC policy), RLS-006 (`current_tenant_id` NULLIF) |
+| 2026-10-10 | §16 (Phase 3.6): CURSOR-001, BUILD-001, CLUSTER-001, LOG-001, PROC-005; SEED-002 → `pnpm dev:test-user` |
+| 2026-10-10 | §15: PROC-004 (Python CRLF → LF) |
+| 2026-10-10 | §15: FE-004 (Шат 8 UI — lint, native validation, mobile, Tailwind, prompt); Шат 9 аудит: Шат 1–8-ын алдаа бүгд бүртгэгдсэн |
 | 2026-10-10 | §15: TEST-008 нэмэлт (Modal-ын "×" = "Хаах" давхцал, багц 3) |
 | 2026-10-10 | §15: TEST-008 (Playwright шошгын дэд мөр), TEST-009 (interception multipart) |
 | 2026-10-10 | §15: PROC-003 (тасарсан оролдлогын үлдэгдэл файл) |

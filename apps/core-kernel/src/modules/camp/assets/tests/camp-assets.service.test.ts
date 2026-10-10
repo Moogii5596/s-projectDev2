@@ -209,7 +209,8 @@ describe('CampAssetsService — хөрөнгө (Шат 4.3)', () => {
 
   it('list: агуулах шүүлт (roomId null), хайлт, cursor; буруу cursor → 400', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.REPORT_VIEW] }] });
-    s.tx.campAsset.findMany.mockResolvedValueOnce([ASSET_ROW, { ...ASSET_ROW, id: 'as2' }]);
+    // [3.6.3] cursor-ийн id UUID байх ёстой (UUID биш → 400)
+    s.tx.campAsset.findMany.mockResolvedValueOnce([{ ...ASSET_ROW, id: '0192a3b4-0000-7000-8000-0000000000a1' }, { ...ASSET_ROW, id: 'as2' }]);
     const res = await svc.list('t1', 'a1', 'c1', { roomId: 'warehouse', q: 'inv', limit: 1 });
     const where = s.tx.campAsset.findMany.mock.calls[0][0].where;
     expect(where.roomId).toBeNull();

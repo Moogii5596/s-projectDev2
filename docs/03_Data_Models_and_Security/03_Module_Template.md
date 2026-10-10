@@ -61,7 +61,7 @@ private inTenantTx<T>(tenantId: string, fn: (tx: Prisma.TransactionClient) => Pr
 | Where | **Үргэлж** `tenantId`-аар (RLS нь хоёр дахь хамгаалалт — app одоогоор superuser [RLS-004]) |
 | Давхардал | `P2002` → `ConflictException` (409) |
 | Тоо хэмжээ өөрчлөх | Атомик `UPDATE ... SET x = x + $d WHERE ... AND x + $d >= 0 RETURNING` |
-| Cursor | `encodeCursor/decodeCursor` (`common/utils/cursor`), буруу cursor → 400, нөхцөл `created_at <= c AND (created_at < c OR id < cid)` |
+| Cursor | `encodeCursor/decodeCursor` (`common/utils/cursor`) — `decodeCursor` өөрөө 400 шиднэ (id = UUID шалгана) [CURSOR-001], нөхцөл `created_at <= c AND (created_at < c OR id < cid)` + index `(tenant_id, created_at DESC, id DESC)` |
 | Cache | `CacheService.buildKey('<module>', tenantId, ...)`, бичсэний дараа `invalidateTenant(tenantId)` |
 | MR-ийн төлөвт хариу үйлдэл | `MrLifecycleService`-д дуудлага нэмэх (MR transaction дотор, алдаа → rollback) |
 | Promise буцаах public method | `async` [ASYNC-001] |

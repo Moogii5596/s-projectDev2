@@ -1,6 +1,6 @@
 # Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD · v4
 
-> 2026-10-09 · Төлөв: **ERD v4 батлагдсан · V1: Шат 1–4 ДУУССАН → Шат 8 (Frontend) ДУУССАН → Шат 9 · Шат 5–7 → V2 (D8)** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
+> 2026-10-09 · Төлөв: **ERD v4 · V1 ДУУССАН (Шат 1–4, 8, 9 — 2026-10-10) · V2 хүлээгдэж буй (Шат 5–7, D8)** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`, `.v3.md`
 > Мөрдөх: `docs/08_Roadmap/00_rules_and_context.md` (RULE-01~20), `docs/03_Data_Models_and_Security/03_Module_Template.md`,
 > lessons_learned [RLS-004] (PERMISSIVE TO app_user + FORCE + GRANT), [MIG-001] (`prisma db push` ХОРИОТОЙ — зөвхөн supabase migration)
 
@@ -288,8 +288,9 @@ erDiagram
 - [x] 8.B3e2e `apps/e2e/tests/camp-assets.spec.ts` 7/7 + `camp.spec.ts` 6/6 + `camp-ops.spec.ts` 7/7 = 20/20 ✅; type-check, vitest 27/27 (2026-10-10, хэрэглэгчийн машин дээр)
 
 ### Шат 9 — Баримт (V1)
-- [ ] 9.1 `CHANGELOG.md`, `00_rules_and_context.md` (RULE-12-ийг [RLS-004]-тэй нийцүүлэх)
-- [ ] 9.2 Алдааг `docs/lessons_learned.md`-д
+- [x] 9.1 `CHANGELOG.md` (`[Unreleased]` → «Кемп модуль V1»; `v0.2.0` = Air-Gapped тул тусдаа дугаар нээгээгүй), `00_rules_and_context.md` RULE-12 → `AS PERMISSIVE TO app_user` + GRANT ([RLS-004])
+- [x] 9.2 `docs/lessons_learned.md` аудит — Шат 1–8-ын алдаа бүгд бүртгэгдсэн; FE-004 (Шат 8 UI) нэмсэн; ID давхцалгүй
+- [x] 9.3 `project-status.md` (Кемп модулийн төлөв), `INDEX.md` (кемпийн баримтын холбоос)
 
 ---
 
