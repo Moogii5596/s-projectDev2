@@ -256,13 +256,13 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
   - [ ] GitHub Actions (CI-004-ийн дараах анхны бодит ажиллалт) — ногоон эсэхийг баталгаажуулах
 
 
-### v0.1.6 — Кемп пилот (таны компьютер, интернэтэд нээлттэй) — ✅ код бэлэн (cloud-д тестлэгдсэн, 2026-10-10) · таны машин дээр суулгах үлдсэн
+### v0.1.6 — Кемп пилот (таны компьютер, интернэтэд нээлттэй) — ✅ ПИЛОТ АЖИЛЛАЖ БАЙНА (2026-10-10 23:58, `v0.1.6.1`) · https://desktop-13n3elv.tail7fe33e.ts.net
 > Хүрээ: зөвхөн Кемп модуль, нэг байгууллага (бодит өгөгдөл). Байршил: таны Windows компьютер. Эхлэх: өнөөдөр.
 > **Шийдвэр (21:31):** домэйн алга → интернэт = **Tailscale Funnel** (үнэгүй, тогтмол `https://<компьютер>.<tailnet>.ts.net`, HTTPS автомат, router port нээхгүй; нөөц: Cloudflare quick tunnel — хаяг дахин асах бүрт солигдоно) · байгууллага **Sino Hydro**, slug `sinohydro` · **хувийн мэдээлэл орно** → backup шифрлэлт (7-Zip AES-256), BitLocker зөвлөмж, хэрэглэгчийн эрх хамгийн бага
 > Runbook: `docs/07_Tech_Stack_and_Environment/04_Pilot_Camp_Windows.md` · Скрипт/тохиргоо: `deploy/pilot/` · Сургамж: lessons §20
 **A. Пилотыг dev/тестээс тусгаарлах**
 - [x] A1 Тусдаа Supabase project `s-project-pilot` (553xx, `deploy/pilot/supabase/config.toml`, `--workdir`), тусдаа Redis (127.0.0.1:56379), backend :3100 — dev-тэй зэрэг ажиллана
-- [ ] A1b Таны машин: `E:\MoogiiDev\Pilot\s-project` = `v0.1.6` tag-ийн clone (runbook §2)
+- [x] A1b `E:\MoogiiDev\Pilot\s-project` = tag clone (одоо `v0.1.6.1`)
 **B. Код (cloud-д тестлээд `v0.1.6` tag)**
 - [x] B1 `pilot.ps1 onboard` / `pilot.ps1 user` (`pilot-admin.ts` + CLI; давтан ажиллуулахад аюулгүй, нууц үг 16 тэмдэгт нэг удаа, `--reset-password`, `--deactivate` + Redis membership cache цэвэрлэнэ) — unit 7, бодит DB/Auth-тай туршсан, кирилл нэр
 - [x] B2 Web-shell `VITE_MODULES` (`lib/modules.ts`, unit 6): цэс/route шүүлт, нүүр `/camp`; `VITE_SUPABASE_URL=same-origin`
@@ -272,20 +272,21 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
 **C. Production горимоор ажиллуулах (dev server биш)**
 - [x] C1 Backend `node dist/src/main` (production, dedicated) — `pilot.ps1 start|run` (PID, лог эргүүлэлт, watchdog 30с)
 - [x] C2 `deploy/pilot/Caddyfile`: SPA + `/api/*` + `/auth/v1/{token,user,logout}` → бусад Supabase зам 404; CSP/HSTS/nosniff; `/assets/*` байхгүй бол 404
-- [ ] C3 Таны машин: Tailscale Funnel → 127.0.0.1:8088 (runbook §7)
+- [x] C3 Tailscale Funnel → 127.0.0.1:8088 — гаднаас health OK, утаснаас (мобайл дата) нэвтэрсэн
 **D. Аюулгүй байдал**
 - [x] D1 Supabase `auth.jwt_secret = env(SUPABASE_AUTH_JWT_SECRET)` (CLI 2.120 дэмжинэ; env алга бол CLI demo нууцаар чимээгүй асдаг → `pilot.ps1` anon/service key-ийн HMAC-ийг шалгаж demo бол зогсооно — SEC-006); `app_user` нууц үг `.env`-ээс DB-д; `.env` шалгалт (`pilot.ps1 check`)
 - [x] D2 `enable_signup = false` + Caddy `/auth/v1/signup` 404; Studio/Storage/Realtime унтраалттай
-- [ ] D3 Таны машин: `pilot.ps1 firewall` (Админ) — 3000/3100/5173/5174/6379/8088/5432x/5532x/56379 гаднаас хаах
+- [x] D3 `pilot.ps1 firewall` — LAN-аас 3100/55321/8088 нээгдэхгүйг шалгасан
 **E. Үйл ажиллагаа**
 - [x] E1 `pilot.ps1 backup|restore`: `pg_dump --data-only` (public + auth.users/identities) → 7-Zip AES-256 (`-mhe`), 14 хоног; restore = migration тулгалт → `db reset` → truncate → `pg_restore` → тоо тулгалт. Cloud: 54 хүснэгт md5 ижил сэргэсэн
 - [x] E2 `pilot.ps1 install-tasks`: нэвтрэхэд `run` (watchdog), өдөр бүр 02:00 backup; тэжээлийн тохиргоо runbook-д
-- [ ] E2b Таны машин: `install-tasks`, `powercfg`, нэг удаа restore дадлага
+- [x] E2b `install-tasks`, `powercfg`; дахин асаалтын тест — автоматаар асав
+- [ ] E1b Бодит Supabase дээр `backup` → `restore` дадлага (баталгаажуулах)
 - [ ] E4 Хувийн мэдээлэл: BitLocker, зөвхөн шаардлагатай хүнд эрх, пилотын хэрэглэгчдэд мэдэгдэх
 - [x] E3 Runbook `docs/07_Tech_Stack_and_Environment/04_Pilot_Camp_Windows.md`
 **F. Шалгалт**
 - [x] F1a Cloud: unit core-kernel 528 · web-shell 51 · integration 159/159 (`app_user` + `postgres`) · e2e 47/47 · build · Caddy-гаар UI (OWNER, VIEWER+CAMP_MANAGER: 12 кемп хуудас, CSP алдаагүй, зөвхөн same-origin) · `pilot.ps1` бүх команд (docker/supabase shim + бодит PG/Caddy/7-Zip/pwsh 7.4)
-- [ ] F1b Таны машин: `pnpm test` → commit/tag `v0.1.6` → пилот хавтсанд суулгах → утаснаас (мобайл дата) нэвтрэх; LAN-аас 3100/55321/8088 хүрэхгүйг шалгах (runbook §8)
+- [x] F1b `v0.1.6` → суулгах явцад олдсон 4 алдааг засаж `v0.1.6.1`: PROC-009 (`init` → `pnpm install`), PROC-010 (`.ps1` орчин цонхонд үлдсэн), OPS-003 (`[auth.email] enable_signup` → нэвтрэлт хаагдсан), FE-007 (401 → `/login` ↔ `/camp` давталт) — lessons §20
 ### Backlog (товлоогүй — шийдвэр шаардлагатай)
 - [x] ~~4.6 Frontend~~ → Phase 6.0 руу шилжсэн
 - [ ] Frontend component тест, `mfe-requisitions` stub
