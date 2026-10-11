@@ -100,6 +100,7 @@
 | PS-002 | pwsh shim: python shebang скрипт → `ProcessName` = `python3` → PID файлын шалгалт "ажиллаагүй" | Процессын нэрийг шалгадаг кодыг тестлэх shim нь жинхэнэ нэртэй (C wrapper + `PR_SET_PDEATHSIG`) |
 | TEST-019 | CONC-002 тест (30 зэрэгцээ MR) postgres горимын бүтэн ажиллуулалтад 4-өөс 1 удаа унав | "Flaky" гэж хаахгүй (TEST-015) — QA-09-д бүртгэж, шалтгааныг (pool `maxWait` 2с / tx 5с) шалгана |
 | PROC-013 | Таньд өгсөн зааварт `pnpm supabase:reset`-ийн дараа `dev:test-user` ба `camp_e2e_grant.sql` орхигдож e2e унав (нэвтрэлт, дараа нь 403) | DB reset-ийн дараа CI-ийн дараалал бүтнээрээ: `db:generate` → `dev:test-user` → `camp_e2e_grant.sql` → тест |
+| CI-005 | CI (v0.1.5-аас хойш шалгаагүй, QA-01): Node 20 → supabase-js "native WebSocket not found"; unit-ийн өмнө `prisma generate` алга → `UserRole` undefined | CI-ийн Node = Dockerfile/машинтай ижил (22); `db:generate`-ийг install-ийн дараа; CI-г release бүрт шалгана |
 
 ---
 
@@ -1238,13 +1239,19 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Хоёр дахь удаа (19:14):** `dev:test-user`-ийн дараа ч `camp_e2e_grant.sql` (admin@test.mn → Кемп админ) мөн орхигдсон → Кемпийн 4 тест `POST /camps → 403 camp.err.access.2`. Би зааврыг CI-тэй тулгалгүй, санахаараа бичсэн нь давтагдав.
 **Дүрэм:** DB reset орсон заавар бүрт CI-ийн дараалал бүтнээрээ: `supabase:reset` → `db:generate` → `dev:test-user` → `camp_e2e_grant.sql` → тест. Зааврыг `.github/workflows/ci.yml`-ийн "Prepare" алхмаас ХУУЛЖ бичнэ (санахаар биш). Docker контейнерийг нэрээр нь яг заана (`supabase_db_s-project` — пилотын `supabase_db_s-project-pilot`-тэй андуурахгүй).
 
+### [CI-005] CI улаан: Node 20, Prisma client generate-гүй unit тест
+**Тохиолдсон (2026-10-11, v0.2.0 push):** GitHub Actions "Lint · Unit · Integration · Build" — (1) `TenantOnboardingService` 6 тест: `Node.js detected but native WebSocket not found` (CI `node-version: 20`; `@supabase/supabase-js` realtime нь Node 22+-ийн native WebSocket шаарддаг — Dockerfile, таны машин 22); (2) `workflow-definition.*`, `require-role.helper` тест: `Cannot read properties of undefined (reading 'OWNER')` — unit алхмын өмнө `prisma generate` хийгдээгүй тул `@prisma/client`-ийн enum-ууд алга (e2e job-д л `db:generate` байсан).
+**Шалтгаан:** CI-г v0.1.5-аас хойш хэн ч шалгаагүй (QA-01, CI-004); local болон harness-д Prisma client аль хэдийн generate хийгдсэн байдаг тул илрээгүй.
+**Шийдэл:** `ci.yml`: хоёр job-д `node-version: 22`; install-ийн дараа `pnpm db:generate`.
+**Дүрэм:** CI-ийн орчин (Node, generate алхам) = Dockerfile/production-тэй ижил; release бүрт CI ногоон эсэхийг "дуусах нөхцөл"-д заавал шалгана.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
-| 2026-10-11 | §21 (v0.2.0): FE-008, PROC-012, TEST-017, TEST-018, OPS-004, PS-002, TEST-019, PROC-013 |
+| 2026-10-11 | §21 (v0.2.0): FE-008, PROC-012, TEST-017, TEST-018, OPS-004, PS-002, TEST-019, PROC-013, CI-005 |
 | 2026-10-11 | §20: PROC-011 (commit хийгээгүй файлыг дарж бичсэн) |
 | 2026-10-10 | §20: FE-007 (/login ↔ /camp давталт) |
 | 2026-10-10 | §20: OPS-003 (auth.email enable_signup) |

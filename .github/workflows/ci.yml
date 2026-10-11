@@ -43,11 +43,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22   # @supabase/supabase-js realtime: native WebSocket (Node 22+) — Dockerfile ч 22 [CI-005]
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # Unit тест @prisma/client-ийн enum-уудыг (UserRole г.м.) импортлодог → generate-гүй бол undefined [CI-005]
+      - name: Prisma Client
+        run: pnpm db:generate
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -104,7 +108,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22   # @supabase/supabase-js realtime: native WebSocket (Node 22+) — Dockerfile ч 22 [CI-005]
           cache: pnpm
 
       - name: Install dependencies
