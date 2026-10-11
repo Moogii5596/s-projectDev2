@@ -8,6 +8,7 @@ import { CampDepartmentsService } from './camp-departments.service';
 import { CampCrewsService } from './camp-crews.service';
 import { CampEmployeesService } from './camp-employees.service';
 import {
+  BulkRoomsDto,
   CreateBuildingDto,
   CreateCampDto,
   CreateCrewDto,
@@ -109,6 +110,14 @@ export class CampMasterController {
   createBuilding(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Body() dto: CreateBuildingDto) {
     const u = reqUser(req);
     return this.facilities.createBuilding(u.tenantId, u.id, campId, dto);
+  }
+
+  /** FB-07 (v0.2.0) — олон өрөө нэг дор */
+  @Post('buildings/:id/rooms/bulk')
+  @HttpCode(201)
+  bulkRooms(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Param('id', uuid()) id: string, @Body() dto: BulkRoomsDto) {
+    const u = reqUser(req);
+    return this.facilities.bulkRooms(u.tenantId, u.id, campId, id, dto);
   }
 
   @Patch('buildings/:id')

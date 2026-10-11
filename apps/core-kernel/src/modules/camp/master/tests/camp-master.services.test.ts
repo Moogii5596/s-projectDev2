@@ -65,13 +65,13 @@ describe('CampFacilitiesService (Шат 2.4)', () => {
   let svc: CampFacilitiesService;
   beforeEach(() => {
     s = setup();
-    svc = new CampFacilitiesService(s.prisma as never, s.access);
+    svc = new CampFacilitiesService(s.prisma as never, s.access, s.audit);
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
   });
 
   it('өрөө: room.manage эсвэл master.manage хангалттай; аль нь ч үгүй → 403', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MEAL_ORDER] }] });
-    await expect(svc.createRoom('t1', 'a1', 'c1', { buildingId: 'b1', roomNo: '101', capacity: 2 })).rejects.toThrow(/camp\.room\.manage эсвэл camp\.master\.manage/);
+    await expect(svc.createRoom('t1', 'a1', 'c1', { buildingId: 'b1', roomNo: '101', capacity: 2 })).rejects.toThrow(/camp\.room\.manage \/ camp\.master\.manage/);
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.ROOM_MANAGE] }] });
     s.tx.campBuilding.findFirst.mockResolvedValueOnce({ isActive: true });
     await svc.createRoom('t1', 'a1', 'c1', { buildingId: 'b1', roomNo: '101', capacity: 2 });
@@ -186,7 +186,7 @@ describe('CampDepartmentsService (Шат 2.4)', () => {
   let svc: CampDepartmentsService;
   beforeEach(() => {
     s = setup();
-    svc = new CampDepartmentsService(s.prisma as never, s.access);
+    svc = new CampDepartmentsService(s.prisma as never, s.access, s.audit);
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MASTER_MANAGE] }] });
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
   });
@@ -241,7 +241,7 @@ describe('CampCrewsService (Шат 2.4)', () => {
   let svc: CampCrewsService;
   beforeEach(() => {
     s = setup();
-    svc = new CampCrewsService(s.prisma as never, s.access);
+    svc = new CampCrewsService(s.prisma as never, s.access, s.audit);
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MASTER_MANAGE] }] });
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
   });
@@ -278,7 +278,7 @@ describe('CampEmployeesService (Шат 2.4)', () => {
   };
   beforeEach(() => {
     s = setup();
-    svc = new CampEmployeesService(s.prisma as never, s.access);
+    svc = new CampEmployeesService(s.prisma as never, s.access, s.audit);
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.EMPLOYEE_MANAGE] }] });
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
   });
@@ -297,7 +297,7 @@ describe('CampEmployeesService (Шат 2.4)', () => {
     await expect(svc.create('t1', 'a1', 'c1', dto)).rejects.toThrow(/Хэлтэс идэвхгүй/);
     s.tx.campDepartment.findFirst.mockResolvedValue({ isActive: true });
     s.tx.campCrew.findFirst.mockResolvedValue({ isActive: false });
-    await expect(svc.create('t1', 'a1', 'c1', dto)).rejects.toThrow(/Баг идэвхгүй/);
+    await expect(svc.create('t1', 'a1', 'c1', dto)).rejects.toThrow(/Ростер идэвхгүй/);
     expect(s.tx.campEmployee.create).not.toHaveBeenCalled();
   });
 

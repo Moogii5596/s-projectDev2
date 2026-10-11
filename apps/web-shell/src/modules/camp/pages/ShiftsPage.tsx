@@ -6,11 +6,12 @@ import type { AdjustmentReason, CalendarCell, ShiftType } from '../api/types'
 import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
 import { P } from '../lib/permissions'
-import { REASON_LABEL, SHIFT_LABEL, WEEKDAYS } from '../lib/labels'
+import { REASON_LABEL, SHIFT_LABEL, weekdayShort } from '../lib/labels'
 import { addDays, isoWeekday, todayUb } from '../lib/dates'
 import { CELL_TEXT, CELL_TITLE, type CellKind, cellKind, rangeProblem } from '../lib/calendar'
 import EmployeePicker, { type PickedEmployee } from '../components/EmployeePicker'
 import { Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../components/ui'
+import { useTranslation } from 'react-i18next'
 
 const CELL_CLS: Record<CellKind, string> = {
   DAY: 'bg-amber-200 text-amber-900',
@@ -24,6 +25,7 @@ const PRESENCE_MARK = { ARRIVAL: '▲', DEPARTURE: '▼', FULL_DAY: '' } as cons
 
 /** /camp/:campId/shifts — ээлжийн календарь (ажилтан × өдөр, ≤ 31) + ээлжийн зохицуулалт */
 export default function ShiftsPage() {
+  const { t } = useTranslation()
   const { campId = '' } = useParams()
   const perms = useCampPermissions(campId)
   const canAdjust = perms.can(P.SHIFT_ADJUST)
@@ -46,10 +48,19 @@ export default function ShiftsPage() {
 
   return (
     <div className="space-y-5">
-      <Card title="Ээлжийн календарь" actions={canAdjust && <Button size="sm" onClick={() => setAdjusting(true)}>+ Зохицуулалт</Button>}>
+      <Card
+        title={t('camp.shifts.calendar')}
+        actions={
+          canAdjust && (
+            <Button size="sm" onClick={() => setAdjusting(true)}>
+              {t('camp.shifts.add_adjustment')}
+            </Button>
+          )
+        }
+      >
         <div className="flex flex-wrap items-end gap-2 mb-3">
-          <Field label="Эхлэх өдөр">{(id) => <input id={id} type="date" className={inputSmCls} value={from} onChange={(e) => setFrom(e.target.value)} />}</Field>
-          <Field label="Хоног">
+          <Field label={t('camp.shifts.start_day')}>{(id) => <input id={id} type="date" className={inputSmCls} value={from} onChange={(e) => setFrom(e.target.value)} />}</Field>
+          <Field label={t('camp.shifts.days')}>
             {(id) => (
               <select id={id} className={inputSmCls} value={days} onChange={(e) => setDays(Number(e.target.value))}>
                 {[7, 14, 21, 28, 31].map((n) => (
@@ -60,10 +71,10 @@ export default function ShiftsPage() {
               </select>
             )}
           </Field>
-          <Field label="Хэлтэс">
+          <Field label={t('camp.emp.department')}>
             {(id) => (
               <select id={id} className={inputSmCls} value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
-                <option value="">Бүгд</option>
+                <option value="">{t('camp.common.all')}</option>
                 {depts.data?.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.code}
@@ -72,10 +83,10 @@ export default function ShiftsPage() {
               </select>
             )}
           </Field>
-          <Field label="Баг">
+          <Field label={t('camp.emp.crew')}>
             {(id) => (
               <select id={id} className={inputSmCls} value={crewId} onChange={(e) => setCrewId(e.target.value)}>
-                <option value="">Бүгд</option>
+                <option value="">{t('camp.common.all')}</option>
                 {crews.data?.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.code}
@@ -89,19 +100,19 @@ export default function ShiftsPage() {
         <Legend />
         {cal.isLoading && <Loading />}
         <ErrorBox error={cal.error} />
-        {cal.data && cal.data.employees.length === 0 && <Empty>Идэвхтэй ажилтан алга</Empty>}
+        {cal.data && cal.data.employees.length === 0 && <Empty>{t('camp.dept.no_employees')}</Empty>}
         {cal.data && cal.data.employees.length > 0 && (
           <div className="overflow-x-auto border border-gray-100 rounded-lg">
             <table className="text-xs border-separate border-spacing-0">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-10 bg-white text-left font-medium text-gray-600 px-2 py-1 min-w-[12rem] border-b border-gray-100">Ажилтан</th>
+                  <th className="sticky left-0 z-10 bg-white text-left font-medium text-gray-600 px-2 py-1 min-w-[12rem] border-b border-gray-100">{t('camp.att.col.employee')}</th>
                   {cal.data.days.map((d) => {
                     const wd = isoWeekday(d)
                     return (
                       <th key={d} className={`px-0.5 py-1 font-normal text-center border-b border-gray-100 ${wd === 0 || wd === 6 ? 'text-gray-400' : 'text-gray-600'}`}>
                         <div>{d.slice(8)}</div>
-                        <div className="text-[10px]">{WEEKDAYS[wd].slice(0, 2)}</div>
+                        <div className="text-[10px]">{weekdayShort(wd)}</div>
                       </th>
                     )
                   })}
@@ -135,15 +146,16 @@ export default function ShiftsPage() {
 }
 
 function CalendarCellView({ cell, onDays, employee }: { cell: CalendarCell; onDays: number; employee: string }) {
+  const { t } = useTranslation()
   const kind = cellKind(cell, onDays)
   const adj = cell.source === 'ADJUSTMENT'
   const notHere = cell.presence === null && (kind === 'DAY' || kind === 'NIGHT' || kind === 'UNKNOWN')
   const title = [
     `${employee} · ${cell.date}`,
     CELL_TITLE[kind],
-    cell.dayNo !== null ? `ростерын ${cell.dayNo}-р өдөр` : null,
-    adj ? 'зохицуулалтаар' : null,
-    cell.presence === 'ARRIVAL' ? 'ирсэн' : cell.presence === 'DEPARTURE' ? 'явсан' : cell.presence === 'FULL_DAY' ? 'кемпэд' : 'кемпэд бүртгэлгүй',
+    cell.dayNo !== null ? t('camp.shifts.roster_day', { n: cell.dayNo }) : null,
+    adj ? t('camp.shifts.by_adjustment') : null,
+    t(`camp.shifts.presence.${cell.presence ?? 'NONE'}`),
   ]
     .filter(Boolean)
     .join(' · ')
@@ -164,14 +176,8 @@ function CalendarCellView({ cell, onDays, employee }: { cell: CalendarCell; onDa
 }
 
 function Legend() {
-  const items: [CellKind, string][] = [
-    ['DAY', 'Өдөр'],
-    ['NIGHT', 'Шөнө'],
-    ['UNKNOWN', 'Тодорхойгүй'],
-    ['ARRIVE_TRAVEL', 'Ирэх өдөр'],
-    ['LEAVE_TRAVEL', 'Явах өдөр'],
-    ['OFF', 'Амралт'],
-  ]
+  const { t } = useTranslation()
+  const items: [CellKind, string][] = (['DAY', 'NIGHT', 'UNKNOWN', 'ARRIVE_TRAVEL', 'LEAVE_TRAVEL', 'OFF'] as CellKind[]).map((k) => [k, t(`camp.shifts.legend.${k}`)])
   return (
     <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 mb-3">
       {items.map(([k, l]) => (
@@ -181,14 +187,15 @@ function Legend() {
         </span>
       ))}
       <span className="inline-flex items-center gap-1">
-        <span className="w-5 h-4 mx-1 rounded bg-amber-200 ring-2 ring-offset-1 ring-fuchsia-500" /> Зохицуулалт
+        <span className="w-5 h-4 mx-1 rounded bg-amber-200 ring-2 ring-offset-1 ring-fuchsia-500" /> {t('camp.shifts.adjustment')}
       </span>
-      <span>▲ ирсэн · ▼ явсан · бүдэг = кемпэд бүртгэлгүй</span>
+      <span>{t('camp.shifts.legend_marks')}</span>
     </div>
   )
 }
 
 function AdjustmentsCard({ campId, canEdit, from, to }: { campId: string; canEdit: boolean; from: string; to: string }) {
+  const { t } = useTranslation()
   const valid = !rangeProblem(from, to, 366)
   const list = useQuery({
     queryKey: [...campKeys.adjustments(campId), from, to],
@@ -197,12 +204,12 @@ function AdjustmentsCard({ campId, canEdit, from, to }: { campId: string; canEdi
   })
   const del = useCampMutation((id: string) => campApi.deleteShiftAdjustment(campId, id), [campKeys.adjustments(campId), campKeys.calendar(campId), campKeys.presence(campId)])
   return (
-    <Card title={`Ээлжийн зохицуулалт (${from} – ${to})`}>
+    <Card title={t('camp.shifts.adjustments_title', { from, to })}>
       {list.isLoading && <Loading />}
       <ErrorBox error={list.error ?? del.error} />
-      {list.data && list.data.length === 0 && <Empty>Энэ хугацаанд зохицуулалт алга</Empty>}
+      {list.data && list.data.length === 0 && <Empty>{t('camp.shifts.no_adjustments')}</Empty>}
       {list.data && list.data.length > 0 && (
-        <Table head={['Ажилтан', 'Хугацаа', 'Ээлж', 'Шалтгаан', 'Бүртгэсэн', '']}>
+        <Table head={[t('camp.att.col.employee'), t('camp.shifts.period'), t('camp.att.col.shift'), t('camp.shifts.reason'), t('camp.shifts.created_by'), '']}>
           {list.data.map((a) => (
             <tr key={a.id}>
               <td className={td}>
@@ -221,7 +228,7 @@ function AdjustmentsCard({ campId, canEdit, from, to }: { campId: string; canEdi
               <td className={`${td} text-right`}>
                 {canEdit && (
                   <Button variant="ghost" onClick={() => del.mutate(a.id)} disabled={del.isPending}>
-                    Устгах
+                    {t('camp.att.delete')}
                   </Button>
                 )}
               </td>
@@ -234,6 +241,7 @@ function AdjustmentsCard({ campId, canEdit, from, to }: { campId: string; canEdi
 }
 
 function AdjustmentModal({ campId, defaultFrom, onClose }: { campId: string; defaultFrom: string; onClose: () => void }) {
+  const { t } = useTranslation()
   const [emps, setEmps] = useState<PickedEmployee[]>([])
   const [startDate, setStart] = useState(defaultFrom)
   const [endDate, setEnd] = useState(addDays(defaultFrom, 13))
@@ -257,35 +265,36 @@ function AdjustmentModal({ campId, defaultFrom, onClose }: { campId: string; def
   const needReason = reasonType === 'OTHER' && !reason.trim()
   return (
     <Modal
-      title="Ээлжийн зохицуулалт"
+      title={t('camp.shifts.adjustment_title')}
       onClose={onClose}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Болих
+            {t('camp.common.cancel')}
           </Button>
           <Button onClick={() => m.mutate(undefined)} loading={m.isPending} disabled={emps.length === 0 || !!problem || needReason}>
-            Хадгалах{emps.length > 1 ? ` (${emps.length})` : ''}
+            {t('camp.common.save')}
+            {emps.length > 1 ? ` (${emps.length})` : ''}
           </Button>
         </>
       }
     >
-      <EmployeePicker campId={campId} label="Ажилтнууд" value={emps} onChange={setEmps} multiple />
+      <EmployeePicker campId={campId} label={t('camp.shifts.employees')} value={emps} onChange={setEmps} multiple />
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Эхлэх">{(id) => <input id={id} type="date" className={inputCls} value={startDate} onChange={(e) => setStart(e.target.value)} />}</Field>
-        <Field label="Дуусах">{(id) => <input id={id} type="date" className={inputCls} value={endDate} onChange={(e) => setEnd(e.target.value)} />}</Field>
-        <Field label="Ээлж">
+        <Field label={t('camp.att.from')}>{(id) => <input id={id} type="date" className={inputCls} value={startDate} onChange={(e) => setStart(e.target.value)} />}</Field>
+        <Field label={t('camp.att.to')}>{(id) => <input id={id} type="date" className={inputCls} value={endDate} onChange={(e) => setEnd(e.target.value)} />}</Field>
+        <Field label={t('camp.att.col.shift')}>
           {(id) => (
             <select id={id} className={inputCls} value={shift} onChange={(e) => setShift(e.target.value as ShiftType)}>
-              <option value="DAY">Өдөр</option>
-              <option value="NIGHT">Шөнө</option>
+              <option value="DAY">{SHIFT_LABEL.DAY}</option>
+              <option value="NIGHT">{SHIFT_LABEL.NIGHT}</option>
             </select>
           )}
         </Field>
       </div>
       {problem && <p className="text-xs text-red-600">{problem}</p>}
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Шалтгааны төрөл">
+        <Field label={t('camp.shifts.reason_type')}>
           {(id) => (
             <select id={id} className={inputCls} value={reasonType} onChange={(e) => setReasonType(e.target.value as AdjustmentReason)}>
               {(Object.keys(REASON_LABEL) as AdjustmentReason[]).map((r) => (
@@ -297,7 +306,7 @@ function AdjustmentModal({ campId, defaultFrom, onClose }: { campId: string; def
           )}
         </Field>
         <div className="col-span-2">
-          <Field label="Тайлбар" error={needReason ? '"Бусад" үед тайлбар заавал' : null}>
+          <Field label={t('camp.shifts.reason_text')} error={needReason ? t('camp.shifts.reason_required') : null}>
             {(id) => <input id={id} className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />}
           </Field>
         </div>

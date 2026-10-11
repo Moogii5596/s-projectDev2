@@ -31,39 +31,44 @@ export class CampPresenceService {
   }
 
   /** Transaction дотроос дуудагдана (V2: Шат 6 захиалга үүсгэхэд дахин ашиглана) */
-  async compute(tx: Tx, tenantId: string, campId: string, date: string): Promise<PresenceResult> {
-    const settings = await getRosterSettings(tx, tenantId, campId);
-    const d = toDbDate(date);
-    const prev = toDbDate(addDays(date, -1));
-    const emps = await tx.campEmployee.findMany({
-      where: { tenantId, campId, stays: { some: { startDate: { lte: d }, OR: [{ endDate: null }, { endDate: { gte: prev } }] } } },
-      select: {
-        id: true, employeeCode: true, fullName: true,
-        department: { select: { code: true, mealLocationId: true, shiftPatterns: { select: { dayFrom: true, dayTo: true, shift: true } } } },
-        crew: { select: { rosterAnchorDate: true } },
-        shiftAdjustments: { where: { startDate: { lte: d }, endDate: { gte: prev } }, select: { startDate: true, endDate: true, shift: true } },
-        stays: {
-          where: { startDate: { lte: d }, OR: [{ endDate: null }, { endDate: { gte: prev } }] },
-          select: { startDate: true, endDate: true, arrivalMovement: { select: { meals: true } }, departureMovement: { select: { meals: true } } },
-        },
-      },
-    });
-    const employees: PresenceEmployee[] = emps.map((e) => ({
-      id: e.id,
-      employeeCode: e.employeeCode,
-      fullName: e.fullName,
-      departmentCode: e.department.code,
-      departmentLocationId: e.department.mealLocationId,
-      crewAnchor: e.crew ? fromDbDate(e.crew.rosterAnchorDate) : null,
-      pattern: e.department.shiftPatterns,
-      adjustments: e.shiftAdjustments.map((a) => ({ startDate: fromDbDate(a.startDate), endDate: fromDbDate(a.endDate), shift: a.shift })),
-      stays: e.stays.map((s) => ({
-        startDate: fromDbDate(s.startDate),
-        endDate: s.endDate ? fromDbDate(s.endDate) : null,
-        arrivalMeals: s.arrivalMovement.meals,
-        departureMeals: s.departureMovement?.meals ?? null,
-      })),
-    }));
-    return computePresence(employees, date, settings, settings.defaultMealLocationId);
+  compute(tx: Tx, tenantId: string, campId: string, date: string): Promise<PresenceResult> {
+    return loadPresence(tx, tenantId, campId, date);
   }
+}
+
+/** D өдрийн хоолны суурь тоо — DB-ээс ачаалж тооцно (API + `camp:snapshot` CLI, v0.2.0 §0.2) */
+export async function loadPresence(tx: Tx, tenantId: string, campId: string, date: string): Promise<PresenceResult> {
+  const settings = await getRosterSettings(tx, tenantId, campId);
+  const d = toDbDate(date);
+  const prev = toDbDate(addDays(date, -1));
+  const emps = await tx.campEmployee.findMany({
+    where: { tenantId, campId, stays: { some: { startDate: { lte: d }, OR: [{ endDate: null }, { endDate: { gte: prev } }] } } },
+    select: {
+      id: true, employeeCode: true, fullName: true,
+      department: { select: { code: true, mealLocationId: true, shiftPatterns: { select: { dayFrom: true, dayTo: true, shift: true } } } },
+      crew: { select: { rosterAnchorDate: true } },
+      shiftAdjustments: { where: { startDate: { lte: d }, endDate: { gte: prev } }, select: { startDate: true, endDate: true, shift: true } },
+      stays: {
+        where: { startDate: { lte: d }, OR: [{ endDate: null }, { endDate: { gte: prev } }] },
+        select: { startDate: true, endDate: true, arrivalMovement: { select: { meals: true } }, departureMovement: { select: { meals: true } } },
+      },
+    },
+  });
+  const employees: PresenceEmployee[] = emps.map((e) => ({
+    id: e.id,
+    employeeCode: e.employeeCode,
+    fullName: e.fullName,
+    departmentCode: e.department.code,
+    departmentLocationId: e.department.mealLocationId,
+    crewAnchor: e.crew ? fromDbDate(e.crew.rosterAnchorDate) : null,
+    pattern: e.department.shiftPatterns,
+    adjustments: e.shiftAdjustments.map((a) => ({ startDate: fromDbDate(a.startDate), endDate: fromDbDate(a.endDate), shift: a.shift })),
+    stays: e.stays.map((s) => ({
+      startDate: fromDbDate(s.startDate),
+      endDate: s.endDate ? fromDbDate(s.endDate) : null,
+      arrivalMeals: s.arrivalMovement.meals,
+      departureMeals: s.departureMovement?.meals ?? null,
+    })),
+  }));
+  return computePresence(employees, date, settings, settings.defaultMealLocationId);
 }

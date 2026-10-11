@@ -10,12 +10,15 @@ import { CONDITION_LABEL } from '../lib/labels'
 import { formatMoney } from '../lib/money'
 import { todayUb } from '../lib/dates'
 import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../components/ui'
+import i18n from '../../../i18n'
+import { useTranslation } from 'react-i18next'
 
 const COND_TONE: Record<AssetCondition, 'green' | 'yellow' | 'gray'> = { GOOD: 'green', DAMAGED: 'yellow', WRITTEN_OFF: 'gray' }
-const roomLabel = (a: { room: { roomNo: string; building: { code: string } } | null }) => (a.room ? `${a.room.building.code}-${a.room.roomNo}` : 'Агуулах')
+const roomLabel = (a: { room: { roomNo: string; building: { code: string } } | null }) => (a.room ? `${a.room.building.code}-${a.room.roomNo}` : i18n.t('camp.asset.warehouse'))
 
 /** /camp/:campId/assets — үндсэн хөрөнгө: жагсаалт, бүртгэх, засах, шилжүүлэх, актлах, түүх */
 export default function AssetsPage() {
+  const { t } = useTranslation()
   const { campId = '' } = useParams()
   const perms = useCampPermissions(campId)
   const canEdit = perms.can(P.ASSET_MANAGE)
@@ -38,28 +41,37 @@ export default function AssetsPage() {
   const usableRooms = (rooms.data ?? []).filter((r) => r.status !== 'INACTIVE')
 
   return (
-    <Card title="Үндсэн хөрөнгө" actions={canEdit && <Button size="sm" onClick={() => setEditing('new')}>+ Хөрөнгө</Button>}>
+    <Card
+      title={t('camp.asset.title')}
+      actions={
+        canEdit && (
+          <Button size="sm" onClick={() => setEditing('new')}>
+            {t('camp.asset.add')}
+          </Button>
+        )
+      }
+    >
       <div className="flex flex-wrap gap-2 mb-3">
-        <input aria-label="Хөрөнгө хайх" className={`${inputSmCls} w-56 max-w-full`} placeholder="Инвентарь, нэр, сериал" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <select aria-label="Байршлаар шүүх" className={`${inputSmCls} w-auto`} value={filter.roomId ?? ''} onChange={(e) => setF('roomId', e.target.value)}>
-          <option value="">Бүх байршил</option>
-          <option value="warehouse">Агуулах</option>
+        <input aria-label={t('camp.asset.search')} className={`${inputSmCls} w-56 max-w-full`} placeholder={t('camp.asset.search_ph')} value={search} onChange={(e) => setSearch(e.target.value)} />
+        <select aria-label={t('camp.asset.filter_location')} className={`${inputSmCls} w-auto`} value={filter.roomId ?? ''} onChange={(e) => setF('roomId', e.target.value)}>
+          <option value="">{t('camp.asset.all_locations')}</option>
+          <option value="warehouse">{t('camp.asset.warehouse')}</option>
           {usableRooms.map((r) => (
             <option key={r.id} value={r.id}>
               {r.building.code}-{r.roomNo}
             </option>
           ))}
         </select>
-        <select aria-label="Ангиллаар шүүх" className={`${inputSmCls} w-auto`} value={filter.categoryId ?? ''} onChange={(e) => setF('categoryId', e.target.value)}>
-          <option value="">Бүх ангилал</option>
+        <select aria-label={t('camp.asset.filter_category')} className={`${inputSmCls} w-auto`} value={filter.categoryId ?? ''} onChange={(e) => setF('categoryId', e.target.value)}>
+          <option value="">{t('camp.asset.all_categories')}</option>
           {cats.data?.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
           ))}
         </select>
-        <select aria-label="Төлвөөр шүүх" className={`${inputSmCls} w-auto`} value={filter.condition ?? ''} onChange={(e) => setF('condition', e.target.value)}>
-          <option value="">Бүх төлөв</option>
+        <select aria-label={t('camp.filter.status')} className={`${inputSmCls} w-auto`} value={filter.condition ?? ''} onChange={(e) => setF('condition', e.target.value)}>
+          <option value="">{t('camp.filter.all_statuses')}</option>
           {(Object.keys(CONDITION_LABEL) as AssetCondition[]).map((c) => (
             <option key={c} value={c}>
               {CONDITION_LABEL[c]}
@@ -69,9 +81,9 @@ export default function AssetsPage() {
       </div>
       {list.isLoading && <Loading />}
       <ErrorBox error={list.error} onRetry={() => list.refetch()} />
-      {list.data && rows.length === 0 && <Empty>Хөрөнгө олдсонгүй</Empty>}
+      {list.data && rows.length === 0 && <Empty>{t('camp.asset.empty')}</Empty>}
       {rows.length > 0 && (
-        <Table head={['Инвентарь', 'Нэр', 'Ангилал', 'Байршил', 'Төлөв', 'Үнэ', '']}>
+        <Table head={[t('camp.asset.inventory'), t('camp.common.name'), t('camp.asset.category'), t('camp.common.location'), t('camp.common.status'), t('camp.asset.cost'), '']}>
           {rows.map((a) => (
             <tr key={a.id} className={a.condition === 'WRITTEN_OFF' ? 'text-gray-400' : ''}>
               <td className={`${td} font-mono`}>{a.inventoryNo}</td>
@@ -87,7 +99,7 @@ export default function AssetsPage() {
               <td className={`${td} tabular-nums whitespace-nowrap`}>{a.acquiredCost ? formatMoney(a.acquiredCost) : '—'}</td>
               <td className={`${td} text-right whitespace-nowrap`}>
                 <Button variant="ghost" onClick={() => setDetailId(a.id)}>
-                  Дэлгэрэнгүй
+                  {t('camp.asset.details')}
                 </Button>
               </td>
             </tr>
@@ -97,7 +109,7 @@ export default function AssetsPage() {
       {list.hasNextPage && (
         <div className="mt-3 text-center">
           <Button variant="secondary" onClick={() => list.fetchNextPage()} loading={list.isFetchingNextPage}>
-            Цааш ачаалах
+            {t('camp.common.load_more')}
           </Button>
         </div>
       )}
@@ -121,6 +133,7 @@ export default function AssetsPage() {
 }
 
 function AssetModal({ campId, asset, rooms, onClose }: { campId: string; asset: Asset | null; rooms: Room[]; onClose: () => void }) {
+  const { t } = useTranslation()
   const cats = useQuery({ queryKey: campKeys.assetCategories, queryFn: () => campApi.assetCategories(false) })
   const [f, setF] = useState({
     inventoryNo: asset?.inventoryNo ?? '',
@@ -154,30 +167,30 @@ function AssetModal({ campId, asset, rooms, onClose }: { campId: string; asset: 
 
   return (
     <Modal
-      title={asset ? `Хөрөнгө ${asset.inventoryNo} засах` : 'Хөрөнгө бүртгэх'}
+      title={asset ? t('camp.asset.edit_title', { no: asset.inventoryNo }) : t('camp.asset.add_title')}
       onClose={onClose}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Болих
+            {t('camp.common.cancel')}
           </Button>
           <Button onClick={() => m.mutate(undefined)} loading={m.isPending} disabled={!f.inventoryNo.trim() || !f.name.trim() || !f.categoryId || costInvalid}>
-            Хадгалах
+            {t('camp.common.save')}
           </Button>
         </>
       }
     >
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Инвентарийн дугаар">{(id) => <input id={id} className={inputCls} value={f.inventoryNo} onChange={(e) => set('inventoryNo', e.target.value)} maxLength={50} />}</Field>
+        <Field label={t('camp.asset.inventory_no')}>{(id) => <input id={id} className={inputCls} value={f.inventoryNo} onChange={(e) => set('inventoryNo', e.target.value)} maxLength={50} />}</Field>
         <div className="col-span-2">
-          <Field label="Нэр">{(id) => <input id={id} className={inputCls} value={f.name} onChange={(e) => set('name', e.target.value)} maxLength={200} />}</Field>
+          <Field label={t('camp.common.name')}>{(id) => <input id={id} className={inputCls} value={f.name} onChange={(e) => set('name', e.target.value)} maxLength={200} />}</Field>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Ангилал" hint={usableCats.length === 0 ? 'Эхлээд "Хөрөнгийн ангилал" хуудсанд ангилал нэмнэ үү' : undefined}>
+        <Field label={t('camp.asset.category')} hint={usableCats.length === 0 ? t('camp.asset.need_category') : undefined}>
           {(id) => (
             <select id={id} className={inputCls} value={f.categoryId} onChange={(e) => set('categoryId', e.target.value)}>
-              <option value="">— Сонгох —</option>
+              <option value="">{t('camp.common.choose')}</option>
               {usableCats.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -186,13 +199,13 @@ function AssetModal({ campId, asset, rooms, onClose }: { campId: string; asset: 
             </select>
           )}
         </Field>
-        <Field label="Сериал дугаар">{(id) => <input id={id} className={inputCls} value={f.serialNo} onChange={(e) => set('serialNo', e.target.value)} maxLength={100} />}</Field>
+        <Field label={t('camp.asset.serial')}>{(id) => <input id={id} className={inputCls} value={f.serialNo} onChange={(e) => set('serialNo', e.target.value)} maxLength={100} />}</Field>
       </div>
       {!asset && (
-        <Field label="Байршил" hint="Дараа нь 'Шилжүүлэх'-ээр өөрчилнө (түүхэнд бичигдэнэ)">
+        <Field label={t('camp.common.location')} hint={t('camp.asset.location_hint')}>
           {(id) => (
             <select id={id} className={inputCls} value={f.roomId} onChange={(e) => set('roomId', e.target.value)}>
-              <option value="">Агуулах</option>
+              <option value="">{t('camp.asset.warehouse')}</option>
               {rooms.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.building.code}-{r.roomNo}
@@ -203,20 +216,20 @@ function AssetModal({ campId, asset, rooms, onClose }: { campId: string; asset: 
         </Field>
       )}
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Төлөв">
+        <Field label={t('camp.common.status')}>
           {(id) => (
             <select id={id} className={inputCls} value={f.condition} onChange={(e) => set('condition', e.target.value)}>
-              <option value="GOOD">Хэвийн</option>
-              <option value="DAMAGED">Гэмтэлтэй</option>
+              <option value="GOOD">{CONDITION_LABEL.GOOD}</option>
+              <option value="DAMAGED">{CONDITION_LABEL.DAMAGED}</option>
             </select>
           )}
         </Field>
-        <Field label="Авсан огноо">{(id) => <input id={id} type="date" max={todayUb()} className={inputCls} value={f.acquiredDate} onChange={(e) => set('acquiredDate', e.target.value)} />}</Field>
-        <Field label="Үнэ (₮)" error={costInvalid ? 'Тоо (≥ 0)' : null}>
+        <Field label={t('camp.asset.acquired_date')}>{(id) => <input id={id} type="date" max={todayUb()} className={inputCls} value={f.acquiredDate} onChange={(e) => set('acquiredDate', e.target.value)} />}</Field>
+        <Field label={t('camp.asset.cost_mnt')} error={costInvalid ? t('camp.asset.cost_invalid') : null}>
           {(id) => <input id={id} type="number" min={0} step="0.01" className={inputCls} value={f.acquiredCost} onChange={(e) => set('acquiredCost', e.target.value)} />}
         </Field>
       </div>
-      <Field label="Тэмдэглэл">{(id) => <textarea id={id} rows={2} className={inputCls} value={f.note} onChange={(e) => set('note', e.target.value)} maxLength={1000} />}</Field>
+      <Field label={t('camp.facilities.note')}>{(id) => <textarea id={id} rows={2} className={inputCls} value={f.note} onChange={(e) => set('note', e.target.value)} maxLength={1000} />}</Field>
       <ErrorBox error={m.error} />
     </Modal>
   )
@@ -239,6 +252,7 @@ function AssetDetailModal({
   onEdit: (a: Asset) => void
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const asset = useQuery({ queryKey: [...campKeys.assets(campId), 'detail', id], queryFn: () => campApi.asset(campId, id) })
   const history = useQuery({ queryKey: [...campKeys.assets(campId), 'movements', id], queryFn: () => campApi.assetMovements(campId, id) })
@@ -255,40 +269,40 @@ function AssetDetailModal({
   const locked = a?.condition === 'WRITTEN_OFF'
 
   return (
-    <Modal wide title={a ? `${a.inventoryNo} · ${a.name}` : 'Хөрөнгө'} onClose={onClose}>
+    <Modal wide title={a ? `${a.inventoryNo} · ${a.name}` : t('camp.asset.asset')} onClose={onClose}>
       {asset.isLoading && <Loading />}
       <ErrorBox error={asset.error} />
       {a && (
         <>
           <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
             <div>
-              <dt className="text-xs text-gray-500">Ангилал</dt>
+              <dt className="text-xs text-gray-500">{t('camp.asset.category')}</dt>
               <dd>{a.category.name}</dd>
             </div>
             <div>
-              <dt className="text-xs text-gray-500">Байршил</dt>
+              <dt className="text-xs text-gray-500">{t('camp.common.location')}</dt>
               <dd>{roomLabel(a)}</dd>
             </div>
             <div>
-              <dt className="text-xs text-gray-500">Төлөв</dt>
+              <dt className="text-xs text-gray-500">{t('camp.common.status')}</dt>
               <dd>
                 <Badge tone={COND_TONE[a.condition]}>{CONDITION_LABEL[a.condition]}</Badge>
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-gray-500">Нээлттэй засвар</dt>
+              <dt className="text-xs text-gray-500">{t('camp.asset.open_repairs')}</dt>
               <dd>{a.openMaintenance ?? 0}</dd>
             </div>
             <div>
-              <dt className="text-xs text-gray-500">Авсан огноо</dt>
+              <dt className="text-xs text-gray-500">{t('camp.asset.acquired_date')}</dt>
               <dd>{a.acquiredDate ?? '—'}</dd>
             </div>
             <div>
-              <dt className="text-xs text-gray-500">Үнэ</dt>
+              <dt className="text-xs text-gray-500">{t('camp.asset.cost')}</dt>
               <dd className="tabular-nums">{formatMoney(a.acquiredCost)}</dd>
             </div>
             <div className="col-span-2">
-              <dt className="text-xs text-gray-500">Тэмдэглэл</dt>
+              <dt className="text-xs text-gray-500">{t('camp.facilities.note')}</dt>
               <dd className="whitespace-pre-line">{a.note ?? '—'}</dd>
             </div>
           </dl>
@@ -298,32 +312,32 @@ function AssetDetailModal({
               {canEdit && (
                 <>
                   <Button size="sm" variant="secondary" onClick={() => onEdit(a)}>
-                    Засах
+                    {t('camp.common.edit')}
                   </Button>
                   <Button size="sm" variant="secondary" onClick={() => setMode('move')}>
-                    Шилжүүлэх
+                    {t('camp.asset.move')}
                   </Button>
                   <Button size="sm" variant="danger" onClick={() => setMode('writeOff')}>
-                    Актлах
+                    {t('camp.asset.write_off')}
                   </Button>
                 </>
               )}
               {canMaintain && (
                 <Button size="sm" onClick={() => navigate(`../maintenance?new=1&assetId=${a.id}`)}>
-                  Засварын хүсэлт
+                  {t('camp.asset.repair_request')}
                 </Button>
               )}
             </div>
           )}
-          {locked && <p className="text-sm text-gray-500">Актлагдсан хөрөнгө — өөрчлөх, шилжүүлэх, засварт оруулах боломжгүй.</p>}
+          {locked && <p className="text-sm text-gray-500">{t('camp.asset.locked')}</p>}
 
           {mode === 'move' && (
             <div className="border border-gray-200 rounded-lg p-3 space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Шинэ байршил">
+                <Field label={t('camp.asset.new_location')}>
                   {(fid) => (
                     <select id={fid} className={inputCls} value={toRoom} onChange={(e) => setToRoom(e.target.value)}>
-                      <option value="">Агуулах</option>
+                      <option value="">{t('camp.asset.warehouse')}</option>
                       {rooms.map((r) => (
                         <option key={r.id} value={r.id}>
                           {r.building.code}-{r.roomNo}
@@ -332,46 +346,46 @@ function AssetDetailModal({
                     </select>
                   )}
                 </Field>
-                <Field label="Шалтгаан">{(fid) => <input id={fid} className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />}</Field>
+                <Field label={t('camp.shifts.reason')}>{(fid) => <input id={fid} className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />}</Field>
               </div>
               <ErrorBox error={move.error} />
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => move.mutate(undefined)} loading={move.isPending}>
-                  Шилжүүлэх
+                  {t('camp.asset.move')}
                 </Button>
                 <Button size="sm" variant="secondary" onClick={reset}>
-                  Болих
+                  {t('camp.common.cancel')}
                 </Button>
               </div>
             </div>
           )}
           {mode === 'writeOff' && (
             <div className="border border-red-200 bg-red-50/40 rounded-lg p-3 space-y-3">
-              <p className="text-sm text-red-700">Актласны дараа буцаах боломжгүй. Хөрөнгө агуулах руу шилжиж, түгжигдэнэ.</p>
-              <Field label="Актлах шалтгаан">{(fid) => <input id={fid} className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />}</Field>
+              <p className="text-sm text-red-700">{t('camp.asset.write_off_warning')}</p>
+              <Field label={t('camp.asset.write_off_reason')}>{(fid) => <input id={fid} className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />}</Field>
               <ErrorBox error={writeOff.error} />
               <div className="flex gap-2">
                 <Button size="sm" variant="danger" onClick={() => writeOff.mutate(undefined)} loading={writeOff.isPending} disabled={!reason.trim()}>
-                  Актлах
+                  {t('camp.asset.write_off')}
                 </Button>
                 <Button size="sm" variant="secondary" onClick={reset}>
-                  Болих
+                  {t('camp.common.cancel')}
                 </Button>
               </div>
             </div>
           )}
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-800 mb-2">Шилжилтийн түүх</h3>
+            <h3 className="text-sm font-semibold text-gray-800 mb-2">{t('camp.asset.history')}</h3>
             <ErrorBox error={history.error} />
-            {history.data && history.data.length === 0 && <Empty>Шилжилт алга</Empty>}
+            {history.data && history.data.length === 0 && <Empty>{t('camp.asset.no_history')}</Empty>}
             {history.data && history.data.length > 0 && (
-              <Table head={['Огноо', 'Хаанаас', 'Хаашаа', 'Шалтгаан', 'Хэн']}>
+              <Table head={[t('camp.att.col.date'), t('camp.asset.from'), t('camp.asset.to'), t('camp.shifts.reason'), t('camp.i18n.who')]}>
                 {history.data.map((h) => (
                   <tr key={h.id}>
                     <td className={`${td} whitespace-nowrap`}>{h.movedAt.slice(0, 16).replace('T', ' ')}</td>
-                    <td className={td}>{h.fromRoom?.roomNo ?? 'Агуулах'}</td>
-                    <td className={td}>{h.toRoom?.roomNo ?? 'Агуулах'}</td>
+                    <td className={td}>{h.fromRoom?.roomNo ?? t('camp.asset.warehouse')}</td>
+                    <td className={td}>{h.toRoom?.roomNo ?? t('camp.asset.warehouse')}</td>
                     <td className={td}>{h.reason ?? ''}</td>
                     <td className={`${td} text-gray-500`}>{h.movedByUser.fullName ?? h.movedByUser.email}</td>
                   </tr>

@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { campApi, type OrganizationInput } from '../api/camp-api'
 import type { Organization, OrgServiceType, OrgType } from '../api/types'
@@ -8,12 +7,14 @@ import { useCampMutation } from '../hooks/useCampMutation'
 import { P } from '../lib/permissions'
 import { ORG_SERVICE_LABEL, ORG_TYPE_LABEL } from '../lib/labels'
 import { ActiveBadge, Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Table, inputCls, td } from '../components/ui'
+import { useTranslation } from 'react-i18next'
 
 const SERVICES = Object.keys(ORG_SERVICE_LABEL) as OrgServiceType[]
 const ORG_TYPES = Object.keys(ORG_TYPE_LABEL) as OrgType[]
 
 /** /camp/admin/organizations — tenant түвшин (бүх кемпэд үйлчилнэ). Бичих: бүх кемпийн master.manage */
 export default function OrganizationsPage() {
+  const { t } = useTranslation()
   const perms = useCampPermissions()
   const [showInactive, setShowInactive] = useState(false)
   const orgs = useQuery({ queryKey: [...campKeys.organizations, showInactive], queryFn: () => campApi.organizations({ activeOnly: !showInactive }) })
@@ -22,31 +23,25 @@ export default function OrganizationsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-gray-500">
-        <Link to="/camp" className="hover:text-blue-600">
-          Кемпүүд
-        </Link>{' '}
-        / Байгууллагууд
-      </div>
       <PageHeader
-        title="Байгууллагууд"
-        subtitle="Үйлчилгээний төрөл: катеринг (кемпийн тохиргоонд сонгогдоно), хог/бохир ус тээвэрлэгч, хүлээн авах цэг"
-        actions={canEdit && <Button onClick={() => setEditing('new')}>+ Байгууллага нэмэх</Button>}
+        title={t('camp.org.title')}
+        subtitle={t('camp.org.subtitle')}
+        actions={canEdit && <Button onClick={() => setEditing('new')}>{t('camp.org.add')}</Button>}
       />
       <label className="inline-flex items-center gap-2 text-sm text-gray-600">
-        <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} /> Идэвхгүйг харуулах
+        <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} /> {t('camp.org.show_inactive')}
       </label>
       <Card>
         {orgs.isLoading && <Loading />}
         <ErrorBox error={orgs.error} onRetry={() => orgs.refetch()} />
-        {orgs.data && orgs.data.length === 0 && <Empty>Байгууллага бүртгэгдээгүй</Empty>}
+        {orgs.data && orgs.data.length === 0 && <Empty>{t('camp.org.empty')}</Empty>}
         {orgs.data && orgs.data.length > 0 && (
-          <Table head={['Нэр', 'Төрөл', 'Үйлчилгээ', 'Холбоо барих', 'Төлөв', '']}>
+          <Table head={[t('camp.common.name'), t('camp.org.type'), t('camp.org.services'), t('camp.org.contact'), t('camp.common.status'), '']}>
             {orgs.data.map((o) => (
               <tr key={o.id}>
                 <td className={td}>
                   <div className="font-medium text-gray-900">{o.name}</div>
-                  {o.regNumber && <div className="text-xs text-gray-400">РД {o.regNumber}</div>}
+                  {o.regNumber && <div className="text-xs text-gray-400">{t('camp.org.reg_short', { reg: o.regNumber })}</div>}
                 </td>
                 <td className={td}>{ORG_TYPE_LABEL[o.orgType]}</td>
                 <td className={td}>
@@ -69,7 +64,7 @@ export default function OrganizationsPage() {
                 <td className={`${td} text-right`}>
                   {canEdit && (
                     <Button variant="ghost" onClick={() => setEditing(o)}>
-                      Засах
+                      {t('camp.common.edit')}
                     </Button>
                   )}
                 </td>
@@ -84,6 +79,7 @@ export default function OrganizationsPage() {
 }
 
 function OrgModal({ org, onClose }: { org: Organization | null; onClose: () => void }) {
+  const { t } = useTranslation()
   const [f, setF] = useState<OrganizationInput & { isActive: boolean }>({
     name: org?.name ?? '',
     regNumber: org?.regNumber ?? '',
@@ -115,25 +111,25 @@ function OrgModal({ org, onClose }: { org: Organization | null; onClose: () => v
 
   return (
     <Modal
-      title={org ? 'Байгууллага засах' : 'Байгууллага нэмэх'}
+      title={org ? t('camp.org.edit_title') : t('camp.org.add_title')}
       onClose={onClose}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Болих
+            {t('camp.common.cancel')}
           </Button>
           <Button onClick={() => m.mutate(undefined)} loading={m.isPending} disabled={!f.name.trim()}>
-            Хадгалах
+            {t('camp.common.save')}
           </Button>
         </>
       }
     >
-      <Field label="Нэр">{(id) => <input id={id} className={inputCls} value={f.name} onChange={(e) => set('name', e.target.value)} maxLength={200} />}</Field>
+      <Field label={t('camp.common.name')}>{(id) => <input id={id} className={inputCls} value={f.name} onChange={(e) => set('name', e.target.value)} maxLength={200} />}</Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Регистрийн дугаар">
+        <Field label={t('camp.org.reg')}>
           {(id) => <input id={id} className={inputCls} value={f.regNumber ?? ''} onChange={(e) => set('regNumber', e.target.value)} maxLength={30} />}
         </Field>
-        <Field label="Төрөл">
+        <Field label={t('camp.org.type')}>
           {(id) => (
             <select id={id} className={inputCls} value={f.orgType} onChange={(e) => set('orgType', e.target.value as OrgType)}>
               {ORG_TYPES.map((t) => (
@@ -146,7 +142,7 @@ function OrgModal({ org, onClose }: { org: Organization | null; onClose: () => v
         </Field>
       </div>
       <fieldset>
-        <legend className="block text-xs font-medium text-gray-600 mb-1">Үйлчилгээний төрөл (олныг сонгож болно)</legend>
+        <legend className="block text-xs font-medium text-gray-600 mb-1">{t('camp.org.service_types')}</legend>
         <div className="grid grid-cols-2 gap-1">
           {SERVICES.map((s) => (
             <label key={s} className="inline-flex items-center gap-2 text-sm">
@@ -156,17 +152,17 @@ function OrgModal({ org, onClose }: { org: Organization | null; onClose: () => v
         </div>
       </fieldset>
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Холбоо барих хүн">
+        <Field label={t('camp.org.contact_name')}>
           {(id) => <input id={id} className={inputCls} value={f.contactName ?? ''} onChange={(e) => set('contactName', e.target.value)} maxLength={200} />}
         </Field>
-        <Field label="Утас">{(id) => <input id={id} className={inputCls} value={f.phone ?? ''} onChange={(e) => set('phone', e.target.value)} maxLength={50} />}</Field>
-        <Field label="И-мэйл">
+        <Field label={t('camp.emp.col.phone')}>{(id) => <input id={id} className={inputCls} value={f.phone ?? ''} onChange={(e) => set('phone', e.target.value)} maxLength={50} />}</Field>
+        <Field label={t('auth.email')}>
           {(id) => <input id={id} type="email" className={inputCls} value={f.email ?? ''} onChange={(e) => set('email', e.target.value)} maxLength={200} />}
         </Field>
       </div>
       {org && (
         <label className="inline-flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={f.isActive} onChange={(e) => set('isActive', e.target.checked)} /> Идэвхтэй
+          <input type="checkbox" checked={f.isActive} onChange={(e) => set('isActive', e.target.checked)} /> {t('camp.common.active')}
         </label>
       )}
       <ErrorBox error={m.error} />

@@ -5,6 +5,7 @@
 import { vi, type Mock } from 'vitest';
 import { UserRole } from '@prisma/client';
 import { CampAccessService } from '../camp-access.service';
+import { CampAuditService } from '../camp-audit.service';
 
 type ModelMock = Record<string, Mock>;
 export type TxMock = Record<string, ModelMock> & { $executeRaw: Mock; $queryRaw: Mock };
@@ -78,7 +79,8 @@ export function setup() {
   const prisma = createPrisma(tx);
   const cache = createCache();
   const access = new CampAccessService(cache as never);
-  return { tx, prisma, cache, access };
+  const audit = new CampAuditService(prisma as never, access);
+  return { tx, prisma, cache, access, audit };
 }
 
 /** Transaction бүр set_config('app.tenant_id', tenantId)-аар ЭХЭЛСЭН эсэх (RULE-04) */

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CampAssetCondition, CampMaintenanceStatus, CampPartSource, CampRoomStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
@@ -6,6 +6,8 @@ import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx, toDbDate, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
+import { statusText } from '../common/camp-i18n';
+import { t } from '../../../common/i18n/translate';
 import { getCampOr404 } from '../common/camp-lookup';
 import { todayUb } from '../attendance/camp-date';
 import { computeVat, sumVat, vatView } from '../costs/vat';
@@ -28,6 +30,7 @@ import {
   STATUS_LABEL,
   TRANSITIONS,
 } from './maintenance-flow';
+import { badRequest, conflict, notFound, forbidden } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
 const DEFAULT_VAT_RATE = 10;
@@ -125,7 +128,7 @@ export class CampMaintenanceService {
       where: { id, tenantId, campId },
       select: { id: true, requestNo: true, status: true, roomId: true, blocksRoom: true, reportedBy: true },
     });
-    if (!r) throw new NotFoundException('Засварын хүсэлт олдсонгүй');
+    if (!r) throw notFound('camp.err.maintenance.1');
     return r;
   }
 
@@ -152,9 +155,9 @@ export class CampMaintenanceService {
   private async blockRoom(tx: Tx, tenantId: string, campId: string, roomId: string): Promise<string[]> {
     await this.lockRoomRow(tx, tenantId, roomId);
     const room = await tx.campRoom.findFirst({ where: { id: roomId, tenantId, campId }, select: { roomNo: true, status: true } });
-    if (!room) throw new BadRequestException('Өрөө энэ кемпэд олдсонгүй');
+    if (!room) throw badRequest('camp.err.assets.4');
     if (room.status === CampRoomStatus.INACTIVE) {
-      throw new ConflictException(`Өрөө ${room.roomNo} идэвхгүй — засварт оруулах боломжгүй`);
+      throw conflict('camp.err.maintenance.2', { roomNo: room.roomNo });
     }
     if (room.status === CampRoomStatus.ACTIVE) {
       await tx.campRoom.update({ where: { id: roomId }, data: { status: CampRoomStatus.MAINTENANCE } });
@@ -163,7 +166,7 @@ export class CampMaintenanceService {
     const occupants = await tx.campRoomAllocation.count({
       where: { tenantId, roomId, startDate: { lte: today }, OR: [{ endDate: null }, { endDate: { gte: today } }] },
     });
-    return occupants > 0 ? [`Өрөө ${room.roomNo}-д одоо ${occupants} хүн байрлаж байна — шилжүүлэх шаардлагатай эсэхийг шалгана уу`] : [];
+    return occupants > 0 ? [t('camp.warn.room_occupied', { roomNo: room.roomNo, n: occupants })] : [];
   }
 
   /** Өөр нээлттэй түгжих засвар үлдээгүй бол өрөөг ACTIVE болгоно. Буцаах: суллагдсан эсэх */
@@ -183,7 +186,7 @@ export class CampMaintenanceService {
   /** Төлөв шилжүүлэх (optimistic: status = уншсан төлөв) */
   private async setStatus(tx: Tx, tenantId: string, r: RequestCore, data: Prisma.CampMaintenanceRequestUncheckedUpdateManyInput) {
     const res = await tx.campMaintenanceRequest.updateMany({ where: { id: r.id, tenantId, status: r.status }, data });
-    if (res.count === 0) throw new ConflictException(`${r.requestNo} төлөв өөрчлөгдсөн байна — дахин ачаална уу`);
+    if (res.count === 0) throw conflict('camp.err.maintenance.3', { requestNo: r.requestNo });
   }
 
   private async vatRateOf(tx: Tx, tenantId: string, campId: string) {
@@ -193,7 +196,7 @@ export class CampMaintenanceService {
 
   private async detail(tx: Tx, tenantId: string, campId: string, id: string) {
     const r = await tx.campMaintenanceRequest.findFirst({ where: { id, tenantId, campId }, select: REQUEST_SELECT });
-    if (!r) throw new NotFoundException('Засварын хүсэлт олдсонгүй');
+    if (!r) throw notFound('camp.err.maintenance.1');
     const parts = await tx.campMaintenancePart.findMany({ where: { tenantId, requestId: id }, select: PART_SELECT, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
     const { vatRate } = await this.vatRateOf(tx, tenantId, campId);
     return { ...r, statusLabel: STATUS_LABEL[r.status], parts: parts.map(partView), cost: costPreview(parts, vatRate) };
@@ -208,7 +211,7 @@ export class CampMaintenanceService {
       try {
         cursor = decodeCursor(q.cursor);
       } catch {
-        throw new BadRequestException('cursor буруу байна');
+        throw badRequest('camp.err.assets.11');
       }
     }
     return inTenantTx(this.prisma, tenantId, async (tx) => {
@@ -252,7 +255,7 @@ export class CampMaintenanceService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const userId = await this.access.require(tx, tenantId, authId, campId, P.MAINTENANCE_CREATE);
         const camp = await getCampOr404(tx, tenantId, campId);
-        if (!dto.roomId && !dto.assetId) throw new BadRequestException('roomId эсвэл assetId шаардлагатай');
+        if (!dto.roomId && !dto.assetId) throw badRequest('camp.err.maintenance.4');
 
         let roomId = dto.roomId ?? null;
         if (dto.assetId) {
@@ -260,20 +263,20 @@ export class CampMaintenanceService {
             where: { id: dto.assetId, tenantId, campId },
             select: { inventoryNo: true, roomId: true, condition: true },
           });
-          if (!asset) throw new BadRequestException('Хөрөнгө энэ кемпэд олдсонгүй');
+          if (!asset) throw badRequest('camp.err.maintenance.5');
           if (asset.condition === CampAssetCondition.WRITTEN_OFF) {
-            throw new ConflictException(`Хөрөнгө ${asset.inventoryNo} актлагдсан — засварт оруулах боломжгүй`);
+            throw conflict('camp.err.maintenance.6', { inventoryNo: asset.inventoryNo });
           }
           if (roomId && asset.roomId !== roomId) {
-            throw new BadRequestException(`Хөрөнгө ${asset.inventoryNo} заасан өрөөнд байхгүй (${asset.roomId ? 'өөр өрөөнд' : 'агуулахад'} байна)`);
+            throw badRequest(asset.roomId ? 'camp.err.maintenance.7' : 'camp.err.maintenance.17', { inventoryNo: asset.inventoryNo });
           }
           roomId ??= asset.roomId; // зөвхөн хөрөнгө өгвөл түүний одоогийн өрөө
         } else if (roomId) {
           const room = await tx.campRoom.findFirst({ where: { id: roomId, tenantId, campId }, select: { id: true } });
-          if (!room) throw new BadRequestException('Өрөө энэ кемпэд олдсонгүй');
+          if (!room) throw badRequest('camp.err.assets.4');
         }
         const blocksRoom = dto.blocksRoom ?? false;
-        if (blocksRoom && !roomId) throw new BadRequestException('Өрөө түгжихэд (blocksRoom) өрөө шаардлагатай — хөрөнгө агуулахад байна');
+        if (blocksRoom && !roomId) throw badRequest('camp.err.maintenance.8');
 
         const requestNo = await this.nextRequestNo(tx, tenantId, campId, camp.code);
         const created = await tx.campMaintenanceRequest.create({
@@ -303,7 +306,7 @@ export class CampMaintenanceService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const r = await this.loadCoreAuthorized(tx, tenantId, authId, campId, id, [P.MAINTENANCE_CLOSE], true);
         if (!DETAILS_EDITABLE.includes(r.status)) {
-          throw new ConflictException(`${r.requestNo} ${STATUS_LABEL[r.status]} төлөвтэй — засах боломжгүй`);
+          throw conflict('camp.err.maintenance.9', { requestNo: r.requestNo, status: statusText(r.status) });
         }
         const data: Prisma.CampMaintenanceRequestUncheckedUpdateManyInput = {};
         if (dto.title !== undefined) data.title = dto.title;
@@ -331,10 +334,10 @@ export class CampMaintenanceService {
     const actor = await this.access.resolve(tx, tenantId, authId);
     const hasPerm = perms.some((c) => CampAccessService.has(actor.perms, campId, c));
     const mayReport = reporterMay && CampAccessService.has(actor.perms, campId, P.MAINTENANCE_CREATE);
-    if (!hasPerm && !mayReport) throw new ForbiddenException(`Энэ үйлдэлд ${perms.join(' эсвэл ')} эрх шаардлагатай`);
+    if (!hasPerm && !mayReport) throw forbidden('camp.err.access.2', { perms: perms.join(' / ') });
     const r = await this.loadCore(tx, tenantId, campId, id);
     if (!hasPerm && r.reportedBy !== actor.userId) {
-      throw new ForbiddenException(`Зөвхөн хүсэлт үүсгэсэн хүн эсвэл ${perms.join('/')} эрхтэй хүн хийнэ`);
+      throw forbidden('camp.err.maintenance.10', { perms: perms.join('/') });
     }
     return { ...r, actorId: actor.userId };
   }
@@ -347,9 +350,7 @@ export class CampMaintenanceService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const r = await this.loadCoreAuthorized(tx, tenantId, authId, campId, id, rule.perms, rule.reporterMay);
         if (!rule.from.includes(r.status)) {
-          throw new ConflictException(
-            `${r.requestNo}: ${STATUS_LABEL[r.status]} төлөвөөс "${action}" хийх боломжгүй (зөвхөн ${rule.from.map((s) => STATUS_LABEL[s]).join(', ')})`,
-          );
+          throw conflict('camp.err.maintenance.18', { requestNo: r.requestNo, status: statusText(r.status), action, allowed: rule.from.map(statusText).join(', ') });
         }
         const now = new Date();
         const data: Prisma.CampMaintenanceRequestUncheckedUpdateManyInput = { status: rule.to };
@@ -358,7 +359,7 @@ export class CampMaintenanceService {
         if (action === 'complete') data.completedAt = now;
         if (action === 'reopen') data.completedAt = null;
         if (action === 'cancel') {
-          if (!dto?.reason) throw new BadRequestException('Цуцлах шалтгаан шаардлагатай');
+          if (!dto?.reason) throw badRequest('camp.err.maintenance.11');
           data.cancelReason = dto.reason;
         }
         if (action === 'close') {
@@ -377,10 +378,10 @@ export class CampMaintenanceService {
           const catering = parts.filter((p) => p.source === CampPartSource.CATERING_PURCHASED);
           const { vatRate, cateringOrganizationId } = await this.vatRateOf(tx, tenantId, campId);
           if (catering.length > 0 && !cateringOrganizationId) {
-            throw new ConflictException('Кемпийн тохиргоонд катерингийн үйлчилгээ үзүүлэгч байгууллага сонгоогүй — сэлбэгийн зардлыг бүртгэх боломжгүй');
+            throw conflict('camp.err.maintenance.12');
           }
           const unpriced = catering.find((p) => p.unitPrice === null);
-          if (unpriced) throw new ConflictException(`Сэлбэг "${unpriced.partName}" үнэгүй — катерингийн сэлбэгт үнэ заавал`);
+          if (unpriced) throw conflict('camp.err.maintenance.13', { partName: unpriced.partName });
           costEntries = await writeMaintenancePartCosts(
             tx,
             { tenantId, campId, requestNo: r.requestNo, costDate: todayUb(), organizationId: cateringOrganizationId ?? '', vatRate, createdBy: r.actorId },
@@ -400,14 +401,14 @@ export class CampMaintenanceService {
     const userId = await this.access.require(tx, tenantId, authId, campId, P.MAINTENANCE_PARTS);
     const r = await this.loadCore(tx, tenantId, campId, id);
     if (!PARTS_EDITABLE.includes(r.status)) {
-      throw new ConflictException(`${r.requestNo} ${STATUS_LABEL[r.status]} — сэлбэг өөрчлөх боломжгүй`);
+      throw conflict('camp.err.maintenance.14', { requestNo: r.requestNo, status: statusText(r.status) });
     }
     return { r, userId };
   }
 
   private static assertPriced(source: CampPartSource, unitPrice: number | Prisma.Decimal | null | undefined) {
     if (source === CampPartSource.CATERING_PURCHASED && (unitPrice === null || unitPrice === undefined)) {
-      throw new BadRequestException('Катерингийн авсан сэлбэгт нэгж үнэ (unitPrice) заавал — зардалд орно');
+      throw badRequest('camp.err.maintenance.15');
     }
   }
 
@@ -440,7 +441,7 @@ export class CampMaintenanceService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.loadForParts(tx, tenantId, authId, campId, id);
         const part = await tx.campMaintenancePart.findFirst({ where: { id: partId, tenantId, requestId: id }, select: PART_SELECT });
-        if (!part) throw new NotFoundException('Сэлбэг олдсонгүй');
+        if (!part) throw notFound('camp.err.maintenance.16');
         const source = dto.source ?? part.source;
         const unitPrice = dto.unitPrice !== undefined ? dto.unitPrice : part.unitPrice;
         CampMaintenanceService.assertPriced(source, unitPrice);
@@ -466,7 +467,7 @@ export class CampMaintenanceService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.loadForParts(tx, tenantId, authId, campId, id);
         const res = await tx.campMaintenancePart.deleteMany({ where: { id: partId, tenantId, requestId: id } });
-        if (res.count === 0) throw new NotFoundException('Сэлбэг олдсонгүй');
+        if (res.count === 0) throw notFound('camp.err.maintenance.16');
         return { deleted: true };
       }),
     );

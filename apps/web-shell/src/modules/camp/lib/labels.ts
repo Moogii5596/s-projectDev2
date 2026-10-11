@@ -1,3 +1,4 @@
+import i18n from '../../../i18n'
 import type {
   AdjustmentReason,
   AssetCondition,
@@ -15,54 +16,37 @@ import type {
   ShiftType,
 } from '../api/types'
 
-export const WEEKDAYS = ['Ням', 'Даваа', 'Мягмар', 'Лхагва', 'Пүрэв', 'Баасан', 'Бямба'] as const
-
-export const ORG_TYPE_LABEL: Record<OrgType, string> = {
-  MAIN: 'Үндсэн (уурхай)',
-  SUBCONTRACTOR: 'Туслан гүйцэтгэгч',
-  CONTRACTOR: 'Гэрээт байгууллага',
+/**
+ * Enum шошго — v0.2.0 §0.7: орчуулгын түлхүүр `camp.enum.<бүлэг>.<утга>`.
+ * Getter-тэй объект: уншихад одоогийн хэлээр (компонент `useTranslation()`-оор дахин render хийгдэнэ).
+ */
+function labels<K extends string>(group: string, keys: readonly K[]): Record<K, string> {
+  const obj = {} as Record<K, string>
+  for (const k of keys) Object.defineProperty(obj, k, { enumerable: true, get: () => i18n.t(`camp.enum.${group}.${k}`) })
+  return obj
 }
 
-export const ORG_SERVICE_LABEL: Record<OrgServiceType, string> = {
-  CATERING: 'Катеринг',
-  WASTE_TRANSPORT: 'Хог тээвэрлэгч',
-  SEWAGE_TRANSPORT: 'Бохир ус тээвэрлэгч',
-  WASTE_DISPOSAL: 'Хог хүлээн авах цэг',
-  SEWAGE_DISPOSAL: 'Бохир ус хүлээн авах цэг',
-  OTHER: 'Бусад',
-}
+/** 0 = Ням … 6 = Бямба */
+export const weekdayName = (n: number): string => i18n.t(`camp.weekday.${((n % 7) + 7) % 7}`)
+/** Хүснэгтийн толгойд (Да, Мя / Mo, Tu / 一, 二) */
+export const weekdayShort = (n: number): string => i18n.t(`camp.weekday_short.${((n % 7) + 7) % 7}`)
+export const weekdayNames = (): string[] => [0, 1, 2, 3, 4, 5, 6].map(weekdayName)
 
-export const ROOM_STATUS_LABEL: Record<RoomStatus, string> = {
-  ACTIVE: 'Идэвхтэй',
-  MAINTENANCE: 'Засварт',
-  INACTIVE: 'Идэвхгүй',
-}
-
-export const SHIFT_LABEL: Record<ShiftType, string> = { DAY: 'Өдөр', NIGHT: 'Шөнө' }
-
-export const SYSTEM_ROLE_LABEL: Record<string, string> = {
-  CAMP_ADMIN: 'Системийн роль · Кемп админ',
-  CAMP_MANAGER: 'Системийн роль · Кемп менежер',
-  CATERING_ADMIN: 'Системийн роль · Катеринг админ',
-}
-
-export const MEAL_LABEL: Record<MealType, string> = { BREAKFAST: 'Өглөө', LUNCH: 'Өдөр', DINNER: 'Орой', NIGHT: 'Шөнө' }
+export const ORG_TYPE_LABEL = labels<OrgType>('org_type', ['MAIN', 'SUBCONTRACTOR', 'CONTRACTOR'])
+export const ORG_SERVICE_LABEL = labels<OrgServiceType>('org_service', ['CATERING', 'WASTE_TRANSPORT', 'SEWAGE_TRANSPORT', 'WASTE_DISPOSAL', 'SEWAGE_DISPOSAL', 'OTHER'])
+export const ROOM_STATUS_LABEL = labels<RoomStatus>('room_status', ['ACTIVE', 'MAINTENANCE', 'INACTIVE'])
+export const SHIFT_LABEL = labels<ShiftType>('shift', ['DAY', 'NIGHT'])
+export const SYSTEM_ROLE_LABEL = labels<string>('system_role', ['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN'])
+export const MEAL_LABEL = labels<MealType>('meal', ['BREAKFAST', 'LUNCH', 'DINNER', 'NIGHT'])
 export const MEAL_ORDER: MealType[] = ['BREAKFAST', 'LUNCH', 'DINNER', 'NIGHT']
-export const DIRECTION_LABEL: Record<Direction, string> = { ARRIVAL: 'Ирэх', DEPARTURE: 'Явах' }
-export const KIND_LABEL: Record<MovementKind, string> = { ROSTER: 'Ростер', OFF_ROSTER: 'Ээлжийн бус' }
-export const IMPORT_STATUS_LABEL: Record<ImportStatus, string> = { PREVIEW: 'Урьдчилсан', CONFIRMED: 'Баталгаажсан', CANCELLED: 'Цуцалсан' }
-export const REASON_LABEL: Record<AdjustmentReason, string> = { EARLY_ARRIVAL: 'Эрт ирсэн', SHIFT_CHANGE: 'Ээлж солигдсон', OTHER: 'Бусад' }
-export const EMPLOYEE_STATUS_LABEL: Record<EmployeeStatus, string> = { ACTIVE: 'Идэвхтэй', INACTIVE: 'Идэвхгүй' }
+export const DIRECTION_LABEL = labels<Direction>('direction', ['ARRIVAL', 'DEPARTURE'])
+export const KIND_LABEL = labels<MovementKind>('movement_kind', ['ROSTER', 'OFF_ROSTER'])
+export const IMPORT_STATUS_LABEL = labels<ImportStatus>('import_status', ['PREVIEW', 'CONFIRMED', 'CANCELLED'])
+export const REASON_LABEL = labels<AdjustmentReason>('adjust_reason', ['EARLY_ARRIVAL', 'SHIFT_CHANGE', 'OTHER'])
+export const EMPLOYEE_STATUS_LABEL = labels<EmployeeStatus>('employee_status', ['ACTIVE', 'INACTIVE'])
 /** Хоолны задаргааны бүлэг (backend PresenceBreakdown.group) */
-export const PRESENCE_GROUP_LABEL: Record<string, string> = { DAY: 'Өдрийн ээлж', NIGHT: 'Шөнийн ээлж', UNKNOWN: 'Ээлж тодорхойгүй', MOVEMENT: 'Ирэх/явах өдөр' }
-
-export const CONDITION_LABEL: Record<AssetCondition, string> = { GOOD: 'Хэвийн', DAMAGED: 'Гэмтэлтэй', WRITTEN_OFF: 'Актлагдсан' }
-export const MAINT_STATUS_LABEL: Record<MaintenanceStatus, string> = {
-  OPEN: 'Нээлттэй',
-  IN_PROGRESS: 'Хийгдэж буй',
-  DONE: 'Дууссан',
-  CLOSED: 'Хаагдсан',
-  CANCELLED: 'Цуцлагдсан',
-}
-export const PRIORITY_LABEL: Record<MaintenancePriority, string> = { LOW: 'Бага', MEDIUM: 'Дунд', HIGH: 'Өндөр', URGENT: 'Яаралтай' }
-export const PART_SOURCE_LABEL: Record<PartSource, string> = { MINE_SUPPLIED: 'Уурхайн нийлүүлсэн', CATERING_PURCHASED: 'Катерингийн авсан' }
+export const PRESENCE_GROUP_LABEL = labels<string>('presence_group', ['DAY', 'NIGHT', 'UNKNOWN', 'MOVEMENT'])
+export const CONDITION_LABEL = labels<AssetCondition>('asset_condition', ['GOOD', 'DAMAGED', 'WRITTEN_OFF'])
+export const MAINT_STATUS_LABEL = labels<MaintenanceStatus>('maint_status', ['OPEN', 'IN_PROGRESS', 'DONE', 'CLOSED', 'CANCELLED'])
+export const PRIORITY_LABEL = labels<MaintenancePriority>('priority', ['LOW', 'MEDIUM', 'HIGH', 'URGENT'])
+export const PART_SOURCE_LABEL = labels<PartSource>('part_source', ['MINE_SUPPLIED', 'CATERING_PURCHASED'])

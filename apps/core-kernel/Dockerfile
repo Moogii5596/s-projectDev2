@@ -20,6 +20,7 @@ COPY tsconfig.json ./
 COPY apps/core-kernel/package.json ./apps/core-kernel/
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY packages/prisma-rls-extension/package.json ./packages/prisma-rls-extension/
+COPY packages/i18n/package.json ./packages/i18n/
 
 # Dependencies суулгах
 RUN pnpm install --frozen-lockfile
@@ -28,6 +29,8 @@ RUN pnpm install --frozen-lockfile
 COPY apps/core-kernel/ ./apps/core-kernel/
 COPY packages/shared-types/ ./packages/shared-types/
 COPY packages/prisma-rls-extension/ ./packages/prisma-rls-extension/
+# v0.2.0: орчуулгын анхдагч (web.*.json) — backend орчуулгын Excel/шалгалт уншина
+COPY packages/i18n/ ./packages/i18n/
 
 # Prisma client үүсгэх
 RUN cd apps/core-kernel && npx prisma generate
@@ -74,6 +77,8 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/core-kernel/node_modules ./apps/core-kernel/node_modules
 
 COPY --from=builder /app/apps/core-kernel/dist ./apps/core-kernel/dist
+# @s-project/i18n — runtime-д require('@s-project/i18n/web.*.json') (workspace symlink → packages/i18n)
+COPY --from=builder /app/packages/i18n ./packages/i18n
 
 WORKDIR /app/apps/core-kernel
 

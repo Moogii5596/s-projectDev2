@@ -1,3 +1,4 @@
+import i18n from '../../../i18n'
 import type { CalendarCell } from '../api/types'
 
 /** Календарийн нүдний төрөл (UI өнгө/тэмдэг) */
@@ -18,15 +19,15 @@ export function cellKind(cell: CalendarCell, onDays: number): CellKind {
   return 'UNKNOWN'
 }
 
-export const CELL_TEXT: Record<CellKind, string> = { DAY: 'Ө', NIGHT: 'Ш', UNKNOWN: '?', ARRIVE_TRAVEL: 'И', LEAVE_TRAVEL: 'Я', OFF: '' }
-export const CELL_TITLE: Record<CellKind, string> = {
-  DAY: 'Өдрийн ээлж',
-  NIGHT: 'Шөнийн ээлж',
-  UNKNOWN: 'Ээлж тодорхойгүй (зохицуулалт хэрэгтэй)',
-  ARRIVE_TRAVEL: 'Ирэх өдөр (ростер)',
-  LEAVE_TRAVEL: 'Явах өдөр (ростер)',
-  OFF: 'Амралт',
+const KINDS: CellKind[] = ['DAY', 'NIGHT', 'UNKNOWN', 'ARRIVE_TRAVEL', 'LEAVE_TRAVEL', 'OFF']
+const byKind = (group: string) => {
+  const o = {} as Record<CellKind, string>
+  for (const k of KINDS) Object.defineProperty(o, k, { enumerable: true, get: () => (k === 'OFF' && group === 'cell_text' ? '' : i18n.t(`camp.${group}.${k}`)) })
+  return o
 }
+/** Нүдний товч тэмдэг (Ө/Ш/И/Я — хэлээр) ба тайлбар */
+export const CELL_TEXT = byKind('cell_text')
+export const CELL_TITLE = byKind('cell_title')
 
 /** 'YYYY-MM-DD' хоёр огнооны зай (өдөр); to < from бол сөрөг */
 export function daySpan(from: string, to: string): number {
@@ -35,9 +36,9 @@ export function daySpan(from: string, to: string): number {
 
 /** Мужийн шалгалт (backend-тэй ижил хязгаар) — алдааны мессеж эсвэл null */
 export function rangeProblem(from: string, to: string, maxDays: number): string | null {
-  if (!from || !to) return 'Огноо сонгоно уу'
+  if (!from || !to) return i18n.t('camp.range.pick_dates')
   const n = daySpan(from, to)
-  if (n < 1) return 'Дуусах огноо эхлэхээс өмнө байна'
-  if (n > maxDays) return `Муж ${maxDays} хоногоос хэтэрч болохгүй (${n})`
+  if (n < 1) return i18n.t('camp.range.end_before_start')
+  if (n > maxDays) return i18n.t('camp.range.too_long', { max: maxDays, n })
   return null
 }

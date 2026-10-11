@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<title>Байр, өрөө</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #E2E5E0;font-size:14px}
+th{font-size:12px;font-weight:600;color:#5B636B;background:#F7F8F5}
+</style>
+</helmet>
+<div style="min-height: 100%; box-sizing: border-box; display: flex; background: #F3F4F1; font-family: 'IBM Plex Sans', 'Noto Sans SC', sans-serif; color: #16191D">
+
+<nav aria-label="Тохиргоо" style="width: 220px; flex-shrink: 0; background: #FFFFFF; border-right: 1px solid #E2E5E0; padding: 20px 12px; display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 12px; font-weight: 600; color: #5B636B; padding: 0 10px 10px">ТОХИРГОО</div>
+<a href="#" style="padding: 9px 10px; border-radius: 8px; font-size: 14px; color: #16191D; text-decoration: none">Ерөнхий</a>
+<a href="#" style="padding: 9px 10px; border-radius: 8px; font-size: 14px; color: #16191D; text-decoration: none">Хоолны байршил</a>
+<a href="#" aria-current="page" style="padding: 9px 10px; border-radius: 8px; font-size: 14px; font-weight: 600; color: #0D6B5B; background: #E6F2EF; text-decoration: none">Байр, өрөө</a>
+<a href="#" style="padding: 9px 10px; border-radius: 8px; font-size: 14px; color: #16191D; text-decoration: none">Хэлтэс, ээлж</a>
+<a href="#" style="padding: 9px 10px; border-radius: 8px; font-size: 14px; color: #16191D; text-decoration: none">Албан тушаал</a>
+<a href="#" style="padding: 9px 10px; border-radius: 8px; font-size: 14px; color: #16191D; text-decoration: none">Ростер</a>
+<a href="#" style="padding: 9px 10px; border-radius: 8px; font-size: 14px; color: #16191D; text-decoration: none">Орчуулга</a>
+</nav>
+
+<main style="flex: 1; min-width: 0; padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<h1 style="margin: 0; font-size: 22px; font-weight: 700; flex: 1">Байр, өрөө</h1>
+<button type="button" style="height: 38px; padding: 0 14px; border-radius: 8px; border: 1px solid #C7CCC5; background: #FFFFFF; font: inherit; font-size: 14px">Excel татах</button>
+<button type="button" style="height: 38px; padding: 0 14px; border-radius: 8px; border: 1px solid #C7CCC5; background: #FFFFFF; font: inherit; font-size: 14px">Excel оруулах</button>
+<button type="button" style="height: 38px; padding: 0 14px; border-radius: 8px; border: 0; background: #0D6B5B; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">+ Байр</button>
+</div>
+
+<div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start">
+
+<section aria-label="Байрууд" style="width: 240px; background: #FFFFFF; border: 1px solid #E2E5E0; border-radius: 12px; overflow: hidden">
+<button type="button" style="width: 100%; text-align: left; padding: 12px 14px; border: 0; border-bottom: 1px solid #E2E5E0; background: #FFFFFF; font: inherit; font-size: 14px; display: flex; justify-content: space-between"><span>Бүх байр</span><span style="color: #5B636B">186 өрөө</span></button>
+<button type="button" aria-pressed="true" style="width: 100%; text-align: left; padding: 12px 14px; border: 0; border-left: 3px solid #0D6B5B; border-bottom: 1px solid #E2E5E0; background: #F3F8F6; font: inherit; font-size: 14px; font-weight: 600; display: flex; justify-content: space-between"><span>Блок 7</span><span style="color: #5B636B; font-weight: 400">24 · 96 ор</span></button>
+<button type="button" style="width: 100%; text-align: left; padding: 12px 14px; border: 0; border-bottom: 1px solid #E2E5E0; background: #FFFFFF; font: inherit; font-size: 14px; display: flex; justify-content: space-between"><span>Блок 8</span><span style="color: #5B636B">24 · 96 ор</span></button>
+<button type="button" style="width: 100%; text-align: left; padding: 12px 14px; border: 0; border-bottom: 1px solid #E2E5E0; background: #FFFFFF; font: inherit; font-size: 14px; display: flex; justify-content: space-between"><span>Удирдлагын байр</span><span style="color: #5B636B">18 · 18 ор</span></button>
+<button type="button" style="width: 100%; text-align: left; padding: 12px 14px; border: 0; background: #FFFFFF; font: inherit; font-size: 14px; display: flex; justify-content: space-between"><span>Вагон А</span><span style="color: #5B636B">12 · 24 ор</span></button>
+</section>
+
+<section aria-label="Блок 7 өрөөнүүд" style="flex: 1; min-width: 420px; background: #FFFFFF; border: 1px solid #E2E5E0; border-radius: 12px; overflow: hidden">
+<div style="padding: 12px 14px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid #E2E5E0">
+<label for="room-q" style="position: absolute; left: -9999px">Өрөө хайх</label>
+<input id="room-q" placeholder="Өрөө хайх" style="height: 36px; flex: 1; box-sizing: border-box; padding: 0 12px; border: 1px solid #C7CCC5; border-radius: 8px; font: inherit; font-size: 14px">
+<select aria-label="Давхар" style="height: 36px; padding: 0 10px; border: 1px solid #C7CCC5; border-radius: 8px; font: inherit; font-size: 14px; background: #FFFFFF"><option>Бүх давхар</option></select>
+</div>
+<table style="width: 100%; border-collapse: collapse">
+<thead><tr><th>Өрөө</th><th>Давхар</th><th>Багтаамж</th><th>Суусан</th><th>Төлөв</th></tr></thead>
+<tbody>
+<tr><td>7-01</td><td>1</td><td>4</td><td>4</td><td><span style="font-size: 12px; padding: 3px 8px; border-radius: 10px; background: #F0F1EE">Дүүрэн</span></td></tr>
+<tr><td>7-02</td><td>1</td><td>4</td><td>2</td><td><span style="font-size: 12px; padding: 3px 8px; border-radius: 10px; background: #E6F2EF; color: #0D6B5B">Сул 2</span></td></tr>
+<tr><td>7-03</td><td>1</td><td>4</td><td>3</td><td><span style="font-size: 12px; padding: 3px 8px; border-radius: 10px; background: #E6F2EF; color: #0D6B5B">Сул 1</span></td></tr>
+<tr><td>7-04</td><td>1</td><td>4</td><td>0</td><td><span style="font-size: 12px; padding: 3px 8px; border-radius: 10px; background: #FFF4DC; color: #8A5300">Засвартай</span></td></tr>
+<tr><td>7-05</td><td>1</td><td>4</td><td>4</td><td><span style="font-size: 12px; padding: 3px 8px; border-radius: 10px; background: #F0F1EE">Дүүрэн</span></td></tr>
+</tbody>
+</table>
+</section>
+
+<section aria-label="Олон өрөө нэмэх" style="width: 300px; background: #FFFFFF; border: 1px solid #E2E5E0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600">+ Олон өрөө нэмэх</h2>
+<div style="display: flex; gap: 10px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px"><label for="r-from" style="font-size: 12px; font-weight: 600">Эхлэх №</label><input id="r-from" value="1" style="height: 38px; box-sizing: border-box; padding: 0 10px; border: 1px solid #C7CCC5; border-radius: 8px; font: inherit; font-size: 14px"></div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px"><label for="r-to" style="font-size: 12px; font-weight: 600">Дуусах №</label><input id="r-to" value="24" style="height: 38px; box-sizing: border-box; padding: 0 10px; border: 1px solid #C7CCC5; border-radius: 8px; font: inherit; font-size: 14px"></div>
+</div>
+<div style="display: flex; gap: 10px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px"><label for="r-prefix" style="font-size: 12px; font-weight: 600">Угтвар</label><input id="r-prefix" value="7-" style="height: 38px; box-sizing: border-box; padding: 0 10px; border: 1px solid #C7CCC5; border-radius: 8px; font: inherit; font-size: 14px"></div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px"><label for="r-floor" style="font-size: 12px; font-weight: 600">Давхар</label><input id="r-floor" value="1" style="height: 38px; box-sizing: border-box; padding: 0 10px; border: 1px solid #C7CCC5; border-radius: 8px; font: inherit; font-size: 14px"></div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px"><label for="r-cap" style="font-size: 12px; font-weight: 600">Багтаамж</label><input id="r-cap" value="4" style="height: 38px; box-sizing: border-box; padding: 0 10px; border: 1px solid #C7CCC5; border-radius: 8px; font: inherit; font-size: 14px"></div>
+</div>
+<label style="display: flex; gap: 8px; align-items: center; font-size: 14px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #0D6B5B">Байгаа өрөөг алгасах</label>
+<div style="font-size: 13px; line-height: 1.45; color: #5B636B; background: #F7F8F5; border-radius: 8px; padding: 10px">Урьдчилж харах: <b style="color: #16191D">7-01 … 7-24</b> · 19 шинэ, 5 алгасна</div>
+<button type="button" style="height: 40px; border-radius: 8px; border: 0; background: #0D6B5B; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">19 өрөө үүсгэх</button>
+</section>
+
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

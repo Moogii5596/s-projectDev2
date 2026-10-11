@@ -29,6 +29,6 @@ test.describe('Auth flow', () => {
     expect(res.status()).toBe(200);
     const body = await res.json() as { status: string; version: string };
     expect(body.status).toBe('ok');
-    expect(body.version).toBe('0.1.6'); // Phase 6.4.2: APP_VERSION (= package.json)
+    expect(body.version).toBe('0.2.0'); // Phase 6.4.2: APP_VERSION (= package.json)
   });
 });

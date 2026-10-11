@@ -1,0 +1,78 @@
+# ============================================================
+# S Project — v0.2.0 STAGING: шинэчлэлийн дадлага (runbook §13в). Пилоттой нэг машин дээр, ТУСДАА Supabase.
+# Ажиллуулах: deploy/pilot/pilot.ps1 -Profile staging -Root <staging clone> ...
+#   (pilot.ps1 нь энэ хавтсыг --workdir болгоно; migrations/ — <Root>/supabase/migrations-оос хуулна, gitignored)
+#
+# Пилот (553xx, s-project-pilot), dev (543xx, s-project)-тэй давхцахгүй: портууд 565xx, project_id өөр.
+# Пилотын нөөцийг энд сэргээнэ → хэрэглэгчийн хувийн мэдээлэл агуулна: пилоттой ИЖИЛ хамгаалалт
+#   (өөрийн jwt_secret, enable_signup = false, портуудыг router-ээр нээхгүй, Firewall: pilot.ps1 firewall).
+# Studio асаалттай (зөвхөн энэ машинаас: http://127.0.0.1:56523) — дадлагын үед өгөгдлийг харахад.
+# ============================================================
+project_id = "s-project-staging"
+
+[api]
+enabled = true
+port = 56521
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 56522
+shadow_port = 56520
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 56529
+
+[db.seed]
+# Пилотын нөөцөөс сэргээнэ — seed.sql (dev хэрэглэгчид) АЖИЛЛАХГҮЙ
+enabled = false
+
+[realtime]
+enabled = false
+
+[studio]
+# Staging: асаалттай (127.0.0.1:56523). Firewall дүрэм 56520-56529-ийг гаднаас хаадаг
+enabled = true
+port = 56523
+
+[local_smtp]
+enabled = false
+port = 56524
+
+[storage]
+enabled = false
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false
+port = 56527
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:8089"
+additional_redirect_urls = []
+jwt_expiry = 3600
+# <Root>/.env.staging-ийн SUPABASE_AUTH_JWT_SECRET (32+ тэмдэгт) — pilot.ps1 орчинд тохируулна
+jwt_secret = "env(SUPABASE_AUTH_JWT_SECRET)"
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = false
+enable_anonymous_sign_ins = false
+minimum_password_length = 12
+
+[auth.rate_limit]
+# Caddy-ийн ард бүх хүсэлт нэг IP-ээс ирнэ → нийт байгууллагад хуваалцсан хязгаар (5 мин тутам)
+sign_in_sign_ups = 120
+token_refresh = 300
+
+[auth.email]
+# АНХААР: энэ нь "имэйлээр бүртгүүлэх" биш, ИМЭЙЛ PROVIDER-ийг бүхэлд нь (нэвтрэлт ч) асаана/унтраана
+# (GOTRUE_EXTERNAL_EMAIL_ENABLED). false → "Email logins are disabled" (OPS-003). Бүртгэлийг [auth] enable_signup = false хаадаг.
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false

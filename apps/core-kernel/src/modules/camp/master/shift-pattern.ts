@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { CampShiftType } from '@prisma/client';
+import { badRequest } from '../../../common/i18n/app-error';
 
 export interface ShiftSegment {
   dayFrom: number;
@@ -29,7 +30,7 @@ export function normalizeShiftPattern(segments: ShiftSegment[], rosterOnDays: nu
   if (segments.length === 0) return [];
   for (const s of segments) {
     if (s.dayFrom < 1 || s.dayTo < s.dayFrom || s.dayTo > rosterOnDays) {
-      throw new BadRequestException(`Ээлжийн мөр буруу (${s.dayFrom}–${s.dayTo}): 1 ≤ эхлэх ≤ дуусах ≤ ${rosterOnDays} байх ёстой`);
+      throw badRequest('camp.err.shift_pattern.1', { dayFrom: s.dayFrom, dayTo: s.dayTo, rosterOnDays });
     }
   }
   const owner = new Array<number>(rosterOnDays + 1).fill(0);
@@ -41,12 +42,12 @@ export function normalizeShiftPattern(segments: ShiftSegment[], rosterOnDays: nu
     }
   }
   if (overlap.length > 0) {
-    throw new BadRequestException(`Ээлжийн загвар давхцаж байна: ${ranges([...new Set(overlap)].sort((a, b) => a - b))}-р өдөр`);
+    throw badRequest('camp.err.shift_pattern.2', { days: ranges([...new Set(overlap)].sort((a, b) => a - b)) });
   }
   const missing: number[] = [];
   for (let d = 1; d <= rosterOnDays; d++) if (owner[d] === 0) missing.push(d);
   if (missing.length > 0) {
-    throw new BadRequestException(`Ээлжийн загвар 1–${rosterOnDays} өдрийг бүрэн бүрхэх ёстой. Дутуу: ${ranges(missing)}-р өдөр`);
+    throw badRequest('camp.err.shift_pattern.3', { rosterOnDays, days: ranges(missing) });
   }
   const sorted = [...segments].sort((a, b) => a.dayFrom - b.dayFrom);
   const merged: ShiftSegment[] = [];

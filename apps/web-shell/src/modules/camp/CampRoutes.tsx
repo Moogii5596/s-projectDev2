@@ -1,32 +1,29 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import CampLayout from './components/CampLayout'
 import CampHomePage from './pages/CampHomePage'
-import OrganizationsPage from './pages/OrganizationsPage'
-import RolesPage from './pages/RolesPage'
-import UserRolesPage from './pages/UserRolesPage'
 import CampSettingsPage from './pages/CampSettingsPage'
-import FacilitiesPage from './pages/FacilitiesPage'
-import DepartmentsPage from './pages/DepartmentsPage'
-import CrewsPage from './pages/CrewsPage'
+import SystemSettingsPage from './pages/SystemSettingsPage'
 import EmployeesPage from './pages/EmployeesPage'
 import AttendancePage from './pages/AttendancePage'
 import ShiftsPage from './pages/ShiftsPage'
 import RoomBoardPage from './pages/RoomBoardPage'
 import PresencePage from './pages/PresencePage'
-import AssetCategoriesPage from './pages/AssetCategoriesPage'
 import AssetsPage from './pages/AssetsPage'
 import MaintenanceListPage from './pages/MaintenanceListPage'
 import MaintenanceDetailPage from './pages/MaintenanceDetailPage'
 
-/** /camp/* — Кемп модуль (Шат 8, V1) */
+/** /camp/* — Кемп модуль (Шат 8, V1; v0.2.0 — системийн тохиргоо, тохиргооны каталог) */
 export default function CampRoutes() {
   return (
     <Routes>
       <Route index element={<CampHomePage />} />
-      <Route path="admin/organizations" element={<OrganizationsPage />} />
-      <Route path="admin/roles" element={<RolesPage />} />
-      <Route path="admin/user-roles" element={<UserRolesPage />} />
-      <Route path="admin/asset-categories" element={<AssetCategoriesPage />} />
+      {/* FB-11 (v0.2.0): "Системийн тохиргоо" — хуучин /camp/admin/* хаягууд redirect */}
+      <Route path="system" element={<Navigate to="camps" replace />} />
+      <Route path="system/:section" element={<SystemSettingsPage />} />
+      <Route path="admin/organizations" element={<Navigate to="/camp/system/organizations" replace />} />
+      <Route path="admin/roles" element={<Navigate to="/camp/system/roles" replace />} />
+      <Route path="admin/user-roles" element={<Navigate to="/camp/system/user-roles" replace />} />
+      <Route path="admin/asset-categories" element={<Navigate to="/camp/system/asset-categories" replace />} />
       <Route path=":campId" element={<CampLayout />}>
         <Route index element={<Navigate to="attendance" replace />} />
         <Route path="attendance" element={<AttendancePage />} />
@@ -37,10 +34,12 @@ export default function CampRoutes() {
         <Route path="maintenance/:id" element={<MaintenanceDetailPage />} />
         <Route path="assets" element={<AssetsPage />} />
         <Route path="employees" element={<EmployeesPage />} />
-        <Route path="settings" element={<CampSettingsPage />} />
-        <Route path="facilities" element={<FacilitiesPage />} />
-        <Route path="departments" element={<DepartmentsPage />} />
-        <Route path="crews" element={<CrewsPage />} />
+        {/* FB-05 (v0.2.0): тохиргооны каталог; хуучин хаягууд redirect */}
+        <Route path="settings" element={<Navigate to="general" replace />} />
+        <Route path="settings/:section" element={<CampSettingsPage />} />
+        <Route path="facilities" element={<Navigate to="../settings/facilities" replace />} />
+        <Route path="departments" element={<Navigate to="../settings/departments" replace />} />
+        <Route path="crews" element={<Navigate to="../settings/crews" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/camp" replace />} />
     </Routes>

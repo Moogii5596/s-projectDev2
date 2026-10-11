@@ -23,3 +23,6 @@ export async function configureApp(app: NestFastifyApplication): Promise<void> {
   app.setGlobalPrefix(GLOBAL_PREFIX);
   await registerMultipart(app);
 }
+
+/** JSON body-ийн дээд хэмжээ (main.ts FastifyAdapter) — хүснэгтээр оруулах ≤5000 мөр */
+export const JSON_BODY_LIMIT = 4 * 1024 * 1024;

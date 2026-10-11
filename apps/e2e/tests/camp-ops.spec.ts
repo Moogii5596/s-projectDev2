@@ -171,8 +171,8 @@ test.describe.serial('Кемп — өдөр тутмын ажиллагаа', ()
     await expect(page.getByText(/Өрөөгүй \d/)).toHaveCount(0);
     await expect(page.getByLabel('Өрөө 101')).toContainText('2 / 2');
 
-    // Сараа-г маргаашаас 101 руу шилжүүлэх → 101 дүүрэн (А баг 2 хүн) → 409
-    await page.getByRole('listitem').filter({ hasText: 'Сараа' }).getByRole('button', { name: 'Шилжүүлэх' }).click();
+    // Сараа-г маргаашаас 101 руу шилжүүлэх → 101 дүүрэн (А баг 2 хүн) → 409 (v0.2.0 FB-12: "Шилжүүлэх" → "Өрөө солих")
+    await page.getByRole('listitem').filter({ hasText: 'Сараа' }).getByRole('button', { name: 'Өрөө солих' }).click();
     const dlg = page.getByRole('dialog');
     await selectRoom(dlg, '101');
     await dlg.getByLabel('Эхлэх огноо', { exact: true }).fill(addDays(TODAY, 1));

@@ -1,15 +1,16 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CampEmployeeStatus, CampRoomStatus } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { fromDbDate, inTenantTx, toDbDate } from '../common/camp-tx';
+import { fromDbDate, inTenantTx, toDbDate, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
 import { addDays, coversDay } from './camp-date';
 import { expectedNight, RosterSettings } from './roster';
 import { assertDate } from './range';
 import { CreateRoomAllocationDto, EndRoomAllocationDto, QueryAllocationsDto } from './camp-attendance.dto';
+import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
 /** Багтаамжийг шалгах цонх — нэг бүтэн ростерын мөчлөг (28 хоног) */
@@ -60,11 +61,11 @@ export class CampRoomsService {
           where: { id: dto.employeeId, tenantId, campId },
           select: { id: true, employeeCode: true, status: true, crew: { select: { rosterAnchorDate: true } } },
         });
-        if (!emp) throw new BadRequestException('Ажилтан энэ кемпэд олдсонгүй');
-        if (emp.status !== CampEmployeeStatus.ACTIVE) throw new BadRequestException('Ажилтан идэвхгүй');
+        if (!emp) throw badRequest('camp.err.attendance.5');
+        if (emp.status !== CampEmployeeStatus.ACTIVE) throw badRequest('camp.err.rooms.1');
         const room = await tx.campRoom.findFirst({ where: { id: dto.roomId, tenantId, campId }, select: { id: true, roomNo: true, capacity: true, status: true } });
-        if (!room) throw new BadRequestException('Өрөө энэ кемпэд олдсонгүй');
-        if (room.status !== CampRoomStatus.ACTIVE) throw new BadRequestException(`Өрөө ${room.roomNo} ${room.status} төлөвтэй — хуваарилах боломжгүй`);
+        if (!room) throw badRequest('camp.err.assets.4');
+        if (room.status !== CampRoomStatus.ACTIVE) throw badRequest('camp.err.rooms.2', { roomNo: room.roomNo, status: room.status });
 
         const start = toDbDate(dto.startDate);
         const current = await tx.campRoomAllocation.findMany({
@@ -76,9 +77,7 @@ export class CampRoomsService {
           const c = current[0];
           const cStart = fromDbDate(c.startDate);
           if (!dto.replaceCurrent || current.length > 1 || c.endDate !== null || cStart >= dto.startDate) {
-            throw new ConflictException(
-              `Ажилтан ${c.room.roomNo} өрөөнд ${cStart}-ээс хуваарилагдсан — шилжүүлэх бол replaceCurrent=true (эхлэх огноо нь одоогийнхоос хойш)`,
-            );
+            throw conflict('camp.err.rooms.6', { roomNo: c.room.roomNo, date: cStart });
           }
           replacedId = c.id;
         }
@@ -102,9 +101,7 @@ export class CampRoomsService {
         ];
         const over = firstOverCapacityNight(occupants, room.capacity, dto.startDate, CAPACITY_WINDOW_NIGHTS, settings);
         if (over) {
-          throw new ConflictException(
-            `Өрөө ${room.roomNo}: ${over.date}-ний шөнө ${over.count} хүн хонох (багтаамж ${room.capacity}) — ${over.codes.join(', ')}`,
-          );
+          throw conflict('camp.err.rooms.7', { roomNo: room.roomNo, date: over.date, count: over.count, capacity: room.capacity, codes: over.codes.join(', ') });
         }
         if (replacedId) {
           await tx.campRoomAllocation.update({ where: { id: replacedId }, data: { endDate: toDbDate(addDays(dto.startDate, -1)) } });
@@ -124,9 +121,9 @@ export class CampRoomsService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.ROOM_MANAGE);
         const a = await tx.campRoomAllocation.findFirst({ where: { id, tenantId, campId }, select: { id: true, startDate: true, endDate: true } });
-        if (!a) throw new NotFoundException('Хуваарилалт олдсонгүй');
-        if (a.endDate !== null) throw new ConflictException(`Хуваарилалт ${fromDbDate(a.endDate)}-нд дууссан`);
-        if (dto.endDate < fromDbDate(a.startDate)) throw new BadRequestException('endDate нь эхлэх огнооноос өмнө байна');
+        if (!a) throw notFound('camp.err.rooms.3');
+        if (a.endDate !== null) throw conflict('camp.err.rooms.4', { date: fromDbDate(a.endDate) });
+        if (dto.endDate < fromDbDate(a.startDate)) throw badRequest('camp.err.rooms.5');
         await tx.campRoomAllocation.update({ where: { id }, data: { endDate: toDbDate(dto.endDate) } });
         return { id, endDate: dto.endDate };
       }),
@@ -166,52 +163,59 @@ export class CampRoomsService {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       await getCampOr404(tx, tenantId, campId);
-      const d = toDbDate(date);
-      const [rooms, allocations, stays] = await Promise.all([
-        tx.campRoom.findMany({
-          where: { tenantId, campId, status: { not: CampRoomStatus.INACTIVE } },
-          select: { id: true, roomNo: true, floor: true, capacity: true, status: true, building: { select: { code: true, name: true } } },
-          orderBy: [{ building: { code: 'asc' } }, { roomNo: 'asc' }],
-        }),
-        tx.campRoomAllocation.findMany({
-          where: { tenantId, campId, startDate: { lte: d }, OR: [{ endDate: null }, { endDate: { gte: d } }] },
-          select: { roomId: true, employee: { select: { id: true, employeeCode: true, fullName: true, crew: { select: { code: true } } } } },
-        }),
-        // D шөнө кемпэд: ирсэн ≤ D ба (яваагүй эсвэл D-ээс хойш явна)
-        tx.campStay.findMany({
-          where: { tenantId, campId, startDate: { lte: d }, OR: [{ endDate: null }, { endDate: { gt: d } }] },
-          select: { employee: { select: { id: true, employeeCode: true, fullName: true, department: { select: { code: true } }, crew: { select: { code: true } } } } },
-        }),
-      ]);
-      const tonight = new Set(stays.map((s) => s.employee.id));
-      const allocated = new Set(allocations.map((a) => a.employee.id));
-      const byRoom = new Map<string, typeof allocations>();
-      for (const a of allocations) byRoom.set(a.roomId, [...(byRoom.get(a.roomId) ?? []), a]);
-      const roomViews = rooms.map((r) => {
-        const occ = (byRoom.get(r.id) ?? []).map((a) => ({ ...a.employee, crewCode: a.employee.crew?.code ?? null, presentTonight: tonight.has(a.employee.id) }));
-        const present = occ.filter((o) => o.presentTonight).length;
-        return {
-          id: r.id, roomNo: r.roomNo, floor: r.floor, capacity: r.capacity, roomStatus: r.status, building: r.building,
-          allocatedCount: occ.length, presentCount: present,
-          occupancy: present === 0 ? 'VACANT' : present >= r.capacity ? 'FULL' : 'PARTIAL',
-          overCapacity: present > r.capacity,
-          occupants: occ.map(({ crew: _crew, ...rest }) => rest),
-        };
-      });
-      return {
-        date,
-        rooms: roomViews,
-        totals: {
-          rooms: roomViews.length,
-          capacity: roomViews.reduce((s, r) => s + r.capacity, 0),
-          present: roomViews.reduce((s, r) => s + r.presentCount, 0),
-          vacant: roomViews.filter((r) => r.occupancy === 'VACANT').length,
-          full: roomViews.filter((r) => r.occupancy === 'FULL').length,
-        },
-        unassigned: stays
-          .filter((s) => !allocated.has(s.employee.id))
-          .map((s) => ({ id: s.employee.id, employeeCode: s.employee.employeeCode, fullName: s.employee.fullName, departmentCode: s.employee.department.code, crewCode: s.employee.crew?.code ?? null })),
-      };
+      return computeRoomBoard(tx, tenantId, campId, date);
     });
   }
+}
+
+/** Өрөөний самбар (D шөнө) — transaction дотроос (API + `camp:snapshot` CLI, v0.2.0 §0.2) */
+export async function computeRoomBoard(tx: Tx, tenantId: string, campId: string, date: string) {
+  const d = toDbDate(date);
+  const [rooms, allocations, stays] = await Promise.all([
+    tx.campRoom.findMany({
+      where: { tenantId, campId, status: { not: CampRoomStatus.INACTIVE } },
+      select: { id: true, roomNo: true, floor: true, capacity: true, status: true, building: { select: { code: true, name: true } } },
+      orderBy: [{ building: { code: 'asc' } }, { roomNo: 'asc' }],
+    }),
+    tx.campRoomAllocation.findMany({
+      where: { tenantId, campId, startDate: { lte: d }, OR: [{ endDate: null }, { endDate: { gte: d } }] },
+      select: { roomId: true, employee: { select: { id: true, employeeCode: true, fullName: true, status: true, crew: { select: { code: true } } } } },
+    }),
+    // D шөнө кемпэд: ирсэн ≤ D ба (яваагүй эсвэл D-ээс хойш явна)
+    tx.campStay.findMany({
+      where: { tenantId, campId, startDate: { lte: d }, OR: [{ endDate: null }, { endDate: { gt: d } }] },
+      select: { employee: { select: { id: true, employeeCode: true, fullName: true, department: { select: { code: true } }, crew: { select: { code: true } } } } },
+    }),
+  ]);
+  const tonight = new Set(stays.map((s) => s.employee.id));
+  const allocated = new Set(allocations.map((a) => a.employee.id));
+  const byRoom = new Map<string, typeof allocations>();
+  for (const a of allocations) byRoom.set(a.roomId, [...(byRoom.get(a.roomId) ?? []), a]);
+  const roomViews = rooms.map((r) => {
+    const occ = (byRoom.get(r.id) ?? []).map((a) => ({ ...a.employee, crewCode: a.employee.crew?.code ?? null, presentTonight: tonight.has(a.employee.id) }));
+    const present = occ.filter((o) => o.presentTonight).length;
+    return {
+      id: r.id, roomNo: r.roomNo, floor: r.floor, capacity: r.capacity, roomStatus: r.status, building: r.building,
+      allocatedCount: occ.length, presentCount: present,
+      occupancy: present === 0 ? 'VACANT' : present >= r.capacity ? 'FULL' : 'PARTIAL',
+      overCapacity: present > r.capacity,
+      // FB-12 (v0.2.0): идэвхгүй болсон ажилтан өрөөнд хуваарилагдсан хэвээр
+      inactiveOccupants: occ.filter((o) => o.status === 'INACTIVE').length,
+      occupants: occ.map(({ crew: _crew, ...rest }) => rest),
+    };
+  });
+  return {
+    date,
+    rooms: roomViews,
+    totals: {
+      rooms: roomViews.length,
+      capacity: roomViews.reduce((s, r) => s + r.capacity, 0),
+      present: roomViews.reduce((s, r) => s + r.presentCount, 0),
+      vacant: roomViews.filter((r) => r.occupancy === 'VACANT').length,
+      full: roomViews.filter((r) => r.occupancy === 'FULL').length,
+    },
+    unassigned: stays
+      .filter((s) => !allocated.has(s.employee.id))
+      .map((s) => ({ id: s.employee.id, employeeCode: s.employee.employeeCode, fullName: s.employee.fullName, departmentCode: s.employee.department.code, crewCode: s.employee.crew?.code ?? null })),
+  };
 }

@@ -1,5 +1,6 @@
-import { BadRequestException, ConflictException, HttpException, NotFoundException } from '@nestjs/common';
+import { HttpException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
 /**
  * DB-ийн алдааг HTTP алдаа руу (Шат 2.1). App түвшний шалгалт үндсэн, энэ нь НӨӨЦ хамгаалалт:
@@ -12,25 +13,25 @@ export function toCampHttpError(err: unknown): unknown {
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === 'P2002') {
       const target = (err.meta?.target as string[] | string | undefined) ?? '';
-      return new ConflictException(`Давхардсан утга (${Array.isArray(target) ? target.join(', ') : target})`);
+      return conflict('camp.err.errors.1', { fields: Array.isArray(target) ? target.join(', ') : target });
     }
-    if (err.code === 'P2003') return new BadRequestException('Холбогдох бичлэг буруу эсвэл өөр кемп/tenant-ийнх байна');
-    if (err.code === 'P2025') return new NotFoundException('Бичлэг олдсонгүй');
+    if (err.code === 'P2003') return badRequest('camp.err.errors.2');
+    if (err.code === 'P2025') return notFound('camp.err.errors.3');
   }
   // Prisma 5 (PrismaClientUnknownRequestError) PostgreSQL алдааг Rust Debug хэлбэрээр өгдөг — хашилт escape-тэй:
   //   PostgresError { code: "23514", message: "... violates check constraint \"camp_rooms_capacity_check\"", ... }
   // → эхлээд `\"` → `"` болгож хэвийн болгоно; SQLSTATE-ээр (23P01 / 23514) нөөц таних [PRISMA-003]
   const message = (err instanceof Error ? err.message : String(err)).replace(/\\"/g, '"');
   const trigger = /(CAMP_[A-Z_]+): ([^\n"]+)/.exec(message);
-  if (trigger) return new ConflictException(`${trigger[1]}: ${trigger[2].trim()}`);
+  if (trigger) return conflict('camp.err.errors.4', { code: trigger[1], detail: trigger[2].trim() });
   const sqlstate = /code: "([0-9A-Z]{5})"/.exec(message)?.[1];
   const exclusion = /exclusion constraint "([a-z0-9_]+)"/.exec(message);
   if (exclusion || sqlstate === '23P01') {
-    return new ConflictException(`Хугацаа/муж давхцаж байна${exclusion ? ` (${exclusion[1]})` : ''}`);
+    return conflict('camp.err.errors.5', { constraint: exclusion?.[1] ?? sqlstate ?? '23P01' });
   }
   const check = /check constraint "([a-z0-9_]+)"/.exec(message);
   if (check || sqlstate === '23514') {
-    return new BadRequestException(`Өгөгдөл дүрэм зөрчиж байна${check ? ` (${check[1]})` : ''}`);
+    return badRequest('camp.err.errors.6', { constraint: check?.[1] ?? sqlstate ?? '23514' });
   }
   return err;
 }

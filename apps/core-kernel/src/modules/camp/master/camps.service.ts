@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
@@ -6,6 +6,7 @@ import { inTenantTx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import { getCampOr404 } from '../common/camp-lookup';
 import { CreateCampDto, QueryActiveOnlyDto, UpdateCampDto } from './camp-master.dto';
+import { conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
 const CAMP_SELECT = { id: true, code: true, name: true, location: true, isActive: true, createdAt: true, updatedAt: true } as const;
@@ -38,7 +39,7 @@ export class CampsService {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       const camp = await tx.camp.findFirst({ where: { id: campId, tenantId }, select: CAMP_SELECT });
-      if (!camp) throw new NotFoundException('Кемп олдсонгүй');
+      if (!camp) throw notFound('camp.err.lookup.1');
       return camp;
     });
   }
@@ -48,7 +49,7 @@ export class CampsService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
         const dup = await tx.camp.findFirst({ where: { tenantId, code: dto.code }, select: { id: true } });
-        if (dup) throw new ConflictException(`"${dto.code}" кодтой кемп аль хэдийн байна`);
+        if (dup) throw conflict('camp.err.camps.1', { code: dto.code });
         const camp = await tx.camp.create({
           data: { tenantId, code: dto.code, name: dto.name, location: dto.location ?? null },
           select: CAMP_SELECT,

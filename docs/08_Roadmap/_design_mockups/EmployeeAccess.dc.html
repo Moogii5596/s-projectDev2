@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<title>Ажилтан, эрх</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid #E2E5E0;font-size:14px}
+th{font-size:12px;font-weight:600;color:#5B636B;background:#F7F8F5}
+</style>
+</helmet>
+<div style="min-height: 100%; box-sizing: border-box; background: #F3F4F1; font-family: 'IBM Plex Sans', 'Noto Sans SC', sans-serif; color: #16191D; padding: 24px">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: #FFFFFF; border: 1px solid #E2E5E0; border-radius: 12px; padding: 16px 20px">
+<div aria-hidden="true" style="width: 56px; height: 56px; border-radius: 28px; background: #D6E7E2; color: #0D6B5B; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center">БГ</div>
+<div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 2px">
+<h1 style="margin: 0; font-size: 20px; font-weight: 700">Бат-Эрдэнэ Ганболд</h1>
+<div style="font-size: 14px; color: #5B636B">E-1041 · Катеринг · ростер 14/14 · 9911 2233 · ganbold@mail.mn</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<label for="ea-pos" style="font-size: 12px; font-weight: 600">Албан тушаал</label>
+<select id="ea-pos" style="height: 38px; padding: 0 10px; border: 1px solid #C7CCC5; border-radius: 8px; font: inherit; font-size: 14px; background: #FFFFFF"><option>Тогооч</option></select>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<label for="ea-tpl" style="font-size: 12px; font-weight: 600">Эрхийн загвар</label>
+<select id="ea-tpl" style="height: 38px; padding: 0 10px; border: 1px solid #C7CCC5; border-radius: 8px; font: inherit; font-size: 14px; background: #FFFFFF"><option>Катеринг</option><option>Ажилтан</option><option>Кемп менежер</option><option>Кемп админ</option></select>
+</div>
+</div>
+
+<div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start">
+
+<section aria-label="Эрх" style="flex: 1.4; min-width: 460px; background: #FFFFFF; border: 1px solid #E2E5E0; border-radius: 12px; overflow: hidden">
+<div style="padding: 14px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #E2E5E0">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600; flex: 1">Эрх</h2>
+<span style="font-size: 12px; padding: 3px 10px; border-radius: 10px; background: #FFF4DC; color: #8A5300">Загвараас 1 зөрүүтэй</span>
+<button type="button" style="height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid #C7CCC5; background: #FFFFFF; font: inherit; font-size: 13px">Загвар руу буцаах</button>
+</div>
+<table style="width: 100%; border-collapse: collapse">
+<thead><tr><th>Эрх</th><th>Эх үүсвэр</th><th style="width: 70px">Идэвхтэй</th></tr></thead>
+<tbody>
+<tr><td>Feed — пост бичих, сэтгэгдэл</td><td style="color: #5B636B">загвараас</td><td><input type="checkbox" checked aria-label="Feed пост" style="width: 18px; height: 18px; accent-color: #0D6B5B"></td></tr>
+<tr><td>Хоолны цэс — засах, нийтлэх</td><td style="color: #5B636B">загвараас</td><td><input type="checkbox" checked aria-label="Хоолны цэс" style="width: 18px; height: 18px; accent-color: #0D6B5B"></td></tr>
+<tr><td>Хоолны гомдол — харах, хариулах</td><td style="color: #5B636B">загвараас</td><td><input type="checkbox" checked aria-label="Хоолны гомдол" style="width: 18px; height: 18px; accent-color: #0D6B5B"></td></tr>
+<tr style="background: #FFFAEE"><td>Хоолны тайлан — экспорт</td><td><span style="font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #FFF4DC; color: #8A5300">шууд нэмсэн</span></td><td><input type="checkbox" checked aria-label="Хоолны тайлан" style="width: 18px; height: 18px; accent-color: #0D6B5B"></td></tr>
+<tr><td>Байр, өрөө — засах</td><td style="color: #5B636B">загварт байхгүй</td><td><input type="checkbox" aria-label="Байр өрөө" style="width: 18px; height: 18px; accent-color: #0D6B5B"></td></tr>
+</tbody>
+</table>
+<div style="padding: 12px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border-top: 1px solid #E2E5E0">
+<label for="ea-camp" style="font-size: 13px; font-weight: 600">Кемпийн хүрээ</label>
+<select id="ea-camp" style="height: 34px; padding: 0 10px; border: 1px solid #C7CCC5; border-radius: 8px; font: inherit; font-size: 14px; background: #FFFFFF"><option>Оюу Толгой кемп 1</option></select>
+<span style="font-size: 13px; color: #5B636B">Хэрэглэгч дээрх эрх эцсийнх. Загвар өөрчлөгдвөл зөрүүтэй эрх хадгалагдана.</span>
+</div>
+</section>
+
+<div style="flex: 1; min-width: 340px; display: flex; flex-direction: column; gap: 16px">
+<section aria-label="Нэвтрэх эрх" style="background: #FFFFFF; border: 1px solid #E2E5E0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 10px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600; flex: 1">Нэвтрэх эрх</h2>
+<span style="font-size: 12px; padding: 3px 10px; border-radius: 10px; background: #F0F1EE; color: #5B636B">Урилга хүлээгдэж байна</span>
+</div>
+<div role="radiogroup" aria-label="Урилгын арга" style="display: flex; flex-direction: column; gap: 8px">
+<label style="display: flex; gap: 10px; align-items: flex-start; border: 1.5px solid #0D6B5B; background: #F3F8F6; border-radius: 10px; padding: 10px 12px; font-size: 14px"><input type="radio" name="inv" checked style="margin-top: 3px; accent-color: #0D6B5B"><span><b>Имэйл урилга</b><br><span style="font-size: 13px; color: #5B636B">Линк Gmail-ээр очно, ажилтан өөрөө нууц үг үүсгэнэ</span></span></label>
+<label style="display: flex; gap: 10px; align-items: flex-start; border: 1px solid #E2E5E0; border-radius: 10px; padding: 10px 12px; font-size: 14px"><input type="radio" name="inv" style="margin-top: 3px; accent-color: #0D6B5B"><span><b>Урилгын линк / QR</b><br><span style="font-size: 13px; color: #5B636B">Имэйлгүй ажилтанд гар утсаар уншуулна</span></span></label>
+<label style="display: flex; gap: 10px; align-items: flex-start; border: 1px solid #E2E5E0; border-radius: 10px; padding: 10px 12px; font-size: 14px"><input type="radio" name="inv" style="margin-top: 3px; accent-color: #0D6B5B"><span><b>Нэг удаагийн нууц үг</b><br><span style="font-size: 13px; color: #5B636B">Утасны дугаараар нэвтэрч, эхний удаа заавал солино</span></span></label>
+</div>
+<button type="button" style="height: 40px; border-radius: 8px; border: 0; background: #0D6B5B; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">Урилга илгээх</button>
+</section>
+
+<section aria-label="Өөрчлөлтийн түүх" style="background: #FFFFFF; border: 1px solid #E2E5E0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600">Өөрчлөлтийн түүх</h2>
+<div style="font-size: 13px; line-height: 1.5"><span style="color: #5B636B">10-11 14:20 · Мөнхбат</span><br>«Хоолны тайлан — экспорт» эрх шууд нэмсэн</div>
+<div style="font-size: 13px; line-height: 1.5"><span style="color: #5B636B">10-11 14:18 · Мөнхбат</span><br>Албан тушаал: Тогооч → загвар «Катеринг»</div>
+<div style="font-size: 13px; line-height: 1.5"><span style="color: #5B636B">10-11 09:02 · Excel импорт</span><br>Ажилтан бүртгэгдсэн (E-1041)</div>
+</section>
+</div>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

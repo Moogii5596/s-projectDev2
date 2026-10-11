@@ -92,6 +92,9 @@ async function main(): Promise<void> {
         await tx.$executeRaw`DELETE FROM inventory_items WHERE tenant_id = ${tenantId}::uuid AND sku LIKE ${like}`;
         await tx.$executeRaw`DELETE FROM vendors WHERE tenant_id = ${tenantId}::uuid AND name LIKE ${like}`;
         if (coreIds.length > 0) {
+          // v0.2.0: DEV tenant-ийн fixture хэрэглэгчийн орчуулгын засвар/түүх (append-only — зөвхөн системийн холболтоор)
+          await tx.$executeRaw`DELETE FROM i18n_override_history WHERE tenant_id = ${tenantId}::uuid AND changed_by = ANY(${coreIds}::uuid[])`;
+          await tx.$executeRaw`DELETE FROM i18n_overrides WHERE tenant_id = ${tenantId}::uuid AND updated_by = ANY(${coreIds}::uuid[])`;
           await tx.$executeRaw`DELETE FROM core_users WHERE tenant_id = ${tenantId}::uuid AND id = ANY(${coreIds}::uuid[])`;
         }
       });

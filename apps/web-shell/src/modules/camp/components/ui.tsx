@@ -1,5 +1,6 @@
 import { useEffect, useId, type ReactNode } from 'react'
 import { apiErrorMessage } from '../lib/errors'
+import { useTranslation } from 'react-i18next'
 
 /* Кемп модулийн жижиг UI хэрэгслүүд — web-shell-ийн Tailwind хэв маягтай (gray/blue). Шинэ сан нэмэхгүй. */
 
@@ -19,6 +20,7 @@ export function Button({
   children,
   ...rest
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant; size?: 'sm' | 'md'; loading?: boolean }) {
+  const { t } = useTranslation()
   const pad = variant === 'ghost' ? '' : size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-4 py-2 text-sm'
   return (
     <button
@@ -27,7 +29,7 @@ export function Button({
       disabled={rest.disabled || loading}
       className={`${BTN[variant]} ${pad} rounded-lg font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed ${className}`}
     >
-      {loading ? 'Түр хүлээнэ үү…' : children}
+      {loading ? t('camp.common.wait') : children}
     </button>
   )
 }
@@ -100,8 +102,9 @@ export function Badge({ tone = 'gray', children }: { tone?: 'gray' | 'green' | '
   return <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${t}`}>{children}</span>
 }
 
-export function Loading({ text = 'Уншиж байна…' }: { text?: string }) {
-  return <div className="py-10 text-center text-sm text-gray-400">{text}</div>
+export function Loading({ text }: { text?: string }) {
+  const { t } = useTranslation()
+  return <div className="py-10 text-center text-sm text-gray-400">{text ?? t('camp.common.loading')}</div>
 }
 
 export function Empty({ children }: { children: ReactNode }) {
@@ -110,13 +113,14 @@ export function Empty({ children }: { children: ReactNode }) {
 
 /** API алдаа (backend-ийн мессежийг шууд) */
 export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  const { t } = useTranslation()
   if (!error) return null
   return (
     <div role="alert" className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700 text-sm flex items-center justify-between gap-3">
       <span>{apiErrorMessage(error)}</span>
       {onRetry && (
         <button type="button" onClick={onRetry} className="underline shrink-0">
-          Дахин оролдох
+          {t('common.retry')}
         </button>
       )}
     </div>
@@ -124,6 +128,7 @@ export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => v
 }
 
 export function Modal({ title, onClose, children, footer, wide }: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean }) {
+  const { t } = useTranslation()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -140,7 +145,7 @@ export function Modal({ title, onClose, children, footer, wide }: { title: strin
       >
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
           <h2 className="font-semibold text-gray-900">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Хаах" className="text-gray-400 hover:text-gray-600 text-xl leading-none">
+          <button type="button" onClick={onClose} aria-label={t('camp.common.close')} className="text-gray-400 hover:text-gray-600 text-xl leading-none">
             ×
           </button>
         </div>
@@ -174,10 +179,12 @@ export function Table({ head, children }: { head: ReactNode[]; children: ReactNo
 export const td = 'px-3 py-2 align-middle'
 
 export function ActiveBadge({ active }: { active: boolean }) {
-  return active ? <Badge tone="green">Идэвхтэй</Badge> : <Badge>Идэвхгүй</Badge>
+  const { t } = useTranslation()
+  return active ? <Badge tone="green">{t('camp.common.active')}</Badge> : <Badge>{t('camp.common.inactive')}</Badge>
 }
 
 /** Эрхгүй үед харуулах */
 export function NoAccess({ what }: { what: string }) {
-  return <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg px-4 py-3">{what}: энэ хэсэгт хандах эрх алга.</div>
+  const { t } = useTranslation()
+  return <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg px-4 py-3">{t('camp.common.no_access', { what })}</div>
 }

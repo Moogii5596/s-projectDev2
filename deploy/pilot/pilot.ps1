@@ -1,8 +1,8 @@
 ﻿<#
 .SYNOPSIS
-  S Project v0.1.6 — Кемп пилот (Windows, нэг машин). Пилотын хавтасны root-оос ажиллуулна:
+  S Project — Кемп пилот (Windows, нэг машин; v0.1.6+, staging профайл v0.2.0). Пилотын хавтасны root-оос ажиллуулна:
     cd E:\MoogiiDev\Pilot\s-project
-    .\deploy\pilot\pilot.ps1 <команд> [аргумент]
+    .\deploy\pilot\pilot.ps1 <команд> [аргумент] [-Profile pilot|staging] [-Root <хавтас>]
 
 .DESCRIPTION
   Командууд:
@@ -17,9 +17,18 @@
     user --email= ...     Хэрэглэгч нэмэх/засах (pnpm pilot:user)
     backup                Шифрлэсэн нөөц (7-Zip AES-256) → PILOT_BACKUP_DIR, хуучныг устгана
     restore <файл.7z>     Нөөцөөс сэргээх (ОДООГИЙН ӨГӨГДӨЛ УСТНА — баталгаажуулалт асууна)
+    upgrade -Tag <tag>    Шинэ хувилбар: нөөц → зогсоох → git fetch/checkout <tag> → init → build → start → health
+                          (бохир git tree бол эхлэхгүй; алдаа гарвал буцаах заавар хэвлэнэ)
     firewall              (Админ) Windows Firewall: dev/пилотын портуудыг гаднаас хаах
     install-tasks         Task Scheduler: нэвтрэхэд `run`, өдөр бүр 02:00 `backup`
     uninstall-tasks       Task Scheduler-ийн даалгавруудыг устгах
+
+  Профайл (-Profile):
+    pilot (анхдагч)       .env, Supabase s-project-pilot (55321/55322), Redis 56379, backend 3100, Caddy 8088
+    staging               .env.staging, Supabase s-project-staging (56521/56522, Studio 56523), Redis 56579,
+                          backend 3200, Caddy 8089, нөөц staging-<slug>-*.7z. Тусдаа clone-д (-Root) ажиллуулна;
+                          Task Scheduler / Funnel-гүй. Шинэчлэлийн дадлага: runbook §13в
+  -Root <хавтас>          Кодын хавтас (анхдагч: энэ скриптийн ../..). Хуучин tag-ийн clone-д шинэ скриптийг ашиглахад
 
   Windows PowerShell 5.1 + PowerShell 7-д ажиллана. Энэ файл UTF-8 BOM-той (5.1 кирилл зөв уншина).
   Дэлгэрэнгүй: docs/07_Tech_Stack_and_Environment/04_Pilot_Camp_Windows.md
@@ -29,7 +38,11 @@ param(
   [Parameter(Position = 0)] [string] $Command = 'help',
   [Parameter(Position = 1, ValueFromRemainingArguments = $true)] [string[]] $Rest,
   [switch] $All,
-  [switch] $Yes
+  [switch] $Yes,
+  # $PROFILE (PowerShell-ийн автомат хувьсагч)-тай давхцахгүйн тулд дотроо $Instance
+  [Alias('Profile')] [ValidateSet('pilot', 'staging')] [string] $Instance = 'pilot',
+  [string] $Root = '',
+  [string] $Tag = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -37,17 +50,34 @@ Set-StrictMode -Version 2.0
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 
 # ── Тогтмолууд ────────────────────────────────────────────────
-$PilotDir = $PSScriptRoot
-$Root = Split-Path -Parent (Split-Path -Parent $PilotDir)
-$ProjectId = 's-project-pilot'
+$ScriptDir = $PSScriptRoot
+$DefaultRoot = Split-Path -Parent (Split-Path -Parent $ScriptDir)
+if ($Root) { $Root = (Resolve-Path $Root).Path } else { $Root = $DefaultRoot }
+# Профайл бүрийн тогтмол (v0.2.0 §0.2). pilot-ийн утгууд v0.1.6-тай ЯГ ижил.
+#   pilot: ажлын хавтас = <Root>\deploy\pilot (run\, supabase\ — скриптийг өөр газраас ажиллуулсан ч пилотынх)
+#   staging: ажлын хавтас = энэ скриптийн ..\staging (хуучин tag-ийн clone-д deploy\staging байхгүй тул tools хуулбарт)
+$Profiles = @{
+  pilot   = @{
+    Dir = (Join-Path (Join-Path $Root 'deploy') 'pilot'); EnvFile = '.env'; ProjectId = 's-project-pilot'; RedisContainer = 's-project-pilot-redis'
+    ApiPort = 55321; DbPort = 55322; RedisPort = 56379; Port = '3100'; HttpPort = '8088'; BackupPrefix = ''; Tasks = $true
+  }
+  staging = @{
+    Dir = (Join-Path (Split-Path -Parent $ScriptDir) 'staging'); EnvFile = '.env.staging'; ProjectId = 's-project-staging'
+    RedisContainer = 's-project-staging-redis'; ApiPort = 56521; DbPort = 56522; RedisPort = 56579; Port = '3200'; HttpPort = '8089'
+    BackupPrefix = 'staging-'; Tasks = $false
+  }
+}
+$Prof = $Profiles[$Instance]
+$PilotDir = $Prof.Dir
+$ProjectId = $Prof.ProjectId
 $DbContainer = "supabase_db_$ProjectId"
-$RedisContainer = 's-project-pilot-redis'
+$RedisContainer = $Prof.RedisContainer
 $RedisCompose = Join-Path $PilotDir 'docker-compose.redis.yml'
 $RunDir = Join-Path $PilotDir 'run'
 $LogDir = Join-Path $RunDir 'logs'
 $BackendDir = Join-Path (Join-Path $Root 'apps') 'core-kernel'
 $WebDist = Join-Path (Join-Path (Join-Path $Root 'apps') 'web-shell') 'dist'
-$SupabaseApiPort = 55321
+$SupabaseApiPort = $Prof.ApiPort
 # Supabase local-ийн олон нийтэд ил demo нууц — пилотод ХЭЗЭЭ Ч болохгүй
 $DemoJwtSecret = 'super-secret-jwt-token-with-at-least-32-characters-long'
 $DefaultAppUserPassword = 'change_in_production'
@@ -116,8 +146,9 @@ function Get-Cfg([hashtable] $cfg, [string] $key, [string] $default = '') {
 }
 
 function Import-PilotEnv {
-  $envFile = Join-Path $Root '.env'
+  $envFile = Join-Path $Root $Prof.EnvFile
   if (-not (Test-Path $envFile)) {
+    if ($Instance -eq 'staging') { Stop-Pilot2 ".env.staging алга ($envFile). copy deploy\staging\.env.staging.example .env.staging → <...>-г бөглөнө" }
     Stop-Pilot2 ".env алга ($envFile). copy deploy\pilot\.env.pilot.example .env → <...>-г бөглөнө"
   }
   $cfg = Read-DotEnv $envFile
@@ -155,10 +186,20 @@ function Test-PilotEnv([hashtable] $cfg, [switch] $NeedBackup) {
   $pw = Get-UrlPassword $dbUrl
   if ($pw -eq $DefaultAppUserPassword) { $errors.Add('DATABASE_URL: app_user-ийн анхдагч нууц үг (change_in_production) — солино') }
   if ($pw -notmatch '^[A-Za-z0-9]{24,}$') { $errors.Add('DATABASE_URL: app_user нууц үг зөвхөн латин үсэг/тоо, 24+ тэмдэгт') }
-  if ($dbUrl -notmatch '@127\.0\.0\.1:55322/') { Write-Warn2 'DATABASE_URL нь 127.0.0.1:55322 биш (пилотын Supabase)?' }
+  if ($dbUrl -notmatch "@127\.0\.0\.1:$($Prof.DbPort)/") { Write-Warn2 "DATABASE_URL нь 127.0.0.1:$($Prof.DbPort) биш ($Instance-ийн Supabase)?" }
+  if ($Instance -eq 'staging') {
+    # Staging ХЭЗЭЭ Ч пилотын DB / Redis / порт руу холбогдохгүй (шинэчлэлийн дадлага пилотын өгөгдлийг өөрчлөхгүй)
+    foreach ($k in 'DATABASE_URL', 'SYSTEM_DATABASE_URL', 'DIRECT_URL') {
+      if ((Get-Cfg $cfg $k) -match ':5532[0-9]/') { $errors.Add("$k пилотын DB (5532x) руу заасан — staging: 127.0.0.1:$($Prof.DbPort)") }
+    }
+    if ((Get-Cfg $cfg 'SUPABASE_URL') -match ':5532[0-9]') { $errors.Add("SUPABASE_URL пилотынх — staging: http://127.0.0.1:$($Prof.ApiPort)") }
+    if ((Get-Cfg $cfg 'REDIS_URL') -match ':56379') { $errors.Add("REDIS_URL пилотынх — staging: redis://127.0.0.1:$($Prof.RedisPort)") }
+    if ((Get-Cfg $cfg 'PORT') -in @('3000', '3100')) { $errors.Add("PORT=$(Get-Cfg $cfg 'PORT') нь dev/пилоттой давхцана — staging: $($Prof.Port)") }
+    if ((Get-Cfg $cfg 'PILOT_HTTP_PORT' '8088') -eq '8088') { $errors.Add("PILOT_HTTP_PORT нь пилоттой давхцана — staging: $($Prof.HttpPort)") }
+  }
   if ((Get-Cfg $cfg 'SUPABASE_URL') -ne "http://127.0.0.1:$SupabaseApiPort") { Write-Warn2 "SUPABASE_URL нь http://127.0.0.1:$SupabaseApiPort биш?" }
-  if ((Get-Cfg $cfg 'REDIS_URL') -ne 'redis://127.0.0.1:56379') { Write-Warn2 'REDIS_URL нь пилотын Redis (redis://127.0.0.1:56379) биш?' }
-  if ((Get-Cfg $cfg 'PORT') -eq '3000') { Write-Warn2 'PORT=3000 нь dev backend-тэй давхцана (3100 зөвлөнө)' }
+  if ((Get-Cfg $cfg 'REDIS_URL') -ne "redis://127.0.0.1:$($Prof.RedisPort)") { Write-Warn2 "REDIS_URL нь $Instance-ийн Redis (redis://127.0.0.1:$($Prof.RedisPort)) биш?" }
+  if ($Instance -eq 'pilot' -and (Get-Cfg $cfg 'PORT') -eq '3000') { Write-Warn2 'PORT=3000 нь dev backend-тэй давхцана (3100 зөвлөнө)' }
   if ((Get-Cfg $cfg 'ESCALATION_CRON') -ne 'off') { Write-Warn2 'ESCALATION_CRON=off биш — автомат escalation асаалттай' }
 
   $bpw = Get-Cfg $cfg 'PILOT_BACKUP_PASSWORD'
@@ -176,7 +217,7 @@ function Assert-PilotEnv([hashtable] $cfg, [switch] $NeedBackup) {
   $errors = Test-PilotEnv $cfg -NeedBackup:$NeedBackup
   if ($errors.Count -gt 0) {
     foreach ($e in $errors) { Write-Host "  [X]  $e" -ForegroundColor Red }
-    Stop-Pilot2 ".env-д $($errors.Count) алдаа (.\deploy\pilot\pilot.ps1 check)"
+    Stop-Pilot2 "$($Prof.EnvFile)-д $($errors.Count) алдаа (pilot.ps1 check -Profile $Instance)"
   }
 }
 
@@ -242,8 +283,8 @@ function Wait-Docker([int] $timeoutSec = 300) {
 }
 
 function Start-PilotRedis {
-  Invoke-Native -Exe 'docker' -Arguments @('compose', '-f', $RedisCompose, '-p', 's-project-pilot-redis', 'up', '-d') | Out-Null
-  Write-Ok "Redis ($RedisContainer, 127.0.0.1:56379)"
+  Invoke-Native -Exe 'docker' -Arguments @('compose', '-f', $RedisCompose, '-p', $RedisContainer, 'up', '-d') | Out-Null
+  Write-Ok "Redis ($RedisContainer, 127.0.0.1:$($Prof.RedisPort))"
 }
 
 function Start-PilotSupabase([hashtable] $cfg) {
@@ -395,7 +436,7 @@ function Assert-Built([hashtable] $keys) {
 function Start-Backend([hashtable] $cfg) {
   $p = Get-PilotProcess 'backend' 'node'
   if ($null -ne $p) { Write-Ok "backend ажиллаж байна (PID $($p.Id))"; return }
-  $port = Get-Cfg $cfg 'PORT' '3100'
+  $port = Get-Cfg $cfg 'PORT' $Prof.Port
   $p = Start-PilotProcess 'backend' 'node' @('dist/src/main.js') $BackendDir
   if (-not (Wait-Http "http://127.0.0.1:$port/api/v1/health" 90)) {
     Stop-Pilot2 "backend эхэлсэнгүй — $(Join-Path $LogDir 'backend.err.log'), backend.log-ийг үз"
@@ -408,11 +449,11 @@ function Start-Caddy([hashtable] $cfg) {
   $p = Get-PilotProcess 'caddy' 'caddy'
   if ($null -ne $p) { Write-Ok "Caddy ажиллаж байна (PID $($p.Id))"; return }
   $env:PILOT_WEB_ROOT = $WebDist
-  $env:PILOT_API_PORT = Get-Cfg $cfg 'PORT' '3100'
+  $env:PILOT_API_PORT = Get-Cfg $cfg 'PORT' $Prof.Port
   $env:PILOT_SUPABASE_PORT = [string] $SupabaseApiPort
-  $env:PILOT_HTTP_PORT = Get-Cfg $cfg 'PILOT_HTTP_PORT' '8088'
+  $env:PILOT_HTTP_PORT = Get-Cfg $cfg 'PILOT_HTTP_PORT' $Prof.HttpPort
   $env:PILOT_LOG_DIR = $LogDir
-  $caddyfile = Join-Path $PilotDir 'Caddyfile'
+  $caddyfile = Join-Path $ScriptDir 'Caddyfile'
   $p = Start-PilotProcess 'caddy' (Get-CaddyExe) @('run', '--config', $caddyfile, '--adapter', 'caddyfile') $PilotDir
   if (-not (Wait-Http "http://127.0.0.1:$($env:PILOT_HTTP_PORT)/api/v1/health" 30)) {
     Stop-Pilot2 "Caddy эхэлсэнгүй — $(Join-Path $LogDir 'caddy.err.log')-ийг үз"
@@ -475,7 +516,7 @@ function Invoke-Backup {
     }
     ($manifest | ConvertTo-Json) | Set-Content -Path (Join-Path $tmp 'manifest.json') -Encoding UTF8
 
-    $archive = Join-Path $dir "$slug-$stamp.7z"
+    $archive = Join-Path $dir "$($Prof.BackupPrefix)$slug-$stamp.7z"
     # -mhe=on: файлын нэрийг ч шифрлэнэ (AES-256)
     Invoke-Native $sevenZip @('a', '-t7z', '-mhe=on', '-mx=5', "-p$($cfg['PILOT_BACKUP_PASSWORD'])", $archive, (Join-Path $tmp '*')) -Quiet | Out-Null
     Invoke-Native $sevenZip @('t', "-p$($cfg['PILOT_BACKUP_PASSWORD'])", $archive) -Quiet | Out-Null
@@ -483,8 +524,9 @@ function Invoke-Backup {
     Write-Ok "$archive ($size KB; tenants $($c[0]), хэрэглэгч $($c[1]), migration $($versions.Count))"
     Write-Log 'backup.log' "OK $archive ${size}KB tenants=$($c[0]) users=$($c[1])"
 
-    $old = Get-ChildItem -Path $dir -Filter "$slug-*.7z" | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$keep) }
+    $old = Get-ChildItem -Path $dir -Filter "$($Prof.BackupPrefix)$slug-*.7z" | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$keep) }
     foreach ($f in $old) { Remove-Item $f.FullName -Force; Write-Host "  хуучин нөөц устгав: $($f.Name)" }
+    return $archive
   } catch {
     Write-Log 'backup.log' "FAIL $($_.Exception.Message)"
     throw
@@ -529,6 +571,7 @@ function Invoke-Restore([string] $file) {
     }
 
     Write-Step 'Апп зогсоож, DB-г migration-оос шинээр үүсгэнэ'
+    $suspended = Suspend-PilotTask
     Stop-Watchdog
     Stop-PilotProcess 'caddy' 'caddy'
     Stop-PilotProcess 'backend' 'node'
@@ -561,8 +604,122 @@ function Invoke-Restore([string] $file) {
     Write-Log 'backup.log' "RESTORE OK $file"
   } finally {
     Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
+    # Алдаа гарсан ч Task-ийг идэвхжүүлнэ (эс бөгөөс Start-ScheduledTask "disabled" алдаа өгнө)
+    if (Test-Path variable:suspended) { Resume-PilotTask $suspended }
   }
   Start-Pilot | Out-Null
+}
+
+# ── Шинэ хувилбар (PIL-11, v0.2.0 §0.3) ─────────────────────
+# Энэ скриптийг (ижил профайл, -Root) дэд процессоор дуудна: checkout-ын дараа ШИНЭ хувилбарын pilot.ps1-ийн init/build/start
+function Invoke-Self([string] $cmd) {
+  $exe = (Get-Process -Id $PID).Path
+  $a = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $ScriptDir 'pilot.ps1'), $cmd)
+  # Анхдагч үед нэмэлт параметргүй (v0.2.0-оос өмнөх pilot.ps1-д -Profile/-Root алга — буцаах tag-д ч ажиллана)
+  if ($Instance -ne 'pilot') { $a += @('-Profile', $Instance) }
+  if ($Root -ne $DefaultRoot) { $a += @('-Root', $Root) }
+  Write-Step "pilot.ps1 $cmd ($Instance)"
+  Invoke-Native -Exe $exe -Arguments $a | Out-Null
+}
+
+function Get-SelfCommand {
+  $c = '.\deploy\pilot\pilot.ps1'
+  if ($Root -ne $DefaultRoot) { $c = "& `"$(Join-Path $ScriptDir 'pilot.ps1')`" -Root `"$Root`"" }
+  if ($Instance -ne 'pilot') { $c += " -Profile $Instance" }
+  return $c
+}
+
+# Task Scheduler-ийн 'run' даалгавар (RestartCount 3, 1 мин) watchdog-ийг алсны дараа дахин асааж, шинэчлэл / сэргээлтийн
+# дундуур backend-ийг асаахаас сэргийлж түр идэвхгүй болгоно
+function Suspend-PilotTask {
+  if (-not ($IsWin -and $Prof.Tasks)) { return $false }
+  $t = Get-ScheduledTask -TaskName $TaskRun -ErrorAction SilentlyContinue
+  if ($null -eq $t) { return $false }
+  Stop-ScheduledTask -TaskName $TaskRun -ErrorAction SilentlyContinue
+  Disable-ScheduledTask -TaskName $TaskRun | Out-Null
+  Write-Ok "Task '$TaskRun' түр идэвхгүй"
+  return $true
+}
+
+function Resume-PilotTask([bool] $suspended, [switch] $Start) {
+  if (-not $suspended) { return }
+  Enable-ScheduledTask -TaskName $TaskRun | Out-Null
+  if ($Start) { Start-ScheduledTask -TaskName $TaskRun; Write-Ok "Task '$TaskRun' (watchdog) дахин асав" } else { Write-Ok "Task '$TaskRun' идэвхжүүлэв" }
+}
+
+function Invoke-Upgrade([string] $tag) {
+  if (-not $tag) { Stop-Pilot2 'Хэрэглээ: pilot.ps1 upgrade -Tag v0.2.0' }
+  if ($tag -notmatch '^v\d+\.\d+\.\d+(\.\d+)?$') { Stop-Pilot2 "tag буруу: $tag (жнь v0.2.0)" }
+  $cfg = Import-PilotEnv
+  Assert-PilotEnv $cfg -NeedBackup
+  $null = Get-7zExe
+  $self = Get-SelfCommand
+
+  Write-Step "Git ($Root)"
+  Push-Location $Root
+  try {
+    # Tracked файлд commit хийгээгүй өөрчлөлт байвал checkout дарж устгах эрсдэлтэй → зогсоно (.env, run/ — gitignored)
+    $dirty = @((Invoke-Native 'git' @('status', '--porcelain', '--untracked-files=no') -Capture).Out | Where-Object { "$_".Trim() -ne '' })
+    if ($dirty.Count -gt 0) {
+      Stop-Pilot2 "git tree бохир ($($dirty.Count) файл: $(($dirty | Select-Object -First 5) -join '; ')) → git status / git diff; өөрчлөлтийг хадгалж (git stash) эсвэл буцаагаад дахин"
+    }
+    $prev = ((Invoke-Native 'git' @('rev-parse', 'HEAD') -Capture).Out | Select-Object -First 1).Trim()
+    $d = Invoke-Native 'git' @('describe', '--tags', '--exact-match', 'HEAD') -Capture -AllowFail
+    $prevName = if ($d.Code -eq 0 -and $d.Out) { (@($d.Out)[0]).Trim() } else { $prev.Substring(0, 12) }
+    Invoke-Native 'git' @('fetch', '--tags', '--quiet') | Out-Null
+    $t = Invoke-Native 'git' @('rev-parse', '--verify', '--quiet', "refs/tags/$tag^{commit}") -Capture -AllowFail
+    if ($t.Code -ne 0 -or -not $t.Out) { Stop-Pilot2 "tag $tag олдсонгүй (git tag -l 'v*' — GitHub-д push хийсэн эсэх?)" }
+    $target = (@($t.Out)[0]).Trim()
+    if ($target -eq $prev) { Write-Ok "аль хэдийн $tag дээр байна ($prevName) — юу ч хийсэнгүй"; return }
+  } finally { Pop-Location }
+  Write-Ok "$prevName → $tag"
+  Write-Log 'upgrade.log' "START $Instance $prevName -> $tag"
+
+  Write-Step 'Нөөц (шинэчлэлийн өмнө)'
+  $archive = @(Invoke-Backup)[-1]
+
+  Write-Step 'Зогсоох'
+  $suspended = Suspend-PilotTask
+  Stop-Watchdog
+  Stop-PilotProcess 'caddy' 'caddy'
+  Stop-PilotProcess 'backend' 'node'
+
+  $failed = $null
+  try {
+    Push-Location $Root
+    try { Invoke-Native 'git' @('checkout', '--quiet', $tag) | Out-Null } finally { Pop-Location }
+    Write-Ok "checkout $tag"
+    Invoke-Self 'init'
+    Invoke-Self 'build'
+    Invoke-Self 'start'
+    $port = Get-Cfg $cfg 'PORT' $Prof.Port
+    if (-not (Wait-Http "http://127.0.0.1:$port/api/v1/health" 60)) { throw "backend health (127.0.0.1:$port) хариу өгсөнгүй" }
+  } catch {
+    $failed = $_.Exception.Message
+  }
+
+  if ($failed) {
+    Resume-PilotTask $suspended
+    Write-Log 'upgrade.log' "FAIL $Instance $prevName -> ${tag}: $failed"
+    Write-Host ''
+    Write-Host "  ШИНЭЧЛЭЛ АМЖИЛТГҮЙ: $failed" -ForegroundColor Red
+    Write-Host "  Буцаах (өгөгдөл = шинэчлэлийн өмнөх нөөц; migration буцдаггүй тул restore заавал):" -ForegroundColor Yellow
+    Write-Host "    $self stop"
+    Write-Host "    git checkout $prevName"
+    Write-Host "    $self restore `"$archive`""
+    Write-Host "    $self build"
+    if ($Prof.Tasks) { Write-Host "    Start-ScheduledTask '$TaskRun'" } else { Write-Host "    $self start" }
+    Write-Host "  Лог: $LogDir (backend.err.log, upgrade.log)"
+    Stop-Pilot2 "шинэчлэл амжилтгүй ($prevName → $tag)"
+  }
+
+  Write-Log 'upgrade.log' "OK $Instance $prevName -> $tag backup=$archive"
+  Write-Ok "шинэчлэв: $prevName → $tag (нөөц: $archive)"
+  if ($suspended) {
+    Resume-PilotTask $suspended -Start
+  } elseif ($Prof.Tasks) {
+    Write-Warn2 "watchdog ажиллахгүй — Start-ScheduledTask '$TaskRun' (эсвэл $self run)"
+  }
 }
 
 # ── Windows-ийн тохиргоо ─────────────────────────────────────
@@ -577,7 +734,11 @@ function Assert-Windows([switch] $Admin) {
 }
 
 $FirewallRule = 'S-Project pilot - block inbound dev/pilot ports'
-$BlockedPorts = @('3000', '3100', '5173', '5174', '6379', '8088', '54320-54329', '55320-55329', '56379')
+$BlockedPorts = @('3000', '3100', '3200', '5173', '5174', '6379', '8088', '8089', '54320-54329', '55320-55329', '56379', '56520-56529', '56579')
+
+function Assert-PilotProfile([string] $what) {
+  if (-not $Prof.Tasks) { Stop-Pilot2 "$what зөвхөн pilot профайлд (одоо: $Instance)" }
+}
 
 function Set-PilotFirewall {
   Assert-Windows -Admin
@@ -592,8 +753,9 @@ $TaskBackup = 'S-Project Pilot Backup'
 
 function Install-PilotTasks {
   Assert-Windows
+  Assert-PilotProfile 'install-tasks'
   $ps = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-  $script = Join-Path $PilotDir 'pilot.ps1'
+  $script = Join-Path $ScriptDir 'pilot.ps1'
   $user = [Security.Principal.WindowsIdentity]::GetCurrent().Name
   $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
 
@@ -633,7 +795,7 @@ function Invoke-Watchdog {
   Set-Content -Path (Get-PidFile 'watchdog') -Value $PID -Encoding ASCII
   Write-Log 'pilot.log' "watchdog started pid=$PID"
   Write-Step 'Watchdog: 30 секунд тутам шалгана (Ctrl+C — зогсоох; процессууд үргэлжилнэ)'
-  $port = Get-Cfg $cfg 'PORT' '3100'
+  $port = Get-Cfg $cfg 'PORT' $Prof.Port
   $fails = 0
   while ($true) {
     Start-Sleep -Seconds 30
@@ -663,8 +825,9 @@ function Invoke-Watchdog {
 
 function Show-Status {
   $cfg = Import-PilotEnv
-  $port = Get-Cfg $cfg 'PORT' '3100'
-  $http = Get-Cfg $cfg 'PILOT_HTTP_PORT' '8088'
+  Write-Ok "профайл: $Instance ($ProjectId) · код: $Root"
+  $port = Get-Cfg $cfg 'PORT' $Prof.Port
+  $http = Get-Cfg $cfg 'PILOT_HTTP_PORT' $Prof.HttpPort
   foreach ($n in @(@('backend', 'node'), @('caddy', 'caddy'))) {
     $p = Get-PilotProcess $n[0] $n[1]
     if ($p) { Write-Ok "$($n[0]) PID $($p.Id)" } else { Write-Warn2 "$($n[0]) ажиллахгүй" }
@@ -803,15 +966,16 @@ try {
       Stop-PilotProcess 'backend' 'node'
       if ($All) {
         Invoke-Supabase -Arguments @('stop') | Out-Null   # --no-backup ХЭЗЭЭ Ч БИШ (өгөгдөл устна)
-        Invoke-Native 'docker' @('compose', '-f', $RedisCompose, '-p', 's-project-pilot-redis', 'stop') | Out-Null
+        Invoke-Native 'docker' @('compose', '-f', $RedisCompose, '-p', $RedisContainer, 'stop') | Out-Null
         Write-Ok 'Supabase, Redis зогсов (өгөгдөл хадгалагдсан)'
       }
     }
     'status' { Show-Status }
     'onboard' { Invoke-AdminCli 'onboard' }
     'user' { Invoke-AdminCli 'user' }
-    'backup' { Invoke-Backup }
+    'backup' { Invoke-Backup | Out-Null }
     'restore' { $f = $null; if ($Rest) { $f = $Rest[0] }; Invoke-Restore $f }
+    'upgrade' { $t = $Tag; if (-not $t -and $Rest) { $t = $Rest[0] }; Invoke-Upgrade $t }
     'firewall' { Set-PilotFirewall }
     'install-tasks' { Install-PilotTasks }
     'uninstall-tasks' { Uninstall-PilotTasks }

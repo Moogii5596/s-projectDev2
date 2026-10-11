@@ -1,10 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS, CAMP_PERMISSION_CODES, campPermissionAvailableIn, isCampPermission } from '../common/camp-permissions';
 import { inTenantTx, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import { AssignUserRoleDto, CreateCampRoleDto, QueryUserRolesDto, SetRolePermissionsDto, UpdateCampRoleDto } from './camp-rbac.dto';
+import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
 const ROLE_SELECT = {
@@ -56,12 +57,12 @@ export class CampRbacService {
 
   private validateCodes(codes: string[]): void {
     const unknown = codes.filter((c) => !isCampPermission(c));
-    if (unknown.length > 0) throw new BadRequestException(`Үл мэдэгдэх эрх: ${unknown.join(', ')}`);
+    if (unknown.length > 0) throw badRequest('camp.err.rbac.1', { codes: unknown.join(', ') });
   }
 
   private async findRole(tx: Tx, tenantId: string, id: string) {
     const role = await tx.campRole.findFirst({ where: { id, tenantId }, select: ROLE_SELECT });
-    if (!role) throw new NotFoundException('Роль олдсонгүй');
+    if (!role) throw notFound('camp.err.rbac.2');
     return role;
   }
 
@@ -110,7 +111,7 @@ export class CampRbacService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
         const dup = await tx.campRole.findFirst({ where: { tenantId, name: dto.name }, select: { id: true } });
-        if (dup) throw new ConflictException(`"${dto.name}" нэртэй роль аль хэдийн байна`);
+        if (dup) throw conflict('camp.err.rbac.3', { name: dto.name });
         const created = await tx.campRole.create({ data: { tenantId, name: dto.name, description: dto.description ?? null } });
         if (codes.length > 0) {
           await tx.campRolePermission.createMany({ data: codes.map((permissionCode) => ({ tenantId, roleId: created.id, permissionCode })) });
@@ -129,7 +130,7 @@ export class CampRbacService {
         await this.findRole(tx, tenantId, id);
         if (dto.name !== undefined) {
           const dup = await tx.campRole.findFirst({ where: { tenantId, name: dto.name, NOT: { id } }, select: { id: true } });
-          if (dup) throw new ConflictException(`"${dto.name}" нэртэй роль аль хэдийн байна`);
+          if (dup) throw conflict('camp.err.rbac.3', { name: dto.name });
         }
         await tx.campRole.update({
           where: { id },
@@ -149,7 +150,7 @@ export class CampRbacService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
         const role = await this.findRole(tx, tenantId, id);
-        if (role.isSystem) throw new ConflictException(`Системийн роль "${role.name}"-ийг устгах боломжгүй (эрхийг нь засаж болно)`);
+        if (role.isSystem) throw conflict('camp.err.rbac.4', { name: role.name });
         await tx.campRole.delete({ where: { id } });   // camp_role_permissions, camp_user_roles → CASCADE
       }),
     );
@@ -203,16 +204,16 @@ export class CampRbacService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
         const user = await tx.coreUser.findFirst({ where: { id: dto.userId, tenantId }, select: { id: true, isActive: true } });
-        if (!user) throw new BadRequestException('Хэрэглэгч олдсонгүй (core_users.id шаардлагатай)');
-        if (!user.isActive) throw new BadRequestException('Идэвхгүй хэрэглэгчид роль өгөх боломжгүй');
+        if (!user) throw badRequest('camp.err.rbac.5');
+        if (!user.isActive) throw badRequest('camp.err.rbac.6');
         const role = await tx.campRole.findFirst({ where: { id: dto.roleId, tenantId }, select: { id: true } });
-        if (!role) throw new BadRequestException('Роль олдсонгүй');
+        if (!role) throw badRequest('camp.err.rbac.2');
         if (campId !== null) {
           const camp = await tx.camp.findFirst({ where: { id: campId, tenantId }, select: { id: true } });
-          if (!camp) throw new BadRequestException('Кемп олдсонгүй');
+          if (!camp) throw badRequest('camp.err.lookup.1');
         }
         const dup = await tx.campUserRole.findFirst({ where: { tenantId, userId: dto.userId, roleId: dto.roleId, campId }, select: { id: true } });
-        if (dup) throw new ConflictException('Энэ хэрэглэгчид энэ роль (энэ кемпэд) аль хэдийн өгөгдсөн');
+        if (dup) throw conflict('camp.err.rbac.7');
         return tx.campUserRole.create({
           data: { tenantId, userId: dto.userId, roleId: dto.roleId, campId },
           select: { id: true, userId: true, roleId: true, campId: true, createdAt: true },
@@ -228,7 +229,7 @@ export class CampRbacService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
         const row = await tx.campUserRole.findFirst({ where: { id, tenantId }, select: { id: true } });
-        if (!row) throw new NotFoundException('Хэрэглэгчийн роль олдсонгүй');
+        if (!row) throw notFound('camp.err.rbac.8');
         await tx.campUserRole.delete({ where: { id } });
       }),
     );

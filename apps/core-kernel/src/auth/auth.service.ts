@@ -167,6 +167,7 @@ export class AuthService {
           role: true,
           tenantId: true,
           isActive: true,
+          locale: true, // v0.2.0 §0.7
           createdAt: true,
         },
       });

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<title>Нэвтрэх</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0D6B5B}a:hover{color:#09493E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F3F4F1; font-family: 'IBM Plex Sans', 'Noto Sans SC', sans-serif; color: #16191D; padding: 20px 20px 28px">
+
+<div style="display: flex; justify-content: flex-end">
+<div role="group" aria-label="Хэл" style="display: flex; border: 1px solid #D4D8D2; border-radius: 18px; overflow: hidden; background: #FFFFFF">
+<button type="button" aria-pressed="true" style="height: 36px; padding: 0 14px; border: 0; background: #16191D; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600">МН</button>
+<button type="button" aria-pressed="false" style="height: 36px; padding: 0 14px; border: 0; background: #FFFFFF; color: #16191D; font: inherit; font-size: 13px">EN</button>
+<button type="button" aria-pressed="false" style="height: 36px; padding: 0 14px; border: 0; background: #FFFFFF; color: #16191D; font: inherit; font-size: 13px">中文</button>
+</div>
+</div>
+
+<div style="margin-top: 72px; display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 30px; font-weight: 700; letter-spacing: -0.5px">S Project</div>
+<div style="font-size: 15px; color: #5B636B">Sino Hydro · кемпийн систем</div>
+</div>
+
+<form style="margin-top: 40px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="login-id" style="font-size: 13px; font-weight: 600">Утасны дугаар эсвэл имэйл</label>
+<input id="login-id" type="text" inputmode="tel" value="9911 2233" style="height: 48px; box-sizing: border-box; padding: 0 14px; border: 1px solid #C7CCC5; border-radius: 10px; background: #FFFFFF; font: inherit; font-size: 16px; color: #16191D">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="login-pw" style="font-size: 13px; font-weight: 600">Нууц үг</label>
+<input id="login-pw" type="password" value="password12" style="height: 48px; box-sizing: border-box; padding: 0 14px; border: 1px solid #C7CCC5; border-radius: 10px; background: #FFFFFF; font: inherit; font-size: 16px; color: #16191D">
+</div>
+<a href="Main.dc.html" style="height: 50px; border-radius: 10px; background: #0D6B5B; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center">Нэвтрэх</a>
+<a href="#" style="align-self: center; font-size: 14px">Нууц үг мартсан?</a>
+</form>
+
+<section aria-label="Анхны нэвтрэлт" style="margin-top: auto; background: #FFFFFF; border: 1px solid #E2E5E0; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 13px; font-weight: 600">Анх удаа нэвтэрч байна уу?</div>
+<div style="font-size: 13px; line-height: 1.45; color: #5B636B">Админаас авсан урилгын линкээр ороод нууц үгээ үүсгэнэ. Нэг удаагийн нууц үгээр орсон бол эхний нэвтрэлт дээр шинэ нууц үг заавал үүсгэнэ.</div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -30,6 +30,32 @@ export class RangeQueryDto {
   to!: string;
 
   @IsOptional() @IsUUID() employeeId?: string;
+
+  /** FB-14 (v0.2.0): хэлтэс, ростер, албан тушаал, код/нэрээр шүүх */
+  @IsOptional() @IsUUID() departmentId?: string;
+  /** UUID эсвэл 'none' (ростергүй) */
+  @IsOptional() @Matches(/^(none|[0-9a-fA-F-]{36})$/) crewId?: string;
+  @IsOptional() @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value)) @IsString() @MaxLength(100) position?: string;
+  @IsOptional() @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value)) @IsString() @MaxLength(100) q?: string;
+}
+
+/** FB-14 (v0.2.0) — олон ажилтны ирц нэг дор → ирцийн импортын урсгал (PREVIEW → confirm) */
+export class ManualMovementsDto {
+  @IsString() @Matches(ISO_DATE, DATE_MSG('date'))
+  date!: string;
+
+  @IsEnum(CampMovementDirection, { message: 'direction: ARRIVAL | DEPARTURE' })
+  direction!: CampMovementDirection;
+
+  /** Хоосон/алга = ростерын анхдагч; [] = хоол идэхгүй (NONE) */
+  @IsOptional() @IsArray() @ArrayUnique() @ArrayMaxSize(4) @IsEnum(CampMealType, { each: true })
+  meals?: CampMealType[] | null;
+
+  @IsOptional() @IsEnum(CampShiftType)
+  shift?: CampShiftType;
+
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(500) @ArrayUnique() @IsUUID('all', { each: true, message: 'employeeIds UUID байх ёстой' })
+  employeeIds!: string[];
 }
 
 export class CalendarQueryDto {

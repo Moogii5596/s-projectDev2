@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
 import type { PermissionDef, Role } from '../api/types'
@@ -8,12 +7,14 @@ import { useCampMutation } from '../hooks/useCampMutation'
 import { P, mergeRolePermissions, visiblePermissions } from '../lib/permissions'
 import { SYSTEM_ROLE_LABEL } from '../lib/labels'
 import { Badge, Button, Card, ErrorBox, Field, Loading, Modal, NoAccess, PageHeader, inputCls } from '../components/ui'
+import { useTranslation } from 'react-i18next'
 
 /**
  * /camp/admin/roles — роль × эрхийн матриц (roles.manage, tenant түвшин).
  * V2 эрх (availableIn = 'v2') харагдахгүй, гэхдээ роль эзэмшиж байвал хадгалахад хасагдахгүй.
  */
 export default function RolesPage() {
+  const { t } = useTranslation()
   const perms = useCampPermissions()
   const canManage = perms.can(P.ROLES_MANAGE)
   const catalog = useQuery({ queryKey: campKeys.permissions, queryFn: campApi.permissions, enabled: canManage })
@@ -36,7 +37,7 @@ export default function RolesPage() {
   )
 
   if (perms.isLoading) return <Loading />
-  if (!canManage) return <NoAccess what="Роль ба эрх" />
+  if (!canManage) return <NoAccess what={t('camp.system.section.roles')} />
 
   const toggle = (r: Role, code: string) => {
     const cur = selectedOf(r)
@@ -45,22 +46,17 @@ export default function RolesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-gray-500">
-        <Link to="/camp" className="hover:text-blue-600">
-          Кемпүүд
-        </Link>{' '}
-        / Роль ба эрх
-      </div>
       <PageHeader
-        title="Роль ба эрх"
-        subtitle="Роль бүрт эрх сонгоод хадгална. Хэрэглэгчид ролийг 'Хэрэглэгчийн роль' хуудсанд ононо."
+        title={t('camp.system.section.roles')}
+        subtitle={t('camp.roles.subtitle')}
         actions={
           <>
             <Button variant="secondary" onClick={() => setRoleModal('new')}>
-              + Роль
+              {t('camp.roles.add')}
             </Button>
             <Button onClick={() => save.mutate(undefined)} loading={save.isPending} disabled={changed.length === 0}>
-              Хадгалах{changed.length > 0 ? ` (${changed.length})` : ''}
+              {t('camp.common.save')}
+              {changed.length > 0 ? ` (${changed.length})` : ''}
             </Button>
           </>
         }
@@ -73,18 +69,18 @@ export default function RolesPage() {
             <table className="text-sm">
               <thead>
                 <tr className="align-bottom">
-                  <th className="text-left font-medium text-gray-600 px-3 py-2 min-w-[16rem]">Эрх</th>
+                  <th className="text-left font-medium text-gray-600 px-3 py-2 min-w-[16rem]">{t('camp.roles.permission')}</th>
                   {roles.data.map((r) => (
                     <th key={r.id} className="px-2 py-2 text-center font-medium text-gray-700 min-w-[7rem]">
                       <div>{r.name}</div>
-                      <div className="text-[11px] font-normal text-gray-400">{r.userCount} хэрэглэгч</div>
+                      <div className="text-[11px] font-normal text-gray-400">{t('camp.roles.users', { n: r.userCount })}</div>
                       <div className="mt-1 space-x-2">
                         <button type="button" className="text-[11px] text-blue-600 hover:underline" onClick={() => setRoleModal(r)}>
-                          Засах
+                          {t('camp.common.edit')}
                         </button>
                         {!r.isSystem && (
                           <button type="button" className="text-[11px] text-red-600 hover:underline" onClick={() => setDeleting(r)}>
-                            Устгах
+                            {t('camp.att.delete')}
                           </button>
                         )}
                       </div>
@@ -116,9 +112,9 @@ export default function RolesPage() {
           </div>
           {changed.length > 0 && (
             <div className="flex items-center gap-3 mt-3 text-sm text-blue-700">
-              Хадгалаагүй өөрчлөлт: {changed.map((r) => r.name).join(', ')}
+              {t('camp.roles.unsaved', { names: changed.map((r) => r.name).join(', ') })}
               <Button variant="ghost" onClick={() => setDraft({})}>
-                Буцаах
+                {t('camp.roles.revert')}
               </Button>
             </div>
           )}
@@ -131,6 +127,7 @@ export default function RolesPage() {
 }
 
 function RoleModal({ role, onClose }: { role: Role | null; onClose: () => void }) {
+  const { t } = useTranslation()
   const [name, setName] = useState(role?.name ?? '')
   const [description, setDescription] = useState(role?.description ?? '')
   const m = useCampMutation(
@@ -143,47 +140,49 @@ function RoleModal({ role, onClose }: { role: Role | null; onClose: () => void }
   )
   return (
     <Modal
-      title={role ? 'Роль засах' : 'Роль нэмэх'}
+      title={role ? t('camp.roles.edit_title') : t('camp.roles.add_title')}
       onClose={onClose}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Болих
+            {t('camp.common.cancel')}
           </Button>
           <Button onClick={() => m.mutate(undefined)} loading={m.isPending} disabled={!name.trim()}>
-            Хадгалах
+            {t('camp.common.save')}
           </Button>
         </>
       }
     >
-      {role?.isSystem && role.systemCode && <Badge tone="blue">{SYSTEM_ROLE_LABEL[role.systemCode] ?? 'Системийн роль'}</Badge>}
-      <Field label="Нэр">{(id) => <input id={id} className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />}</Field>
-      <Field label="Тайлбар">{(id) => <input id={id} className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} />}</Field>
-      {!role && <p className="text-xs text-gray-500">Эрхийг матриц дээр сонгоод "Хадгалах" дарна.</p>}
+      {role?.isSystem && role.systemCode && <Badge tone="blue">{SYSTEM_ROLE_LABEL[role.systemCode] ?? t('camp.roles.system')}</Badge>}
+      <Field label={t('camp.common.name')}>{(id) => <input id={id} className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />}</Field>
+      <Field label={t('camp.roles.description')}>{(id) => <input id={id} className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} />}</Field>
+      {!role && <p className="text-xs text-gray-500">{t('camp.roles.matrix_hint')}</p>}
       <ErrorBox error={m.error} />
     </Modal>
   )
 }
 
 function DeleteRoleModal({ role, onClose }: { role: Role; onClose: () => void }) {
+  const { t } = useTranslation()
   const m = useCampMutation(() => campApi.deleteRole(role.id), [campKeys.roles, campKeys.all], onClose)
   return (
     <Modal
-      title="Роль устгах"
+      title={t('camp.roles.delete_title')}
       onClose={onClose}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Болих
+            {t('camp.common.cancel')}
           </Button>
           <Button variant="danger" onClick={() => m.mutate(undefined)} loading={m.isPending}>
-            Устгах
+            {t('camp.att.delete')}
           </Button>
         </>
       }
     >
       <p className="text-sm">
-        "{role.name}" ролийг устгах уу?{role.userCount > 0 && ` ${role.userCount} хэрэглэгчээс энэ роль хасагдана.`}
+        {t('camp.roles.delete_confirm', { name: role.name })}
+        {role.userCount > 0 && ` ${t('camp.roles.delete_users', { n: role.userCount })}`}
       </p>
       <ErrorBox error={m.error} />
     </Modal>

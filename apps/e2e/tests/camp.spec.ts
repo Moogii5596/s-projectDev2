@@ -20,7 +20,8 @@ function nextWednesday(): string {
 const addDaysIso = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 async function openCamp(page: Page) {
-  await page.goto('/camp');
+  // v0.2.0 FB-11: /camp нь сүүлийн кемп рүү шууд ордог → жагсаалт = /camp?list=1
+  await page.goto('/camp?list=1');
   await expect(page.getByRole('heading', { name: 'Кемп', exact: true })).toBeVisible();
   if (await page.getByText('Танд кемпийн эрх олгогдоогүй').isVisible().catch(() => false)) {
     throw new Error('admin@test.mn-д кемпийн эрх алга — supabase/dev/camp_e2e_grant.sql-ийг ажиллуулна уу (README тэмдэглэл)');
@@ -29,7 +30,13 @@ async function openCamp(page: Page) {
   // кемп нээгдэхэд анхдагч хэсэг = Ирц (багц 2); тохиргоо руу шилжинэ
   await page.waitForURL('**/attendance');
   await page.getByRole('link', { name: 'Тохиргоо', exact: true }).click();
-  await page.waitForURL('**/settings');
+  // v0.2.0 FB-05: тохиргооны каталог (зүүн цэс) — анхдагч "Ерөнхий"
+  await page.waitForURL('**/settings/general');
+}
+
+/** Тохиргооны зүүн цэсний хэсэг */
+async function openSetting(page: Page, name: string) {
+  await page.getByRole('navigation', { name: 'Тохиргоо' }).getByRole('link', { name, exact: true }).click();
 }
 
 test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл, эрх', () => {
@@ -38,7 +45,7 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
   });
 
   test('кемп үүсгэх (латин бус код → backend-ийн монгол алдаа)', async ({ page }) => {
-    await page.goto('/camp');
+    await page.goto('/camp?list=1');
     await page.getByRole('button', { name: '+ Кемп нэмэх' }).click();
     const dlg = page.getByRole('dialog');
     await dlg.getByLabel('Код').fill('Кемп');
@@ -53,6 +60,7 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
 
   test('тохиргоо: хоол идэх байршил + анхдагч байршил хадгалах', async ({ page }) => {
     await openCamp(page);
+    await openSetting(page, 'Хоол идэх байршил');
     await page.getByLabel('Шинэ байршлын нэр').fill('Кемпийн гал тогоо');
     await page.getByRole('button', { name: 'Нэмэх' }).click();
     await expect(page.getByRole('cell', { name: 'Кемпийн гал тогоо' })).toBeVisible();
@@ -60,6 +68,7 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
     await page.getByRole('button', { name: 'Нэмэх' }).click();
     await expect(page.getByRole('cell', { name: 'Уулын хэсэг' })).toBeVisible();
 
+    await openSetting(page, 'Ерөнхий');
     await page.getByLabel('Анхдагч хоол идэх байршил').selectOption({ label: 'Кемпийн гал тогоо' });
     await page.getByLabel('Амрах хоног').fill('1');
     await page.getByRole('button', { name: 'Тохиргоо хадгалах' }).click();
@@ -73,11 +82,11 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
 
   test('байр, өрөө', async ({ page }) => {
     await openCamp(page);
-    await page.getByRole('link', { name: 'Байр, өрөө' }).click();
+    await openSetting(page, 'Байр, өрөө');
     await page.getByLabel('Байрны код').fill('B1');
     await page.getByLabel('Байрны нэр').fill('Байр 1');
     await page.getByRole('button', { name: 'Нэмэх' }).click();
-    await expect(page.getByText('Байр 1')).toBeVisible();
+    await expect(page.getByRole('button', { name: /B1\s*Байр 1/ })).toBeVisible();
     await page.getByRole('button', { name: '+ Өрөө' }).click();
     const dlg = page.getByRole('dialog');
     await dlg.getByLabel('Өрөөний дугаар').fill('101');
@@ -89,7 +98,7 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
 
   test('хэлтэс + ээлжийн загвар (1–7 өдөр, 8–14 шөнө)', async ({ page }) => {
     await openCamp(page);
-    await page.getByRole('link', { name: 'Хэлтэс, ээлж' }).click();
+    await openSetting(page, 'Хэлтэс, ээлж');
     await page.getByRole('button', { name: '+ Хэлтэс' }).click();
     const dlg = page.getByRole('dialog');
     await dlg.getByLabel('Код').fill('MINE');
@@ -108,10 +117,10 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
     await expect(page.getByLabel('1–7 Өдөр, 8–14 Шөнө')).toBeVisible();
   });
 
-  test('баг: солигдох гарагаас өөр өдөр → хадгалах боломжгүй', async ({ page }) => {
+  test('ростер (FB-06): солигдох гарагаас өөр өдөр → хадгалах боломжгүй', async ({ page }) => {
     await openCamp(page);
-    await page.getByRole('link', { name: 'Баг (ростер)' }).click();
-    await page.getByRole('button', { name: '+ Баг' }).click();
+    await openSetting(page, 'Ростер');
+    await page.getByRole('button', { name: '+ Ростер бүртгэх' }).click();
     const dlg = page.getByRole('dialog');
     const wed = nextWednesday();
     await dlg.getByLabel('Код').fill('A');

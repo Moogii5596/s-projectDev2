@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<title>Feed — нүүр</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0D6B5B}a:hover{color:#09493E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F3F4F1; font-family: 'IBM Plex Sans', 'Noto Sans SC', sans-serif; color: #16191D; overflow: hidden">
+
+<header style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; background: #FFFFFF; border-bottom: 1px solid #E2E5E0">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 18px; font-weight: 700; letter-spacing: -0.2px">S Project</span>
+<button type="button" style="display: flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; color: #5B636B">Кемп: OT-1 · Оюу толгой
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<button type="button" aria-label="Хэл солих" style="height: 32px; padding: 0 10px; border: 1px solid #D4D8D2; border-radius: 16px; background: #FFFFFF; font: inherit; font-size: 12px; font-weight: 600; color: #16191D">МН · EN · 中</button>
+<button type="button" aria-label="Мэдэгдэл, 3 шинэ" style="position: relative; width: 44px; height: 44px; border: 0; background: none; color: #16191D">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 01-3.4 0"></path></svg>
+<span style="position: absolute; top: 8px; right: 8px; min-width: 16px; height: 16px; border-radius: 8px; background: #B42318; color: #FFFFFF; font-size: 10px; font-weight: 700; line-height: 16px">3</span>
+</button>
+</div>
+</header>
+
+<nav aria-label="Feed шүүлтүүр" style="display: flex; gap: 8px; padding: 10px 16px; background: #FFFFFF; border-bottom: 1px solid #E2E5E0">
+<button type="button" style="height: 32px; padding: 0 14px; border: 0; border-radius: 16px; background: #16191D; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600">Бүгд</button>
+<button type="button" style="height: 32px; padding: 0 14px; border: 1px solid #D4D8D2; border-radius: 16px; background: #FFFFFF; font: inherit; font-size: 13px; color: #16191D">Анхааруулга</button>
+<button type="button" style="height: 32px; padding: 0 14px; border: 1px solid #D4D8D2; border-radius: 16px; background: #FFFFFF; font: inherit; font-size: 13px; color: #16191D">Миний хүсэлт</button>
+</nav>
+
+<main style="flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 12px 12px 0; overflow: hidden; width: 363px; height: 625px">
+
+<section aria-label="Өнөөдрийн хоолны цэс" style="background: #0D6B5B; color: #FFFFFF; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<span style="font-size: 13px; font-weight: 600; opacity: 0.85">Өнөөдрийн цэс · Даваа, 10.12</span>
+<a href="#" style="color: #FFFFFF; font-size: 12px">Бүтэн цэс</a>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<div style="background: rgba(255,255,255,0.12); border-radius: 10px; padding: 8px"><div style="font-size: 11px; opacity: 0.8">Өглөө</div><div style="font-size: 13px; font-weight: 600">Будаатай хуурга</div></div>
+<div style="background: rgba(255,255,255,0.22); border-radius: 10px; padding: 8px"><div style="font-size: 11px; opacity: 0.8">Өдөр</div><div style="font-size: 13px; font-weight: 600">Цуйван · Салат</div></div>
+<div style="background: rgba(255,255,255,0.12); border-radius: 10px; padding: 8px"><div style="font-size: 11px; opacity: 0.8">Орой</div><div style="font-size: 13px; font-weight: 600">Гуляш</div></div>
+</div>
+</section>
+
+<article style="background: #FFF4DC; border: 1px solid #F0D49A; border-radius: 14px; padding: 12px 14px; display: flex; gap: 10px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8A5300" stroke-width="2" aria-hidden="true" style="flex: none; margin-top: 1px"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 12px; font-weight: 600; color: #8A5300">АНХААРУУЛГА · ХАБ · Б. Ганзориг · 06:40</div>
+<div style="font-size: 14px; line-height: 1.4">Өнөөдөр 14 цагаас цас орж, зам гулгаа үүснэ. Хамгаалалтын хэрэгслээ бүрэн өмсөж болгоомжтой ажиллаарай.</div>
+</div>
+</article>
+
+<article style="background: #FFFFFF; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px">
+<div aria-hidden="true" style="width: 36px; height: 36px; border-radius: 18px; background: #D9E4F2; color: #24476E; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center">Э</div>
+<div style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 600">Э. Тэмүүлэн</span><span style="font-size: 12px; color: #5B636B">Засварын хүсэлт · ZAS-OT1-2026-0042 · 25 мин</span></div>
+</div>
+<div style="font-size: 14px; line-height: 1.4">Блок 7-00 ус алдаж байна, шал нойтон байна.</div>
+<div style="height: 120px; border-radius: 10px; background: #DCE1DA; display: flex; align-items: center; justify-content: center; color: #5B636B; font-size: 12px">[Зураг: ус алдаж буй хоолой]</div>
+<ol aria-label="Засварын явц" style="list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 6px; font-size: 12px">
+<li style="display: flex; align-items: center; gap: 4px; color: #0D6B5B; font-weight: 600"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 4px; background: #0D6B5B"></span>Нээлттэй</li>
+<li aria-hidden="true" style="flex: 1; height: 2px; background: #0D6B5B"></li>
+<li style="display: flex; align-items: center; gap: 4px; color: #0D6B5B; font-weight: 600"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 4px; background: #0D6B5B"></span>Хийгдэж буй</li>
+<li aria-hidden="true" style="flex: 1; height: 2px; background: #D4D8D2"></li>
+<li style="display: flex; align-items: center; gap: 4px; color: #5B636B"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 4px; border: 2px solid #A9B0A8; box-sizing: border-box"></span>Дууссан</li>
+</ol>
+<div style="font-size: 12px; color: #5B636B; background: #F3F4F1; border-radius: 8px; padding: 8px 10px">Засварчин Д. Болд: "Сантехникч очиж байна, 30 минутад засна."</div>
+<div style="display: flex; gap: 16px; border-top: 1px solid #EEF0EC; padding-top: 8px">
+<button type="button" style="height: 32px; display: flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; font: inherit; font-size: 13px; color: #5B636B"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"></path></svg>Лайк · 4</button>
+<button type="button" style="height: 32px; border: 0; background: none; padding: 0; font: inherit; font-size: 13px; color: #5B636B">Сэтгэгдэл · 2</button>
+</div>
+</article>
+
+<article style="background: #FFFFFF; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 10px">
+<div aria-hidden="true" style="width: 36px; height: 36px; border-radius: 18px; background: #F2DDD6; color: #7A2E17; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center">Н</div>
+<div style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 600">Н. Сарангэрэл</span><span style="font-size: 12px; color: #5B636B">Хоолны гомдол · 1 ц</span></div>
+<span style="margin-left: auto; font-size: 11px; font-weight: 600; color: #0D6B5B; background: #E3F1EC; border-radius: 10px; padding: 3px 8px">Шийдсэн</span>
+</div>
+<div style="font-size: 14px; line-height: 1.4">Өчигдрийн өдрийн хоол давс ихтэй байсан.</div>
+</article>
+
+</main>
+
+<nav aria-label="Үндсэн цэс" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: #FFFFFF; border-top: 1px solid #E2E5E0; padding: 6px 4px 18px">
+<a href="#" style="height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; font-weight: 600; color: #0D6B5B; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg>Feed</a>
+<a href="#" style="height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; color: #5B636B; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9"></path></svg>Хүсэлт</a>
+<a href="NewPost.dc.html" aria-label="Шинэ пост" style="height: 48px; display: flex; align-items: center; justify-content: center; text-decoration: none"><span style="width: 44px; height: 44px; border-radius: 22px; background: #0D6B5B; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span></a>
+<a href="#" style="height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; color: #5B636B; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"></path></svg>Кемп</a>
+<a href="#" style="height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; color: #5B636B; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg>Профайл</a>
+</nav>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

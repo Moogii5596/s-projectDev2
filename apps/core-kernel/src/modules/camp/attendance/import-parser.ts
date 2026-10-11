@@ -1,7 +1,8 @@
-import { BadRequestException } from '@nestjs/common';
+import { t } from '../../../common/i18n/translate';
 import { CampMealType, CampMovementDirection, CampShiftType } from '@prisma/client';
 import ExcelJS from 'exceljs';
-import { isRealIsoDate, msToIso } from './camp-date';
+import { cellText, parseDateCell } from '../../../common/xlsx/cells';
+import { badRequest } from '../../../common/i18n/app-error';
 
 /**
  * Ирцийн xlsx задлагч (Шат 3.3). Багана (англи эсвэл монгол, том жижиг үсэг хамаарахгүй):
@@ -45,55 +46,32 @@ const NONE = new Set(['NONE', '-', 'ҮГҮЙ']);
 const SHIFTS: Record<string, CampShiftType> = { DAY: CampShiftType.DAY, 'ӨДӨР': CampShiftType.DAY, NIGHT: CampShiftType.NIGHT, 'ШӨНӨ': CampShiftType.NIGHT };
 const MEAL_ORDER = [CampMealType.BREAKFAST, CampMealType.LUNCH, CampMealType.DINNER, CampMealType.NIGHT];
 
-/** exceljs нүдний утгыг текст болгох (rich text, formula, hyperlink) */
-function cellText(v: ExcelJS.CellValue): string {
-  if (v === null || v === undefined) return '';
-  if (v instanceof Date) return v.toISOString();
-  if (typeof v === 'object') {
-    if ('richText' in v) return v.richText.map((r) => r.text).join('');
-    if ('result' in v) return cellText(v.result as ExcelJS.CellValue);
-    if ('text' in v) return String(v.text);
-    return '';
-  }
-  return String(v);
-}
-
-/** Огноо: Excel огноо (Date, UTC) · Excel serial тоо · 'YYYY-MM-DD' / 'YYYY.MM.DD' / 'YYYY/MM/DD' */
-export function parseDateCell(v: ExcelJS.CellValue): string | null {
-  if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v.toISOString().slice(0, 10);
-  if (typeof v === 'number' && Number.isFinite(v) && v > 20000 && v < 80000) {
-    return msToIso(Date.UTC(1899, 11, 30) + Math.round(v) * 86_400_000);
-  }
-  if (v && typeof v === 'object' && 'result' in v) return parseDateCell(v.result as ExcelJS.CellValue);
-  const m = /^(\d{4})[-./](\d{1,2})[-./](\d{1,2})$/.exec(cellText(v).trim());
-  if (!m) return null;
-  const iso = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
-  return isRealIsoDate(iso) ? iso : null;
-}
+// cellText, parseDateCell → common/xlsx/cells.ts (v0.2.0 §0.5, зан төлөв ижил)
+export { parseDateCell };
 
 export function parseMeals(text: string): { meals: CampMealType[] | null; error?: string } {
   const tokens = norm(text).split(/[,;\s]+/).filter(Boolean);
   if (tokens.length === 0) return { meals: null };
-  if (tokens.some((t) => NONE.has(t))) {
-    return tokens.length === 1 ? { meals: [] } : { meals: null, error: 'NONE-ийг бусад хоолтой хамт бичих боломжгүй' };
+  if (tokens.some((tok) => NONE.has(tok))) {
+    return tokens.length === 1 ? { meals: [] } : { meals: null, error: t('camp.row.meals_none_mixed') };
   }
-  const unknown = tokens.filter((t) => !MEALS[t]);
-  if (unknown.length > 0) return { meals: null, error: `Үл мэдэгдэх хоол: ${unknown.join(', ')} (BREAKFAST, LUNCH, DINNER, NIGHT эсвэл NONE)` };
-  const set = new Set(tokens.map((t) => MEALS[t]));
+  const unknown = tokens.filter((tok) => !MEALS[tok]);
+  if (unknown.length > 0) return { meals: null, error: t('camp.row.meals_unknown', { values: unknown.join(', ') }) };
+  const set = new Set(tokens.map((tok) => MEALS[tok]));
   return { meals: MEAL_ORDER.filter((m) => set.has(m)) };
 }
 
 export async function parseAttendanceXlsx(buffer: Buffer): Promise<ParsedRow[]> {
-  if (buffer.length > IMPORT_MAX_BYTES) throw new BadRequestException('Файл 2 MB-ээс их байна');
-  if (buffer.length < 4 || buffer[0] !== 0x50 || buffer[1] !== 0x4b) throw new BadRequestException('Зөвхөн .xlsx файл хүлээн авна');
+  if (buffer.length > IMPORT_MAX_BYTES) throw badRequest('camp.err.attendance_ctl.3');
+  if (buffer.length < 4 || buffer[0] !== 0x50 || buffer[1] !== 0x4b) throw badRequest('camp.err.import_parser.1');
   const wb = new ExcelJS.Workbook();
   try {
     await wb.xlsx.load(buffer as unknown as ArrayBuffer);
   } catch {
-    throw new BadRequestException('xlsx файлыг уншиж чадсангүй (эвдэрсэн эсвэл .xlsx биш)');
+    throw badRequest('camp.err.import_parser.2');
   }
   const ws = wb.worksheets[0];
-  if (!ws) throw new BadRequestException('Файлд хуудас алга');
+  if (!ws) throw badRequest('camp.err.import_parser.3');
 
   const col: Partial<Record<keyof typeof HEADERS, number>> = {};
   ws.getRow(1).eachCell((cell, c) => {
@@ -102,7 +80,7 @@ export async function parseAttendanceXlsx(buffer: Buffer): Promise<ParsedRow[]> 
   });
   const missing = (['employeeCode', 'date', 'direction'] as const).filter((f) => col[f] === undefined);
   if (missing.length > 0) {
-    throw new BadRequestException(`Заавал багана алга: ${missing.map((f) => HEADERS[f][0].toLowerCase()).join(', ')} (загвар файлыг ашиглана уу)`);
+    throw badRequest('camp.err.import_parser.4', { columns: missing.map((f) => HEADERS[f][0].toLowerCase()).join(', ') });
   }
 
   const rows: ParsedRow[] = [];
@@ -117,22 +95,22 @@ export async function parseAttendanceXlsx(buffer: Buffer): Promise<ParsedRow[]> 
     if (!code && !cellText(dateRaw).trim() && !dirText && !mealsText.trim() && !shiftText) continue; // хоосон мөр
 
     const errors: string[] = [];
-    if (!code) errors.push('employee_code хоосон');
+    if (!code) errors.push(t('camp.row.code_empty'));
     const date = parseDateCell(dateRaw);
-    if (!date) errors.push(`Огноо буруу: "${cellText(dateRaw)}" (YYYY-MM-DD)`);
+    if (!date) errors.push(t('camp.row.bad_date', { value: cellText(dateRaw) }));
     const direction = DIRECTIONS[dirText] ?? null;
-    if (!direction) errors.push(`direction буруу: "${dirText}" (ARRIVAL эсвэл DEPARTURE)`);
+    if (!direction) errors.push(t('camp.row.bad_direction', { value: dirText }));
     const m = parseMeals(mealsText);
     if (m.error) errors.push(m.error);
     let shift: CampShiftType | null = null;
     if (shiftText) {
       shift = SHIFTS[shiftText] ?? null;
-      if (!shift) errors.push(`shift буруу: "${shiftText}" (DAY эсвэл NIGHT)`);
+      if (!shift) errors.push(t('camp.row.bad_shift', { value: shiftText }));
     }
     rows.push({ row: r, employeeCode: code, date, direction, meals: m.meals, shift, errors });
-    if (rows.length > IMPORT_MAX_ROWS) throw new BadRequestException(`Хэт олон мөр (> ${IMPORT_MAX_ROWS})`);
+    if (rows.length > IMPORT_MAX_ROWS) throw badRequest('camp.err.import_parser.5', { max: IMPORT_MAX_ROWS });
   }
-  if (rows.length === 0) throw new BadRequestException('Файлд өгөгдлийн мөр алга');
+  if (rows.length === 0) throw badRequest('camp.err.import_parser.6');
   return rows;
 }
 

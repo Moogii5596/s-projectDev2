@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
 import type { UserRole } from '../api/types'
@@ -7,9 +6,11 @@ import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
 import { P } from '../lib/permissions'
 import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, NoAccess, PageHeader, Table, inputCls, inputSmCls, td } from '../components/ui'
+import { useTranslation } from 'react-i18next'
 
 /** /camp/admin/user-roles — хэрэглэгчид роль оноох: бүх кемпэд (campId = null) эсвэл тодорхой кемпэд */
 export default function UserRolesPage() {
+  const { t } = useTranslation()
   const perms = useCampPermissions()
   const canManage = perms.can(P.ROLES_MANAGE)
   const users = useQuery({ queryKey: campKeys.users, queryFn: campApi.users, enabled: canManage })
@@ -27,7 +28,7 @@ export default function UserRolesPage() {
   const remove = useCampMutation((id: string) => campApi.removeUserRole(id), [campKeys.userRoles, campKeys.roles, campKeys.all])
 
   if (perms.isLoading) return <Loading />
-  if (!canManage) return <NoAccess what="Хэрэглэгчийн роль" />
+  if (!canManage) return <NoAccess what={t('camp.system.section.user-roles')} />
 
   const byUser = new Map<string, UserRole[]>()
   for (const ur of assigned.data ?? []) byUser.set(ur.user.id, [...(byUser.get(ur.user.id) ?? []), ur])
@@ -36,17 +37,11 @@ export default function UserRolesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-gray-500">
-        <Link to="/camp" className="hover:text-blue-600">
-          Кемпүүд
-        </Link>{' '}
-        / Хэрэглэгчийн роль
-      </div>
       <PageHeader
-        title="Хэрэглэгчийн роль"
-        subtitle="'Бүх кемп' — бүх кемпэд хүчинтэй (байгууллага, роль удирдах эрх зөвхөн ингэж олгогдоно). Байгууллагын OWNER/ADMIN бүх эрхтэй."
+        title={t('camp.system.section.user-roles')}
+        subtitle={t('camp.uroles.subtitle')}
       />
-      <Card title="Роль оноох">
+      <Card title={t('camp.uroles.assign_title')}>
         <form
           className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] items-end"
           onSubmit={(e) => {
@@ -54,10 +49,10 @@ export default function UserRolesPage() {
             assign.mutate(undefined)
           }}
         >
-          <Field label="Хэрэглэгч">
+          <Field label={t('camp.uroles.user')}>
             {(id) => (
               <select id={id} className={inputCls} value={f.userId} onChange={(e) => setF({ ...f, userId: e.target.value })}>
-                <option value="">— Сонгох —</option>
+                <option value="">{t('camp.common.choose')}</option>
                 {users.data
                   ?.filter((u) => u.isActive)
                   .map((u) => (
@@ -68,10 +63,10 @@ export default function UserRolesPage() {
               </select>
             )}
           </Field>
-          <Field label="Роль">
+          <Field label={t('camp.uroles.role')}>
             {(id) => (
               <select id={id} className={inputCls} value={f.roleId} onChange={(e) => setF({ ...f, roleId: e.target.value })}>
-                <option value="">— Сонгох —</option>
+                <option value="">{t('camp.common.choose')}</option>
                 {roles.data?.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
@@ -80,10 +75,10 @@ export default function UserRolesPage() {
               </select>
             )}
           </Field>
-          <Field label="Хамрах хүрээ">
+          <Field label={t('camp.uroles.scope')}>
             {(id) => (
               <select id={id} className={inputCls} value={f.campId} onChange={(e) => setF({ ...f, campId: e.target.value })}>
-                <option value="">Бүх кемп</option>
+                <option value="">{t('camp.uroles.all_camps')}</option>
                 {camps.data?.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.code} · {c.name}
@@ -93,7 +88,7 @@ export default function UserRolesPage() {
             )}
           </Field>
           <Button type="submit" loading={assign.isPending} disabled={!f.userId || !f.roleId}>
-            Оноох
+            {t('camp.uroles.assign')}
           </Button>
         </form>
         <div className="mt-3">
@@ -102,33 +97,33 @@ export default function UserRolesPage() {
       </Card>
 
       <Card
-        title="Хэрэглэгчид"
+        title={t('camp.uroles.users')}
         actions={
-          <input aria-label="Хэрэглэгч хайх" className={`${inputSmCls} w-56 max-w-full`} placeholder="Нэр, и-мэйлээр хайх" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input aria-label={t('camp.uroles.search')} className={`${inputSmCls} w-56 max-w-full`} placeholder={t('camp.uroles.search_ph')} value={search} onChange={(e) => setSearch(e.target.value)} />
         }
       >
         {(users.isLoading || assigned.isLoading) && <Loading />}
         <ErrorBox error={users.error ?? assigned.error ?? roles.error ?? camps.error} />
-        {users.data && shownUsers.length === 0 && <Empty>Хэрэглэгч олдсонгүй</Empty>}
+        {users.data && shownUsers.length === 0 && <Empty>{t('camp.uroles.empty')}</Empty>}
         {shownUsers.length > 0 && (
-          <Table head={['Хэрэглэгч', 'Роль (хамрах хүрээ)']}>
+          <Table head={[t('camp.uroles.user'), t('camp.uroles.role_scope')]}>
             {shownUsers.map((u) => (
               <tr key={u.id}>
                 <td className={`${td} whitespace-nowrap`}>
                   <div className="font-medium text-gray-900">{u.fullName ?? u.email}</div>
                   <div className="text-xs text-gray-400">
-                    {u.email} {!u.isActive && <Badge>Идэвхгүй</Badge>}
+                    {u.email} {!u.isActive && <Badge>{t('camp.common.inactive')}</Badge>}
                   </div>
                 </td>
                 <td className={td}>
                   <div className="flex flex-wrap gap-2">
-                    {(byUser.get(u.id) ?? []).length === 0 && <span className="text-gray-400 text-xs">Роль алга</span>}
+                    {(byUser.get(u.id) ?? []).length === 0 && <span className="text-gray-400 text-xs">{t('camp.uroles.no_role')}</span>}
                     {(byUser.get(u.id) ?? []).map((ur) => (
                       <span key={ur.id} className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-800 text-xs px-2 py-1">
-                        {ur.role.name} · {ur.camp ? ur.camp.code : 'Бүх кемп'}
+                        {ur.role.name} · {ur.camp ? ur.camp.code : t('camp.uroles.all_camps')}
                         <button
                           type="button"
-                          aria-label={`${ur.role.name} (${ur.camp ? ur.camp.code : 'Бүх кемп'}) хасах`}
+                          aria-label={t('camp.picker.remove', { code: `${ur.role.name} (${ur.camp ? ur.camp.code : t('camp.uroles.all_camps')})` })}
                           className="ml-1 text-blue-400 hover:text-red-600"
                           onClick={() => remove.mutate(ur.id)}
                           disabled={remove.isPending}

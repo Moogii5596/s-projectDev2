@@ -55,12 +55,42 @@ export class QueryActiveOnlyDto {
 }
 
 // ── Байр, өрөө ───────────────────────────────────────────────
+/** FB-07 (v0.2.0) — олон өрөө нэг дор: дугаар = угтвар + (эхлэх…дуусах, padTo оронтой тэгээр дүүргэсэн) */
+export class BulkRoomsDto {
+  @Type(() => Number) @IsInt() @Min(0) @Max(99999)
+  from!: number;
+
+  @Type(() => Number) @IsInt() @Min(0) @Max(99999)
+  to!: number;
+
+  @IsOptional() @Transform(trim) @IsString() @MaxLength(20) @Matches(/^[^\s]*$/, { message: 'prefix зайгүй байна' })
+  prefix?: string;
+
+  /** 0 = дүүргэхгүй (1, 2 … 10); 2 → 01, 02 … 10 */
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(6)
+  padTo?: number;
+
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @Type(() => Number) @IsInt() @Min(-5) @Max(100)
+  floor?: number | null;
+
+  @Type(() => Number) @IsInt() @Min(1) @Max(50)
+  capacity!: number;
+
+  /** true (анхдагч) = байгаа дугаарыг алгасна; false = байвал бүгдийг зогсооно (409) */
+  @IsOptional() @IsBoolean()
+  skipExisting?: boolean;
+}
+
 export class CreateBuildingDto {
   @Transform(trim) @IsString() @IsNotEmpty({ message: 'code шаардлагатай' }) @MaxLength(30) @Matches(CODE, { message: CODE_MSG })
   code!: string;
 
   @Transform(trim) @IsString() @IsNotEmpty({ message: 'name шаардлагатай' }) @MaxLength(200)
   name!: string;
+
+  /** FB-07: байр үүсгэхдээ өрөөнүүдийг нэг transaction-д (заавал биш) */
+  @IsOptional() @ValidateNested() @Type(() => BulkRoomsDto)
+  rooms?: BulkRoomsDto;
 }
 
 export class UpdateBuildingDto {
@@ -258,6 +288,10 @@ export class CreateEmployeeDto {
 
   @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(50)
   phone?: string | null;
+
+  /** v0.2.0 — ADR-003-ын бэлтгэл (заавал биш) */
+  @IsOptional() @Transform(trimOrNull) @IsEmail({}, { message: 'email буруу байна' }) @MaxLength(254)
+  email?: string | null;
 }
 
 export class UpdateEmployeeDto {
@@ -283,6 +317,9 @@ export class UpdateEmployeeDto {
   @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(50)
   phone?: string | null;
 
+  @IsOptional() @Transform(trimOrNull) @IsEmail({}, { message: 'email буруу байна' }) @MaxLength(254)
+  email?: string | null;
+
   @IsOptional() @IsEnum(CampEmployeeStatus)
   status?: CampEmployeeStatus;
 }
@@ -291,7 +328,8 @@ export class QueryEmployeesDto {
   @IsOptional() @IsString() cursor?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit?: number;
   @IsOptional() @IsUUID() departmentId?: string;
-  @IsOptional() @IsUUID() crewId?: string;
+  /** UUID эсвэл 'none' (ростергүй, v0.2.0) */
+  @IsOptional() @Matches(/^(none|[0-9a-fA-F-]{36})$/, { message: 'crewId UUID эсвэл none' }) crewId?: string;
   @IsOptional() @IsUUID() organizationId?: string;
   @IsOptional() @IsEnum(CampEmployeeStatus) status?: CampEmployeeStatus;
   /** Код эсвэл нэрээр хайх (хэсэгчилсэн, том жижиг үсэг үл хамаарна) */

@@ -4,4 +4,4 @@
  * `app-version.spec.ts` нь энэ утга `apps/core-kernel/package.json`-ийн `version`-тэй тэнцүүг шалгана
  * (release хийхэд хоёуланг нь солино).
  */
-export const APP_VERSION = '0.1.6';
+export const APP_VERSION = '0.2.0';

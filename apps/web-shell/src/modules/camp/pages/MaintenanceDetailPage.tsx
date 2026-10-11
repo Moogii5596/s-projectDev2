@@ -10,17 +10,14 @@ import { MAINT_STATUS_LABEL, PART_SOURCE_LABEL, PRIORITY_LABEL } from '../lib/la
 import { formatMoney } from '../lib/money'
 import { ACTION_LABEL, type MaintenanceActor, STATUS_TONE, availableActions, canEditDetails, canEditParts } from '../lib/maintenance'
 import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, td } from '../components/ui'
+import { useTranslation } from 'react-i18next'
 
-const FLOW: { status: MaintenanceDetail['status']; label: string }[] = [
-  { status: 'OPEN', label: 'Нээлттэй' },
-  { status: 'IN_PROGRESS', label: 'Хийгдэж буй' },
-  { status: 'DONE', label: 'Дууссан' },
-  { status: 'CLOSED', label: 'Хаагдсан' },
-]
+const FLOW: { status: MaintenanceDetail['status'] }[] = [{ status: 'OPEN' }, { status: 'IN_PROGRESS' }, { status: 'DONE' }, { status: 'CLOSED' }]
 const ts = (v: string | null) => (v ? v.slice(0, 16).replace('T', ' ') : '—')
 
 /** /camp/:campId/maintenance/:id — засварын дэлгэрэнгүй: төлөв, сэлбэг, зардлын урьдчилсан тооцоо */
 export default function MaintenanceDetailPage() {
+  const { t } = useTranslation()
   const { campId = '', id = '' } = useParams()
   const perms = useCampPermissions(campId)
   const q = useQuery({ queryKey: [...campKeys.maintenance(campId), 'detail', id], queryFn: () => campApi.maintenance(campId, id) })
@@ -48,7 +45,7 @@ export default function MaintenanceDetailPage() {
     <div className="space-y-5">
       <div className="text-sm text-gray-500">
         <Link to=".." relative="path" className="hover:text-blue-600">
-          Засвар
+          {t('camp.section.maintenance')}
         </Link>{' '}
         / <span className="font-mono">{m.requestNo}</span>
       </div>
@@ -58,15 +55,15 @@ export default function MaintenanceDetailPage() {
         actions={
           canEditDetails(m.status, actor) && (
             <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
-              Засах
+              {t('camp.common.edit')}
             </Button>
           )
         }
       >
-        <ol className="flex flex-wrap items-center gap-2 text-xs mb-4" aria-label="Төлвийн дараалал">
+        <ol className="flex flex-wrap items-center gap-2 text-xs mb-4" aria-label={t('camp.maint.flow')}>
           {m.status === 'CANCELLED' ? (
             <li>
-              <Badge tone="red">Цуцлагдсан</Badge>
+              <Badge tone="red">{MAINT_STATUS_LABEL.CANCELLED}</Badge>
             </li>
           ) : (
             FLOW.map((f, i) => {
@@ -77,7 +74,7 @@ export default function MaintenanceDetailPage() {
                     aria-current={f.status === m.status ? 'step' : undefined}
                     className={`rounded-full px-2.5 py-1 ${i < idx ? 'bg-green-50 text-green-700' : i === idx ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400'}`}
                   >
-                    {f.label}
+                    {MAINT_STATUS_LABEL[f.status]}
                   </span>
                   {i < FLOW.length - 1 && <span className="text-gray-300">→</span>}
                 </li>
@@ -87,51 +84,51 @@ export default function MaintenanceDetailPage() {
         </ol>
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
           <div>
-            <dt className="text-xs text-gray-500">Өрөө</dt>
+            <dt className="text-xs text-gray-500">{t('camp.facilities.room')}</dt>
             <dd>
               {m.room ? `${m.room.building.code}-${m.room.roomNo}` : '—'}
-              {m.blocksRoom && m.room && <span className="block text-xs text-yellow-700">Өрөөг түгжинэ ({m.room.status === 'MAINTENANCE' ? 'засварт' : 'сулласан'})</span>}
+              {m.blocksRoom && m.room && <span className="block text-xs text-yellow-700">{m.room.status === 'MAINTENANCE' ? t('camp.maint.room_locked') : t('camp.maint.room_released')}</span>}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Хөрөнгө</dt>
+            <dt className="text-xs text-gray-500">{t('camp.asset.asset')}</dt>
             <dd>{m.asset ? `${m.asset.inventoryNo} · ${m.asset.name}` : '—'}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Зэрэглэл</dt>
+            <dt className="text-xs text-gray-500">{t('camp.maint.priority')}</dt>
             <dd>{PRIORITY_LABEL[m.priority]}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Төлөв</dt>
+            <dt className="text-xs text-gray-500">{t('camp.common.status')}</dt>
             <dd>
               <Badge tone={STATUS_TONE[m.status]}>{MAINT_STATUS_LABEL[m.status]}</Badge>
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Үүсгэсэн</dt>
+            <dt className="text-xs text-gray-500">{t('camp.maint.created')}</dt>
             <dd>
               {m.reportedByUser?.fullName ?? m.reportedByUser?.email ?? '—'} · {ts(m.createdAt)}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Эхэлсэн / дууссан</dt>
+            <dt className="text-xs text-gray-500">{t('camp.maint.started_done')}</dt>
             <dd>
               {ts(m.startedAt)} / {ts(m.completedAt)}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Хаагдсан</dt>
+            <dt className="text-xs text-gray-500">{MAINT_STATUS_LABEL.CLOSED}</dt>
             <dd>{ts(m.closedAt)}</dd>
           </div>
           {m.cancelReason && (
             <div>
-              <dt className="text-xs text-gray-500">Цуцалсан шалтгаан</dt>
+              <dt className="text-xs text-gray-500">{t('camp.maint.cancel_reason_shown')}</dt>
               <dd>{m.cancelReason}</dd>
             </div>
           )}
           {m.description && (
             <div className="col-span-2 sm:col-span-4">
-              <dt className="text-xs text-gray-500">Тайлбар</dt>
+              <dt className="text-xs text-gray-500">{t('camp.roles.description')}</dt>
               <dd className="whitespace-pre-line">{m.description}</dd>
             </div>
           )}
@@ -154,13 +151,22 @@ export default function MaintenanceDetailPage() {
         )}
       </Card>
 
-      <Card title="Сэлбэг" actions={partsEditable && <Button size="sm" onClick={() => setPartModal('new')}>+ Сэлбэг</Button>}>
-        {!partsEditable && (m.status === 'CLOSED' || m.status === 'CANCELLED') && <p className="text-xs text-gray-500 mb-2">Хаагдсан/цуцлагдсан засварын сэлбэг түгжигдсэн.</p>}
+      <Card
+        title={t('camp.part.title')}
+        actions={
+          partsEditable && (
+            <Button size="sm" onClick={() => setPartModal('new')}>
+              {t('camp.part.add')}
+            </Button>
+          )
+        }
+      >
+        {!partsEditable && (m.status === 'CLOSED' || m.status === 'CANCELLED') && <p className="text-xs text-gray-500 mb-2">{t('camp.part.locked')}</p>}
         <ErrorBox error={removePart.error} />
         {m.parts.length === 0 ? (
-          <Empty>Сэлбэг бүртгэгдээгүй</Empty>
+          <Empty>{t('camp.part.empty')}</Empty>
         ) : (
-          <Table head={['Нэр', 'Тоо', 'Нэгж үнэ', 'НӨАТ', 'Эх сурвалж', '']}>
+          <Table head={[t('camp.common.name'), t('camp.part.qty'), t('camp.part.unit_price'), t('camp.part.vat'), t('camp.part.source'), '']}>
             {m.parts.map((p) => (
               <tr key={p.id}>
                 <td className={td}>{p.partName}</td>
@@ -168,7 +174,7 @@ export default function MaintenanceDetailPage() {
                   {p.quantity} {p.unit}
                 </td>
                 <td className={`${td} tabular-nums whitespace-nowrap`}>{formatMoney(p.unitPrice)}</td>
-                <td className={td}>{p.vatIncluded ? 'Үнэд орсон' : 'Нэмж тооцно'}</td>
+                <td className={td}>{p.vatIncluded ? t('camp.part.vat_included') : t('camp.part.vat_added')}</td>
                 <td className={td}>
                   <Badge tone={p.source === 'CATERING_PURCHASED' ? 'blue' : 'gray'}>{PART_SOURCE_LABEL[p.source]}</Badge>
                 </td>
@@ -176,10 +182,10 @@ export default function MaintenanceDetailPage() {
                   {partsEditable && (
                     <>
                       <Button variant="ghost" onClick={() => setPartModal(p)}>
-                        Засах
+                        {t('camp.common.edit')}
                       </Button>
                       <Button variant="ghost" onClick={() => removePart.mutate(p.id)} disabled={removePart.isPending}>
-                        Устгах
+                        {t('camp.att.delete')}
                       </Button>
                     </>
                   )}
@@ -190,21 +196,21 @@ export default function MaintenanceDetailPage() {
         )}
       </Card>
 
-      <Card title={m.status === 'CLOSED' ? 'Бүртгэгдсэн зардал (катерингийн сэлбэг)' : 'Зардлын урьдчилсан тооцоо (катерингийн сэлбэг)'}>
+      <Card title={m.status === 'CLOSED' ? t('camp.cost.recorded') : t('camp.cost.estimate')}>
         <p className="text-xs text-gray-500 mb-3">
-          Зөвхөн "Катерингийн авсан" сэлбэг зардалд орно (кемпийн катеринг байгууллага, НӨАТ {m.cost.vatRate}%). Уурхайн нийлүүлсэн сэлбэг орохгүй.
+          {t('camp.cost.note', { vat: m.cost.vatRate })}
         </p>
         <dl className="grid grid-cols-3 gap-3 text-sm max-w-xl">
           <div>
-            <dt className="text-xs text-gray-500">НӨАТ-гүй дүн</dt>
+            <dt className="text-xs text-gray-500">{t('camp.cost.net')}</dt>
             <dd className="tabular-nums font-medium">{formatMoney(m.cost.total.net)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">НӨАТ</dt>
+            <dt className="text-xs text-gray-500">{t('camp.part.vat')}</dt>
             <dd className="tabular-nums font-medium">{formatMoney(m.cost.total.vat)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Нийт</dt>
+            <dt className="text-xs text-gray-500">{t('camp.meals.total')}</dt>
             <dd className="tabular-nums font-semibold">{formatMoney(m.cost.total.gross)}</dd>
           </div>
         </dl>
@@ -244,26 +250,27 @@ function TransitionModal({
   onDone: (messages: string[]) => void
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const [reason, setReason] = useState('')
   const m = useCampMutation(
     () => campApi.transitionMaintenance(campId, detail.id, action, action === 'cancel' ? reason.trim() : undefined),
     [campKeys.maintenance(campId), campKeys.rooms(campId), campKeys.roomBoard(campId), campKeys.assets(campId)],
     (res) => {
       const msgs: string[] = [...(res.warnings ?? [])]
-      if (res.roomReleased) msgs.push('Өрөө засвараас гарч идэвхжлээ.')
-      if (action === 'close') msgs.push(`Хаагдлаа: ${res.costEntries ?? 0} сэлбэгийн зардал бүртгэгдлээ.`)
+      if (res.roomReleased) msgs.push(t('camp.maint.room_reactivated'))
+      if (action === 'close') msgs.push(t('camp.maint.closed_costs', { n: res.costEntries ?? 0 }))
       onDone(msgs)
     },
   )
   const body: Record<MaintenanceAction, string> = {
-    start: 'Засварын ажлыг эхлүүлэх үү?',
-    complete: `Засварыг дууссан гэж тэмдэглэх үү?${detail.blocksRoom ? ' Өөр түгжих засвар байхгүй бол өрөө идэвхжинэ.' : ''}`,
-    reopen: `Засварыг дахин нээх үү?${detail.blocksRoom ? ' Өрөө дахин засварт орно.' : ''}`,
+    start: t('camp.maint.confirm.start'),
+    complete: t('camp.maint.confirm.complete') + (detail.blocksRoom ? ` ${t('camp.maint.confirm.complete_room')}` : ''),
+    reopen: t('camp.maint.confirm.reopen') + (detail.blocksRoom ? ` ${t('camp.maint.confirm.reopen_room')}` : ''),
     close:
       costCount > 0
-        ? `Катерингийн ${costCount} сэлбэгийн зардал (нийт ${formatMoney(detail.cost.total.gross)}) зардлын бүртгэлд орж, дахин засах боломжгүй болно. Хаах уу?`
-        : 'Катерингийн сэлбэг алга — зардал бүртгэгдэхгүй. Хаах уу? Хаасны дараа засах боломжгүй.',
-    cancel: 'Засварын хүсэлтийг цуцлах уу?',
+        ? t('camp.maint.confirm.close_costs', { n: costCount, total: formatMoney(detail.cost.total.gross) })
+        : t('camp.maint.confirm.close_none'),
+    cancel: t('camp.maint.confirm.cancel'),
   }
   return (
     <Modal
@@ -272,7 +279,7 @@ function TransitionModal({
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Болих
+            {t('camp.common.cancel')}
           </Button>
           <Button variant={action === 'cancel' ? 'danger' : 'primary'} onClick={() => m.mutate(undefined)} loading={m.isPending} disabled={action === 'cancel' && !reason.trim()}>
             {ACTION_LABEL[action]}
@@ -282,7 +289,7 @@ function TransitionModal({
     >
       <p className="text-sm">{body[action]}</p>
       {action === 'cancel' && (
-        <Field label="Цуцлах шалтгаан">{(id) => <input id={id} className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />}</Field>
+        <Field label={t('camp.maint.cancel_reason')}>{(id) => <input id={id} className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />}</Field>
       )}
       <ErrorBox error={m.error} />
     </Modal>
@@ -290,6 +297,7 @@ function TransitionModal({
 }
 
 function EditModal({ campId, detail, onClose }: { campId: string; detail: MaintenanceDetail; onClose: () => void }) {
+  const { t } = useTranslation()
   const [title, setTitle] = useState(detail.title)
   const [description, setDescription] = useState(detail.description ?? '')
   const [priority, setPriority] = useState<MaintenancePriority>(detail.priority)
@@ -300,22 +308,22 @@ function EditModal({ campId, detail, onClose }: { campId: string; detail: Mainte
   )
   return (
     <Modal
-      title={`${detail.requestNo} засах`}
+      title={t('camp.maint.edit_title', { no: detail.requestNo })}
       onClose={onClose}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Болих
+            {t('camp.common.cancel')}
           </Button>
           <Button onClick={() => m.mutate(undefined)} loading={m.isPending} disabled={!title.trim()}>
-            Хадгалах
+            {t('camp.common.save')}
           </Button>
         </>
       }
     >
-      <Field label="Гарчиг">{(id) => <input id={id} className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />}</Field>
-      <Field label="Тайлбар">{(id) => <textarea id={id} rows={3} className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} />}</Field>
-      <Field label="Зэрэглэл">
+      <Field label={t('camp.maint.title_col')}>{(id) => <input id={id} className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />}</Field>
+      <Field label={t('camp.roles.description')}>{(id) => <textarea id={id} rows={3} className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} />}</Field>
+      <Field label={t('camp.maint.priority')}>
         {(id) => (
           <select id={id} className={inputCls} value={priority} onChange={(e) => setPriority(e.target.value as MaintenancePriority)}>
             {(Object.keys(PRIORITY_LABEL) as MaintenancePriority[]).map((p) => (
@@ -332,10 +340,11 @@ function EditModal({ campId, detail, onClose }: { campId: string; detail: Mainte
 }
 
 function PartModal({ campId, requestId, part, onClose }: { campId: string; requestId: string; part: MaintenancePart | null; onClose: () => void }) {
+  const { t } = useTranslation()
   const [f, setF] = useState({
     partName: part?.partName ?? '',
     quantity: part?.quantity ?? '1',
-    unit: part?.unit ?? 'ш',
+    unit: part?.unit ?? t('camp.part.unit_default'),
     unitPrice: part?.unitPrice ?? '',
     vatIncluded: part?.vatIncluded ?? true,
     source: (part?.source ?? 'CATERING_PURCHASED') as PartSource,
@@ -345,7 +354,7 @@ function PartModal({ campId, requestId, part, onClose }: { campId: string; reque
   const qtyBad = !(qty > 0)
   const priceBad = price !== null && !(price >= 0)
   const needPrice = f.source === 'CATERING_PURCHASED' && price === null
-  const body = (): PartInput => ({ partName: f.partName.trim(), quantity: qty, unit: f.unit.trim() || 'ш', unitPrice: price, vatIncluded: f.vatIncluded, source: f.source })
+  const body = (): PartInput => ({ partName: f.partName.trim(), quantity: qty, unit: f.unit.trim() || t('camp.part.unit_default'), unitPrice: price, vatIncluded: f.vatIncluded, source: f.source })
   const m = useCampMutation(
     () => (part ? campApi.updatePart(campId, requestId, part.id, body()) : campApi.addPart(campId, requestId, body())),
     [campKeys.maintenance(campId)],
@@ -353,30 +362,30 @@ function PartModal({ campId, requestId, part, onClose }: { campId: string; reque
   )
   return (
     <Modal
-      title={part ? 'Сэлбэг засах' : 'Сэлбэг нэмэх'}
+      title={part ? t('camp.part.edit_title') : t('camp.part.add_title')}
       onClose={onClose}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Болих
+            {t('camp.common.cancel')}
           </Button>
           <Button onClick={() => m.mutate(undefined)} loading={m.isPending} disabled={!f.partName.trim() || qtyBad || priceBad || needPrice}>
-            Хадгалах
+            {t('camp.common.save')}
           </Button>
         </>
       }
     >
-      <Field label="Сэлбэгийн нэр">{(id) => <input id={id} className={inputCls} value={f.partName} onChange={(e) => setF({ ...f, partName: e.target.value })} maxLength={200} />}</Field>
+      <Field label={t('camp.part.name')}>{(id) => <input id={id} className={inputCls} value={f.partName} onChange={(e) => setF({ ...f, partName: e.target.value })} maxLength={200} />}</Field>
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Тоо хэмжээ" error={qtyBad ? '> 0' : null}>
+        <Field label={t('camp.part.quantity')} error={qtyBad ? '> 0' : null}>
           {(id) => <input id={id} type="number" min={0.001} step="0.001" className={inputCls} value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} />}
         </Field>
-        <Field label="Нэгж">{(id) => <input id={id} className={inputCls} value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} maxLength={20} />}</Field>
-        <Field label="Нэгж үнэ (₮)" error={needPrice ? 'Катерингийн сэлбэгт заавал' : priceBad ? '≥ 0' : null}>
+        <Field label={t('camp.part.unit')}>{(id) => <input id={id} className={inputCls} value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} maxLength={20} />}</Field>
+        <Field label={t('camp.part.unit_price_mnt')} error={needPrice ? t('camp.part.price_required') : priceBad ? '≥ 0' : null}>
           {(id) => <input id={id} type="number" min={0} step="0.01" className={inputCls} value={f.unitPrice} onChange={(e) => setF({ ...f, unitPrice: e.target.value })} />}
         </Field>
       </div>
-      <Field label="Эх сурвалж" hint="Катерингийн авсан сэлбэг засвар хаагдахад катеринг байгууллагын зардалд бүртгэгдэнэ">
+      <Field label={t('camp.part.source')} hint={t('camp.part.source_hint')}>
         {(id) => (
           <select id={id} className={inputCls} value={f.source} onChange={(e) => setF({ ...f, source: e.target.value as PartSource })}>
             {(Object.keys(PART_SOURCE_LABEL) as PartSource[]).map((s) => (
@@ -388,7 +397,7 @@ function PartModal({ campId, requestId, part, onClose }: { campId: string; reque
         )}
       </Field>
       <label className="inline-flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={f.vatIncluded} onChange={(e) => setF({ ...f, vatIncluded: e.target.checked })} /> Үнэд НӨАТ орсон
+        <input type="checkbox" checked={f.vatIncluded} onChange={(e) => setF({ ...f, vatIncluded: e.target.checked })} /> {t('camp.part.vat_in_price')}
       </label>
       <ErrorBox error={m.error} />
     </Modal>

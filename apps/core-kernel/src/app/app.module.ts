@@ -33,6 +33,9 @@ import { VendorModule }        from '../modules/vendor/vendor.module';
 import { ReportModule }        from '../modules/report/report.module';
 // Camp Module (ERD v4, Шат 2)
 import { CampModule }          from '../modules/camp/camp.module';
+// v0.2.0 §0.7 — олон хэл
+import { I18nModule }          from '../common/i18n/i18n.module';
+import { I18nInterceptor }     from '../common/i18n/i18n.interceptor';
 
 @Module({
   imports: [
@@ -50,6 +53,7 @@ import { CampModule }          from '../modules/camp/camp.module';
     DatabaseModule,
     RedisModule,
     AppCacheModule,
+    I18nModule,
     AuthModule,
     GatewayModule,             // Sprint 1: @Global() → DynamicIngressRouterService + DrainingInterceptor
     MaterialRequisitionModule,
@@ -73,6 +77,7 @@ import { CampModule }          from '../modules/camp/camp.module';
     { provide: APP_GUARD,       useClass: TenantRateLimitGuard },
     { provide: APP_INTERCEPTOR, useExisting: TenantContextInterceptor },
     { provide: APP_INTERCEPTOR, useExisting: DrainingInterceptor },  // Sprint 1 RULE-07
+    { provide: APP_INTERCEPTOR, useExisting: I18nInterceptor },      // v0.2.0 §0.7
   ],
   exports: [EnvConfig],
 })

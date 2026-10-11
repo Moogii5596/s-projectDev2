@@ -1,33 +1,69 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Navigate, NavLink, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
 import type { Camp, CampSettings, MealLocation } from '../api/types'
 import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
 import { P } from '../lib/permissions'
-import { WEEKDAYS } from '../lib/labels'
+import { weekdayName, weekdayNames } from '../lib/labels'
 import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Table, inputCls, td } from '../components/ui'
+import FacilitiesPage from './FacilitiesPage'
+import DepartmentsPage from './DepartmentsPage'
+import CrewsPage from './CrewsPage'
 
-/** /camp/:campId/settings — кемпийн мэдээлэл, тохиргоо (НӨАТ, ростер, байршил, катеринг), хоол идэх байршил */
+/**
+ * /camp/:campId/settings/:section — кемпийн тохиргооны каталог (FB-05, v0.2.0):
+ * зүүн цэс (Ерөнхий · Хоолны байршил · Байр, өрөө · Хэлтэс, ээлж · Ростер) → баруун талд тухайн хэсэг.
+ * Хуучин /facilities, /departments, /crews → энд redirect (CampRoutes).
+ */
+export const SETTINGS_SECTIONS = ['general', 'meal-locations', 'facilities', 'departments', 'crews'] as const
+export type SettingsSection = (typeof SETTINGS_SECTIONS)[number]
+
 export default function CampSettingsPage() {
+  const { t } = useTranslation()
+  const { section = 'general' } = useParams()
+  // relative="path": "..", URL-ийн нэг сегмент (route-relative бол :campId хүртэл гарч буруу хаяг болдог)
+  if (!(SETTINGS_SECTIONS as readonly string[]).includes(section)) return <Navigate to="../general" relative="path" replace />
+  return (
+    <div className="flex flex-col gap-5 md:flex-row">
+      <nav aria-label={t('camp.settings.menu')} className="md:w-52 shrink-0 flex md:flex-col gap-1 overflow-x-auto">
+        {SETTINGS_SECTIONS.map((s) => (
+          <NavLink
+            key={s}
+            to={`../${s}`}
+            relative="path"
+            className={({ isActive }) =>
+              `px-3 py-2 rounded-lg text-sm whitespace-nowrap ${isActive ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700 hover:bg-gray-100'}`
+            }
+          >
+            {t(`camp.settings.section.${s}`)}
+          </NavLink>
+        ))}
+      </nav>
+      <div className="min-w-0 flex-1">
+        {section === 'general' && <GeneralSection />}
+        {section === 'meal-locations' && <MealLocationsSection />}
+        {section === 'facilities' && <FacilitiesPage />}
+        {section === 'departments' && <DepartmentsPage />}
+        {section === 'crews' && <CrewsPage />}
+      </div>
+    </div>
+  )
+}
+
+function GeneralSection() {
+  const { t } = useTranslation()
   const { campId = '' } = useParams()
   const perms = useCampPermissions(campId)
   const camp = useQuery({ queryKey: campKeys.camp(campId), queryFn: () => campApi.camp(campId) })
   const settings = useQuery({ queryKey: campKeys.settings(campId), queryFn: () => campApi.settings(campId) })
   const locations = useQuery({ queryKey: campKeys.mealLocations(campId), queryFn: () => campApi.mealLocations(campId) })
-
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-      <div className="space-y-5">
-        {camp.data && <CampInfoCard camp={camp.data} canEdit={perms.can(P.MASTER_MANAGE)} />}
-        <Card title="Хоол идэх байршил">
-          {locations.isLoading && <Loading />}
-          <ErrorBox error={locations.error} />
-          {locations.data && <MealLocations campId={campId} rows={locations.data} canEdit={perms.can(P.SETTINGS_MANAGE)} />}
-        </Card>
-      </div>
-      <Card title="Кемпийн тохиргоо">
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+      {camp.data && <CampInfoCard camp={camp.data} canEdit={perms.can(P.MASTER_MANAGE)} />}
+      <Card title={t('camp.settings.camp_settings')}>
         {(settings.isLoading || locations.isLoading) && <Loading />}
         <ErrorBox error={settings.error} />
         {settings.data && locations.data && (
@@ -38,7 +74,22 @@ export default function CampSettingsPage() {
   )
 }
 
+function MealLocationsSection() {
+  const { t } = useTranslation()
+  const { campId = '' } = useParams()
+  const perms = useCampPermissions(campId)
+  const locations = useQuery({ queryKey: campKeys.mealLocations(campId), queryFn: () => campApi.mealLocations(campId) })
+  return (
+    <Card title={t('camp.settings.meal_locations')}>
+      {locations.isLoading && <Loading />}
+      <ErrorBox error={locations.error} />
+      {locations.data && <MealLocations campId={campId} rows={locations.data} canEdit={perms.can(P.SETTINGS_MANAGE)} />}
+    </Card>
+  )
+}
+
 function CampInfoCard({ camp, canEdit }: { camp: Camp; canEdit: boolean }) {
+  const { t } = useTranslation()
   const [name, setName] = useState(camp.name)
   const [location, setLocation] = useState(camp.location ?? '')
   const [isActive, setIsActive] = useState(camp.isActive)
@@ -53,27 +104,27 @@ function CampInfoCard({ camp, canEdit }: { camp: Camp; canEdit: boolean }) {
   )
   const dirty = name !== camp.name || location !== (camp.location ?? '') || isActive !== camp.isActive
   return (
-    <Card title="Кемпийн мэдээлэл">
+    <Card title={t('camp.settings.camp_info')}>
       <div className="space-y-3">
-        <Field label="Код" hint="Код өөрчлөгдөхгүй">
+        <Field label={t('camp.common.code')} hint={t('camp.settings.code_fixed')}>
           {(id) => <input id={id} className={inputCls} value={camp.code} disabled />}
         </Field>
-        <Field label="Нэр">
+        <Field label={t('camp.common.name')}>
           {(id) => <input id={id} className={inputCls} value={name} onChange={(e) => setName(e.target.value)} disabled={!canEdit} maxLength={200} />}
         </Field>
-        <Field label="Байршил">
+        <Field label={t('camp.common.location')}>
           {(id) => <input id={id} className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} disabled={!canEdit} maxLength={300} />}
         </Field>
         <label className="inline-flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} disabled={!canEdit} /> Идэвхтэй
+          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} disabled={!canEdit} /> {t('camp.common.active')}
         </label>
         <ErrorBox error={m.error} />
         {canEdit && (
           <div className="flex items-center gap-3">
             <Button onClick={() => m.mutate(undefined)} loading={m.isPending} disabled={!dirty || !name.trim()}>
-              Хадгалах
+              {t('camp.common.save')}
             </Button>
-            {m.isSuccess && !dirty && <span className="text-sm text-green-600">Хадгалагдлаа</span>}
+            {m.isSuccess && !dirty && <span className="text-sm text-green-600">{t('camp.common.saved')}</span>}
           </div>
         )}
       </div>
@@ -82,6 +133,7 @@ function CampInfoCard({ camp, canEdit }: { camp: Camp; canEdit: boolean }) {
 }
 
 function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: CampSettings; locations: MealLocation[]; canEdit: boolean }) {
+  const { t } = useTranslation()
   const catering = useQuery({
     queryKey: [...campKeys.organizations, 'catering'],
     queryFn: () => campApi.organizations({ activeOnly: true, serviceType: 'CATERING' }),
@@ -119,21 +171,21 @@ function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: Ca
   return (
     <form
       className="space-y-3"
-      noValidate // шалгалтыг backend хийж монгол мессеж буцаана (браузерын англи мессеж биш)
+      noValidate // шалгалтыг backend хийж хэрэглэгчийн хэлээр мессеж буцаана (браузерын мессеж биш)
       onSubmit={(e) => {
         e.preventDefault()
         m.mutate(undefined)
       }}
     >
-      {!s.configured && <p className="text-xs text-yellow-700 bg-yellow-50 rounded px-2 py-1">Анхдагч утгууд — хадгалахад тохиргоо үүснэ.</p>}
+      {!s.configured && <p className="text-xs text-yellow-700 bg-yellow-50 rounded px-2 py-1">{t('camp.settings.defaults_note')}</p>}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="НӨАТ (%)">
+        <Field label={t('camp.settings.vat')}>
           {(id) => <input id={id} type="number" step="0.01" min={0} max={99.99} className={inputCls} value={f.vatRate} onChange={(e) => set('vatRate', e.target.value)} disabled={!canEdit} />}
         </Field>
-        <Field label="Ээлж солигдох гараг">
+        <Field label={t('camp.settings.changeover')}>
           {(id) => (
             <select id={id} className={inputCls} value={f.changeoverWeekday} onChange={(e) => set('changeoverWeekday', e.target.value)} disabled={!canEdit}>
-              {WEEKDAYS.map((w, i) => (
+              {weekdayNames().map((w, i) => (
                 <option key={i} value={i}>
                   {w}
                 </option>
@@ -141,25 +193,25 @@ function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: Ca
             </select>
           )}
         </Field>
-        <Field label="Ажиллах хоног">
+        <Field label={t('camp.settings.on_days')}>
           {(id) => <input id={id} type="number" min={1} max={28} className={inputCls} value={f.rosterOnDays} onChange={(e) => set('rosterOnDays', e.target.value)} disabled={!canEdit} />}
         </Field>
-        <Field label="Амрах хоног" hint="Ирэх, явах замын хоног амралтад орно (≥ 2)">
+        <Field label={t('camp.settings.off_days')} hint={t('camp.settings.off_days_hint')}>
           {(id) => <input id={id} type="number" min={2} max={28} className={inputCls} value={f.rosterOffDays} onChange={(e) => set('rosterOffDays', e.target.value)} disabled={!canEdit} />}
         </Field>
       </div>
       {Number.isFinite(cycle) && cycle > 0 && (
         <p className="text-xs text-gray-500">
-          Мөчлөг {cycle} хоног: {WEEKDAYS[Number(f.changeoverWeekday)]} ирж, {f.rosterOnDays} хоног ажиллаад дараагийн өдөр нь явна.
+          {t('camp.settings.cycle', { cycle, weekday: weekdayName(Number(f.changeoverWeekday)), on: f.rosterOnDays })}
         </p>
       )}
-      <Field label="Хоолны захиалгын эцсийн цаг" hint="Хоосон = хязгааргүй">
+      <Field label={t('camp.settings.cutoff')} hint={t('camp.settings.cutoff_hint')}>
         {(id) => <input id={id} type="time" className={inputCls} value={f.mealOrderCutoffTime} onChange={(e) => set('mealOrderCutoffTime', e.target.value)} disabled={!canEdit} />}
       </Field>
-      <Field label="Анхдагч хоол идэх байршил" hint="Кемпийн гал тогоо — өглөө, оройн хоол энд">
+      <Field label={t('camp.settings.default_location')} hint={t('camp.settings.default_location_hint')}>
         {(id) => (
           <select id={id} className={inputCls} value={f.defaultMealLocationId} onChange={(e) => set('defaultMealLocationId', e.target.value)} disabled={!canEdit}>
-            <option value="">— Сонгоогүй —</option>
+            <option value="">{t('camp.common.not_selected')}</option>
             {activeLocations.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.name}
@@ -168,17 +220,17 @@ function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: Ca
           </select>
         )}
       </Field>
-      <Field label="Катерингийн үйлчилгээ үзүүлэгч" hint="Засварын сэлбэгийн зардал энэ байгууллагад бүртгэгдэнэ. Жагсаалтад зөвхөн 'Катеринг' төрөлтэй идэвхтэй байгууллага.">
+      <Field label={t('camp.settings.catering')} hint={t('camp.settings.catering_hint')}>
         {(id) => (
           <select id={id} className={inputCls} value={f.cateringOrganizationId} onChange={(e) => set('cateringOrganizationId', e.target.value)} disabled={!canEdit}>
-            <option value="">— Сонгоогүй —</option>
+            <option value="">{t('camp.common.not_selected')}</option>
             {catering.data?.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.name}
               </option>
             ))}
             {f.cateringOrganizationId && catering.data && !catering.data.some((o) => o.id === f.cateringOrganizationId) && (
-              <option value={f.cateringOrganizationId}>(одоогийн — идэвхгүй/катеринг биш)</option>
+              <option value={f.cateringOrganizationId}>{t('camp.settings.catering_current_invalid')}</option>
             )}
           </select>
         )}
@@ -187,9 +239,9 @@ function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: Ca
       {canEdit && (
         <div className="flex items-center gap-3">
           <Button type="submit" loading={m.isPending}>
-            Тохиргоо хадгалах
+            {t('camp.settings.save_settings')}
           </Button>
-          {m.isSuccess && <span className="text-sm text-green-600">Хадгалагдлаа</span>}
+          {m.isSuccess && <span className="text-sm text-green-600">{t('camp.common.saved')}</span>}
         </div>
       )}
     </form>
@@ -197,6 +249,7 @@ function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: Ca
 }
 
 function MealLocations({ campId, rows, canEdit }: { campId: string; rows: MealLocation[]; canEdit: boolean }) {
+  const { t } = useTranslation()
   const [name, setName] = useState('')
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null)
   const add = useCampMutation(() => campApi.createMealLocation(campId, name.trim()), [campKeys.mealLocations(campId)], () => setName(''))
@@ -208,15 +261,15 @@ function MealLocations({ campId, rows, canEdit }: { campId: string; rows: MealLo
   return (
     <div className="space-y-3">
       {rows.length === 0 ? (
-        <Empty>Байршил бүртгэгдээгүй (жнь: Кемпийн гал тогоо, Уулын хэсэг)</Empty>
+        <Empty>{t('camp.settings.no_locations')}</Empty>
       ) : (
-        <Table head={['Нэр', 'Төлөв', '']}>
+        <Table head={[t('camp.common.name'), t('camp.common.status'), '']}>
           {rows.map((l) => (
             <tr key={l.id}>
               <td className={td}>
                 {editing?.id === l.id ? (
                   <input
-                    aria-label="Байршлын нэр"
+                    aria-label={t('camp.settings.location_name')}
                     className={inputCls}
                     value={editing.name}
                     onChange={(e) => setEditing({ id: l.id, name: e.target.value })}
@@ -239,19 +292,19 @@ function MealLocations({ campId, rows, canEdit }: { campId: string; rows: MealLo
                         disabled={!editing.name.trim() || editing.name.trim() === l.name}
                         onClick={() => update.mutate({ id: l.id, name: editing.name.trim() })}
                       >
-                        Хадгалах
+                        {t('camp.common.save')}
                       </Button>
                       <Button variant="ghost" onClick={() => setEditing(null)}>
-                        Болих
+                        {t('camp.common.cancel')}
                       </Button>
                     </>
                   ) : (
                     <>
                       <Button variant="ghost" onClick={() => setEditing({ id: l.id, name: l.name })}>
-                        Нэр солих
+                        {t('camp.common.rename')}
                       </Button>
                       <Button variant="ghost" onClick={() => update.mutate({ id: l.id, isActive: !l.isActive })}>
-                        {l.isActive ? 'Идэвхгүй болгох' : 'Идэвхжүүлэх'}
+                        {l.isActive ? t('camp.common.deactivate') : t('camp.common.activate')}
                       </Button>
                     </>
                   ))}
@@ -268,9 +321,16 @@ function MealLocations({ campId, rows, canEdit }: { campId: string; rows: MealLo
             if (name.trim()) add.mutate(undefined)
           }}
         >
-          <input aria-label="Шинэ байршлын нэр" className={inputCls} placeholder="Шинэ байршлын нэр" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
+          <input
+            aria-label={t('camp.settings.new_location')}
+            className={inputCls}
+            placeholder={t('camp.settings.new_location')}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={100}
+          />
           <Button type="submit" loading={add.isPending} disabled={!name.trim()}>
-            Нэмэх
+            {t('camp.common.add')}
           </Button>
         </form>
       )}

@@ -60,6 +60,10 @@ export interface Building {
   isActive: boolean
   createdAt: string
   updatedAt: string
+  /** FB-07 (v0.2.0): нийт өрөө, идэвхтэй өрөө, идэвхтэй өрөөний нийт багтаамж */
+  _count?: { rooms: number }
+  activeRooms?: number
+  capacity?: number
 }
 
 export interface Room {
@@ -91,6 +95,10 @@ export interface Department {
   updatedAt: string
   mealLocation: { name: string }
   shiftPatterns: ShiftSegment[]
+  /** FB-03 (v0.2.0) */
+  _count?: { employees: number }
+  activeEmployees?: number
+  positions?: number
 }
 
 export interface Crew {
@@ -101,6 +109,8 @@ export interface Crew {
   isActive: boolean
   createdAt: string
   updatedAt: string
+  /** Backend list: бүртгэлтэй ажилтны тоо */
+  employeeCount?: number
 }
 
 export interface PermissionDef {
@@ -161,6 +171,8 @@ export interface Employee {
   fullName: string
   position: string | null
   phone: string | null
+  /** v0.2.0 — ADR-003-ын бэлтгэл */
+  email?: string | null
   status: EmployeeStatus
   organizationId: string
   departmentId: string
@@ -230,7 +242,7 @@ export interface Movement {
   meals: MealType[]
   importId: string | null
   createdAt: string
-  employee: { id: string; employeeCode: string; fullName: string; department: { code: string }; crew: { code: string } | null }
+  employee: { id: string; employeeCode: string; fullName: string; position?: string | null; department: { code: string }; crew: { code: string } | null }
 }
 
 export interface ShiftAdjustment {
@@ -274,6 +286,8 @@ export interface BoardOccupant {
   fullName: string
   crewCode: string | null
   presentTonight: boolean
+  /** FB-12 (v0.2.0) */
+  status?: EmployeeStatus
 }
 
 export interface BoardRoom {
@@ -287,6 +301,8 @@ export interface BoardRoom {
   presentCount: number
   occupancy: 'VACANT' | 'PARTIAL' | 'FULL'
   overCapacity: boolean
+  /** FB-12 (v0.2.0): идэвхгүй ажилтан хуваарилагдсан хэвээр */
+  inactiveOccupants?: number
   occupants: BoardOccupant[]
 }
 
@@ -413,4 +429,58 @@ export interface MaintenanceMutationResult extends MaintenanceDetail {
   warnings?: string[]
   roomReleased?: boolean
   costEntries?: number
+}
+
+// ── v0.2.0 §0.5 — Мастер өгөгдлийн импорт/экспорт ─────────────
+export type DataImportType = 'employees' | 'departments'
+export type ExportType = DataImportType | 'rooms'
+export type DataRowOp = 'create' | 'update' | 'unchanged' | 'error'
+export interface DataRowError {
+  column?: string
+  columnLabel: string | null
+  code: string
+  message: string
+}
+export interface DataImportRow {
+  row: number
+  op: DataRowOp
+  opLabel: string
+  values: Record<string, string | number | boolean | null>
+  changes: Record<string, { from: unknown; to: unknown }>
+  errors: DataRowError[]
+}
+export interface DataImportHeader {
+  id: string
+  type: 'EMPLOYEES' | 'DEPARTMENTS'
+  source: 'XLSX' | 'GRID'
+  fileName: string | null
+  status: ImportStatus
+  totalRows: number
+  createRows: number
+  updateRows: number
+  unchangedRows: number
+  errorRows: number
+  createdAt: string
+  confirmedAt: string | null
+}
+export interface DataImportPreview {
+  import: DataImportHeader
+  rows: DataImportRow[]
+}
+export interface DataImportResult {
+  status: 'CONFIRMED'
+  created: number
+  updated: number
+  skipped: number
+  unchanged: number
+}
+/** FB-07 */
+export interface BulkRoomsInput {
+  from: number
+  to: number
+  prefix?: string
+  padTo?: number
+  floor?: number | null
+  capacity: number
+  skipExisting?: boolean
 }

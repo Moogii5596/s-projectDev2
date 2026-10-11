@@ -1,3 +1,4 @@
+import i18n from '../../../i18n'
 import type { ShiftSegment, ShiftType } from '../api/types'
 
 /** Өдөр бүрийн ээлж (index 0 = 1-р өдөр); null = тохируулаагүй */
@@ -51,5 +52,5 @@ export function formatRanges(nums: number[]): string {
 export function patternProblem(days: DayShifts): string | null {
   const missing = missingDays(days)
   if (missing.length === 0 || missing.length === days.length) return null
-  return `Дутуу өдөр: ${formatRanges(missing)} (1–${days.length} бүрэн бүрхэх ёстой, эсвэл бүгдийг хоосон үлдээнэ)`
+  return i18n.t('camp.shift_pattern.missing_days', { days: formatRanges(missing), total: days.length })
 }

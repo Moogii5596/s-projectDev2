@@ -7,9 +7,11 @@ import { MEAL_LABEL, PRESENCE_GROUP_LABEL } from '../lib/labels'
 import { addDays, todayUb } from '../lib/dates'
 import { pivotPresence } from '../lib/presence'
 import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Table, inputSmCls, td } from '../components/ui'
+import { useTranslation } from 'react-i18next'
 
 /** /camp/:campId/meals — D өдрийн хоолны суурь тоо (хоол × байршил), задаргаа, анхааруулга. Зөвхөн харах */
 export default function PresencePage() {
+  const { t } = useTranslation()
   const { campId = '' } = useParams()
   const [date, setDate] = useState(todayUb())
   const q = useQuery({ queryKey: [...campKeys.presence(campId), date], queryFn: () => campApi.presence(campId, date), enabled: !!date })
@@ -19,22 +21,22 @@ export default function PresencePage() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end gap-3">
-        <Field label="Огноо">{(id) => <input id={id} type="date" className={inputSmCls} value={date} onChange={(e) => setDate(e.target.value)} />}</Field>
+        <Field label={t('camp.att.col.date')}>{(id) => <input id={id} type="date" className={inputSmCls} value={date} onChange={(e) => setDate(e.target.value)} />}</Field>
         <div className="flex gap-1 pb-0.5">
-          <Button size="sm" variant="secondary" onClick={() => setDate(addDays(date, -1))} aria-label="Өмнөх өдөр">
+          <Button size="sm" variant="secondary" onClick={() => setDate(addDays(date, -1))} aria-label={t('camp.board.prev')}>
             ‹
           </Button>
           <Button size="sm" variant="secondary" onClick={() => setDate(todayUb())}>
-            Өнөөдөр
+            {t('camp.board.today')}
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => setDate(addDays(date, 1))} aria-label="Дараагийн өдөр">
+          <Button size="sm" variant="secondary" onClick={() => setDate(addDays(date, 1))} aria-label={t('camp.board.next')}>
             ›
           </Button>
         </div>
         {q.data && (
           <div className="flex gap-2 pb-1">
-            <Badge tone="blue">Кемпэд {q.data.presentCount} хүн</Badge>
-            <Badge>Хүн-өдөр {q.data.personDays}</Badge>
+            <Badge tone="blue">{t('camp.meals.present', { n: q.data.presentCount })}</Badge>
+            <Badge>{t('camp.meals.person_days', { n: q.data.personDays })}</Badge>
           </div>
         )}
       </div>
@@ -43,10 +45,10 @@ export default function PresencePage() {
 
       {q.data && (q.data.warnings.unknownShift.length > 0 || q.data.warnings.noDefaultMealLocation) && (
         <div role="alert" className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg px-4 py-3 space-y-1">
-          {q.data.warnings.noDefaultMealLocation && <div>Кемпийн тохиргоонд анхдагч хоол идэх байршил сонгоогүй — өглөө/оройн хоолны байршил тодорхойгүй.</div>}
+          {q.data.warnings.noDefaultMealLocation && <div>{t('camp.meals.no_default_location')}</div>}
           {q.data.warnings.unknownShift.length > 0 && (
             <div>
-              Ээлж тодорхойгүй {q.data.warnings.unknownShift.length} ажилтан (өглөө, оройн хоолоор тоолсон; "Ээлж" хэсэгт зохицуулалт хийнэ үү):{' '}
+              {t('camp.meals.unknown_shift', { n: q.data.warnings.unknownShift.length })}{' '}
               {q.data.warnings.unknownShift.map((u) => `${u.employeeCode} ${u.fullName} (${u.departmentCode})`).join(', ')}
             </div>
           )}
@@ -54,11 +56,11 @@ export default function PresencePage() {
       )}
 
       {pivot && (
-        <Card title={`Хоолны суурь тоо — ${date}`}>
+        <Card title={t('camp.meals.base_count', { date })}>
           {pivot.rows.length === 0 ? (
-            <Empty>Энэ өдөр кемпэд хүн алга</Empty>
+            <Empty>{t('camp.meals.nobody')}</Empty>
           ) : (
-            <Table head={['Хоол', ...pivot.columns.map((c) => c.name), 'Нийт']}>
+            <Table head={[t('camp.att.col.meals'), ...pivot.columns.map((c) => c.name), t('camp.meals.total')]}>
               {pivot.rows.map((r) => (
                 <tr key={r.meal}>
                   <td className={`${td} font-medium`}>{MEAL_LABEL[r.meal]}</td>
@@ -71,7 +73,7 @@ export default function PresencePage() {
                 </tr>
               ))}
               <tr className="bg-gray-50">
-                <td className={`${td} font-medium`}>Нийт</td>
+                <td className={`${td} font-medium`}>{t('camp.meals.total')}</td>
                 {pivot.columnTotals.map((n, i) => (
                   <td key={i} className={`${td} tabular-nums font-semibold`}>
                     {n}
@@ -86,27 +88,27 @@ export default function PresencePage() {
 
       {q.data && q.data.breakdown.length > 0 && (
         <Card
-          title="Задаргаа (хэлтэс × бүлэг)"
+          title={t('camp.meals.breakdown')}
           actions={
             <Button size="sm" variant="secondary" onClick={() => setShowBreakdown((v) => !v)}>
-              {showBreakdown ? 'Нуух' : 'Харуулах'}
+              {showBreakdown ? t('camp.meals.hide') : t('camp.meals.show')}
             </Button>
           }
         >
           {showBreakdown ? (
-            <Table head={['Хэлтэс', 'Бүлэг', 'Хоол', 'Байршил', 'Тоо']}>
+            <Table head={[t('camp.emp.department'), t('camp.meals.group'), t('camp.att.col.meals'), t('camp.common.location'), t('camp.meals.count')]}>
               {q.data.breakdown.map((b, i) => (
                 <tr key={i}>
                   <td className={td}>{b.departmentCode}</td>
                   <td className={td}>{PRESENCE_GROUP_LABEL[b.group] ?? b.group}</td>
                   <td className={td}>{MEAL_LABEL[b.mealType]}</td>
-                  <td className={td}>{q.data.lines.find((l) => l.mealLocationId === b.mealLocationId)?.mealLocationName ?? 'Байршилгүй'}</td>
+                  <td className={td}>{q.data.lines.find((l) => l.mealLocationId === b.mealLocationId)?.mealLocationName ?? t('camp.presence.no_location')}</td>
                   <td className={`${td} tabular-nums`}>{b.count}</td>
                 </tr>
               ))}
             </Table>
           ) : (
-            <p className="text-sm text-gray-500">{q.data.breakdown.length} мөр — хэлтэс, ээлж (өдөр/шөнө/тодорхойгүй/ирэх-явах) тус бүрээр.</p>
+            <p className="text-sm text-gray-500">{t('camp.meals.breakdown_rows', { n: q.data.breakdown.length })}</p>
           )}
         </Card>
       )}

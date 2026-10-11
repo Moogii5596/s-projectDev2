@@ -2,9 +2,12 @@ import { useState, FormEvent, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { HOME_PATH } from '../config/enabled-modules'
+import { useTranslation } from 'react-i18next'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 export default function LoginPage() {
   const { signIn, user, loading } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,7 +30,7 @@ export default function LoginPage() {
       await signIn(email, password)
       navigate(HOME_PATH)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Нэвтрэхэд алдаа гарлаа')
+      setError(err instanceof Error ? err.message : t('auth.error'))
     } finally {
       setSubmitting(false)
     }
@@ -37,7 +40,7 @@ export default function LoginPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500 text-sm">Уншиж байна...</div>
+        <div className="text-gray-500 text-sm">{t('common.loading')}</div>
       </div>
     )
   }
@@ -45,13 +48,16 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white rounded-xl shadow-md p-8 w-full max-w-md">
+        <div className="flex justify-end mb-2">
+          <LanguageSwitcher />
+        </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">S Project</h1>
-        <p className="text-gray-500 mb-6 text-sm">Системд нэвтрэх</p>
+        <p className="text-gray-500 mb-6 text-sm">{t('auth.subtitle')}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              И-мэйл
+              {t('auth.email')}
             </label>
             <input
               id="email"
@@ -66,7 +72,7 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Нууц үг
+              {t('auth.password')}
             </label>
             <input
               id="password"
@@ -90,7 +96,7 @@ export default function LoginPage() {
             disabled={submitting}
             className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {submitting ? 'Нэвтэрч байна...' : 'Нэвтрэх'}
+            {submitting ? t('auth.submitting') : t('auth.submit')}
           </button>
         </form>
       </div>

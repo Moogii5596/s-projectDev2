@@ -1,14 +1,23 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
 import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
+import { useAuth } from '../../../hooks/useAuth'
+import { getLastCamp, resolveLastCamp } from '../lib/last-camp'
 import { P } from '../lib/permissions'
 import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, inputCls } from '../components/ui'
 
-/** /camp — кемп сонгох + байгууллагын түвшний удирдлага */
+/**
+ * /camp — FB-11 (v0.2.0): сүүлд орсон кемп рүү шууд (идэвхтэй, эрхтэй бол). `?list=1` эсвэл сүүлийнх алга → жагсаалт.
+ * Байгууллагын түвшний тохиргоо → "Системийн тохиргоо" (/camp/system).
+ */
 export default function CampHomePage() {
+  const { t } = useTranslation()
+  const { user } = useAuth()
+  const [params] = useSearchParams()
   const perms = useCampPermissions()
   const camps = useQuery({ queryKey: campKeys.camps, queryFn: () => campApi.camps(false) })
   const [creating, setCreating] = useState(false)
@@ -19,30 +28,44 @@ export default function CampHomePage() {
     if (status === 403) {
       return (
         <div>
-          <PageHeader title="Кемп" />
-          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg px-4 py-3">
-            Танд кемпийн эрх олгогдоогүй байна. Кемпийн админд хандана уу.
-          </div>
+          <PageHeader title={t('camp.home.title')} />
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg px-4 py-3">{t('camp.home.no_access')}</div>
         </div>
       )
     }
     return <ErrorBox error={camps.error} onRetry={() => camps.refetch()} />
   }
 
+  const list = camps.data ?? []
+  const last = params.get('list') ? null : resolveLastCamp(getLastCamp(user?.id), list)
+  if (last) return <Navigate to={`/camp/${last}`} replace />
+  // Ганц идэвхтэй кемп → шууд (сонгох алхамгүй)
+  const active = list.filter((c) => c.isActive)
+  if (!params.get('list') && active.length === 1) return <Navigate to={`/camp/${active[0].id}`} replace />
+
   const canMaster = perms.can(P.MASTER_MANAGE)
-  const canRoles = perms.can(P.ROLES_MANAGE)
+  const canSystem = canMaster || perms.can(P.ROLES_MANAGE) || perms.data?.isTenantAdmin === true
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Кемп"
-        subtitle="Кемпээ сонгоно уу"
-        actions={canMaster && <Button onClick={() => setCreating(true)}>+ Кемп нэмэх</Button>}
+        title={t('camp.home.title')}
+        subtitle={t('camp.home.subtitle')}
+        actions={
+          <>
+            {canSystem && (
+              <Link to="/camp/system" className="px-4 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+                {t('camp.system.title')}
+              </Link>
+            )}
+            {canMaster && <Button onClick={() => setCreating(true)}>{t('camp.home.add_camp')}</Button>}
+          </>
+        }
       />
 
-      {camps.data && camps.data.length > 0 ? (
+      {list.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {camps.data.map((c) => (
+          {list.map((c) => (
             <Link
               key={c.id}
               to={`/camp/${c.id}`}
@@ -59,49 +82,20 @@ export default function CampHomePage() {
         </div>
       ) : (
         <Card>
-          <Empty>Кемп бүртгэгдээгүй байна.{canMaster && ' "+ Кемп нэмэх" товчоор эхлүүлнэ үү.'}</Empty>
+          <Empty>
+            {t('camp.home.empty')}
+            {canMaster && ` ${t('camp.home.empty_hint')}`}
+          </Empty>
         </Card>
       )}
-
-      <Card title="Байгууллагын түвшний тохиргоо">
-        <ul className="text-sm space-y-2">
-          <li>
-            <Link to="/camp/admin/organizations" className="text-blue-600 hover:underline">
-              Байгууллагууд
-            </Link>
-            <span className="text-gray-500"> — уурхай, туслан гүйцэтгэгч, катеринг, хог/бохир ус</span>
-          </li>
-          <li>
-            <Link to="/camp/admin/asset-categories" className="text-blue-600 hover:underline">
-              Хөрөнгийн ангилал
-            </Link>
-            <span className="text-gray-500"> — бүх кемпэд нийтлэг</span>
-          </li>
-          {canRoles && (
-            <>
-              <li>
-                <Link to="/camp/admin/roles" className="text-blue-600 hover:underline">
-                  Роль ба эрх
-                </Link>
-                <span className="text-gray-500"> — роль бүрийн эрхийн матриц</span>
-              </li>
-              <li>
-                <Link to="/camp/admin/user-roles" className="text-blue-600 hover:underline">
-                  Хэрэглэгчийн роль
-                </Link>
-                <span className="text-gray-500"> — хэрэглэгчид бүх кемпэд эсвэл тодорхой кемпэд роль оноох</span>
-              </li>
-            </>
-          )}
-        </ul>
-      </Card>
 
       {creating && <CreateCampModal onClose={() => setCreating(false)} />}
     </div>
   )
 }
 
-function CreateCampModal({ onClose }: { onClose: () => void }) {
+export function CreateCampModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation()
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [location, setLocation] = useState('')
@@ -112,24 +106,24 @@ function CreateCampModal({ onClose }: { onClose: () => void }) {
   )
   return (
     <Modal
-      title="Кемп нэмэх"
+      title={t('camp.home.add_camp_title')}
       onClose={onClose}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Болих
+            {t('camp.common.cancel')}
           </Button>
           <Button onClick={() => m.mutate(undefined)} loading={m.isPending} disabled={!code.trim() || !name.trim()}>
-            Хадгалах
+            {t('camp.common.save')}
           </Button>
         </>
       }
     >
-      <Field label="Код" hint="Латин үсэг, тоо, . _ - (дараа өөрчлөгдөхгүй; засварын дугаарт орно: ZAS-{код}-…)">
+      <Field label={t('camp.common.code')} hint={t('camp.home.code_hint')}>
         {(id) => <input id={id} className={inputCls} value={code} onChange={(e) => setCode(e.target.value)} maxLength={30} />}
       </Field>
-      <Field label="Нэр">{(id) => <input id={id} className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />}</Field>
-      <Field label="Байршил">
+      <Field label={t('camp.common.name')}>{(id) => <input id={id} className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />}</Field>
+      <Field label={t('camp.common.location')}>
         {(id) => <input id={id} className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} maxLength={300} />}
       </Field>
       <ErrorBox error={m.error} />

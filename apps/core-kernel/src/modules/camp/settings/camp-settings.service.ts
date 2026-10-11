@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CampOrgServiceType, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
@@ -7,6 +7,7 @@ import { fromDbTime, inTenantTx, toDbTime, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import { assertMealLocation, getCampOr404 } from '../common/camp-lookup';
 import { CreateMealLocationDto, QueryActiveDto, UpdateCampSettingsDto, UpdateMealLocationDto } from './camp-settings.dto';
+import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
 
@@ -109,10 +110,10 @@ export class CampSettingsService {
   /** Катеринг байгууллага: tenant-д байгаа, идэвхтэй, CATERING үйлчилгээтэй (400) */
   private async assertCateringOrg(tx: Tx, tenantId: string, id: string) {
     const org = await tx.campOrganization.findFirst({ where: { id, tenantId }, select: { name: true, isActive: true, serviceTypes: true } });
-    if (!org) throw new BadRequestException('Катеринг байгууллага олдсонгүй');
-    if (!org.isActive) throw new BadRequestException(`"${org.name}" идэвхгүй байна`);
+    if (!org) throw badRequest('camp.err.settings.1');
+    if (!org.isActive) throw badRequest('camp.err.settings.2', { name: org.name });
     if (!org.serviceTypes.includes(CampOrgServiceType.CATERING)) {
-      throw new BadRequestException(`"${org.name}" катерингийн үйлчилгээ (CATERING) үзүүлэгч гэж бүртгэгдээгүй`);
+      throw badRequest('camp.err.settings.3', { name: org.name });
     }
   }
 
@@ -130,10 +131,7 @@ export class CampSettingsService {
       orderBy: { code: 'asc' },
     });
     if (depts.length > 0) {
-      throw new ConflictException(
-        `Ростерын урт ${currentDays} → ${rosterOnDays} өөрчлөхөд ээлжийн загвар буруу болно. ` +
-          `Эхлээд эдгээр хэлтсийн загварыг шинэчилнэ үү: ${depts.map((d) => d.code).join(', ')}`,
-      );
+      throw conflict('camp.err.settings.8', { from: currentDays, to: rosterOnDays, codes: depts.map((d) => d.code).join(', ') });
     }
   }
 
@@ -157,7 +155,7 @@ export class CampSettingsService {
         await this.access.require(tx, tenantId, authId, campId, P.SETTINGS_MANAGE);
         await getCampOr404(tx, tenantId, campId);
         const dup = await tx.campMealLocation.findFirst({ where: { tenantId, campId, name: dto.name }, select: { id: true } });
-        if (dup) throw new ConflictException(`"${dto.name}" байршил аль хэдийн байна`);
+        if (dup) throw conflict('camp.err.settings.4', { name: dto.name });
         return tx.campMealLocation.create({
           data: { tenantId, campId, name: dto.name },
           select: { id: true, name: true, isActive: true, createdAt: true, updatedAt: true },
@@ -171,17 +169,17 @@ export class CampSettingsService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.SETTINGS_MANAGE);
         const loc = await tx.campMealLocation.findFirst({ where: { id, tenantId, campId }, select: { id: true } });
-        if (!loc) throw new NotFoundException('Хоол идэх байршил олдсонгүй');
+        if (!loc) throw notFound('camp.err.settings.5');
         if (dto.name !== undefined) {
           const dup = await tx.campMealLocation.findFirst({ where: { tenantId, campId, name: dto.name, NOT: { id } }, select: { id: true } });
-          if (dup) throw new ConflictException(`"${dto.name}" байршил аль хэдийн байна`);
+          if (dup) throw conflict('camp.err.settings.4', { name: dto.name });
         }
         if (dto.isActive === false) {
           const isDefault = await tx.campSetting.findFirst({ where: { tenantId, campId, defaultMealLocationId: id }, select: { id: true } });
-          if (isDefault) throw new ConflictException('Кемпийн анхдагч байршлыг идэвхгүй болгохын өмнө тохиргоонд өөр байршил сонгоно уу');
+          if (isDefault) throw conflict('camp.err.settings.6');
           const depts = await tx.campDepartment.findMany({ where: { tenantId, campId, mealLocationId: id, isActive: true }, select: { code: true } });
           if (depts.length > 0) {
-            throw new ConflictException(`Идэвхтэй хэлтэс энэ байршлыг ашиглаж байна: ${depts.map((d) => d.code).join(', ')}`);
+            throw conflict('camp.err.settings.7', { codes: depts.map((d) => d.code).join(', ') });
           }
         }
         return tx.campMealLocation.update({

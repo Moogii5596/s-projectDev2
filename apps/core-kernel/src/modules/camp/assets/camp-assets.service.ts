@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CampAssetCondition, CampRoomStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
@@ -19,6 +19,7 @@ import {
   UpdateAssetDto,
   WriteOffAssetDto,
 } from './camp-assets.dto';
+import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
 
@@ -82,7 +83,7 @@ export class CampAssetsService {
       where: { tenantId, name: { equals: name, mode: 'insensitive' }, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
       select: { id: true },
     });
-    if (dup) throw new ConflictException(`Ангилал "${name}" аль хэдийн бүртгэгдсэн`);
+    if (dup) throw conflict('camp.err.assets.1', { name });
   }
 
   async createCategory(tenantId: string, authId: string, dto: CreateAssetCategoryDto) {
@@ -100,7 +101,7 @@ export class CampAssetsService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireInAnyCamp(tx, tenantId, authId, P.ASSET_MANAGE);
         const c = await tx.campAssetCategory.findFirst({ where: { id, tenantId }, select: { id: true } });
-        if (!c) throw new NotFoundException('Ангилал олдсонгүй');
+        if (!c) throw notFound('camp.err.assets.2');
         if (dto.name !== undefined) await this.assertCategoryNameFree(tx, tenantId, dto.name, id);
         return tx.campAssetCategory.update({
           where: { id },
@@ -115,15 +116,15 @@ export class CampAssetsService {
 
   private async assertCategoryUsable(tx: Tx, tenantId: string, categoryId: string) {
     const c = await tx.campAssetCategory.findFirst({ where: { id: categoryId, tenantId }, select: { isActive: true } });
-    if (!c) throw new BadRequestException('Ангилал олдсонгүй');
-    if (!c.isActive) throw new BadRequestException('Ангилал идэвхгүй байна');
+    if (!c) throw badRequest('camp.err.assets.2');
+    if (!c.isActive) throw badRequest('camp.err.assets.3');
   }
 
   /** Хөрөнгө байрлуулах өрөө: тухайн кемпийнх, INACTIVE биш (засварт байгаа өрөөнд байрлуулж болно) */
   private async assertRoomUsable(tx: Tx, tenantId: string, campId: string, roomId: string) {
     const r = await tx.campRoom.findFirst({ where: { id: roomId, tenantId, campId }, select: { roomNo: true, status: true } });
-    if (!r) throw new BadRequestException('Өрөө энэ кемпэд олдсонгүй');
-    if (r.status === CampRoomStatus.INACTIVE) throw new BadRequestException(`Өрөө ${r.roomNo} идэвхгүй — хөрөнгө байрлуулах боломжгүй`);
+    if (!r) throw badRequest('camp.err.assets.4');
+    if (r.status === CampRoomStatus.INACTIVE) throw badRequest('camp.err.assets.5', { roomNo: r.roomNo });
   }
 
   private async assertInventoryNoFree(tx: Tx, tenantId: string, inventoryNo: string, exceptId?: string) {
@@ -131,13 +132,13 @@ export class CampAssetsService {
       where: { tenantId, inventoryNo, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
       select: { name: true },
     });
-    if (dup) throw new ConflictException(`Инвентарийн дугаар "${inventoryNo}" (${dup.name}) аль хэдийн бүртгэгдсэн`);
+    if (dup) throw conflict('camp.err.assets.6', { inventoryNo, name: dup.name });
   }
 
   private assertAcquiredDate(d: string | null | undefined) {
     if (d === undefined || d === null) return;
-    if (!isRealIsoDate(d)) throw new BadRequestException(`acquiredDate буруу огноо: ${d}`);
-    if (d > todayUb()) throw new BadRequestException('acquiredDate ирээдүйн огноо байж болохгүй');
+    if (!isRealIsoDate(d)) throw badRequest('camp.err.assets.7', { d });
+    if (d > todayUb()) throw badRequest('camp.err.assets.8');
   }
 
   private async getAssetOr404(tx: Tx, tenantId: string, campId: string, id: string) {
@@ -145,13 +146,13 @@ export class CampAssetsService {
       where: { id, tenantId, campId },
       select: { id: true, roomId: true, condition: true, note: true, inventoryNo: true },
     });
-    if (!a) throw new NotFoundException('Хөрөнгө олдсонгүй');
+    if (!a) throw notFound('camp.err.assets.9');
     return a;
   }
 
   private static assertNotWrittenOff(a: { condition: CampAssetCondition; inventoryNo: string }) {
     if (a.condition === CampAssetCondition.WRITTEN_OFF) {
-      throw new ConflictException(`Хөрөнгө ${a.inventoryNo} актлагдсан — өөрчлөх боломжгүй`);
+      throw conflict('camp.err.assets.10', { inventoryNo: a.inventoryNo });
     }
   }
 
@@ -164,7 +165,7 @@ export class CampAssetsService {
       try {
         cursor = decodeCursor(q.cursor);
       } catch {
-        throw new BadRequestException('cursor буруу байна');
+        throw badRequest('camp.err.assets.11');
       }
     }
     return inTenantTx(this.prisma, tenantId, async (tx) => {
@@ -201,7 +202,7 @@ export class CampAssetsService {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       const a = await tx.campAsset.findFirst({ where: { id, tenantId, campId }, select: ASSET_SELECT });
-      if (!a) throw new NotFoundException('Хөрөнгө олдсонгүй');
+      if (!a) throw notFound('camp.err.assets.9');
       const openMaintenance = await tx.campMaintenanceRequest.count({ where: { tenantId, assetId: id, status: { in: [...OPEN_STATUSES] } } });
       return { ...assetView(a), openMaintenance };
     });
@@ -213,7 +214,7 @@ export class CampAssetsService {
         const userId = await this.access.require(tx, tenantId, authId, campId, P.ASSET_MANAGE);
         await getCampOr404(tx, tenantId, campId);
         if (dto.condition === CampAssetCondition.WRITTEN_OFF) {
-          throw new BadRequestException('Шинэ хөрөнгийг актлагдсан төлөвтэй бүртгэх боломжгүй');
+          throw badRequest('camp.err.assets.12');
         }
         this.assertAcquiredDate(dto.acquiredDate);
         await this.assertCategoryUsable(tx, tenantId, dto.categoryId);
@@ -254,7 +255,7 @@ export class CampAssetsService {
         const a = await this.getAssetOr404(tx, tenantId, campId, id);
         CampAssetsService.assertNotWrittenOff(a);
         if (dto.condition === CampAssetCondition.WRITTEN_OFF) {
-          throw new BadRequestException('Актлахдаа write-off үйлдлийг ашиглана уу (шалтгаантай)');
+          throw badRequest('camp.err.assets.13');
         }
         this.assertAcquiredDate(dto.acquiredDate);
         if (dto.categoryId !== undefined) await this.assertCategoryUsable(tx, tenantId, dto.categoryId);
@@ -267,7 +268,7 @@ export class CampAssetsService {
         if (dto.acquiredCost !== undefined) data.acquiredCost = dto.acquiredCost === null ? null : new Prisma.Decimal(dto.acquiredCost);
         // Зэрэгцээ актлалтаас хамгаална: WRITTEN_OFF болсон бол 0 мөр
         const res = await tx.campAsset.updateMany({ where: { id, tenantId, condition: { not: CampAssetCondition.WRITTEN_OFF } }, data });
-        if (res.count === 0) throw new ConflictException(`Хөрөнгө ${a.inventoryNo} өөрчлөгдсөн байна — дахин ачаална уу`);
+        if (res.count === 0) throw conflict('camp.err.assets.14', { inventoryNo: a.inventoryNo });
         const fresh = await tx.campAsset.findFirstOrThrow({ where: { id, tenantId }, select: ASSET_SELECT });
         return assetView(fresh);
       }),
@@ -281,14 +282,14 @@ export class CampAssetsService {
         const a = await this.getAssetOr404(tx, tenantId, campId, id);
         CampAssetsService.assertNotWrittenOff(a);
         const to = dto.toRoomId;
-        if (to === a.roomId) throw new BadRequestException(to ? 'Хөрөнгө аль хэдийн энэ өрөөнд байна' : 'Хөрөнгө аль хэдийн агуулахад байна');
+        if (to === a.roomId) throw badRequest(to ? 'camp.err.assets.17' : 'camp.err.assets.18');
         if (to) await this.assertRoomUsable(tx, tenantId, campId, to);
         // Optimistic: уншсанаас хойш байршил/төлөв өөрчлөгдсөн бол 0 мөр → 409
         const res = await tx.campAsset.updateMany({
           where: { id, tenantId, roomId: a.roomId, condition: { not: CampAssetCondition.WRITTEN_OFF } },
           data: { roomId: to },
         });
-        if (res.count === 0) throw new ConflictException(`Хөрөнгө ${a.inventoryNo}-ийн байршил өөрчлөгдсөн байна — дахин ачаална уу`);
+        if (res.count === 0) throw conflict('camp.err.assets.15', { inventoryNo: a.inventoryNo });
         await tx.campAssetMovement.create({
           data: { tenantId, campId, assetId: id, fromRoomId: a.roomId, toRoomId: to, movedBy: userId, reason: dto.reason ?? null },
         });
@@ -313,13 +314,13 @@ export class CampAssetsService {
           where: { tenantId, assetId: id, status: { in: [...OPEN_STATUSES] } },
           select: { requestNo: true },
         });
-        if (open) throw new ConflictException(`Хөрөнгө ${a.inventoryNo} нээлттэй засвартай (${open.requestNo}) — эхлээд дуусгах эсвэл цуцлах`);
+        if (open) throw conflict('camp.err.assets.16', { inventoryNo: a.inventoryNo, requestNo: open.requestNo });
         const stamp = `[Актлав ${todayUb()}] ${dto.reason}`;
         const res = await tx.campAsset.updateMany({
           where: { id, tenantId, roomId: a.roomId, condition: { not: CampAssetCondition.WRITTEN_OFF } },
           data: { condition: CampAssetCondition.WRITTEN_OFF, roomId: null, note: a.note ? `${a.note}\n${stamp}` : stamp },
         });
-        if (res.count === 0) throw new ConflictException(`Хөрөнгө ${a.inventoryNo} өөрчлөгдсөн байна — дахин ачаална уу`);
+        if (res.count === 0) throw conflict('camp.err.assets.14', { inventoryNo: a.inventoryNo });
         if (a.roomId) {
           await tx.campAssetMovement.create({
             data: { tenantId, campId, assetId: id, fromRoomId: a.roomId, toRoomId: null, movedBy: userId, reason: `Актлав: ${dto.reason}`.slice(0, 500) },

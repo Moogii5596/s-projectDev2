@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { supabase } from '../lib/supabase'
 import { handleUnauthorized } from '../lib/unauthorized'
+import { currentLang } from '../i18n'
 
 // VITE_API_BASE_URL хоосон бол '' (same origin) → Vite proxy '/api' → localhost:3000
 // Тиймээс CORS алдаа гарахгүй
@@ -19,6 +20,8 @@ apiClient.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  // v0.2.0 §0.7: backend-ийн алдааны мессеж, Excel загварын хэл
+  config.headers['Accept-Language'] = currentLang()
 
   return config
 })

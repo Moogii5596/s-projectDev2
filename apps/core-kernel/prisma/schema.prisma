@@ -96,6 +96,8 @@ model CoreUser {
   fullName  String?  @map("full_name")
   role      UserRole @default(REQUESTER)
   isActive  Boolean  @default(true) @map("is_active")
+  /// v0.2.0 §0.7 (20261011004) — mn | en | zh
+  locale    String   @default("mn")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -683,6 +685,29 @@ enum CampMealOrderStatus {
   REJECTED
 }
 
+enum CampAuditAction {
+  CREATE
+  UPDATE
+  DEACTIVATE
+  IMPORT
+}
+
+enum CampDataImportType {
+  EMPLOYEES
+  DEPARTMENTS
+}
+
+enum CampDataImportStatus {
+  PREVIEW
+  CONFIRMED
+  CANCELLED
+}
+
+enum CampDataImportSource {
+  XLSX
+  GRID
+}
+
 enum CampCostSource {
   HAUL
   MEAL
@@ -991,6 +1016,8 @@ model CampEmployee {
   fullName       String             @map("full_name")
   position       String?
   phone          String?
+  /// v0.2.0 (20261011003) — ADR-003 нэвтрэх нэрийн бэлтгэл
+  email          String?
   status         CampEmployeeStatus @default(ACTIVE)
   createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz
@@ -1491,4 +1518,85 @@ model CampCostEntry {
   @@index([tenantId, campId, costDate], map: "idx_camp_cost_report")
   @@index([tenantId, organizationId, costDate], map: "idx_camp_cost_org")
   @@map("camp_cost_entries")
+}
+
+// ── v0.2.0 §0.4 — Кемпийн өөрчлөлтийн түүх (20261011001) ─────
+/// Append-only (app_user: SELECT, INSERT). FK (tenant, actor → core_users; tenant, camp → camps) нь DB-д;
+/// Prisma relation-гүй — хуучин model-уудыг өөрчлөхгүйн тулд (зөвхөн нэмэлт).
+model CampAuditLog {
+  id            String          @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId      String          @map("tenant_id") @db.Uuid
+  campId        String?         @map("camp_id") @db.Uuid
+  entityType    String          @map("entity_type")
+  entityId      String          @map("entity_id") @db.Uuid
+  action        CampAuditAction
+  actorUserId   String          @map("actor_user_id") @db.Uuid
+  /// Орчуулгын түлхүүр (жнь audit.employee.update) + параметр
+  summaryKey    String          @map("summary_key")
+  summaryParams Json            @default("{}") @map("summary_params")
+  /// { талбар: { from, to } }
+  diff          Json            @default("{}")
+  importId      String?         @map("import_id") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([tenantId, entityType, entityId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_audit_entity")
+  @@index([tenantId, campId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_audit_camp")
+  @@map("camp_audit_log")
+}
+
+// ── v0.2.0 §0.5 — Мастер өгөгдлийн импорт (20261011002) ─────
+/// Ажилтан/хэлтэс: PREVIEW → CONFIRMED | CANCELLED. FK (camp, uploaded_by, confirmed_by) нь DB-д; Prisma relation-гүй.
+model CampDataImport {
+  id            String               @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId      String               @map("tenant_id") @db.Uuid
+  campId        String               @map("camp_id") @db.Uuid
+  type          CampDataImportType
+  source        CampDataImportSource
+  fileName      String?              @map("file_name")
+  status        CampDataImportStatus @default(PREVIEW)
+  totalRows     Int                  @default(0) @map("total_rows")
+  createRows    Int                  @default(0) @map("create_rows")
+  updateRows    Int                  @default(0) @map("update_rows")
+  unchangedRows Int                  @default(0) @map("unchanged_rows")
+  errorRows     Int                  @default(0) @map("error_rows")
+  /// [{ row, values, errors: [{ column, code, params }] }]
+  parsedRows    Json                 @default("[]") @map("parsed_rows")
+  uploadedBy    String               @map("uploaded_by") @db.Uuid
+  confirmedBy   String?              @map("confirmed_by") @db.Uuid
+  confirmedAt   DateTime?            @map("confirmed_at") @db.Timestamptz
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, campId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_data_imports_cursor")
+  @@map("camp_data_imports")
+}
+
+// ── v0.2.0 §0.7 — Байгууллагын орчуулгын засвар (20261011005) ─────
+model I18nOverride {
+  tenantId  String   @map("tenant_id") @db.Uuid
+  key       String
+  lang      String
+  text      String
+  updatedBy String   @map("updated_by") @db.Uuid
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@id([tenantId, key, lang])
+  @@map("i18n_overrides")
+}
+
+/// Append-only (app_user: SELECT, INSERT)
+model I18nOverrideHistory {
+  id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  key       String
+  lang      String
+  oldText   String?  @map("old_text")
+  newText   String?  @map("new_text")
+  source    String
+  changedBy String   @map("changed_by") @db.Uuid
+  changedAt DateTime @default(now()) @map("changed_at") @db.Timestamptz
+
+  @@index([tenantId, changedAt(sort: Desc), id(sort: Desc)], map: "idx_i18n_history")
+  @@index([tenantId, key, changedAt(sort: Desc)], map: "idx_i18n_history_key")
+  @@map("i18n_override_history")
 }

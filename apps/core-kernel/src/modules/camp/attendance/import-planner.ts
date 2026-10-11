@@ -1,4 +1,5 @@
 import { CampEmployeeStatus, CampMealType, CampMovementDirection, CampMovementKind, CampShiftType } from '@prisma/client';
+import { t } from '../../../common/i18n/translate';
 import { addDays } from './camp-date';
 import { ROSTER_ARRIVAL_MEALS, ROSTER_DEPARTURE_MEALS } from './meal-rules';
 import { classifyMovement, RosterSettings } from './roster';
@@ -78,9 +79,9 @@ export function planImport(input: ParsedRow[], state: PlannerState): ImportPlan 
     const out: PlannedRow = { row: r.row, employeeCode: r.employeeCode, employeeId: null, date: r.date, direction: r.direction, kind: null, meals: r.meals, shift: r.shift, errors: [...r.errors] };
     plan.rows.push(out);
     const emp = r.employeeCode ? state.employees.get(r.employeeCode) : undefined;
-    if (r.employeeCode && !emp) out.errors.push(`Ажилтан олдсонгүй: ${r.employeeCode}`);
-    else if (emp && emp.campId !== state.campId) out.errors.push('Өөр кемпийн ажилтан');
-    else if (emp && emp.status !== CampEmployeeStatus.ACTIVE) out.errors.push('Ажилтан идэвхгүй');
+    if (r.employeeCode && !emp) out.errors.push(t('camp.row.employee_not_found', { code: r.employeeCode }));
+    else if (emp && emp.campId !== state.campId) out.errors.push(t('camp.row.other_camp'));
+    else if (emp && emp.status !== CampEmployeeStatus.ACTIVE) out.errors.push(t('camp.row.employee_inactive'));
     if (out.errors.length > 0 || !emp || !r.date || !r.direction) {
       if (emp) out.employeeId = emp.id;
       continue;
@@ -89,14 +90,14 @@ export function planImport(input: ParsedRow[], state: PlannerState): ImportPlan 
     const date = r.date;
     const key = movementKey(emp.id, date, r.direction);
     if (seen.has(key)) {
-      out.errors.push('Файлд давхардсан мөр');   // тодорхой мессеж (бусад шалгалтыг алгасна)
+      out.errors.push(t('camp.row.duplicate'));   // тодорхой мессеж (бусад шалгалтыг алгасна)
       continue;
     }
-    if (state.movementKeys.has(key)) out.errors.push('Энэ ирэлт/явалт аль хэдийн бүртгэгдсэн');
+    if (state.movementKeys.has(key)) out.errors.push(t('camp.row.already_registered'));
     const kind = classifyMovement(emp.crewAnchor, date, r.direction, state.settings);
     out.kind = kind;
     if (kind === CampMovementKind.OFF_ROSTER && r.meals === null) {
-      out.errors.push('Ээлжийн бус ирэлт/явалтад хоол заавал (хоол идэхгүй бол NONE)');
+      out.errors.push(t('camp.row.meals_required'));
     }
     const meals = r.meals ?? (r.direction === CampMovementDirection.ARRIVAL ? ROSTER_ARRIVAL_MEALS : ROSTER_DEPARTURE_MEALS);
     out.meals = meals;
@@ -106,12 +107,12 @@ export function planImport(input: ParsedRow[], state: PlannerState): ImportPlan 
 
     if (r.direction === CampMovementDirection.ARRIVAL) {
       const clash = stays.find((s) => s.endDate === null || s.endDate >= date);
-      if (clash) out.errors.push(clash.endDate === null ? `Кемпэд байгаа хэвээр (${clash.startDate}-нд ирсэн, явалт бүртгэгдээгүй)` : `Байх хугацаа давхцана (${clash.startDate} – ${clash.endDate})`);
+      if (clash) out.errors.push(clash.endDate === null ? t('camp.row.still_in_camp', { date: clash.startDate }) : t('camp.row.stay_overlap', { from: clash.startDate, to: clash.endDate }));
       let adjEnd: string | null = null;
       if (r.shift) {
         adjEnd = addDays(date, state.settings.rosterOnDays);
         const busy = [...adjOf(emp.id), ...plan.adjustments.filter((a) => a.employeeId === emp.id)].find((a) => overlaps(date, adjEnd as string, a.startDate, a.endDate));
-        if (busy) out.errors.push(`Ээлжийн зохицуулалт давхцана (${busy.startDate} – ${busy.endDate})`);
+        if (busy) out.errors.push(t('camp.row.adjustment_overlap', { from: busy.startDate, to: busy.endDate }));
       }
       if (out.errors.length > 0) continue;
       seen.add(key);
@@ -123,10 +124,10 @@ export function planImport(input: ParsedRow[], state: PlannerState): ImportPlan 
         plannedAdj.set(`${emp.id}|${newIdx}`, { idx, stayNewIdx: newIdx });
       }
     } else {
-      if (r.shift) out.errors.push('shift зөвхөн ARRIVAL мөрөнд');
+      if (r.shift) out.errors.push(t('camp.row.shift_arrival_only'));
       const open = stays.find((s) => s.endDate === null);
-      if (!open) out.errors.push('Кемпэд байхгүй (нээлттэй ирэлт алга) — эхлээд ирэлтийг бүртгэнэ үү');
-      else if (open.startDate > date) out.errors.push(`Явах огноо ирсэн огнооноос (${open.startDate}) өмнө байна`);
+      if (!open) out.errors.push(t('camp.row.not_in_camp'));
+      else if (open.startDate > date) out.errors.push(t('camp.row.departure_before_arrival', { date: open.startDate }));
       if (out.errors.length > 0 || !open) continue;
       seen.add(key);
       plan.movements.push({ key, employeeId: emp.id, date, direction: r.direction, kind, meals });

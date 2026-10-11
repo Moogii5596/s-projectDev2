@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CampEmployeeStatus, CampShiftAdjustmentReason } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
@@ -10,6 +10,7 @@ import { coversDay, eachDay } from './camp-date';
 import { resolveShift } from './shift-resolver';
 import { assertRange } from './range';
 import { CalendarQueryDto, CreateShiftAdjustmentsDto, RangeQueryDto } from './camp-attendance.dto';
+import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
 const MAX_ADJ_DAYS = 366;
@@ -46,23 +47,21 @@ export class CampShiftsService {
   /** Олон ажилтанд нэг дор. Нэг нь ч давхцвал бүгд татгалзана (409, кодуудыг нэрлэнэ) */
   async createAdjustments(tenantId: string, authId: string, campId: string, dto: CreateShiftAdjustmentsDto) {
     assertRange(dto.startDate, dto.endDate, MAX_ADJ_DAYS);
-    if (dto.reasonType === CampShiftAdjustmentReason.OTHER && !dto.reason) throw new BadRequestException('reasonType OTHER үед reason заавал');
+    if (dto.reasonType === CampShiftAdjustmentReason.OTHER && !dto.reason) throw badRequest('camp.err.shifts.1');
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorId = await this.access.require(tx, tenantId, authId, campId, P.SHIFT_ADJUST);
         await getCampOr404(tx, tenantId, campId);
         const emps = await tx.campEmployee.findMany({ where: { tenantId, campId, id: { in: dto.employeeIds } }, select: { id: true, employeeCode: true, status: true } });
-        if (emps.length !== dto.employeeIds.length) throw new BadRequestException(`${dto.employeeIds.length - emps.length} ажилтан энэ кемпэд олдсонгүй`);
+        if (emps.length !== dto.employeeIds.length) throw badRequest('camp.err.shifts.2', { n: dto.employeeIds.length - emps.length });
         const inactive = emps.filter((e) => e.status !== CampEmployeeStatus.ACTIVE);
-        if (inactive.length > 0) throw new BadRequestException(`Идэвхгүй ажилтан: ${inactive.map((e) => e.employeeCode).join(', ')}`);
+        if (inactive.length > 0) throw badRequest('camp.err.shifts.3', { codes: inactive.map((e) => e.employeeCode).join(', ') });
         const clashes = await tx.campShiftAdjustment.findMany({
           where: { tenantId, employeeId: { in: dto.employeeIds }, startDate: { lte: toDbDate(dto.endDate) }, endDate: { gte: toDbDate(dto.startDate) } },
           select: { startDate: true, endDate: true, employee: { select: { employeeCode: true } } },
         });
         if (clashes.length > 0) {
-          throw new ConflictException(
-            `Давхцах зохицуулалт байна: ${clashes.map((c) => `${c.employee.employeeCode} (${fromDbDate(c.startDate)} – ${fromDbDate(c.endDate)})`).join(', ')}`,
-          );
+          throw conflict('camp.err.shifts.5', { list: clashes.map((c) => `${c.employee.employeeCode} (${fromDbDate(c.startDate)} – ${fromDbDate(c.endDate)})`).join(', ') });
         }
         await tx.campShiftAdjustment.createMany({
           data: dto.employeeIds.map((employeeId) => ({
@@ -79,7 +78,7 @@ export class CampShiftsService {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.require(tx, tenantId, authId, campId, P.SHIFT_ADJUST);
       const row = await tx.campShiftAdjustment.findFirst({ where: { id, tenantId, employee: { campId } }, select: { id: true } });
-      if (!row) throw new NotFoundException('Зохицуулалт олдсонгүй');
+      if (!row) throw notFound('camp.err.shifts.4');
       await tx.campShiftAdjustment.delete({ where: { id } });
       return { deleted: true };
     });

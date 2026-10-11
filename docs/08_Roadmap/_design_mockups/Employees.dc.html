@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<title>Ажилтан оруулах</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+th,td{text-align:left;padding:0;border:1px solid #E2E5E0;font-size:13px;white-space:nowrap}
+th{font-size:12px;font-weight:600;color:#5B636B;background:#F7F8F5;padding:8px 10px}
+td{padding:8px 10px}
+</style>
+</helmet>
+<div style="min-height: 100%; box-sizing: border-box; background: #F3F4F1; font-family: 'IBM Plex Sans', 'Noto Sans SC', sans-serif; color: #16191D; padding: 24px">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 13px; color: #5B636B">Ажилтан › Бөөнөөр оруулах</div>
+<h1 style="margin: 0; font-size: 22px; font-weight: 700">Ажилтан хүснэгтээр оруулах</h1>
+</div>
+<button type="button" style="height: 38px; padding: 0 14px; border-radius: 8px; border: 1px solid #C7CCC5; background: #FFFFFF; font: inherit; font-size: 14px">Excel загвар татах</button>
+<button type="button" style="height: 38px; padding: 0 14px; border-radius: 8px; border: 1px solid #C7CCC5; background: #FFFFFF; font: inherit; font-size: 14px">Excel оруулах</button>
+</div>
+
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<div style="background: #FFFFFF; border: 1px solid #E2E5E0; border-radius: 10px; padding: 10px 14px; font-size: 14px"><b style="color: #0D6B5B">12</b> шинэ</div>
+<div style="background: #FFFFFF; border: 1px solid #E2E5E0; border-radius: 10px; padding: 10px 14px; font-size: 14px"><b style="color: #1F5FA8">3</b> шинэчлэх (код давхцсан)</div>
+<div style="background: #FFFFFF; border: 1px solid #E2E5E0; border-radius: 10px; padding: 10px 14px; font-size: 14px"><b style="color: #B42318">1</b> алдаатай</div>
+<div style="flex: 1; min-width: 260px; font-size: 13px; color: #5B636B; align-self: center">Excel-ээс мөрүүдийг хуулж шууд энд буулгаж (Ctrl+V) болно. Нүдэн дээр дарж засна.</div>
+</div>
+
+<section aria-label="Оруулах өгөгдөл" style="background: #FFFFFF; border: 1px solid #E2E5E0; border-radius: 12px; overflow: auto">
+<table style="width: 100%; border-collapse: collapse">
+<thead><tr><th style="width: 36px">#</th><th>Төлөв</th><th>Код</th><th>Овог нэр</th><th>Утас</th><th>Имэйл</th><th>Албан тушаал</th><th>Хэлтэс</th><th>Ростер</th><th>Байгууллага</th></tr></thead>
+<tbody>
+<tr><td style="color: #5B636B">1</td><td><span style="font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #E6F2EF; color: #0D6B5B">Шинэ</span></td><td>E-1041</td><td>Бат-Эрдэнэ Ганболд</td><td>9911 2233</td><td>ganbold@mail.mn</td><td>Тогооч</td><td>Катеринг</td><td>14/14</td><td>Sino Hydro</td></tr>
+<tr><td style="color: #5B636B">2</td><td><span style="font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #E6F2EF; color: #0D6B5B">Шинэ</span></td><td>E-1042</td><td>Нармандах Сарнай</td><td>8800 4411</td><td></td><td>Цэвэрлэгч</td><td>Кемп</td><td>14/14</td><td>Sino Hydro</td></tr>
+<tr style="background: #F2F6FB"><td style="color: #5B636B">3</td><td><span style="font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #E3ECF7; color: #1F5FA8">Шинэчлэх</span></td><td>E-0877</td><td>Дорж Энхтөр</td><td><s style="color: #8A9199">9900 1100</s> 9900 5577</td><td>enkhtur@mail.mn</td><td>Засварчин</td><td>Засвар</td><td>21/7</td><td>Sino Hydro</td></tr>
+<tr style="background: #FDF1F0"><td style="color: #5B636B">4</td><td><span style="font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #FBE4E2; color: #B42318">Алдаа</span></td><td>E-1043</td><td>Ли Вэй</td><td style="outline: 2px solid #B42318; outline-offset: -2px">99-11</td><td>liwei@sino.cn</td><td>Инженер</td><td style="outline: 2px solid #B42318; outline-offset: -2px">Геологи</td><td>28/14</td><td>Sino Hydro</td></tr>
+<tr><td style="color: #5B636B">5</td><td><span style="font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #E6F2EF; color: #0D6B5B">Шинэ</span></td><td>E-1044</td><td>Төмөр Анар</td><td>9505 6677</td><td>anar@mail.mn</td><td>Жолооч</td><td>Тээвэр</td><td>14/14</td><td>Гэрээт ХХК</td></tr>
+<tr><td style="color: #8A9199">6</td><td></td><td style="color: #8A9199">…</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+</tbody>
+</table>
+</section>
+
+<div role="alert" style="background: #FDF1F0; border: 1px solid #F3C9C5; border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.5; color: #7A1A12">
+<b>Мөр 4:</b> утасны дугаар 8 оронтой байх ёстой · «Геологи» хэлтэс олдсонгүй — <a href="#" style="color: #B42318">шинээр үүсгэх</a> эсвэл засна уу.
+</div>
+
+<div style="display: flex; gap: 12px; align-items: center; justify-content: flex-end; flex-wrap: wrap">
+<label style="display: flex; gap: 8px; align-items: center; font-size: 14px; margin-right: auto"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #0D6B5B">Алдаатай мөрийг алгасаж бусдыг оруулах</label>
+<button type="button" style="height: 40px; padding: 0 16px; border-radius: 8px; border: 1px solid #C7CCC5; background: #FFFFFF; font: inherit; font-size: 14px">Цуцлах</button>
+<button type="button" style="height: 40px; padding: 0 18px; border-radius: 8px; border: 0; background: #0D6B5B; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">Баталгаажуулах (15 мөр)</button>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,10 +1,11 @@
+import i18n from '../../../i18n'
 import type { MealType, Presence } from '../api/types'
 import { MEAL_ORDER } from './labels'
 
 /** Хоол × байршлын хүснэгт: мөр = хоол, багана = байршил (нэрээр эрэмбэлсэн, байршилгүй нь сүүлд) */
 export function pivotPresence(lines: Presence['lines']) {
   const locs = new Map<string, string>()
-  for (const l of lines) locs.set(l.mealLocationId ?? '', l.mealLocationName ?? 'Байршилгүй')
+  for (const l of lines) locs.set(l.mealLocationId ?? '', l.mealLocationName ?? i18n.t('camp.presence.no_location'))
   const columns = [...locs.entries()]
     .map(([id, name]) => ({ id, name }))
     .sort((a, b) => (a.id === '' ? 1 : b.id === '' ? -1 : a.name.localeCompare(b.name, 'mn')))

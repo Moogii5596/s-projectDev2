@@ -1,4 +1,4 @@
-# 04 — Кемп пилот: нэг Windows машин дээр интернэтэд нээх (v0.1.6)
+# 04 — Кемп пилот: нэг Windows машин дээр интернэтэд нээх (v0.1.6, шинэчлэл/staging — v0.2.0)
 
 > Үүсгэсэн: 2026-10-10 (v0.1.6) | Байгууллага: **Sino Hydro** (`sinohydro`) | Модуль: **Кемп**
 > Холбоотой: `deploy/pilot/` (скрипт, тохиргоо), `02_Local_Supabase_Docker_Windows.md` (dev орчин),
@@ -114,7 +114,7 @@ pnpm install --frozen-lockfile     # шинэ clone-д заавал (Supabase CL
 cd E:\MoogiiDev\Pilot\s-project
 .\deploy\pilot\pilot.ps1 firewall
 ```
-Гаднаас (LAN, Tailscale-ийн бусад төхөөрөмж) хаагдах TCP: 3000, 3100, 5173, 5174, 6379, 8088, 54320–54329, 55320–55329, 56379.
+Гаднаас (LAN, Tailscale-ийн бусад төхөөрөмж) хаагдах TCP: 3000, 3100, 3200, 5173, 5174, 6379, 8088, 8089, 54320–54329, 55320–55329, 56379, 56520–56529, 56579 (v0.2.0: staging-ийн портууд нэмэгдсэн → **v0.2.0 суулгасны дараа нэг удаа дахин ажиллуулна**).
 Энэ машин дээрээс (localhost) болон Funnel-ээр ажиллахад нөлөөлөхгүй. Dev-ийг өөр төхөөрөмжөөс (утаснаас :5173) нээх боломжгүй болно.
 
 > Supabase-ийн DB (`postgres`/`supabase_admin`) нууц үг нь local-ийн анхдагч `postgres` хэвээр — тиймээс энэ дүрэм **заавал**.
@@ -217,15 +217,87 @@ Start-ScheduledTask 'S-Project Pilot'
 
 ## 13. Шинэ хувилбар суулгах
 
+**Эхлээд staging дээр дадлага (§13в) — A = B болсны дараа л пилотод.**
+
+### v0.2.0 ба түүнээс хойш — нэг команд
 ```powershell
-.\deploy\pilot\pilot.ps1 backup
+cd E:\MoogiiDev\Pilot\s-project
+.\deploy\pilot\pilot.ps1 upgrade -Tag v0.2.1
+```
+Дараалал: `.env` шалгах → git tree цэвэр эсэх (commit хийгээгүй өөрчлөлттэй бол **эхлэхгүй**) → `git fetch --tags` → tag байгаа эсэх → **нөөц** → Task-ийг түр идэвхгүй + зогсоох → `git checkout <tag>` → шинэ хувилбарын `init` (migration) → `build` → `start` → health → Task-ийг дахин асаана. Лог: `deploy\pilot\run\logs\upgrade.log`.
+Алдаа гарвал **буцаах алхмыг хэвлэнэ** (өмнөх tag, яг энэ шинэчлэлийн нөөцийн зам) — хуулж ажиллуулна:
+```powershell
 .\deploy\pilot\pilot.ps1 stop
-git fetch --tags
-git checkout v0.1.x
-.\deploy\pilot\pilot.ps1 init     # шинэ migration
+git checkout v0.2.0
+.\deploy\pilot\pilot.ps1 restore E:\MoogiiDev\Pilot\backups\sinohydro-YYYYMMDD-HHMMSS.7z   # migration буцдаггүй тул заавал
 .\deploy\pilot\pilot.ps1 build
 Start-ScheduledTask 'S-Project Pilot'
 ```
+
+### v0.1.6.x → v0.2.0 (нэг удаа — хуучин `pilot.ps1`-д `upgrade` алга)
+```powershell
+cd E:\MoogiiDev\Pilot\s-project
+git status                                   # "nothing to commit" байх ёстой
+.\deploy\pilot\pilot.ps1 backup
+.\deploy\pilot\pilot.ps1 stop
+git fetch --tags
+git checkout v0.2.0
+.\deploy\pilot\pilot.ps1 init             # 5 шинэ migration (зөвхөн нэмэлт)
+.\deploy\pilot\pilot.ps1 build
+Start-ScheduledTask 'S-Project Pilot'
+.\deploy\pilot\pilot.ps1 status
+.\deploy\pilot\pilot.ps1 firewall         # Админ PowerShell — staging портуудыг нэмнэ (§6)
+```
+Шалгах: утаснаас нэвтрэх → Кемп нээгдэнэ (сүүлд орсон кемп), хэл сонгох (баруун дээд), Тохиргоо каталог.
+
+### 13в. Staging дээр шинэчлэлийн дадлага (v0.2.0 §0.2) — пилотын өгөгдлийг өөрчлөхгүй
+Staging = **ижил машин, тусдаа** Supabase (`s-project-staging`, 56521/56522, Studio 56523), Redis 56579, backend 3200, Caddy 8089 (Funnel-гүй, Task-гүй). Пилотын нөөцийг сэргээж, хуучин → шинэ хувилбарт шилжүүлээд хоолны тооцоо өөрчлөгдөөгүйг (`camp:snapshot` A = B) шалгана.
+
+**Нэг удаагийн бэлтгэл**
+```powershell
+# 1) Staging clone (пилотын хавтаснаас ТУСДАА)
+git -C E:\MoogiiDev\Pilot\s-project remote get-url origin        # пилотын URL
+git clone <тэр URL> E:\MoogiiDev\Staging\s-project
+# 2) Шинэ скриптийн "tools" хуулбар — хуучин tag-ийн clone-д deploy\staging алга тул скриптийг гаднаас ажиллуулна
+cd E:\MoogiiDev\Dev\s-project ; git fetch --tags
+git archive --format=zip -o E:\MoogiiDev\Staging\tools.zip v0.2.0 deploy   # PowerShell-ийн "|" binary-г эвддэг тул zip файлаар
+Expand-Archive E:\MoogiiDev\Staging\tools.zip E:\MoogiiDev\Staging\tools -Force
+# 3) .env.staging (staging clone-ийн root-д; PILOT_BACKUP_PASSWORD = пилотынх, бусад нууц ШИНЭ)
+copy E:\MoogiiDev\Staging\tools\deploy\staging\.env.staging.example E:\MoogiiDev\Staging\s-project\.env.staging
+notepad E:\MoogiiDev\Staging\s-project\.env.staging
+```
+Доорх командуудад `$st` товчлол:
+```powershell
+$st = 'E:\MoogiiDev\Staging\tools\deploy\pilot\pilot.ps1'
+$sr = 'E:\MoogiiDev\Staging\s-project'
+& $st check -Profile staging -Root $sr      # пилотын порт/DB руу заасан бол АЛДАА гаргаж зогсоно
+```
+
+**Дадлага (≈ 30–40 мин)**
+```powershell
+# A. Пилотын шинэ нөөц
+cd E:\MoogiiDev\Pilot\s-project ; .\deploy\pilot\pilot.ps1 backup
+# B. Staging-ийг пилотын ОДООГИЙН хувилбар дээр (жнь v0.1.6.1)
+cd $sr ; git fetch --tags ; git checkout v0.1.6.1
+& $st init  -Profile staging -Root $sr
+& $st build -Profile staging -Root $sr
+& $st restore E:\MoogiiDev\Pilot\backups\sinohydro-YYYYMMDD-HHMMSS.7z -Profile staging -Root $sr   # slug бичиж баталгаажуулна
+# C. Snapshot A (dev хавтаснаас — шинэ кодын CLI, staging DB-г зөвхөн уншина)
+cd E:\MoogiiDev\Dev\s-project
+pnpm camp:snapshot --env=E:\MoogiiDev\Staging\s-project\.env.staging --out=E:\MoogiiDev\Staging\a.json
+# D. Шинэчлэл (пилот дээр хийх яг тэр команд)
+& $st upgrade -Tag v0.2.0 -Profile staging -Root $sr
+# E. Snapshot B — A-тай ижил өдөр/мужаар (--like)
+pnpm camp:snapshot --env=E:\MoogiiDev\Staging\s-project\.env.staging --out=E:\MoogiiDev\Staging\b.json --like=E:\MoogiiDev\Staging\a.json
+pnpm camp:snapshot --compare E:\MoogiiDev\Staging\a.json E:\MoogiiDev\Staging\b.json
+#    ✅ A = B  → пилотыг §13-аар шинэчилнэ.   ❌ зөрүү → пилотод ХИЙХГҮЙ, зөрүүний жагсаалтыг надад илгээнэ (тоо л, нэр байхгүй)
+# F. Нэвтэрч шалгах: http://127.0.0.1:8089 (зөвхөн энэ машинаас) — пилотын хэрэглэгчийн нууц үгээр
+# G. Дуусахад зогсоох (өгөгдөл хадгалагдана; дараагийн дадлагад restore дахин хийнэ)
+& $st stop -All -Profile staging -Root $sr
+```
+- Замыг **бүтэн** (E:\...) бичнэ. Snapshot: кемп бүрт өнөөдөр − 35 … + 7 хоногийн хоолны тоо (хоол × байршил), хүн, хүн-өдөр, өрөөний самбарын нийлбэр, мастер/үйл ажиллагааны тоо. Файлд **хувийн мэдээлэл байхгүй** (тоо, кемп/байршлын нэр) — гэхдээ git-д оруулахгүй.
+- Staging нь пилотын нөөцийг агуулна → `.env.staging`, `E:\MoogiiDev\Staging\backups` пилоттой ижил хамгаалалт; дадлага дууссаны дараа `stop -All`.
+- `upgrade` нь staging-ийн өөрийн нөөцийг `staging-sinohydro-*.7z` нэрээр авна (пилотын нөөцтэй холилдохгүй).
 
 ### 13б. Hotfix (P0) — `release/v0.1` салбар (2026-10-11 шийдвэр D2)
 v0.1 хаагдсан; `main` дээр v0.2 хөгжиж байгаа тул пилотын P0 засварыг **dev хавтсанд** `release/v0.1` салбарт хийнэ:
@@ -241,6 +313,8 @@ git switch main ; git merge release/v0.1   # засварыг v0.2-т ч ору�
 ## 14. Хориотой
 
 - Пилотын хавтсанд `pnpm supabase:start|stop|reset`, `pnpm dev`, `pnpm test*`, `pnpm dev:test-user`.
+- Staging-ийн `.env.staging`-д пилотын порт (5532x, 56379, 3100, 8088) — `pilot.ps1` зогсооно; гараар ч бүү холбо.
+- Пилотын хавтсанд tracked файлыг гараар засах (`upgrade` бохир tree-д эхлэхгүй).
 - `supabase stop --no-backup` (**бүх өгөгдлийг устгана**), `supabase db reset` (restore-оос бусад үед).
 - Studio-г байнга асаах, 55322/3100/55321-ийг router-ээр (port forward) нээх.
 - `.env`, нөөц, нууц үгийг git / чат / имэйлээр дамжуулах.

@@ -1,8 +1,9 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { CacheService } from '../../../cache/cache.service';
 import { CampPermission } from './camp-permissions';
 import { Tx } from './camp-tx';
+import { forbidden } from '../../../common/i18n/app-error';
 
 /** Tenant-ийн эдгээр role бүх кемпийн бүх эрхтэй (анхны тохиргоо хийх боломж, ERD v4 §2.1) */
 const TENANT_ADMIN_ROLES: readonly UserRole[] = [UserRole.OWNER, UserRole.ADMIN];
@@ -38,7 +39,7 @@ export class CampAccessService {
       where: { authId, tenantId, isActive: true },
       select: { id: true, role: true },
     });
-    if (!user) throw new ForbiddenException('Хэрэглэгч энэ байгууллагад бүртгэлгүй эсвэл идэвхгүй байна');
+    if (!user) throw forbidden('camp.err.access.1');
 
     const key = this.cache.buildKey('camp', tenantId, 'perms', user.id);
     const cached = await this.cache.get<CampPermissionSet>(key);
@@ -81,7 +82,7 @@ export class CampAccessService {
     const list = Array.isArray(codes) ? codes : [codes];
     const actor = await this.resolve(tx, tenantId, authId);
     if (!list.some((c) => CampAccessService.has(actor.perms, campId, c))) {
-      throw new ForbiddenException(`Энэ үйлдэлд ${list.join(' эсвэл ')} эрх шаардлагатай`);
+      throw forbidden('camp.err.access.2', { perms: list.join(' / ') });
     }
     return actor.userId;
   }
@@ -93,7 +94,7 @@ export class CampAccessService {
 
   async requireInAnyCamp(tx: Tx, tenantId: string, authId: string, code: CampPermission): Promise<string> {
     const actor = await this.resolve(tx, tenantId, authId);
-    if (!CampAccessService.hasInAnyCamp(actor.perms, code)) throw new ForbiddenException(`Энэ үйлдэлд ${code} эрх шаардлагатай`);
+    if (!CampAccessService.hasInAnyCamp(actor.perms, code)) throw forbidden('camp.err.access.3', { code });
     return actor.userId;
   }
 
@@ -101,7 +102,7 @@ export class CampAccessService {
   async requireAccess(tx: Tx, tenantId: string, authId: string, campId: string | null): Promise<CampActor> {
     const actor = await this.resolve(tx, tenantId, authId);
     if (!CampAccessService.hasAccess(actor.perms, campId)) {
-      throw new ForbiddenException('Энэ кемпэд хандах эрх алга');
+      throw forbidden('camp.err.access.4');
     }
     return actor;
   }

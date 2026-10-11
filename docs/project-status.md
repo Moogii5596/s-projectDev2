@@ -49,8 +49,8 @@ Redis:     redis://localhost:6379
 | `v0.1.5` | Tier 2 Enterprise VPC | ✅ ДУУССАН | 2026-10-10 |
 | **`v0.1.6.1`** | **Кемп пилот (Sino Hydro, нэг Windows машин)** | **🔄 ПИЛОТ (бодит туршилт)** | **2026-10-10** |
 | `v0.2.0` | Пилотын үр дүн + Кемп V2 + техникийн өр (`08_Roadmap/V.0.2/`) | 📝 УРЬДЧИЛСАН | — |
-| `v0.3.0` | Tier 3 Air-Gapped / Offline-First (v0.2-оос шилжсэн, 2026-10-11) | 📋 ТӨЛӨВЛӨСӨН | — |
-| `v0.4.0+` | Нэмэлт хөгжүүлэлт | 📋 ИРЭЭДҮЙ | — |
+| `v0.3.0` | Байгууллагын дотоод Feed (PRD-05, ADR-004) | 📝 УРЬДЧИЛСАН | — |
+| `v0.4.0+` | Чат · Air-Gapped (шийдэгдээгүй) · нэмэлт | 📋 ИРЭЭДҮЙ | — |
 | `v1.0.0` | Public Production Launch | 🎯 ЗОРИЛГО | — |
 
 > **Хуучин дугаарлалт:** v0.1.0~v0.4.0 (Backend, Integration Tests, Frontend MVP, E2E+CI/CD) бүгд нэгдэж **v0.1.0** болсон.  
@@ -209,6 +209,6 @@ esbuild (default) → decorator metadata дэмждэггүй → БҮХИЙ Л 
 
 ### Ирээдүйн хувилбарууд
 - [ ] **v0.2.0:** Пилотын үр дүн + Кемп V2 + техникийн өр — `08_Roadmap/V.0.2/01_plan_draft.md` (пилотын шалгуур: `docs/pilot-test-guide.md` §7)
-- [ ] **v0.3.0:** Air-Gapped / Offline-First (Tier 3)
-- [ ] **v0.4.0+:** Plugin marketplace, Public API SDK, Analytics
+- [ ] **v0.3.0:** Байгууллагын дотоод Feed — `08_Roadmap/V.0.3/00_plan_draft.md`
+- [ ] **v0.4.0+:** Чат · Air-Gapped (хэрэгтэй эсэх шийдэгдээгүй)
 - [ ] **v1.0.0:** Production Launch — Load test, Security audit, SLA 99.9%

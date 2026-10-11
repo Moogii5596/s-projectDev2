@@ -1,6 +1,6 @@
 {
   "name": "s-project",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "private": true,
   "description": "S Project — Multi-Tenant Supply Chain Management Platform",
   "scripts": {
@@ -16,6 +16,7 @@
     "dev:test-user": "pnpm --filter @s-project/core-kernel dev:test-user",
     "pilot:onboard": "pnpm --silent --filter @s-project/core-kernel pilot onboard",
     "pilot:user": "pnpm --silent --filter @s-project/core-kernel pilot user",
+    "camp:snapshot": "pnpm --silent --filter @s-project/core-kernel camp:snapshot",
     "db:migrate": "supabase migration up",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",

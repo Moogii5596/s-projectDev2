@@ -3,9 +3,14 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import { HOME_PATH, isEnabled } from '../config/enabled-modules'
+import { useTranslation } from 'react-i18next'
+import LanguageSwitcher from './LanguageSwitcher'
+import { useI18nSync } from '../hooks/useI18nSync'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
+  const { t } = useTranslation()
+  useI18nSync()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   // Кемпийн хуудсууд (эрхийн матриц, календарь) өргөн хүснэгттэй
@@ -33,10 +38,10 @@ export default function Layout() {
           S Project
         </span>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          {isEnabled('camp') && <button onClick={() => navigate('/camp')} className={navCls('/camp')}>Кемп</button>}
-          {isEnabled('inventory') && <button onClick={() => navigate('/inventory')} className={navCls('/inventory')}>Бараа</button>}
-          {isEnabled('vendors') && <button onClick={() => navigate('/vendors')} className={navCls('/vendors')}>Нийлүүлэгч</button>}
-          {isEnabled('reports') && <button onClick={() => navigate('/reports')} className={navCls('/reports')}>Тайлан</button>}
+          {isEnabled('camp') && <button onClick={() => navigate('/camp')} className={navCls('/camp')}>{t('nav.camp')}</button>}
+          {isEnabled('inventory') && <button onClick={() => navigate('/inventory')} className={navCls('/inventory')}>{t('nav.inventory')}</button>}
+          {isEnabled('vendors') && <button onClick={() => navigate('/vendors')} className={navCls('/vendors')}>{t('nav.vendors')}</button>}
+          {isEnabled('reports') && <button onClick={() => navigate('/reports')} className={navCls('/reports')}>{t('nav.reports')}</button>}
           {isEnabled('mr') && (
             <>
               <button onClick={() => navigate('/admin/approval-sla')} className="text-sm text-gray-600 hover:text-blue-600">SLA</button>
@@ -44,12 +49,13 @@ export default function Layout() {
               <button onClick={() => navigate('/admin/delegations')} className="text-sm text-gray-600 hover:text-blue-600">Delegation</button>
             </>
           )}
+          <LanguageSwitcher persist />
           <span className="text-sm text-gray-500">{user?.email}</span>
           <button
             onClick={handleSignOut}
             className="text-sm text-red-600 hover:text-red-700 font-medium"
           >
-            Гарах
+            {t('nav.sign_out')}
           </button>
         </div>
       </nav>

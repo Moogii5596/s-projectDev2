@@ -9,6 +9,8 @@ export interface Me {
   role: UserRole
   tenantId: string
   isActive: boolean
+  /** v0.2.0 §0.7 — mn | en | zh */
+  locale?: string
 }
 
 export async function getMe(): Promise<Me> {

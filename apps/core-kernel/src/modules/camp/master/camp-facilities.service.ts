@@ -1,12 +1,15 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CampMaintenanceStatus, CampRoomStatus } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
+import { CampAuditService } from '../common/camp-audit.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { inTenantTx } from '../common/camp-tx';
+import { inTenantTx, Tx } from '../common/camp-tx';
+import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
+import { BULK_ROOMS_MAX, roomNumbers } from './room-range';
 import { withCampErrors } from '../common/camp-errors';
 import { getCampOr404 } from '../common/camp-lookup';
-import { CreateBuildingDto, CreateRoomDto, QueryActiveOnlyDto, QueryRoomsDto, UpdateBuildingDto, UpdateRoomDto } from './camp-master.dto';
+import { BulkRoomsDto, CreateBuildingDto, CreateRoomDto, QueryActiveOnlyDto, QueryRoomsDto, UpdateBuildingDto, UpdateRoomDto } from './camp-master.dto';
 
 const P = CAMP_PERMISSIONS;
 /** Өрөөг кемпийн мастер эсвэл өрөөний эрхтэй хүн удирдана (ERD v4 §2.2: катеринг админ room.manage-тэй) */
@@ -25,34 +28,52 @@ const ROOM_SELECT = {
   building: { select: { code: true, name: true } },
 } as const;
 
+const BUILDING_AUDIT_FIELDS = ['code', 'name', 'isActive'] as const;
+const ROOM_AUDIT_FIELDS = ['buildingId', 'roomNo', 'floor', 'capacity', 'status', 'note'] as const;
+
 /** Байр, өрөө (Шат 2.4). Дүүргэлт (сул/дүүрсэн) Шат 3.5-д тооцоологдоно. */
 @Injectable()
 export class CampFacilitiesService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
     private readonly access: CampAccessService,
+    private readonly audit: CampAuditService,
   ) {}
 
   async listBuildings(tenantId: string, authId: string, campId: string, q: QueryActiveOnlyDto) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       await getCampOr404(tx, tenantId, campId);
-      return tx.campBuilding.findMany({
-        where: { tenantId, campId, ...(q.activeOnly ? { isActive: true } : {}) },
-        select: { ...BUILDING_SELECT, _count: { select: { rooms: true } } },
-        orderBy: { code: 'asc' },
-      });
+      const [rows, stats] = await Promise.all([
+        tx.campBuilding.findMany({
+          where: { tenantId, campId, ...(q.activeOnly ? { isActive: true } : {}) },
+          select: { ...BUILDING_SELECT, _count: { select: { rooms: true } } },
+          orderBy: { code: 'asc' },
+        }),
+        // FB-07: идэвхтэй (INACTIVE биш) өрөөний тоо + нийт багтаамж
+        tx.campRoom.groupBy({ by: ['buildingId'], where: { tenantId, campId, status: { not: 'INACTIVE' } }, _count: { _all: true }, _sum: { capacity: true } }),
+      ]);
+      const byId = new Map(stats.map((x) => [x.buildingId, x]));
+      return rows.map((b) => ({ ...b, activeRooms: byId.get(b.id)?._count._all ?? 0, capacity: byId.get(b.id)?._sum.capacity ?? 0 }));
     });
   }
 
   async createBuilding(tenantId: string, authId: string, campId: string, dto: CreateBuildingDto) {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
-        await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
+        const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         await getCampOr404(tx, tenantId, campId);
         const dup = await tx.campBuilding.findFirst({ where: { tenantId, campId, code: dto.code }, select: { id: true } });
-        if (dup) throw new ConflictException(`"${dto.code}" кодтой байр аль хэдийн байна`);
-        return tx.campBuilding.create({ data: { tenantId, campId, code: dto.code, name: dto.name }, select: BUILDING_SELECT });
+        if (dup) throw conflict('camp.err.facilities.1', { code: dto.code });
+        const b = await tx.campBuilding.create({ data: { tenantId, campId, code: dto.code, name: dto.name }, select: BUILDING_SELECT });
+        await this.audit.record(tx, {
+          tenantId, campId, entityType: 'building', entityId: b.id, action: 'CREATE', actorUserId,
+          fields: BUILDING_AUDIT_FIELDS, before: null, after: b, summaryParams: { code: b.code, name: b.name },
+        });
+        if (!dto.rooms) return b;
+        // FB-07: байр + өрөөнүүд НЭГ transaction (өрөөний алдаа → байр ч үүсэхгүй)
+        const rooms = await this.createRoomsBulk(tx, { tenantId, campId, actorUserId }, b, dto.rooms);
+        return { ...b, roomsCreated: rooms.created, roomsSkipped: rooms.skipped };
       }),
     );
   }
@@ -60,14 +81,14 @@ export class CampFacilitiesService {
   async updateBuilding(tenantId: string, authId: string, campId: string, id: string, dto: UpdateBuildingDto) {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
-        await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
-        const b = await tx.campBuilding.findFirst({ where: { id, tenantId, campId }, select: { id: true } });
-        if (!b) throw new NotFoundException('Байр олдсонгүй');
+        const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
+        const b = await tx.campBuilding.findFirst({ where: { id, tenantId, campId }, select: BUILDING_SELECT });
+        if (!b) throw notFound('camp.err.facilities.2');
         if (dto.isActive === false) {
           const active = await tx.campRoom.count({ where: { tenantId, buildingId: id, status: { not: 'INACTIVE' } } });
-          if (active > 0) throw new ConflictException(`Байранд идэвхтэй ${active} өрөө байна — эхлээд өрөөнүүдийг INACTIVE болгоно уу`);
+          if (active > 0) throw conflict('camp.err.facilities.3', { active });
         }
-        return tx.campBuilding.update({
+        const after = await tx.campBuilding.update({
           where: { id },
           data: {
             ...(dto.name !== undefined ? { name: dto.name } : {}),
@@ -75,8 +96,54 @@ export class CampFacilitiesService {
           },
           select: BUILDING_SELECT,
         });
+        await this.audit.record(tx, {
+          tenantId, campId, entityType: 'building', entityId: id, action: 'UPDATE', actorUserId,
+          fields: BUILDING_AUDIT_FIELDS, before: b, after, summaryParams: { code: after.code, name: after.name },
+        });
+        return after;
       }),
     );
+  }
+
+  /** FB-07 — POST buildings/:id/rooms/bulk ("+ Олон өрөө") */
+  async bulkRooms(tenantId: string, authId: string, campId: string, buildingId: string, dto: BulkRoomsDto) {
+    return withCampErrors(() =>
+      inTenantTx(this.prisma, tenantId, async (tx) => {
+        const actorUserId = await this.access.require(tx, tenantId, authId, campId, ROOM_WRITE);
+        const b = await tx.campBuilding.findFirst({ where: { id: buildingId, tenantId, campId }, select: { id: true, code: true, isActive: true } });
+        if (!b) throw notFound('camp.err.facilities.2');
+        if (!b.isActive) throw badRequest('camp.err.facilities.4');
+        return this.createRoomsBulk(tx, { tenantId, campId, actorUserId }, b, dto);
+      }),
+    );
+  }
+
+  private async createRoomsBulk(tx: Tx, ctx: { tenantId: string; campId: string; actorUserId: string }, building: { id: string; code: string }, dto: BulkRoomsDto) {
+    if (dto.to < dto.from) throw badRequest('rooms.bulk_range');
+    const n = dto.to - dto.from + 1;
+    if (n > BULK_ROOMS_MAX) throw badRequest('rooms.bulk_too_many', { max: BULK_ROOMS_MAX, n });
+    const numbers = roomNumbers(dto);
+    const existing = await tx.campRoom.findMany({ where: { tenantId: ctx.tenantId, buildingId: building.id, roomNo: { in: numbers } }, select: { roomNo: true } });
+    const exists = new Set(existing.map((r) => r.roomNo));
+    if (exists.size > 0 && dto.skipExisting === false) {
+      const list = numbers.filter((x) => exists.has(x));
+      throw conflict('rooms.bulk_exists', { n: list.length, rooms: list.slice(0, 10).join(', ') + (list.length > 10 ? '…' : '') });
+    }
+    const toCreate = numbers.filter((x) => !exists.has(x));
+    if (toCreate.length > 0) {
+      await tx.campRoom.createMany({
+        data: toCreate.map((roomNo) => ({ tenantId: ctx.tenantId, campId: ctx.campId, buildingId: building.id, roomNo, floor: dto.floor ?? null, capacity: dto.capacity })),
+      });
+      const created = await tx.campRoom.findMany({ where: { tenantId: ctx.tenantId, buildingId: building.id, roomNo: { in: toCreate } }, select: ROOM_SELECT });
+      await this.audit.recordMany(
+        tx,
+        created.map((room) => ({
+          tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'room' as const, entityId: room.id, action: 'CREATE' as const, actorUserId: ctx.actorUserId,
+          fields: ROOM_AUDIT_FIELDS, before: null, after: room, summaryParams: { room: room.roomNo, building: building.code },
+        })),
+      );
+    }
+    return { created: toCreate.length, skipped: numbers.filter((x) => exists.has(x)) };
   }
 
   async listRooms(tenantId: string, authId: string, campId: string, q: QueryRoomsDto) {
@@ -99,14 +166,14 @@ export class CampFacilitiesService {
   async createRoom(tenantId: string, authId: string, campId: string, dto: CreateRoomDto) {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
-        await this.access.require(tx, tenantId, authId, campId, ROOM_WRITE);
+        const actorUserId = await this.access.require(tx, tenantId, authId, campId, ROOM_WRITE);
         await getCampOr404(tx, tenantId, campId);
         const b = await tx.campBuilding.findFirst({ where: { id: dto.buildingId, tenantId, campId }, select: { isActive: true } });
-        if (!b) throw new BadRequestException('Байр энэ кемпэд олдсонгүй');
-        if (!b.isActive) throw new BadRequestException('Идэвхгүй байранд өрөө нэмэх боломжгүй');
+        if (!b) throw badRequest('camp.err.facilities.5');
+        if (!b.isActive) throw badRequest('camp.err.facilities.4');
         const dup = await tx.campRoom.findFirst({ where: { tenantId, buildingId: dto.buildingId, roomNo: dto.roomNo }, select: { id: true } });
-        if (dup) throw new ConflictException(`"${dto.roomNo}" дугаартай өрөө энэ байранд аль хэдийн байна`);
-        return tx.campRoom.create({
+        if (dup) throw conflict('camp.err.facilities.6', { roomNo: dto.roomNo });
+        const room = await tx.campRoom.create({
           data: {
             tenantId,
             campId,
@@ -118,6 +185,11 @@ export class CampFacilitiesService {
           },
           select: ROOM_SELECT,
         });
+        await this.audit.record(tx, {
+          tenantId, campId, entityType: 'room', entityId: room.id, action: 'CREATE', actorUserId,
+          fields: ROOM_AUDIT_FIELDS, before: null, after: room, summaryParams: { room: room.roomNo, building: room.building?.code ?? null },
+        });
+        return room;
       }),
     );
   }
@@ -125,15 +197,15 @@ export class CampFacilitiesService {
   async updateRoom(tenantId: string, authId: string, campId: string, id: string, dto: UpdateRoomDto) {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
-        await this.access.require(tx, tenantId, authId, campId, ROOM_WRITE);
-        const room = await tx.campRoom.findFirst({ where: { id, tenantId, campId }, select: { id: true, buildingId: true } });
-        if (!room) throw new NotFoundException('Өрөө олдсонгүй');
+        const actorUserId = await this.access.require(tx, tenantId, authId, campId, ROOM_WRITE);
+        const room = await tx.campRoom.findFirst({ where: { id, tenantId, campId }, select: ROOM_SELECT });
+        if (!room) throw notFound('camp.err.facilities.7');
         if (dto.roomNo !== undefined) {
           const dup = await tx.campRoom.findFirst({
             where: { tenantId, buildingId: room.buildingId, roomNo: dto.roomNo, NOT: { id } },
             select: { id: true },
           });
-          if (dup) throw new ConflictException(`"${dto.roomNo}" дугаартай өрөө энэ байранд аль хэдийн байна`);
+          if (dup) throw conflict('camp.err.facilities.6', { roomNo: dto.roomNo });
         }
         // Шат 4: өрөөг түгжсэн (blocks_room) нээлттэй засвар байхад гараар MAINTENANCE-ээс гаргахгүй —
         // засвар дуусах/цуцлагдахад автоматаар ACTIVE болно
@@ -143,10 +215,10 @@ export class CampFacilitiesService {
             select: { requestNo: true },
           });
           if (blocking) {
-            throw new ConflictException(`Өрөө нээлттэй засвартай (${blocking.requestNo}) — засвар дуусахад автоматаар идэвхжинэ`);
+            throw conflict('camp.err.facilities.8', { requestNo: blocking.requestNo });
           }
         }
-        return tx.campRoom.update({
+        const after = await tx.campRoom.update({
           where: { id },
           data: {
             ...(dto.roomNo !== undefined ? { roomNo: dto.roomNo } : {}),
@@ -157,6 +229,11 @@ export class CampFacilitiesService {
           },
           select: ROOM_SELECT,
         });
+        await this.audit.record(tx, {
+          tenantId, campId, entityType: 'room', entityId: id, action: 'UPDATE', actorUserId,
+          fields: ROOM_AUDIT_FIELDS, before: room, after, summaryParams: { room: after.roomNo, building: after.building?.code ?? null },
+        });
+        return after;
       }),
     );
   }

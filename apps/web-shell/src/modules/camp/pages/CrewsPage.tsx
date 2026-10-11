@@ -6,12 +6,14 @@ import type { Crew } from '../api/types'
 import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
 import { P } from '../lib/permissions'
-import { WEEKDAYS } from '../lib/labels'
+import { weekdayName } from '../lib/labels'
 import { isoWeekday } from '../lib/dates'
 import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, td } from '../components/ui'
+import { useTranslation } from 'react-i18next'
 
-/** /camp/:campId/crews — баг (ростер). Ирэх өдөр нь кемпийн солигдох гарагтай таарна */
+/** Тохиргоо › Ростер (FB-06: "Баг" → "Ростер"). Ирэх өдөр нь кемпийн солигдох гарагтай таарна */
 export default function CrewsPage() {
+  const { t } = useTranslation()
   const { campId = '' } = useParams()
   const perms = useCampPermissions(campId)
   const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => campApi.crews(campId) })
@@ -22,30 +24,39 @@ export default function CrewsPage() {
   const cycle = settings.data ? settings.data.rosterOnDays + settings.data.rosterOffDays : 28
 
   return (
-    <Card title="Баг (ростер)" actions={canEdit && <Button size="sm" onClick={() => setModal('new')}>+ Баг</Button>}>
+    <Card
+      title={t('camp.crew.title')}
+      actions={
+        canEdit && (
+          <Button size="sm" onClick={() => setModal('new')}>
+            {t('camp.crew.add')}
+          </Button>
+        )
+      }
+    >
       <p className="text-xs text-gray-500 mb-3">
-        Баг бүр {cycle} хоногийн мөчлөгтэй. "Ирэх өдөр" — багийн ирдэг аль нэг {WEEKDAYS[changeover]} гараг (жнь А баг 2026-10-07). Үүнээс
-        хойш/өмнө {cycle} хоног тутам давтагдана.
+        {t('camp.crew.help', { cycle, weekday: weekdayName(changeover) })}
       </p>
       {(crews.isLoading || settings.isLoading) && <Loading />}
       <ErrorBox error={crews.error ?? settings.error} />
-      {crews.data && crews.data.length === 0 && <Empty>Баг бүртгэгдээгүй</Empty>}
+      {crews.data && crews.data.length === 0 && <Empty>{t('camp.crew.empty')}</Empty>}
       {crews.data && crews.data.length > 0 && (
-        <Table head={['Код', 'Нэр', 'Ирэх өдөр', 'Төлөв', '']}>
+        <Table head={[t('camp.common.code'), t('camp.common.name'), t('camp.crew.anchor'), t('camp.crew.employees'), t('camp.common.status'), '']}>
           {crews.data.map((c) => (
             <tr key={c.id}>
               <td className={`${td} font-mono font-medium`}>{c.code}</td>
               <td className={td}>{c.name ?? '—'}</td>
               <td className={td}>
-                {c.rosterAnchorDate} <span className="text-gray-400">({WEEKDAYS[isoWeekday(c.rosterAnchorDate)]})</span>
+                {c.rosterAnchorDate} <span className="text-gray-400">({weekdayName(isoWeekday(c.rosterAnchorDate))})</span>
               </td>
+              <td className={td}>{c.employeeCount ?? '—'}</td>
               <td className={td}>
                 <ActiveBadge active={c.isActive} />
               </td>
               <td className={`${td} text-right`}>
                 {canEdit && (
                   <Button variant="ghost" onClick={() => setModal(c)}>
-                    Засах
+                    {t('camp.common.edit')}
                   </Button>
                 )}
               </td>
@@ -59,6 +70,7 @@ export default function CrewsPage() {
 }
 
 function CrewModal({ campId, crew, changeover, onClose }: { campId: string; crew: Crew | null; changeover: number; onClose: () => void }) {
+  const { t } = useTranslation()
   const [code, setCode] = useState(crew?.code ?? '')
   const [name, setName] = useState(crew?.name ?? '')
   const [anchor, setAnchor] = useState(crew?.rosterAnchorDate ?? '')
@@ -74,35 +86,35 @@ function CrewModal({ campId, crew, changeover, onClose }: { campId: string; crew
   )
   return (
     <Modal
-      title={crew ? `Баг ${crew.code} засах` : 'Баг нэмэх'}
+      title={crew ? t('camp.crew.edit_title', { code: crew.code }) : t('camp.crew.add_title')}
       onClose={onClose}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Болих
+            {t('camp.common.cancel')}
           </Button>
           <Button onClick={() => m.mutate(undefined)} loading={m.isPending} disabled={!anchor || wrongDay || (!crew && !code.trim())}>
-            Хадгалах
+            {t('camp.common.save')}
           </Button>
         </>
       }
     >
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Код">{(id) => <input id={id} className={inputCls} value={code} onChange={(e) => setCode(e.target.value)} disabled={!!crew} maxLength={10} />}</Field>
+        <Field label={t('camp.common.code')}>{(id) => <input id={id} className={inputCls} value={code} onChange={(e) => setCode(e.target.value)} disabled={!!crew} maxLength={10} />}</Field>
         <div className="col-span-2">
-          <Field label="Нэр">{(id) => <input id={id} className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />}</Field>
+          <Field label={t('camp.common.name')}>{(id) => <input id={id} className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />}</Field>
         </div>
       </div>
       <Field
-        label="Ирэх өдөр"
-        hint={`${WEEKDAYS[changeover]} гараг байх ёстой`}
-        error={wrongDay ? `${anchor} нь ${WEEKDAYS[isoWeekday(anchor)]} — кемпийн солигдох гараг ${WEEKDAYS[changeover]}` : null}
+        label={t('camp.crew.anchor')}
+        hint={t('camp.crew.anchor_hint', { weekday: weekdayName(changeover) })}
+        error={wrongDay ? t('camp.crew.wrong_day', { date: anchor, weekday: weekdayName(isoWeekday(anchor)), changeover: weekdayName(changeover) }) : null}
       >
         {(id) => <input id={id} type="date" className={inputCls} value={anchor} onChange={(e) => setAnchor(e.target.value)} />}
       </Field>
       {crew && (
         <label className="inline-flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} /> Идэвхтэй
+          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} /> {t('camp.common.active')}
         </label>
       )}
       <ErrorBox error={m.error} />

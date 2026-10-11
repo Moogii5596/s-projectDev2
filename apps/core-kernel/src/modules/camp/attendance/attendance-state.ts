@@ -1,9 +1,9 @@
-import { ConflictException } from '@nestjs/common';
 import { CampMovementDirection, CampShiftAdjustmentReason } from '@prisma/client';
 import { fromDbDate, toDbDate, Tx } from '../common/camp-tx';
 import { getRosterSettings } from '../common/camp-lookup';
 import { addDays } from './camp-date';
 import { ImportPlan, movementKey, PlannerState } from './import-planner';
+import { conflict } from '../../../common/i18n/app-error';
 
 /** Төлөвлөгчийн DB төлөв: тухайн ажилтнуудын (кодоор) байх хугацаа, бүртгэл, зохицуулалт — огнооны мужид хамаарах */
 export async function loadPlannerState(tx: Tx, tenantId: string, campId: string, codes: string[], dates: string[]): Promise<PlannerState> {
@@ -68,7 +68,7 @@ export async function applyPlan(
   const idOf = new Map(created.map((m) => [movementKey(m.employeeId, fromDbDate(m.movementDate), m.direction as CampMovementDirection), m.id]));
   const must = (key: string) => {
     const id = idOf.get(key);
-    if (!id) throw new ConflictException(`Бүртгэл үүссэнгүй (${key})`);
+    if (!id) throw conflict('camp.err.attendance_state.1', { key });
     return id;
   };
   if (plan.newStays.length) {
@@ -85,7 +85,7 @@ export async function applyPlan(
       where: { id: c.stayId, tenantId, endDate: null },
       data: { endDate: toDbDate(c.endDate), departureMovementId: must(c.departureKey) },
     });
-    if (res.count !== 1) throw new ConflictException('Байх хугацаа өөрчлөгдсөн байна (зэрэгцээ үйлдэл) — дахин оролдоно уу');
+    if (res.count !== 1) throw conflict('camp.err.attendance_state.2');
   }
   if (plan.adjustments.length) {
     await tx.campShiftAdjustment.createMany({

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
 import type { Employee } from '../api/types'
 import { inputCls } from './ui'
+import { useTranslation } from 'react-i18next'
 
 export interface PickedEmployee {
   id: string
@@ -37,6 +38,7 @@ export default function EmployeePicker({
   onChange: (v: PickedEmployee[]) => void
   multiple?: boolean
 }) {
+  const { t } = useTranslation()
   const [q, setQ] = useState('')
   const term = useDebounced(q.trim())
   const results = useQuery({
@@ -59,7 +61,7 @@ export default function EmployeePicker({
           {value.map((v) => (
             <span key={v.id} className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-800 text-xs px-2 py-1">
               {v.employeeCode} · {v.fullName}
-              <button type="button" aria-label={`${v.employeeCode} хасах`} className="text-blue-400 hover:text-red-600" onClick={() => onChange(value.filter((x) => x.id !== v.id))}>
+              <button type="button" aria-label={t('camp.picker.remove', { code: v.employeeCode })} className="text-blue-400 hover:text-red-600" onClick={() => onChange(value.filter((x) => x.id !== v.id))}>
                 ×
               </button>
             </span>
@@ -68,11 +70,11 @@ export default function EmployeePicker({
       )}
       {showSearch && (
         <div className="relative">
-          <input aria-label={`${label} — код эсвэл нэрээр хайх`} className={inputCls} placeholder="Код эсвэл нэрээр хайх" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input aria-label={t('camp.picker.search_label', { label })} className={inputCls} placeholder={t('camp.picker.search')} value={q} onChange={(e) => setQ(e.target.value)} />
           {term.length > 0 && (
             <ul role="listbox" className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg text-sm">
-              {results.isLoading && <li className="px-3 py-2 text-gray-400">Хайж байна…</li>}
-              {results.data?.data.length === 0 && <li className="px-3 py-2 text-gray-400">Олдсонгүй</li>}
+              {results.isLoading && <li className="px-3 py-2 text-gray-400">{t('camp.picker.searching')}</li>}
+              {results.data?.data.length === 0 && <li className="px-3 py-2 text-gray-400">{t('camp.error.not_found')}</li>}
               {results.data?.data.map((e) => (
                 <li key={e.id}>
                   <button type="button" role="option" aria-selected={false} className="w-full text-left px-3 py-2 hover:bg-blue-50" onClick={() => pick(e)}>
@@ -80,7 +82,7 @@ export default function EmployeePicker({
                     {e.fullName}
                     <span className="text-gray-400 text-xs ml-2">
                       {e.department.code}
-                      {e.crew ? ` · ${e.crew.code} баг` : ''}
+                      {e.crew ? ` · ${t('camp.picker.roster', { code: e.crew.code })}` : ''}
                     </span>
                   </button>
                 </li>

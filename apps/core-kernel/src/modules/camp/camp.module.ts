@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
 import { CampAccessService } from './common/camp-access.service';
+import { CampAuditService } from './common/camp-audit.service';
+import { CampAuditController } from './audit/camp-audit.controller';
+import { CampDataController } from './data/camp-data.controller';
+import { CampDataImportService } from './data/camp-data-import.service';
 import { CampRbacController } from './rbac/camp-rbac.controller';
 import { CampRbacService } from './rbac/camp-rbac.service';
 import { CampSettingsController } from './settings/camp-settings.controller';
@@ -37,9 +41,13 @@ import { CampMaintenanceService } from './maintenance/camp-maintenance.service';
     CampAssetCategoriesController,
     CampAssetsController,
     CampMaintenanceController,
+    CampAuditController,
+    CampDataController,
   ],
   providers: [
     CampAccessService,
+    CampAuditService,
+    CampDataImportService,
     CampRbacService,
     CampSettingsService,
     CampsService,
@@ -55,6 +63,6 @@ import { CampMaintenanceService } from './maintenance/camp-maintenance.service';
     CampAssetsService,
     CampMaintenanceService,
   ],
-  exports: [CampAccessService, CampPresenceService],
+  exports: [CampAccessService, CampAuditService, CampPresenceService],
 })
 export class CampModule {}

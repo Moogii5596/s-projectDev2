@@ -1,3 +1,4 @@
+import i18n from '../../../i18n'
 import type { MaintenanceAction, MaintenanceStatus } from '../api/types'
 
 /**
@@ -20,12 +21,9 @@ const FROM: Record<MaintenanceAction, MaintenanceStatus[]> = {
   cancel: ['OPEN', 'IN_PROGRESS'],
 }
 
-export const ACTION_LABEL: Record<MaintenanceAction, string> = {
-  start: 'Эхлүүлэх',
-  complete: 'Дуусгах',
-  reopen: 'Дахин нээх',
-  close: 'Хаах (зардал бүртгэх)',
-  cancel: 'Цуцлах',
+export const ACTION_LABEL = {} as Record<MaintenanceAction, string>
+for (const a of ['start', 'complete', 'reopen', 'close', 'cancel'] as MaintenanceAction[]) {
+  Object.defineProperty(ACTION_LABEL, a, { enumerable: true, get: () => i18n.t(`camp.maint.action.${a}`) })
 }
 
 function allowed(action: MaintenanceAction, a: MaintenanceActor): boolean {

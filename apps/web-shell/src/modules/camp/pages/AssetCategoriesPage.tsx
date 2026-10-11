@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
 import type { AssetCategory } from '../api/types'
@@ -7,9 +6,11 @@ import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
 import { P, canInAnyCamp } from '../lib/permissions'
 import { ActiveBadge, Button, Card, Empty, ErrorBox, Loading, PageHeader, Table, inputCls, td } from '../components/ui'
+import { useTranslation } from 'react-i18next'
 
 /** /camp/admin/asset-categories — хөрөнгийн ангилал (tenant түвшин; аль нэг кемпэд asset.manage эрхтэй бол засна) */
 export default function AssetCategoriesPage() {
+  const { t } = useTranslation()
   const perms = useCampPermissions()
   const canEdit = canInAnyCamp(perms.data, P.ASSET_MANAGE)
   const list = useQuery({ queryKey: campKeys.assetCategories, queryFn: () => campApi.assetCategories(false) })
@@ -24,24 +25,18 @@ export default function AssetCategoriesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-gray-500">
-        <Link to="/camp" className="hover:text-blue-600">
-          Кемпүүд
-        </Link>{' '}
-        / Хөрөнгийн ангилал
-      </div>
-      <PageHeader title="Хөрөнгийн ангилал" subtitle="Бүх кемпэд нийтлэг (жнь: Тавилга, Цахилгаан бараа, Гал тогооны тоног)" />
+      <PageHeader title={t('camp.system.section.asset-categories')} subtitle={t('camp.assetcat.subtitle')} />
       <Card>
         {list.isLoading && <Loading />}
         <ErrorBox error={list.error} onRetry={() => list.refetch()} />
-        {list.data && list.data.length === 0 && <Empty>Ангилал бүртгэгдээгүй</Empty>}
+        {list.data && list.data.length === 0 && <Empty>{t('camp.assetcat.empty')}</Empty>}
         {list.data && list.data.length > 0 && (
-          <Table head={['Нэр', 'Төлөв', '']}>
+          <Table head={[t('camp.common.name'), t('camp.common.status'), '']}>
             {list.data.map((c) => (
               <tr key={c.id}>
                 <td className={td}>
                   {editing?.id === c.id ? (
-                    <input aria-label="Ангиллын нэр" className={inputCls} value={editing.name} onChange={(e) => setEditing({ id: c.id, name: e.target.value })} maxLength={100} autoFocus />
+                    <input aria-label={t('camp.assetcat.name')} className={inputCls} value={editing.name} onChange={(e) => setEditing({ id: c.id, name: e.target.value })} maxLength={100} autoFocus />
                   ) : (
                     c.name
                   )}
@@ -54,19 +49,19 @@ export default function AssetCategoriesPage() {
                     (editing?.id === c.id ? (
                       <>
                         <Button variant="ghost" disabled={!editing.name.trim() || editing.name.trim() === c.name} onClick={() => update.mutate({ c, name: editing.name.trim() })}>
-                          Хадгалах
+                          {t('camp.common.save')}
                         </Button>
                         <Button variant="ghost" onClick={() => setEditing(null)}>
-                          Болих
+                          {t('camp.common.cancel')}
                         </Button>
                       </>
                     ) : (
                       <>
                         <Button variant="ghost" onClick={() => setEditing({ id: c.id, name: c.name })}>
-                          Нэр солих
+                          {t('camp.common.rename')}
                         </Button>
                         <Button variant="ghost" onClick={() => update.mutate({ c, isActive: !c.isActive })}>
-                          {c.isActive ? 'Идэвхгүй болгох' : 'Идэвхжүүлэх'}
+                          {c.isActive ? t('camp.common.deactivate') : t('camp.common.activate')}
                         </Button>
                       </>
                     ))}
@@ -83,9 +78,9 @@ export default function AssetCategoriesPage() {
               if (name.trim()) add.mutate(undefined)
             }}
           >
-            <input aria-label="Шинэ ангиллын нэр" className={inputCls} placeholder="Шинэ ангиллын нэр" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
+            <input aria-label={t('camp.assetcat.new')} className={inputCls} placeholder={t('camp.assetcat.new')} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
             <Button type="submit" loading={add.isPending} disabled={!name.trim()}>
-              Нэмэх
+              {t('camp.common.add')}
             </Button>
           </form>
         )}

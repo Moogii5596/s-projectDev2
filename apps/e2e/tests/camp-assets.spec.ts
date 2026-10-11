@@ -117,7 +117,9 @@ test.describe.serial('Кемп — хөрөнгө ба засвар', () => {
     await expect(page.getByRole('heading', { name: new RegExp(`ZAS-${CODE}-${YEAR}-0001`) })).toBeVisible();
     await expect(page.getByText(/Өрөөг түгжинэ \(засварт\)/)).toBeVisible();
 
-    await openSection(page, 'Байр, өрөө');
+    // v0.2.0 FB-05: "Байр, өрөө" → Тохиргоо › Байр, өрөө
+    await openSection(page, 'Тохиргоо');
+    await page.getByRole('navigation', { name: 'Тохиргоо' }).getByRole('link', { name: 'Байр, өрөө' }).click();
     await expect(page.getByRole('row', { name: /102/ }).getByRole('link', { name: /Засварт/ })).toBeVisible();
   });
 

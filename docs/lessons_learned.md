@@ -88,9 +88,18 @@
 | PS-001 | Windows PowerShell 5.1: BOM, native stderr, Start-Process, cmd давхарга | UTF-8 BOM; native дуудлагад түр `Continue`; `node` шууд; pwsh-оор parse + shim тест |
 | PROC-008 | `pkill -f "[x]yz"` ч ижил командад `xyz` бичвэрийг агуулбал өөрийгөө алав | pkill-ийг тусдаа, бусад бичвэргүй дуудлагад |
 | PROC-009 | Шинэ clone-д `init` → Supabase CLI алга (`pnpm install` дараагийн алхамд байсан) | Суулгах скриптийг ХООСОН clone-оос туршина; хамаарлыг эхэнд шалгаж/суулгана |
+| PROC-011 | Хуулахын өмнөх шалгалт "M" (commit хийгээгүй) файлыг илрүүлсэн ч скрипт зогсолгүй дарж бичсэн | Pre-hash таарахгүй/`git status` M бол **ЗОГСОХ** (скрипт өөрөө abort) |
 | FE-007 | API 401 → `/login` redirect ч локал session үлдсэн → /login ↔ нүүр төгсгөлгүй | 401-д эхлээд `signOut({scope:'local'})`; logout = `local` |
 | OPS-003 | Supabase `[auth.email] enable_signup=false` → "Email logins are disabled" | Бүртгэл хаах = зөвхөн `[auth] enable_signup=false`; auth тохиргоог бодит GoTrue-гаар нэвтэрч шалгах |
 | PROC-010 | `.ps1`-ийн `$env:` өөрчлөлт хэрэглэгчийн цонхонд үлдэв (NODE_ENV=production → devDeps алгассан) | Скрипт дуусахад орчныг буцаах; `pnpm install`-ийг NODE_ENV-гүй |
+| FE-008 | Nested route (`settings/:section`) доторх `to="../x"` → `settings/x` биш `/camp/:id/x` руу шилжив (route шатлалаар тооцдог) | Nested route-д харьцангуй линк = `relative="path"`; табын линк бүрийг e2e-д дарж шалгах |
+| PROC-012 | Write хэрэгслээр `"\uFEFF"` бичихэд жинхэнэ BOM тэмдэгт болж eslint `no-irregular-whitespace` | Escape дараалал/үл үзэгдэх тэмдэгтийг Python-оор бичиж, `grep -P '\xEF\xBB\xBF'`-ээр шалгах |
+| TEST-017 | DB reset + grant-ийн дараа Redis-ийн эрхийн cache хуучин хэвээр → e2e 403 | DB reset/seed бүрийн дараа Redis `FLUSHALL` (harness `db-reset.sh`-д нэмсэн) |
+| TEST-018 | Playwright `getByRole({name})` нь substring таарна; хэрэглэгчийн төлөв (хэл) өөрчилсөн e2e дараагийн тестийг эвдэв | `exact: true`; хэрэглэгчийн тохиргоог өөрчилсөн spec `afterAll`-д буцаана |
+| OPS-004 | Task Scheduler (`RestartCount 3`) нь restore/upgrade-ийн үед алсан watchdog-ийг 1 мин-д дахин асааж болзошгүй | Урт засвар үйлдлийн өмнө Task-ийг `Disable` → дуусахад (алдаатай ч) `Enable` |
+| PS-002 | pwsh shim: python shebang скрипт → `ProcessName` = `python3` → PID файлын шалгалт "ажиллаагүй" | Процессын нэрийг шалгадаг кодыг тестлэх shim нь жинхэнэ нэртэй (C wrapper + `PR_SET_PDEATHSIG`) |
+| TEST-019 | CONC-002 тест (30 зэрэгцээ MR) postgres горимын бүтэн ажиллуулалтад 4-өөс 1 удаа унав | "Flaky" гэж хаахгүй (TEST-015) — QA-09-д бүртгэж, шалтгааныг (pool `maxWait` 2с / tx 5с) шалгана |
+| PROC-013 | Таньд өгсөн зааварт `pnpm supabase:reset`-ийн дараа `pnpm dev:test-user` орхигдож e2e 6 тест "Invalid login credentials" | DB reset гэсэн алхам бүрийн дараа CI-ийн дарааллыг (`db:generate` → `dev:test-user`) заавал хамт бичнэ |
 
 ---
 
@@ -1186,12 +1195,56 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** `lib/unauthorized.ts` — 401 → `supabase.auth.signOut({ scope: 'local' })` → `/login` (аль хэдийн тэнд бол шилжихгүй); "Гарах" товч `scope: 'local'` (бусад төхөөрөмжийг гаргахгүй). Unit 3 + браузерын давталтын тест (шинэ код: 4 шилжилт, `/login`, localStorage цэвэр).
 **Дүрэм:** Auth-ийн урсгалд "серверт session хүчингүй, клиентэд хүчинтэй" кейсийг заавал шалгана; redirect хийхээс өмнө тухайн шалтгааныг (локал төлөв) цэвэрлэнэ, redirect бүрт "аль хэдийн тэнд бол" хамгаалалт.
 
+### [PROC-011] 🔴 Таны commit хийгээгүй `pilot-feedback.md`-ийг дарж бичсэн
+**Тохиолдсон (2026-10-11 11:16):** Баримт хуулах скрипт эхэндээ `git status` ба одоогийн hash-ийг **хэвлэсэн** ч шалгаагүй — `docs/pilot-feedback.md` нь таны засвартай (M, hash `35134bab…`, HEAD = миний өмнөх `42bf98a1…`) байсан ч tar-аар дарж бичив. Дарагдсан агуулга нь таны надад илгээсэн 14 саналын текст байсан гэж үзэж, түүнийг файлын хавсралтад үгчлэн сэргээв.
+**Шалтгаан:** PROC-005/006-ийн pre-hash шалгалтыг "харах" алхам болгосон (нөхцөлгүй үргэлжилсэн); өмнөх v0.1.6 bundle-д л automated (`bad=1 → зогсох`) байсан.
+**Шийдэл/Дүрэм:** Төхөөрөмж рүү хуулах **бүрт** check файлд `өмнөх hash` заавал, скрипт тулгаад таарахгүй бол **юу ч бичихгүй зогсоно** (NEW файл аль хэдийн байвал ч зогсоно). Хэвлэх ≠ шалгах. Хэрэглэгчийн засаж байж болох файл (feedback, .env, тэмдэглэл) → дарж бичихээс өмнө заавал татаж нэгтгэнэ.
+
+## 21. v0.2.0 — Олон хэл, бөөнөөр оруулах, staging/upgrade (2026-10-11)
+
+### [FE-008] Тохиргооны каталогийн линк кемпээс гаргаж хаяв
+**Тохиолдсон:** `CampSettingsPage` (route `settings/:section`) доторх каталогийн `NavLink to={`../${s}`}` → `/camp/:id/settings/meal-locations` биш `/camp/:id/meal-locations` (байхгүй route) руу очиж, `CampRoutes`-ийн fallback `/camp` руу буцаав. e2e (`camp-v020.spec.ts`) барьсан.
+**Шалтгаан:** React Router-ийн `..` анхдагчаар **route** шатлалаар (`relative="route"`), URL сегментээр биш.
+**Дүрэм:** Nested route-д харьцангуй линк → `relative="path"`; табын линк бүрийг e2e-д дарж URL-ийг шалгана.
+
+### [PROC-012] Үл үзэгдэх тэмдэгт (BOM) кодонд
+**Тохиолдсон:** CSV-ийн BOM-ийг арилгах `"\uFEFF"` мөрийг Write хэрэгслээр бичихэд escape биш жинхэнэ U+FEFF болж, eslint `no-irregular-whitespace` алдаа.
+**Дүрэм:** Escape дараалал, үл үзэгдэх тэмдэгттэй кодыг Python (`\\uFEFF`)-оор бичиж, `grep -P '\xEF\xBB\xBF'`-ээр шалгана.
+
+### [TEST-017] DB reset-ийн дараа эрхийн cache (Redis) хуучин
+**Тохиолдсон:** Harness DB-г reset + `camp_e2e_grant.sql` хийсний дараа e2e 403 — эрхийн жагсаалт Redis-д reset-ээс өмнөхөөрөө.
+**Дүрэм:** DB reset/seed/restore бүрийн дараа Redis `FLUSHALL` (`pilot.ps1 restore` аль хэдийн хийдэг; harness `db-reset.sh`-д нэмэв).
+
+### [TEST-018] Playwright substring + төлөв үлдээсэн тест
+**Тохиолдсон:** `getByRole('button', { name: 'Хаах' })` хоёр товч олж strict алдаа; хэлний тест `admin@test.mn`-ийн хэлийг `zh` болгож үлдээгээд дараагийн spec-үүд хятадаар нээгдэв.
+**Дүрэм:** `exact: true` (эсвэл `.last()` — зориуд); хэрэглэгчийн тохиргоог өөрчилсөн spec `afterAll`-д буцаана.
+
+### [OPS-004] Task Scheduler watchdog-ийг засвар үйлдлийн дундуур дахин асаах эрсдэл (урьдчилан сэргийлсэн)
+**Илэрсэн:** `upgrade`-ийг зохиохдоо: `install-tasks` нь `RestartCount 3 / 1 мин` — `Stop-Watchdog` процессыг алахад Task "амжилтгүй" гэж үзэж 1 минутын дараа `pilot.ps1 run`-ийг дахин асааж, build/restore-ийн дундуур backend асаах боломжтой (v0.1.6-ийн `restore`-д ч мөн).
+**Шийдэл:** `upgrade`/`restore` нь эхлээд Task-ийг `Stop` + `Disable`, дуусахад (алдаатай ч `finally`) `Enable` (`upgrade` амжилттай бол `Start`).
+**Дүрэм:** Автомат дахин асаагчтай (watchdog, Task, service) системд урт засвар хийхдээ асаагчийг өөрийг нь түр унтраана.
+
+### [PS-002] Shim-ийн процессын нэр
+**Тохиолдсон:** pwsh shim тестэд `node` нь python shebang скрипт → `Get-Process`-ийн `ProcessName` = `python3` → `Get-PilotProcess 'backend' 'node'` "ажиллаагүй" гэж `stop` юу ч зогсоосонгүй (тест барьсан, бодит Windows-д `node.exe` тул асуудалгүй).
+**Дүрэм:** Процессын нэр шалгадаг кодыг тестлэх shim нь жинхэнэ нэртэй байх (жижиг C wrapper, хүүхэд процесс `PR_SET_PDEATHSIG`-тэй).
+
+### [TEST-019] CONC-002 тест postgres горимын бүтэн ажиллуулалтад нэг удаа унав
+**Тохиолдсон:** Integration-ийг `DATABASE_URL=postgres`-оор 4 удаа бүтэн ажиллуулахад 1 удаа `30 зэрэгцээ MR үүсгэлт` унав; дангаар нь 2 удаа, бүтнээр 3 удаа ногоон.
+**Таамаг (батлагдаагүй):** 30 transaction advisory lock-оор цувран хүлээх үед Prisma interactive transaction-ийн `maxWait` 2с / `timeout` 5с хэтэрч 500 (harness-ийн wasm adapter удаан). v0.2.0-д MR код өөрчлөгдөөгүй.
+**Дүрэм:** TEST-015-ийн дагуу "flaky" гэж хаахгүй — QA-09-д бүртгэж, алдааны мессежийг барьж шалтгааныг батална.
+
+### [PROC-013] Зааварт `dev:test-user` орхигдов → e2e 6 тест унав
+**Тохиолдсон (2026-10-11 19:10):** v0.2.0-ийг таны машин дээр шалгах зааварт `pnpm supabase:reset` (auth.users-ийг цэвэрлэнэ) бичээд `pnpm dev:test-user`-ийг орхисон → `admin@test.mn` алга → `loginAs` 6 тест "Invalid login credentials", 23 тест ажиллаагүй. Код буруу биш (cloud e2e 55/55).
+**Дүрэм:** DB reset орсон заавар бүрт CI-ийн дараалал: `supabase:reset` → `db:generate` → `dev:test-user` → тест. Зааврыг `.github/workflows/ci.yml`-тэй тулгаж бичнэ.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-11 | §21 (v0.2.0): FE-008, PROC-012, TEST-017, TEST-018, OPS-004, PS-002, TEST-019, PROC-013 |
+| 2026-10-11 | §20: PROC-011 (commit хийгээгүй файлыг дарж бичсэн) |
 | 2026-10-10 | §20: FE-007 (/login ↔ /camp давталт) |
 | 2026-10-10 | §20: OPS-003 (auth.email enable_signup) |
 | 2026-10-10 | §20: PROC-010 (`.ps1` орчин цонхонд үлдсэн) |

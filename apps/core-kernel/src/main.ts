@@ -4,7 +4,7 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import { Logger } from '@nestjs/common';
 import { AppModule } from './app/app.module';
 import { EnvConfig } from './config/env.config';
-import { configureApp } from './common/http/configure-app';
+import { configureApp, JSON_BODY_LIMIT } from './common/http/configure-app';
 import { RestartPolicy, resolveRestartPolicyOptions, startClusterPrimary } from './config/cluster-restart';
 
 async function bootstrap() {
@@ -12,7 +12,8 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: false }),
+    // v0.2.0 §0.5: "Хүснэгтээр оруулах" (≤5000 мөр JSON) — анхдагч 1 MB хүрэхгүй
+    new FastifyAdapter({ logger: false, bodyLimit: JSON_BODY_LIMIT }),
     { bufferLogs: true },
   );
 

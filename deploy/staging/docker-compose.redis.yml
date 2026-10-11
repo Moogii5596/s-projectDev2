@@ -1,0 +1,16 @@
+# S Project — v0.2.0 STAGING: тусдаа Redis (dev 6379, пилот 56379-тэй холилдохгүй)
+# 127.0.0.1-д л холбогдоно (LAN/интернэтэд хаалттай). pilot.ps1 асаана:
+#   docker compose -f deploy/staging/docker-compose.redis.yml -p s-project-staging-redis up -d
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: s-project-staging-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000"]
+    ports:
+      - "127.0.0.1:56579:6379"
+    volumes:
+      - staging_redis_data:/data
+
+volumes:
+  staging_redis_data:

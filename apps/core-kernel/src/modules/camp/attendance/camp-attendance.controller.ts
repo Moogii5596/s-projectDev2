@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, PayloadTooLargeException, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Req, Res } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { reqUser } from '../common/camp-request';
 import { CampAttendanceService } from './camp-attendance.service';
@@ -12,10 +12,12 @@ import {
   CreateShiftAdjustmentsDto,
   DateQueryDto,
   EndRoomAllocationDto,
+  ManualMovementsDto,
   QueryAllocationsDto,
   QueryImportsDto,
   RangeQueryDto,
 } from './camp-attendance.dto';
+import { badRequest, payloadTooLarge } from '../../../common/i18n/app-error';
 
 const uuid = () => new ParseUUIDPipe();
 
@@ -24,13 +26,13 @@ type MultipartFile = { filename: string; toBuffer: () => Promise<Buffer> };
 /** @fastify/multipart — нэг файл ("file" талбар) → Buffer (≤ 2 MB) */
 async function readUpload(req: FastifyRequest): Promise<{ fileName: string; buffer: Buffer }> {
   const r = req as unknown as { isMultipart?: () => boolean; file?: () => Promise<MultipartFile | undefined> };
-  if (typeof r.file !== 'function' || !r.isMultipart?.()) throw new BadRequestException('multipart/form-data хэлбэрээр "file" талбартай илгээнэ үү');
+  if (typeof r.file !== 'function' || !r.isMultipart?.()) throw badRequest('camp.err.attendance_ctl.1');
   const file = await r.file();
-  if (!file) throw new BadRequestException('Файл алга ("file" талбар)');
+  if (!file) throw badRequest('camp.err.attendance_ctl.2');
   try {
     return { fileName: file.filename, buffer: await file.toBuffer() };
   } catch (err) {
-    if ((err as { code?: string }).code === 'FST_REQ_FILE_TOO_LARGE') throw new PayloadTooLargeException('Файл 2 MB-ээс их байна');
+    if ((err as { code?: string }).code === 'FST_REQ_FILE_TOO_LARGE') throw payloadTooLarge('camp.err.attendance_ctl.3');
     throw err;
   }
 }
@@ -63,6 +65,14 @@ export class CampAttendanceController {
     const u = reqUser(req);
     const { fileName, buffer } = await readUpload(req);
     return this.attendance.preview(u.tenantId, u.id, campId, fileName, buffer);
+  }
+
+  /** FB-14 (v0.2.0) — олон ажилтны ирц нэг дор (xlsx-гүй) → PREVIEW */
+  @Post('movement-imports/manual')
+  @HttpCode(201)
+  manual(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Body() dto: ManualMovementsDto) {
+    const u = reqUser(req);
+    return this.attendance.previewManual(u.tenantId, u.id, campId, dto);
   }
 
   @Get('movement-imports')
