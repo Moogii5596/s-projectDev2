@@ -2,6 +2,7 @@ import { useState, FormEvent, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { HOME_PATH } from '../config/enabled-modules'
+import { CHANGE_PASSWORD_PATH } from '../lib/password-change'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 
@@ -9,7 +10,8 @@ export default function LoginPage() {
   const { signIn, user, loading } = useAuth()
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  /** v0.2.2 D-10: утас / нэвтрэх нэр / имэйл */
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -27,8 +29,8 @@ export default function LoginPage() {
     setSubmitting(true)
 
     try {
-      await signIn(email, password)
-      navigate(HOME_PATH)
+      const r = await signIn(identifier, password, t('auth.error'))
+      navigate(r.mustChangePassword ? CHANGE_PASSWORD_PATH : HOME_PATH)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth.error'))
     } finally {
@@ -56,18 +58,24 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              {t('auth.email')}
+            <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('auth.identifier')}
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="identifier"
+              name="identifier"
+              type="text"
+              inputMode="text"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               required
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="email@example.com"
+              placeholder={t('auth.identifier_placeholder')}
             />
+            <p className="mt-1 text-xs text-gray-500">{t('auth.identifier_hint')}</p>
           </div>
 
           <div>
@@ -77,6 +85,7 @@ export default function LoginPage() {
             <input
               id="password"
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

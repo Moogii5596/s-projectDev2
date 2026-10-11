@@ -52,7 +52,10 @@
 	}
 
 	handle /api/* {
-		reverse_proxy 127.0.0.1:{$PILOT_API_PORT:3100}
+		# v0.2.2 D-10: backend-ийн sign-in хязгаарт бодит IP (trusted_proxies-ээр шийдсэн {client_ip}; SEC-007)
+		reverse_proxy 127.0.0.1:{$PILOT_API_PORT:3100} {
+			header_up X-Real-IP {client_ip}
+		}
 	}
 
 	# Hash-тай build файлууд: байхгүй бол 404 (index.html буцаавал шинэчлэлийн дараа хуучин chunk "MIME type" алдаа өгнө)

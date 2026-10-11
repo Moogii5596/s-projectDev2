@@ -17,7 +17,7 @@ test.describe('Auth flow', () => {
   test('буруу нууц үгтэй login амжилтгүй болно', async ({ page }) => {
     await page.goto('/login');
     // LoginPage label нь Монгол бөгөөд htmlFor холболтгүй тул type selector ашиглана
-    await page.locator('input[type="email"]').fill('admin@test.mn');
+    await page.locator('#identifier').fill('admin@test.mn');
     await page.locator('input[type="password"]').fill('wrong_password');
     await page.getByRole('button', { name: /нэвтрэх|login/i }).click();
     // Алдааны мэдэгдэл харагдана, redirect болохгүй

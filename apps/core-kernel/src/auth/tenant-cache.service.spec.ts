@@ -120,9 +120,22 @@ describe('TenantCacheService.isMember()', () => {
     expect(redis.setex).not.toHaveBeenCalled();
   });
 
-  it('invalidateMember() → membership key устгана', async () => {
+  it('invalidateMember() → membership + нууц үг солих (v0.2.2) key устгана', async () => {
     await service.invalidateMember(T, U);
-    expect(redis.del).toHaveBeenCalledWith(`tenant:member:${T}:${U}`);
+    expect(redis.del).toHaveBeenCalledWith(`tenant:member:${T}:${U}`, `tenant:pwchange:${T}:${U}`);
+  });
+
+  it('v0.2.2 mustChangePassword: cache miss → DB (нэг tx, set_config), 60с cache; cache hit → DB-гүй; DB алдаа → false', async () => {
+    tx.$queryRaw.mockResolvedValueOnce([{ must: true }]);
+    await expect(service.mustChangePassword(T, U)).resolves.toBe(true);
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(redis.setex).toHaveBeenCalledWith(`tenant:pwchange:${T}:${U}`, 60, '1');
+    prisma.$transaction.mockClear();
+    redis.get.mockResolvedValueOnce('0');
+    await expect(service.mustChangePassword(T, U)).resolves.toBe(false);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    prisma.$transaction.mockRejectedValueOnce(new Error('db down'));
+    await expect(service.mustChangePassword(T, U)).resolves.toBe(false);
   });
 });
 

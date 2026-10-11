@@ -81,7 +81,7 @@ export async function createSubmittedMr(
 export async function loginAsUser(page: Page, key: FixtureUserKey): Promise<void> {
   const u = fixture().users[key];
   await page.goto('/login');
-  await page.locator('input[type="email"]').fill(u.email);
+  await page.locator('#identifier').fill(u.email);
   await page.locator('input[type="password"]').fill(u.password);
   await page.getByRole('button', { name: /нэвтрэх|login/i }).click();
   await page.waitForURL('**/requisitions**', { timeout: 15_000 });

@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { supabase } from '../lib/supabase'
 import { handleUnauthorized } from '../lib/unauthorized'
+import { handlePasswordChangeRequired, isPasswordChangeRequired } from '../lib/password-change'
 import { currentLang } from '../i18n'
 
 // VITE_API_BASE_URL хоосон бол '' (same origin) → Vite proxy '/api' → localhost:3000
@@ -31,6 +32,10 @@ apiClient.interceptors.request.use(async (config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // v0.2.2 D-06: нууц үг солих шаардлагатай → /change-password
+    if (isPasswordChangeRequired(error)) {
+      handlePasswordChangeRequired({ currentPath: () => window.location.pathname, redirect: (path) => { window.location.href = path } })
+    }
     if (error.response?.status === 401) {
       await handleUnauthorized({
         signOutLocal: () => supabase.auth.signOut({ scope: 'local' }),

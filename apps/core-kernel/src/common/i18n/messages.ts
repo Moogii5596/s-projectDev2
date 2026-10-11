@@ -11,6 +11,15 @@ export const MESSAGES = {
   'error.forbidden': { mn: 'Энэ үйлдэлд эрх алга', en: 'You do not have permission for this action', zh: '您无权执行此操作' },
   'error.not_found': { mn: 'Бичлэг олдсонгүй', en: 'Record not found', zh: '未找到记录' },
 
+  // ── Нэвтрэлт (v0.2.2 Блок 2, D-10 / D-06) ──
+  'auth.invalid_credentials': { mn: 'Нэвтрэх нэр эсвэл нууц үг буруу', en: 'Incorrect login or password', zh: '登录名或密码错误' },
+  'auth.too_many_attempts': { mn: 'Олон удаа оролдсон. 15 минутын дараа дахин оролдоно уу', en: 'Too many attempts. Please try again in 15 minutes', zh: '尝试次数过多。请在 15 分钟后重试' },
+  'auth.service_unavailable': { mn: 'Нэвтрэлтийн сервис түр ажиллахгүй байна', en: 'The sign-in service is temporarily unavailable', zh: '登录服务暂时不可用' },
+  'auth.password_change_required': { mn: 'Үргэлжлүүлэхийн өмнө нууц үгээ солино уу', en: 'Please change your password before continuing', zh: '继续之前请修改密码' },
+  'auth.password_same': { mn: 'Шинэ нууц үг одоогийнхоос өөр байх ёстой', en: 'The new password must differ from the current one', zh: '新密码必须与当前密码不同' },
+  'auth.password_current_wrong': { mn: 'Одоогийн нууц үг буруу', en: 'The current password is incorrect', zh: '当前密码不正确' },
+  'auth.password_weak': { mn: 'Шинэ нууц үг шаардлага хангахгүй (хамгийн багадаа 12 тэмдэгт)', en: 'The new password does not meet the requirements (at least 12 characters)', zh: '新密码不符合要求（至少 12 个字符）' },
+
   // ── Орчуулгын засвар (Системийн тохиргоо → Орчуулга) ──
   'i18n.unknown_key': { mn: 'Үл мэдэгдэх түлхүүр: {key}', en: 'Unknown key: {key}', zh: '未知的键：{key}' },
   'i18n.vars_mismatch': { mn: 'Хувьсагч таарахгүй: байх ёстой {expected}, бичсэн {got}', en: 'Variables do not match: expected {expected}, got {got}', zh: '变量不匹配：应为 {expected}，实际为 {got}' },
@@ -253,6 +262,10 @@ export const MESSAGES = {
   'camp.err.rbac.11': { mn: 'Шууд олгосон эрх олдсонгүй', en: 'Direct permission not found', zh: '未找到直接授予的权限' },
   'camp.err.rbac.12': { mn: 'Албан тушаал олдсонгүй', en: 'Position not found', zh: '未找到职位' },
   'camp.err.rbac.13': { mn: 'Нэг роль загварт хоёр удаа орсон байна', en: 'The same role appears twice in the templates', zh: '同一角色在模板中出现了两次' },
+  'camp.err.login.1': { mn: 'Ажилтан олдсонгүй', en: 'Employee not found', zh: '未找到员工' },
+  'camp.err.login.2': { mn: 'Идэвхгүй ажилтанд нэвтрэх эрх холбох боломжгүй', en: 'Sign-in access cannot be linked to an inactive employee', zh: '不能为已停用的员工关联登录权限' },
+  'camp.err.login.3': { mn: 'Энэ ажилтан өөр хэрэглэгчтэй холбогдсон байна — эхлээд салгана уу', en: 'This employee is linked to another user — unlink first', zh: '该员工已关联其他用户——请先解除关联' },
+  'camp.err.login.4': { mn: 'Энэ хэрэглэгч өөр ажилтантай холбогдсон байна', en: 'This user is already linked to another employee', zh: '该用户已关联其他员工' },
   'camp.err.rooms.1': { mn: 'Ажилтан идэвхгүй', en: 'Employee is inactive', zh: '员工已停用' },
   'camp.err.rooms.2': { mn: 'Өрөө {roomNo} {status} төлөвтэй — хуваарилах боломжгүй', en: 'Room {roomNo} is in status {status} — cannot be assigned', zh: '房间 {roomNo} 状态为 {status}，无法分配' },
   'camp.err.rooms.3': { mn: 'Хуваарилалт олдсонгүй', en: 'Assignment not found', zh: '未找到分配记录' },

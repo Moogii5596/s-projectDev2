@@ -6,9 +6,12 @@ import { HOME_PATH, isEnabled } from '../config/enabled-modules'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from './LanguageSwitcher'
 import { useI18nSync } from '../hooks/useI18nSync'
+import { useMe } from '../hooks/useMe'
+import { CHANGE_PASSWORD_PATH, displayLogin } from '../lib/password-change'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
+  const { me } = useMe()
   const { t } = useTranslation()
   useI18nSync()
   const navigate = useNavigate()
@@ -50,7 +53,14 @@ export default function Layout() {
             </>
           )}
           <LanguageSwitcher persist />
-          <span className="text-sm text-gray-500">{user?.email}</span>
+          {/* v0.2.2: нэвтрэх нэр (дотоод .login.invalid имэйлийг харуулахгүй) + нууц үг солих */}
+          <button
+            onClick={() => navigate(CHANGE_PASSWORD_PATH)}
+            className="text-sm text-gray-500 hover:text-blue-600"
+            title={t('auth.change.link')}
+          >
+            {displayLogin(me, user?.email)}
+          </button>
           <button
             onClick={handleSignOut}
             className="text-sm text-red-600 hover:text-red-700 font-medium"

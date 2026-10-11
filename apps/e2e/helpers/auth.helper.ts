@@ -11,11 +11,11 @@ export const TEST_CREDENTIALS = {
  *
  * NOTE: getByLabel ашиглахгүй — LoginPage дахь label нь Монгол текстийн
  * "И-мэйл"/"Нууц үг" бөгөөд htmlFor/id холболтгүй.
- * input[type] селектор нь хамгийн найдвартай.
+ * v0.2.2: нэвтрэх талбар = `#identifier` (утас / нэвтрэх нэр / имэйл, type="text").
  */
 export async function loginAs(page: Page, email = TEST_CREDENTIALS.email, password = TEST_CREDENTIALS.password): Promise<void> {
   await page.goto('/login');
-  await page.locator('input[type="email"]').fill(email);
+  await page.locator('#identifier').fill(email);
   await page.locator('input[type="password"]').fill(password);
   await page.getByRole('button', { name: /нэвтрэх|login/i }).click();
   await page.waitForURL('**/requisitions**', { timeout: 10_000 });

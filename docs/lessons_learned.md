@@ -110,6 +110,8 @@
 | TEST-022 | Harness client-ийг дахин generate хийхэд wasm loader-ийн засвар арилж "wasm module undefined" | Засварыг `gen.sh`-д оруулна; generate бүрийн дараа автоматаар |
 | TEST-023 | Зан төлөв өөрчлөхөд (роль засах ≠ шууд эрх) зөвхөн CI-д ажилладаг (GoTrue) integration тест хуучныг хүлээж байв | Өөрчлөхөөс өмнө `test/`-ээс endpoint-ийг grep хийж хүлээлтийг шинэчилнэ |
 | PROC-016 | `git ls-files` кирилл нэртэй файлыг octal escape-ээр гаргаж `tar -T` унав | `git ls-files -z` + `tar --null -T` |
+| AUTH-003 | GoTrue хүрэхгүй үед supabase-js throw хийхгүй, `AuthRetryableFetchError` (status 0) → "нууц үг буруу" 401 гарах байв | `!status \|\| status>=500 \|\| name==='AuthRetryableFetchError'` → 503 |
+| SEC-008 | Нэвтрэлтийн хязгаар бүх оролдлогыг тоолбол нэг WiFi/NAT-ийн олон ажилтан (ба e2e) 429 авна | Зөвхөн амжилтгүйг тоолох; амжилт тэглэнэ; IP-г зөвхөн Caddy `X-Real-IP`-тэй үед |
 
 ---
 
@@ -1326,12 +1328,30 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 ### [PROC-016] Кирилл нэртэй файл `git ls-files | tar -T`-д алга болов
 **Тохиолдсон:** `git ls-files` нь ASCII бус нэрийг `"docs/S Project_ \320\242…"` хэлбэрээр (core.quotePath) гаргадаг → `tar: Cannot stat`.
 **Шийдэл:** `git ls-files -co --exclude-standard -z | … | tar czf x.tgz --null -T -`.
+
+### [AUTH-003] GoTrue унтарсан үед хэрэглэгч "нууц үг буруу" гэж харах байв
+**Илэрсэн (v0.2.2 Блок 2, бүтэн AppModule-ийг harness-д асааж):** `supabase.auth.signInWithPassword` сүлжээний алдаанд throw хийхгүй — `{ error: AuthRetryableFetchError, status: 0 }` буцаадаг. Код зөвхөн `status >= 500`-ийг 503 гэж үзэж байсан тул 401 `auth.invalid_credentials` гарсан.
+**Шийдэл:** `isAuthServiceDown(e)` = `name === 'AuthRetryableFetchError' || !status || status >= 500` → 503 `auth.service_unavailable` (sign-in, change-password).
+**Дүрэм:** Гадны client-ийн "алдаа буцаадаг (throw биш)" API-д сүлжээний алдааг тусад нь шалгана; unit mock-д ч энэ хэлбэрийг оруулна.
+
+### [SEC-008] Нэвтрэлтийн хязгаар — амжилттай оролдлогыг тоолбол бодит хэрэглээ 429 авна
+**Илэрсэн (урьдчилан, v0.2.2 Блок 2):** Эхний хувилбар нэвтрэх нэр 10 / 15 мин, IP 30 / 5 мин — БҮХ оролдлогыг тоолсон. e2e нь `beforeEach`-д нэг admin-аар олон удаа нэвтэрдэг; пилотод кемпийн нэг WiFi/NAT-аас өглөө олон ажилтан зэрэг нэвтэрнэ → 429.
+**Шийдэл:** зөвхөн амжилтгүйг тоолно (нэвтрэх нэр 10 / 15 мин, IP 50 / 5 мин), амжилт нэвтрэх нэрийн тоолуурыг тэглэнэ; IP-г зөвхөн Caddy-ийн `X-Real-IP` (loopback-аас) байгаа үед. Үндсэн хамгаалалт = GoTrue-ийн бүртгэлийн түгжээ (PIL-07).
+**Дүрэм:** Хязгаар тавихдаа "нэг IP-ийн ард олон хүн" (NAT, WiFi, proxy) ба тестийн давтамжийг тооцно.
+
+### [PROC-008] (давтагдсан, 2026-10-12) `pkill -f` cloud shell-ийг дахин зогсоов
+**Тохиолдсон:** `pkill -f "caddy run"`, `pkill -f "vite --port"` → exit 144, ажлын мөр тасарсан. **Дүрэм (чангатгав):** cloud-д `pkill -f` огт ашиглахгүй — арын процессыг `timeout N cmd &`-ээр эхлүүлж өөрөө дуусгана, эсвэл PID-ийг файлд бичиж `kill $(cat pid)`.
+
+### [PROC-004] (давтагдсан, 2026-10-12) CRLF файл Python-ий текст горимоор LF болов — 9 файл
+**Тохиолдсон:** Блок 2-т `auth/*.ts`, e2e helper, `ProtectedRoute.tsx` (CRLF) — `open(p).read()` / `write` → LF; sync-ийн hash `\r`-ийг хасдаг тул илрээгүй, git-д бүх мөр өөрчлөгдсөн мэт харагдах байв. Sync-ийн өмнөх шалгалтаар (base-д CR байсан эсэх) илэрч сэргээв.
+**Дүрэм (чангатгав):** засварын скрипт `open(p, newline='')` эсвэл bytes-ээр; sync-ийн өмнө `git diff --name-only`-ийн файл бүрт "base CRLF ↔ одоо" шалгана (G1 алхамд).
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-12 | §22 (v0.2.2 Блок 2): AUTH-003 (GoTrue fetch алдаа ≠ буруу нууц үг), SEC-008 (хязгаар ↔ NAT), PROC-008 давтагдсан |
 | 2026-10-12 | §22 (v0.2.2 Блок 1): TEST-022 (harness generate), TEST-023 (зан төлөв ↔ CI-only тест), PROC-016 (git ls-files -z) |
 | 2026-10-11 | §22 (v0.2.1 #14): SEC-007 (Caddy XFF / GoTrue IP хязгаар), TEST-021 (cloud prisma generate) |
 | 2026-10-11 | §22 (v0.2.1): FE-009, TEST-020, DATA-001, PROC-015 |

@@ -169,6 +169,9 @@ export class AuthService {
           isActive: true,
           locale: true, // v0.2.0 §0.7
           createdAt: true,
+          phone: true, // v0.2.2
+          username: true,
+          mustChangePassword: true, // D-06: frontend "нууц үг солих" руу шилжүүлнэ
         },
       });
     });

@@ -98,6 +98,12 @@ model CoreUser {
   isActive  Boolean  @default(true) @map("is_active")
   /// v0.2.0 §0.7 (20261011004) — mn | en | zh
   locale    String   @default("mn")
+  /// v0.2.2 (20261013004) — Монгол 8 оронтой утас (нормчилсон); идэвхтэй хэрэглэгчдийн дунд давтагдашгүй (partial unique — зөвхөн migration-д)
+  phone              String?
+  /// v0.2.2 — нэвтрэх нэр (D-13, ажилтны кодоос)
+  username           String?
+  /// v0.2.2 D-06 — true бол бусад API 403 PASSWORD_CHANGE_REQUIRED
+  mustChangePassword Boolean  @default(false) @map("must_change_password")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -111,6 +117,7 @@ model CoreUser {
   // Camp Module — (tenant_id, id) composite FK-ууд (D2)
   campUserRoles             CampUserRole[]           @relation("CampUserRoleUser")
   campUserPermissions       CampUserPermission[]     @relation("CampUserPermissionUser")
+  campEmployees             CampEmployee[]           @relation("CampEmployeeUser")
   campShiftAdjustments      CampShiftAdjustment[]    @relation("CampShiftAdjustmentCreatedBy")
   campImportsUploaded       CampMovementImport[]     @relation("CampMovementImportUploadedBy")
   campImportsConfirmed      CampMovementImport[]     @relation("CampMovementImportConfirmedBy")
@@ -788,9 +795,12 @@ model CampUserRole {
   userId    String   @map("user_id") @db.Uuid
   roleId    String   @map("role_id") @db.Uuid
   campId    String?  @map("camp_id") @db.Uuid
+  /// v0.2.2 D-11 — албан тушаалын загвараас автоматаар үүссэн бол тэр албан тушаал; NULL = гараар
+  sourcePositionId String? @map("source_position_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
+  sourcePosition CampPosition? @relation("CampUserRoleSourcePosition", fields: [tenantId, sourcePositionId], references: [tenantId, id], onDelete: SetNull, onUpdate: NoAction, map: "fk_camp_user_roles_source_position")
   tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   user   CoreUser @relation("CampUserRoleUser", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_roles_user")
   role   CampRole @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_roles_role")
@@ -1107,6 +1117,9 @@ model CampEmployee {
   mealLocationId   String?               @map("meal_location_id") @db.Uuid
   /// Хоол авах эсэх — ЭЦСИЙН (NULL → албан тушаал → тийм)
   mealsIncluded    Boolean?              @map("meals_included")
+  /// v0.2.2 (20261013004) — нэвтрэх эрх (1:1; uq_camp_employees_user — зөвхөн migration-д)
+  userId           String?               @map("user_id") @db.Uuid
+  user             CoreUser?             @relation("CampEmployeeUser", fields: [tenantId, userId], references: [tenantId, id], onDelete: SetNull, onUpdate: NoAction, map: "fk_camp_employees_user")
   positionRef      CampPosition?         @relation(fields: [tenantId, positionId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_position")
   workMealLocation CampMealLocation?     @relation("CampEmployeeWorkMealLocation", fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_meal_location")
 
@@ -1701,6 +1714,7 @@ model CampPosition {
   employees CampEmployee[]
   settings  CampPositionSetting[]
   roleTemplates CampPositionRoleTemplate[]
+  autoUserRoles CampUserRole[] @relation("CampUserRoleSourcePosition")
 
   @@unique([tenantId, id], map: "uq_camp_positions_tenant_id")
   @@map("camp_positions")

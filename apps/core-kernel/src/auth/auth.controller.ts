@@ -15,6 +15,10 @@ import { TenantAuthGuard } from './tenant-auth.guard';
 import { TenantContextInterceptor } from './tenant-context.interceptor';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto, SignInDto } from './dto/sign-in.dto';
+import { SignInService, clientIpOf } from './sign-in.service';
+import { SkipAuth } from '../common/decorators/skip-auth.decorator';
+import { AllowPasswordChangeRequired } from '../common/decorators/allow-password-change-required.decorator';
 import type { RequestUser } from '@s-project/shared-types';
 
 /** SEC-005 (v0.1.6): хэрэглэгч үүсгэх эрхтэй role-ууд */
@@ -23,11 +27,15 @@ export const REGISTER_ROLES = ['OWNER', 'ADMIN'] as const;
 interface FastifyRequest {
   user?: RequestUser;
   headers: Record<string, string>;
+  ip?: string;
 }
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly signInService: SignInService,
+  ) {}
 
   /**
    * POST /api/v1/auth/register
@@ -63,7 +71,28 @@ export class AuthController {
    * Одоогийн нэвтэрсэн хэрэглэгчийн мэдээлэл
    * TenantAuthGuard шаардана
    */
+  /**
+   * POST /api/v1/auth/sign-in — v0.2.2 D-10 (нэвтрэлтгүй)
+   * { identifier: утас | username | имэйл, password } → Supabase session (frontend `setSession`)
+   */
+  @Post('sign-in')
+  @SkipAuth()
+  @HttpCode(HttpStatus.OK)
+  async signIn(@Body() dto: SignInDto, @Req() req: FastifyRequest) {
+    return this.signInService.signIn(req.headers['host'], clientIpOf(req), dto.identifier, dto.password);
+  }
+
+  /** POST /api/v1/auth/change-password — D-06 (must_change_password үед ч нээлттэй) */
+  @Post('change-password')
+  @AllowPasswordChangeRequired()
+  @HttpCode(HttpStatus.OK)
+  async changePassword(@Body() dto: ChangePasswordDto, @Req() req: FastifyRequest) {
+    const u = req.user!;
+    return this.signInService.changePassword(u.tenantId, u.id, dto.currentPassword, dto.newPassword);
+  }
+
   @Get('me')
+  @AllowPasswordChangeRequired()
   @UseGuards(TenantAuthGuard)
   @UseInterceptors(TenantContextInterceptor)
   async me(@Req() req: FastifyRequest) {

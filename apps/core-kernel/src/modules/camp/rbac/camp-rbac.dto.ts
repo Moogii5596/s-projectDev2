@@ -75,3 +75,17 @@ export class SetPositionTemplatesDto {
   @IsArray() @ArrayMaxSize(20) @ValidateNested({ each: true }) @Type(() => PositionTemplateItemDto)
   templates!: PositionTemplateItemDto[];
 }
+
+// ── v0.2.2 Блок 2 (ADR-003 §2.1) ─────────────────────────────
+
+/** Ажилтан ↔ хэрэглэгч; null = салгах */
+export class LinkEmployeeUserDto {
+  @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'userId UUID байх ёстой' })
+  userId!: string | null;
+}
+
+export class PositionPreviewQueryDto {
+  /** 'none' = албан тушаалгүй */
+  @ValidateIf((_o, v) => v !== 'none') @IsUUID('all', { message: 'positionId UUID эсвэл none' })
+  positionId!: string;
+}

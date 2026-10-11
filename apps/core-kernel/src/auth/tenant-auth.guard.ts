@@ -12,6 +12,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
 import { TenantCacheService } from './tenant-cache.service';
 import { IS_PUBLIC_KEY } from '../common/decorators/skip-auth.decorator';
+import { resolveTenantSlug } from './tenant-slug';
+import { ALLOW_PASSWORD_CHANGE_REQUIRED_KEY } from '../common/decorators/allow-password-change-required.decorator';
+import { forbidden } from '../common/i18n/app-error';
 import { DeploymentConfig, parseDeploymentConfig } from '../config/deployment-mode';
 
 /**
@@ -96,6 +99,15 @@ export class TenantAuthGuard implements CanActivate {
       throw new ForbiddenException('Та энэ байгууллагад харьяалагдахгүй байна');
     }
 
+    // v0.2.2 D-06: эхний нэвтрэлт / админ шинэчилсэн нууц үг → солих хүртэл зөвхөн зөвшөөрсөн route
+    const allowWhileChange = this.reflector.getAllAndOverride<boolean>(ALLOW_PASSWORD_CHANGE_REQUIRED_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (!allowWhileChange && (await this.tenantCacheService.mustChangePassword(tenantId, user.id))) {
+      throw forbidden('auth.password_change_required');
+    }
+
     // 5. Request-д context хавсаргах
     request.user = {
       id: user.id,
@@ -157,17 +169,7 @@ export class TenantAuthGuard implements CanActivate {
   }
 
   private extractTenantSlug(host: string): string | null {
-    // ADR-001: Enterprise VPC (dedicated) — нэг deploy = нэг tenant, Host header-ээс үл хамаарна
-    if (this.deployment.mode === 'dedicated') {
-      return this.deployment.dedicatedTenantSlug;
-    }
-    if (!host) return null;
-    // subdomain.domain.com → subdomain
-    // localhost:3000 (development) → 'test-tenant'
-    if (host.includes('localhost') || host.includes('127.0.0.1')) {
-      return process.env.DEV_TENANT_SLUG ?? 'test-tenant';
-    }
-    const parts = host.split('.');
-    return parts.length >= 3 ? parts[0] : null;
+    return resolveTenantSlug(this.deployment, host);
   }
+
 }

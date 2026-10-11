@@ -8,6 +8,9 @@ const CACHE_TTL_SECONDS = 300; // 5 минут
 const CACHE_PREFIX = 'tenant:slug:';
 // SEC-001: membership cache — эерэг 5 мин, сөрөг 30 сек (шинэ урилга хурдан идэвхжинэ)
 const MEMBER_PREFIX = 'tenant:member:';
+/** v0.2.2 D-06 — нууц үг солих шаардлага (60с; солиход invalidateMember цэвэрлэнэ) */
+const PWCHANGE_PREFIX = 'tenant:pwchange:';
+const PWCHANGE_TTL_SECONDS = 60;
 const MEMBER_TTL_SECONDS = 300;
 const NON_MEMBER_TTL_SECONDS = 30;
 // PERF-003: Supabase token шалгалтын cache — хүсэлт бүрт Supabase Auth руу хандахгүй
@@ -146,8 +149,36 @@ export class TenantCacheService {
   }
 
   /** Хэрэглэгчийг идэвхгүй болгох / tenant-аас хасах үед дуудна */
+  /**
+   * v0.2.2 D-06: `must_change_password` (гишүүн гэдгийг isMember шалгасны ДАРАА дуудна).
+   * DB алдаа → false (fail-open: нэвтрэлтийг хаахгүй; хамгаалалт = нууц үг өөрөө).
+   */
+  async mustChangePassword(tenantId: string, authId: string): Promise<boolean> {
+    const cacheKey = `${PWCHANGE_PREFIX}${tenantId}:${authId}`;
+    const cached = await this.redis.get(cacheKey);
+    if (cached === '1') return true;
+    if (cached === '0') return false;
+    let must = false;
+    try {
+      const rows = await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
+        return tx.$queryRaw<{ must: boolean }[]>`
+          SELECT must_change_password AS must FROM core_users
+          WHERE tenant_id = ${tenantId}::uuid AND auth_id = ${authId}::uuid AND is_active = true
+          LIMIT 1
+        `;
+      });
+      must = rows[0]?.must === true;
+    } catch (err) {
+      this.logger.error(`must_change_password lookup алдаа: ${(err as Error).message}`);
+      return false;
+    }
+    await this.redis.setex(cacheKey, PWCHANGE_TTL_SECONDS, must ? '1' : '0');
+    return must;
+  }
+
   async invalidateMember(tenantId: string, authId: string): Promise<void> {
-    await this.redis.del(`${MEMBER_PREFIX}${tenantId}:${authId}`);
+    await this.redis.del(`${MEMBER_PREFIX}${tenantId}:${authId}`, `${PWCHANGE_PREFIX}${tenantId}:${authId}`);
   }
 
   async invalidate(slug: string): Promise<void> {

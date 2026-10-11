@@ -19,6 +19,7 @@
     "e2e:fixture": "tsx src/scripts/e2e-fixture.cli.ts",
     "pilot": "tsx src/scripts/pilot-admin.cli.ts",
     "camp:snapshot": "tsx src/scripts/camp-snapshot.cli.ts",
+    "camp:login-report": "tsx src/scripts/camp-login-report.cli.ts",
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {

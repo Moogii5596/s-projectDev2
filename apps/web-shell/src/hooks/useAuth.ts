@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { signInRequest } from '../api/auth'
 
 interface AuthState {
   user: User | null
@@ -37,9 +38,15 @@ export function useAuth() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+  /**
+   * v0.2.2 D-10: утас / нэвтрэх нэр / имэйл → backend `/auth/sign-in` → `setSession`.
+   * Буцаах утга: нууц үг солих шаардлагатай эсэх (LoginPage → /change-password).
+   */
+  const signIn = async (identifier: string, password: string, fallbackError: string): Promise<{ mustChangePassword: boolean }> => {
+    const s = await signInRequest(identifier, password, fallbackError)
+    const { error } = await supabase.auth.setSession({ access_token: s.accessToken, refresh_token: s.refreshToken })
     if (error) throw error
+    return { mustChangePassword: s.mustChangePassword }
   }
 
   // FE-007: зөвхөн энэ төхөөрөмж ('global' анхдагч нь бусад төхөөрөмжийн session-ийг ч цуцалдаг)

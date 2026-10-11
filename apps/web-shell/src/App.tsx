@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import MRListPage from './pages/MRListPage';
@@ -29,6 +30,8 @@ export default function App() {
 
       {/* Protected */}
       <Route element={<ProtectedRoute />}>
+        {/* v0.2.2 D-06: Layout-гүй (нууц үг солих шаардлагатай үед цэс харуулахгүй) */}
+        <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route element={<Layout />}>
           {/* v0.1.6: VITE_MODULES-оор шүүнэ (пилот = зөвхөн camp → нүүр /camp) */}
           <Route path="/" element={<Navigate to={HOME_PATH} replace />} />

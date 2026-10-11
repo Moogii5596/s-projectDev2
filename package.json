@@ -17,6 +17,7 @@
     "pilot:onboard": "pnpm --silent --filter @s-project/core-kernel pilot onboard",
     "pilot:user": "pnpm --silent --filter @s-project/core-kernel pilot user",
     "camp:snapshot": "pnpm --silent --filter @s-project/core-kernel camp:snapshot",
+    "camp:login-report": "pnpm --silent --filter @s-project/core-kernel camp:login-report",
     "db:migrate": "supabase migration up",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",

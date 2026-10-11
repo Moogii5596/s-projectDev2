@@ -48,6 +48,7 @@ describe('TenantAuthGuard', () => {
     tenantCacheService = {
       getTenantId: vi.fn(),
       isMember: vi.fn().mockResolvedValue(true), // SEC-001: default гишүүн
+      mustChangePassword: vi.fn().mockResolvedValue(false), // v0.2.2 D-06: default шаардлагагүй
       getCachedAuthUser: vi.fn().mockResolvedValue(null), // PERF-003: default cache miss
       cacheAuthUser: vi.fn().mockResolvedValue(undefined),
       invalidate: vi.fn(),
@@ -208,6 +209,35 @@ describe('TenantAuthGuard', () => {
   });
 
   // SEC-001: Tenant membership
+  describe('Нууц үг солих шаардлага (v0.2.2 D-06)', () => {
+    beforeEach(() => {
+      mockSupabaseGetUser.mockResolvedValue({ data: { user: { id: 'user-A', email: 'a@a.mn' } }, error: null });
+      (tenantCacheService.getTenantId as ReturnType<typeof vi.fn>).mockResolvedValue('tenant-A');
+      (tenantCacheService.mustChangePassword as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+    });
+
+    it('must_change_password → энгийн route 403 (code auth.password_change_required)', async () => {
+      const ctx = createMockContext({ authorization: 'Bearer valid-token', host: 'a.app.mn' });
+      await expect(guard.canActivate(ctx)).rejects.toMatchObject({ status: 403, code: 'auth.password_change_required' });
+      expect(tenantCacheService.mustChangePassword).toHaveBeenCalledWith('tenant-A', 'user-A');
+    });
+
+    it('@AllowPasswordChangeRequired route (me, change-password) → нээлттэй, шалгахгүй', async () => {
+      // 1-р дуудлага = IS_PUBLIC (false), 2-р = ALLOW_PASSWORD_CHANGE_REQUIRED (true)
+      (mockReflector.getAllAndOverride as ReturnType<typeof vi.fn>).mockReturnValueOnce(false).mockReturnValueOnce(true);
+      const ctx = createMockContext({ authorization: 'Bearer valid-token', host: 'a.app.mn' });
+      await expect(guard.canActivate(ctx)).resolves.toBe(true);
+      expect(tenantCacheService.mustChangePassword).not.toHaveBeenCalled();
+    });
+
+    it('гишүүн биш → membership 403 эхэлж (нууц үгийн шалгалт хийгдэхгүй)', async () => {
+      (tenantCacheService.isMember as ReturnType<typeof vi.fn>).mockResolvedValueOnce(false);
+      const ctx = createMockContext({ authorization: 'Bearer valid-token', host: 'a.app.mn' });
+      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+      expect(tenantCacheService.mustChangePassword).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Tenant membership (SEC-001)', () => {
     beforeEach(() => {
       mockSupabaseGetUser.mockResolvedValue({

@@ -11,6 +11,11 @@ export interface Me {
   isActive: boolean
   /** v0.2.0 §0.7 — mn | en | zh */
   locale?: string
+  /** v0.2.2 — нэвтрэх нэр (D-13) */
+  phone?: string | null
+  username?: string | null
+  /** v0.2.2 D-06 — true бол /change-password */
+  mustChangePassword?: boolean
 }
 
 export async function getMe(): Promise<Me> {

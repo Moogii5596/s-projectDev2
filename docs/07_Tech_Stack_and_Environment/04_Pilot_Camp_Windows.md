@@ -121,6 +121,8 @@ cd E:\MoogiiDev\Pilot\s-project
 
 ## 7. Интернэтэд нээх — Tailscale Funnel
 
+> **Холболт (2026-10-12):** `https://desktop-13n3elv.tail7fe33e.ts.net` ✅ ажиллаж байна. Домэйн `sino.gobiverse.website` (Spaceship DNS) нь CNAME → энэ хаяг, гэхдээ **Funnel өөрийн домэйныг дэмждэггүй** (зөвхөн `*.ts.net` сертификат) → домэйнээр нээхэд TLS алдаа. Шийдэл: v0.2.2 tech plan §10 (D-14, Q-G).
+
 1. Tailscale-ийг нээж нэвтэрнэ (Google/Microsoft/GitHub бүртгэлээр, үнэгүй).
 2. https://login.tailscale.com/admin/dns → **MagicDNS** ба **HTTPS Certificates** → Enable.
 3. PowerShell:

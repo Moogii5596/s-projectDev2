@@ -2,10 +2,13 @@ import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, P
 import type { FastifyRequest } from 'fastify';
 import { reqUser } from '../common/camp-request';
 import { CampRbacService } from './camp-rbac.service';
+import { CampEmployeeLoginService } from './camp-employee-login.service';
 import {
   AssignUserRoleDto,
   CreateCampRoleDto,
   GrantDirectPermissionDto,
+  LinkEmployeeUserDto,
+  PositionPreviewQueryDto,
   QueryMyPermissionsDto,
   QueryUserRolesDto,
   SetPositionTemplatesDto,
@@ -16,7 +19,10 @@ import {
 /** Шат 2.2 — /api/v1/camp/{permissions,me,users,roles,user-roles}; v0.2.2 — user-permissions, positions/:id/role-templates */
 @Controller('camp')
 export class CampRbacController {
-  constructor(private readonly rbac: CampRbacService) {}
+  constructor(
+    private readonly rbac: CampRbacService,
+    private readonly login: CampEmployeeLoginService,
+  ) {}
 
   @Get('permissions')
   permissions(@Req() req: FastifyRequest) {
@@ -129,5 +135,36 @@ export class CampRbacController {
   setPositionTemplates(@Req() req: FastifyRequest, @Param('positionId', new ParseUUIDPipe()) positionId: string, @Body() dto: SetPositionTemplatesDto) {
     const u = reqUser(req);
     return this.rbac.setPositionTemplates(u.tenantId, u.id, positionId, dto);
+  }
+
+  // ── v0.2.2 Блок 2: ажилтан ↔ нэвтрэх эрх (ADR-003 §2.1, D-11, D-13) ──
+
+  @Put('camps/:campId/employees/:id/user')
+  linkUser(
+    @Req() req: FastifyRequest,
+    @Param('campId', new ParseUUIDPipe()) campId: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: LinkEmployeeUserDto,
+  ) {
+    const u = reqUser(req);
+    return this.login.link(u.tenantId, u.id, campId, id, dto.userId);
+  }
+
+  @Get('camps/:campId/employees/:id/position-preview')
+  positionPreview(
+    @Req() req: FastifyRequest,
+    @Param('campId', new ParseUUIDPipe()) campId: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query() q: PositionPreviewQueryDto,
+  ) {
+    const u = reqUser(req);
+    return this.login.positionPreview(u.tenantId, u.id, campId, id, q.positionId === 'none' ? null : q.positionId);
+  }
+
+  @Post('positions/:positionId/role-templates/apply')
+  @HttpCode(200)
+  applyPositionTemplates(@Req() req: FastifyRequest, @Param('positionId', new ParseUUIDPipe()) positionId: string) {
+    const u = reqUser(req);
+    return this.login.applyPositionTemplates(u.tenantId, u.id, positionId);
   }
 }
