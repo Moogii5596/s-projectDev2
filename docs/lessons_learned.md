@@ -103,6 +103,7 @@
 | CI-005 | CI (v0.1.5-аас хойш шалгаагүй, QA-01): Node 20 → supabase-js "native WebSocket not found"; unit-ийн өмнө `prisma generate` алга → `UserRole` undefined | CI-ийн Node = Dockerfile/машинтай ижил (22); `db:generate`-ийг install-ийн дараа; CI-г release бүрт шалгана |
 | PS-003 | `upgrade`: дэд `pilot.ps1 start`-ийг `& exe \| Out-Host`-оор дуудсан → backend/Caddy stdout pipe-ийн handle-ийг удамшиж, pipe хаагдахгүй → Windows-д мөнхөд хүлээв (Linux shim тестэд илрээгүй) | Урт амьдрах процесс асаадаг дэд скриптийг `Process.Start` (redirect-гүй) + `WaitForExit()`-аар; Windows-ийн тусгай зан төлөвийг shim-ээр баталсан гэж үзэхгүй |
 | CI-006 | CI `setup-cli version: latest` → `supabase status -o env`-ээс `API_URL` гараагүй, хоосон `SUPABASE_URL`-аар integration 18 файл "supabaseUrl is required" | CLI-г lockfile-тэй ижил хувилбараар pin; шаардлагатай env хоосон бол тэр алхамдаа тодорхой мессежээр унагана |
+| CI-007 | Turbo 2 (strict env mode) нь turbo.json-д зарлаагүй env-ийг task-д дамжуулдаггүй → CI-ийн `SUPABASE_URL` integration тестэд `undefined` (local-д `.env` файлаас уншдаг тул илрээгүй) | Тест task-уудад `passThroughEnv`; шинэ env нэмэхэд turbo.json-ийг хамт шинэчилж, `turbo run … --dry=json`-оор шалгана |
 
 ---
 
@@ -1258,13 +1259,19 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** хоёр job-д `setup-cli version: 2.120.0`; түлхүүр алга бол түлхүүрийн нэрсийг (утгагүй) хэвлээд тэр алхамдаа унана.
 **Дүрэм:** CI-ийн хэрэгслийн хувилбарыг lockfile/машинтай ижил pin хийнэ ("latest" хориглоно); env бэлтгэх алхам хоосон утгыг "чимээгүй" дамжуулахгүй.
 
+### [CI-007] Turbo 2 env-ийг шүүдэг → CI integration-д SUPABASE_URL алга
+**Тохиолдсон (2026-10-11 20:48):** CI-006-ийн дараа "Supabase env" алхам амжилттай (түлхүүр бүгд олдсон, хамгаалалт унаагүй) ч integration 18 файл дахин `supabaseUrl is required`.
+**Шалтгаан:** `pnpm turbo test:integration` — Turbo 2-ийн анхдагч **strict env mode** нь `turbo.json`-д зарлаагүй орчны хувьсагчийг task-ийн процесст дамжуулдаггүй. Local-д апп `.env` файлаас уншдаг тул илрээгүй; CI-д `.env` алга, бүх утга `$GITHUB_ENV`-ээр ирдэг. Баталгаа: ижил task `passThroughEnv`-гүй → `SB=undefined`, байвал `SB=http://x`. CI-006-ийн (CLI pin) засвар хэрэгтэй хэвээр боловч энэ алдааны жинхэнэ шалтгаан биш байсан — би нэг алдааг хоёр удаа буруу таамагласан.
+**Шийдэл:** `turbo.json` — `test`, `test:unit`, `test:integration`, `test:e2e`-д `passThroughEnv` (DB/Redis/JWT, `SUPABASE_*`, `VITE_*`, `E2E_*`, `TEST_*`, `RATE_LIMIT_*`, `NODE_ENV`, `CI`).
+**Дүрэм:** CI-ийн алдааг засахаасаа өмнө шалтгааныг туршилтаар батална (энд: turbo task-д env хэвлэх) — "магадгүй"-гээр засвар push хийхгүй.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
-| 2026-10-11 | §21 (v0.2.0): FE-008, PROC-012, TEST-017, TEST-018, OPS-004, PS-002, TEST-019, PROC-013, CI-005, PS-003, CI-006 |
+| 2026-10-11 | §21 (v0.2.0): FE-008, PROC-012, TEST-017, TEST-018, OPS-004, PS-002, TEST-019, PROC-013, CI-005, PS-003, CI-006, CI-007 |
 | 2026-10-11 | §20: PROC-011 (commit хийгээгүй файлыг дарж бичсэн) |
 | 2026-10-10 | §20: FE-007 (/login ↔ /camp давталт) |
 | 2026-10-10 | §20: OPS-003 (auth.email enable_signup) |
