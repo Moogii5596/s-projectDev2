@@ -175,7 +175,7 @@ describe('🏕️ Кемп, тохиргоо, байршил', () => {
 });
 
 describe('🏢 Хэлтэс + ээлжийн загвар, баг, байр/өрөө, байгууллага', () => {
-  it('хэлтэс: 7/7 загвартай (201); цоорхой загвар → 400 мессежтэй; өөр кемпийн байршил → 400', async () => {
+  it('хэлтэс: 7/7 загвартай (201); цоорхой загвар → 400 мессежтэй; v0.2.1: хоолны байршлыг үл тооно', async () => {
     const mine = await api().post(camp('/departments')).set(as('admin')).send({
       code: 'MINE', name: 'Уул засвар', mealLocationId: ids.locMine,
       shiftPattern: [{ dayFrom: 8, dayTo: 14, shift: CampShiftType.NIGHT }, { dayFrom: 1, dayTo: 7, shift: CampShiftType.DAY }],
@@ -193,7 +193,11 @@ describe('🏢 Хэлтэс + ээлжийн загвар, баг, байр/өр
     expect(gap.body.message).toMatch(/Дутуу: 11–14/);
     const full = await api().put(camp(`/departments/${ids.deptAdm}/shift-pattern`)).set(as('admin')).send({ segments: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] });
     expect(full.status).toBe(200);
-    expect((await api().post(camp('/departments')).set(as('admin')).send({ code: 'X', name: 'x', mealLocationId: ids.locC2 })).status).toBe(400);
+    // v0.2.1 (Д-4): хэлтсийн хоолны байршлыг үл тооно — хуучин клиент (өөр кемпийн байршилтай ч) эвдрэхгүй, DB-д бичигдэхгүй
+    const legacy = await api().post(camp('/departments')).set(as('admin')).send({ code: 'X', name: 'x', mealLocationId: ids.locC2 });
+    expect(legacy.status).toBe(201);
+    expect((await prismaAdmin.campDepartment.findUniqueOrThrow({ where: { id: legacy.body.id } })).mealLocationId).toBeNull();
+    expect((await prismaAdmin.campDepartment.findUniqueOrThrow({ where: { id: ids.deptMine } })).mealLocationId).toBeNull();
   });
 
   it('загвартай хэлтэс байхад ростерын урт өөрчлөх → 409', async () => {

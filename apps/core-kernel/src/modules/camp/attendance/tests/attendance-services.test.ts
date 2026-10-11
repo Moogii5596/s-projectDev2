@@ -150,8 +150,41 @@ describe('CampAttendanceService — импорт (Шат 3.3)', () => {
       { id: 's2', startDate: d('2026-09-23'), endDate: d('2026-10-07'), employee: emp },
       { id: 's3', startDate: d('2026-10-01'), endDate: null, employee: emp },
     ]);
+    s.tx.campEmployee.findMany.mockResolvedValueOnce([]);
     const rows = await svc.listStays('t1', 'a1', 'c1', '2026-10-07');
     expect(rows.map((r) => r.dayType)).toEqual(['ARRIVAL', 'DEPARTURE', 'FULL_DAY']);
+  });
+
+  it('v0.2.1 listStays (C-14): мөр бүрт тооцоолсон ээлж (албан тушаалын загвар > хэлтсийнх), MOVEMENT, UNKNOWN; shift шүүлт', async () => {
+    const emp = (id: string) => ({ id, employeeCode: id.toUpperCase(), fullName: id, department: { code: 'M', name: 'M' }, crew: null });
+    s.tx.campStay.findMany.mockResolvedValue([
+      { id: 's1', startDate: d('2026-10-07'), endDate: null, employee: emp('a') },
+      { id: 's2', startDate: d('2026-10-01'), endDate: null, employee: emp('b') },
+      { id: 's3', startDate: d('2026-10-01'), endDate: null, employee: emp('c') },
+      { id: 's4', startDate: d('2026-10-01'), endDate: null, employee: emp('x') },
+    ]);
+    s.tx.campSetting.findFirst.mockResolvedValue(S);
+    s.tx.campPositionSetting.findMany.mockResolvedValue([
+      { positionId: 'p-night', mealLocationId: null, mealsIncluded: false, shiftPatterns: [{ dayFrom: 1, dayTo: 14, shift: 'NIGHT' }] },
+    ]);
+    const full = (id: string, positionId: string | null, crew: boolean) => ({
+      id, employeeCode: id.toUpperCase(), fullName: id, position: null, positionId, mealLocationId: null, mealsIncluded: null,
+      positionRef: positionId ? { name: 'Шөнийн харуул' } : null,
+      // баггүй + холимог загвар → ээлж тодорхойгүй (UNKNOWN); баггүй + нэг төрлийн загвар бол тэр ээлж
+      department: { code: 'M', mealLocationId: null, shiftPatterns: crew ? [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] : [{ dayFrom: 1, dayTo: 7, shift: 'DAY' }, { dayFrom: 8, dayTo: 14, shift: 'NIGHT' }] },
+      crew: crew ? { rosterAnchorDate: d('2026-10-01') } : null, shiftAdjustments: [],
+      stays: [{ startDate: d(id === 'a' ? '2026-10-07' : '2026-10-01'), endDate: null, arrivalMovement: { meals: [] }, departureMovement: null }],
+    });
+    s.tx.campEmployee.findMany.mockResolvedValue([full('a', null, true), full('b', null, true), full('c', 'p-night', true), full('x', null, false)]);
+    const rows = await svc.listStays('t1', 'a1', 'c1', '2026-10-07');
+    expect(rows.map((r) => [r.employee.employeeCode, r.shiftGroup, r.positionName, r.mealsIncluded])).toEqual([
+      ['A', 'MOVEMENT', null, true],
+      ['B', 'DAY', null, true],
+      ['C', 'NIGHT', 'Шөнийн харуул', false],
+      ['X', 'UNKNOWN', null, true],
+    ]);
+    expect((await svc.listStays('t1', 'a1', 'c1', '2026-10-07', 'NIGHT')).map((r) => r.employee.employeeCode)).toEqual(['C']);
+    expect((await svc.listStays('t1', 'a1', 'c1', '2026-10-07', 'UNKNOWN')).map((r) => r.employee.employeeCode)).toEqual(['X']);
   });
 });
 
@@ -306,6 +339,31 @@ describe('CampRoomsService (Шат 3.4)', () => {
     expect(b.unassigned.map((u) => u.employeeCode)).toEqual(['Z']);
     expect(b.totals).toEqual({ rooms: 3, capacity: 4, present: 2, vacant: 1, full: 1 });
   });
+
+  it('v0.2.1 самбар (C-12): өрөө бүрийн хөрөнгө (актлагдаагүй) + нээлттэй засвар; totals өөрчлөгдөхгүй (snapshot A = B)', async () => {
+    s.tx.campRoom.findMany.mockResolvedValueOnce([
+      { id: 'r1', roomNo: '101', floor: 1, capacity: 2, status: 'ACTIVE', building: { code: 'B', name: 'B' } },
+      { id: 'r2', roomNo: '102', floor: 1, capacity: 1, status: 'ACTIVE', building: { code: 'B', name: 'B' } },
+    ]);
+    s.tx.campAsset.findMany.mockResolvedValueOnce([
+      { id: 'as1', roomId: 'r1', inventoryNo: 'INV-1', name: 'Хөргөгч', condition: 'GOOD' },
+      { id: 'as2', roomId: 'r1', inventoryNo: 'INV-2', name: 'Ор', condition: 'DAMAGED' },
+    ]);
+    s.tx.campMaintenanceRequest.findMany.mockResolvedValueOnce([
+      { id: 'm1', roomId: 'r2', requestNo: 'ZAS-1', title: 'Ус гоожиж байна', priority: 'HIGH', status: 'OPEN', blocksRoom: false },
+    ]);
+    const b = await svc.board('t1', 'a1', 'c1', '2026-10-07');
+    expect(s.tx.campAsset.findMany.mock.calls[0][0].where).toEqual({ tenantId: 't1', campId: 'c1', roomId: { not: null }, condition: { not: 'WRITTEN_OFF' } });
+    expect(s.tx.campMaintenanceRequest.findMany.mock.calls[0][0].where).toEqual({ tenantId: 't1', campId: 'c1', roomId: { not: null }, status: { in: ['OPEN', 'IN_PROGRESS'] } });
+    expect(b.rooms[0].assets).toEqual([
+      { id: 'as1', inventoryNo: 'INV-1', name: 'Хөргөгч', condition: 'GOOD' },
+      { id: 'as2', inventoryNo: 'INV-2', name: 'Ор', condition: 'DAMAGED' },
+    ]);
+    expect(b.rooms[0].openMaintenance).toEqual([]);
+    expect(b.rooms[1].assets).toEqual([]);
+    expect(b.rooms[1].openMaintenance).toEqual([{ id: 'm1', requestNo: 'ZAS-1', title: 'Ус гоожиж байна', priority: 'HIGH', status: 'OPEN', blocksRoom: false }]);
+    expect(Object.keys(b.totals)).toEqual(['rooms', 'capacity', 'present', 'vacant', 'full']);
+  });
 });
 
 describe('CampPresenceService (Шат 3.5) — DB → тооцоо', () => {
@@ -317,7 +375,9 @@ describe('CampPresenceService (Шат 3.5) — DB → тооцоо', () => {
     s.tx.campSetting.findFirst.mockResolvedValueOnce({ ...S, defaultMealLocationId: 'loc-camp' });
     s.tx.campEmployee.findMany.mockResolvedValueOnce([{
       id: 'e1', employeeCode: 'E1', fullName: 'Бат',
-      department: { code: 'MINE', mealLocationId: 'loc-mine', shiftPatterns: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] },
+      // v0.2.1 (Q1): ажлын хоолны байршил ажилтан дээр (migration хэлтсийнхийг хуулсан); хэлтсийнх уншигдахгүй
+      positionId: null, mealLocationId: 'loc-mine', mealsIncluded: null, positionRef: null,
+      department: { code: 'MINE', mealLocationId: 'loc-OLD-ignored', shiftPatterns: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] },
       crew: { rosterAnchorDate: d('2026-10-07') }, shiftAdjustments: [],
       stays: [{ startDate: d('2026-10-07'), endDate: null, arrivalMovement: { meals: ['DINNER'] }, departureMovement: null }],
     }]);

@@ -99,8 +99,9 @@ test.describe.serial('Кемп — хөрөнгө ба засвар', () => {
     await det.getByLabel('Шинэ байршил').selectOption({ label: 'B1-102' });
     await det.getByLabel('Шалтгаан').fill('Солив');
     await det.getByRole('button', { name: 'Шилжүүлэх' }).click();
-    await expect(det.getByRole('row', { name: /101 102 Солив/ })).toBeVisible();
-    await expect(det.getByRole('row', { name: /Агуулах 101/ })).toBeVisible();
+    // v0.2.1 (C-12): түүхэнд байрны код ч харагдана (B1-101)
+    await expect(det.getByRole('row', { name: /B1-101 B1-102 Солив/ })).toBeVisible();
+    await expect(det.getByRole('row', { name: /Агуулах B1-101/ })).toBeVisible();
   });
 
   test('хөрөнгөөс засварын хүсэлт (өрөө түгжинэ) → дугаар ZAS-{код}-{он}-0001; өрөө "Засварт"', async ({ page }) => {

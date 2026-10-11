@@ -12,13 +12,14 @@ import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Table, inpu
 import FacilitiesPage from './FacilitiesPage'
 import DepartmentsPage from './DepartmentsPage'
 import CrewsPage from './CrewsPage'
+import PositionSettingsPage from './PositionSettingsPage'
 
 /**
  * /camp/:campId/settings/:section — кемпийн тохиргооны каталог (FB-05, v0.2.0):
  * зүүн цэс (Ерөнхий · Хоолны байршил · Байр, өрөө · Хэлтэс, ээлж · Ростер) → баруун талд тухайн хэсэг.
  * Хуучин /facilities, /departments, /crews → энд redirect (CampRoutes).
  */
-export const SETTINGS_SECTIONS = ['general', 'meal-locations', 'facilities', 'departments', 'crews'] as const
+export const SETTINGS_SECTIONS = ['general', 'meal-locations', 'positions', 'facilities', 'departments', 'crews'] as const
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number]
 
 export default function CampSettingsPage() {
@@ -45,6 +46,7 @@ export default function CampSettingsPage() {
       <div className="min-w-0 flex-1">
         {section === 'general' && <GeneralSection />}
         {section === 'meal-locations' && <MealLocationsSection />}
+        {section === 'positions' && <PositionSettingsPage />}
         {section === 'facilities' && <FacilitiesPage />}
         {section === 'departments' && <DepartmentsPage />}
         {section === 'crews' && <CrewsPage />}

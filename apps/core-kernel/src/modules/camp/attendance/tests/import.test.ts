@@ -56,6 +56,43 @@ describe('import-parser', () => {
     expect(rows.map((r) => [r.employeeCode, r.direction, r.errors.length])).toEqual([['E001', ARRIVAL, 0], ['E002', ARRIVAL, 0], ['E003', DEPARTURE, 0]]);
   });
 
+  it('I18N-02: хятад толгой (төгсгөлийн * ч) + хятад утга, холимог хэл', async () => {
+    const buf = await xlsx(['员工编号', '日期 *', '方向', '餐', '班次'], [
+      ['E001', '2026-10-07', '到达', '午餐，晚餐、夜宵', '夜班'],
+      ['E002', '2026-10-08', '离开', '早餐', ''],
+      ['E003', '2026-10-09', '到达', '午餐晚餐', '白班'],
+      ['E004', '2026-10-09', 'ARRIVAL', 'lunch、晚餐', 'шөнө'],
+      ['E005', '2026-10-10', '离开', '无', null],
+    ]);
+    const rows = await parseAttendanceXlsx(buf);
+    expect(rows.map((r) => [r.employeeCode, r.direction, r.meals, r.shift, r.errors])).toEqual([
+      ['E001', ARRIVAL, ['LUNCH', 'DINNER', 'NIGHT'], 'NIGHT', []],
+      ['E002', DEPARTURE, ['BREAKFAST'], null, []],
+      ['E003', ARRIVAL, ['LUNCH', 'DINNER'], 'DAY', []],
+      ['E004', ARRIVAL, ['LUNCH', 'DINNER'], 'NIGHT', []],
+      ['E005', DEPARTURE, [], null, []],
+    ]);
+  });
+
+  it('I18N-02: хятад буруу утга → мөрийн алдаа; 无 + хоол холих → алдаа', async () => {
+    const [r] = await parseAttendanceXlsx(await xlsx(['员工编号', '日期', '方向', '餐', '班次'], [['E1', '2026-10-07', '到', '午餐、宵夜', '中班']]));
+    expect(r.errors).toEqual([
+      'direction буруу: "到" (ARRIVAL эсвэл DEPARTURE)',
+      'Үл мэдэгдэх хоол: 宵夜 (BREAKFAST, LUNCH, DINNER, NIGHT эсвэл NONE)',
+      'shift буруу: "中班" (DAY эсвэл NIGHT)',
+    ]);
+    expect(parseMeals('无、午餐').error).toMatch(/NONE/);
+    await expect(parseAttendanceXlsx(await xlsx(['员工编号', '日期'], [['E1', '2026-10-07']]))).rejects.toThrow(/Заавал багана алга: direction/);
+  });
+
+  it('I18N-02: загвар — "Ирц" эхэнд, Заавар_MN/EN/中文 хуудас', async () => {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load((await buildAttendanceTemplate()) as unknown as ArrayBuffer);
+    expect(wb.worksheets.map((w) => w.name)).toEqual(['Ирц', 'Заавар_MN', 'Заавар_EN', 'Заавар_中文']);
+    expect(String(wb.getWorksheet('Заавар_中文')!.getCell('A1').value)).toBe('考勤导入 — 说明');
+    expect(String(wb.getWorksheet('Заавар_EN')!.getCell('A1').value)).toMatch(/^Attendance import/);
+  });
+
   it('parseMeals / parseDateCell', () => {
     expect(parseMeals('')).toEqual({ meals: null });
     expect(parseMeals('night, b, b')).toEqual({ meals: ['BREAKFAST', 'NIGHT'] });

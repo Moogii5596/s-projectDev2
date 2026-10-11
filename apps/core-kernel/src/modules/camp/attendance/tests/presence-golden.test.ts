@@ -32,7 +32,7 @@ const emp = (id: string, dept: 'ADM' | 'PRD' | 'MIX', over: Partial<PresenceEmpl
   employeeCode: id,
   fullName: id,
   departmentCode: dept,
-  departmentLocationId: `loc-${dept.toLowerCase()}`,
+  workMealLocationId: `loc-${dept.toLowerCase()}`,
   crewAnchor: null,
   pattern: dept === 'ADM' ? ADM_14 : dept === 'PRD' ? PRD_7_7 : MIXED,
   adjustments: [],

@@ -16,7 +16,15 @@ export interface PresenceEmployee {
   employeeCode: string;
   fullName: string;
   departmentCode: string;
-  departmentLocationId: string;
+  /** v0.2.1 (C-01): албан тушаалын нэр (каталог) — задаргаанд */
+  positionName?: string | null;
+  /**
+   * Ажлын хоолны (Өдөр/Шөнө) байршил — ажилтан ?? албан тушаал(кемп) ?? null (= кемпийн анхдагч).
+   * v0.2.0 хүртэл хэлтсийн байршил байсан (Q1: хэлтсээс хасав).
+   */
+  workMealLocationId: string | null;
+  /** v0.2.1 (C-04, Q3): false = хоолны тоонд огт орохгүй (ирэх/явах өдөр ч), ирц/хоног/өрөөнд хэвээр */
+  mealsIncluded?: boolean;
   crewAnchor: string | null;
   pattern: PatternSegment[];
   adjustments: AdjustmentRange[];
@@ -46,9 +54,19 @@ export interface PresenceBreakdown {
   mealLocationId: string | null;
   count: number;
 }
+/** Албан тушаалаар задаргаа (v0.2.1) — "хэлтэс / албан тушаал" сонголт */
+export interface PresencePositionBreakdown {
+  positionName: string | null;
+  mealType: CampMealType;
+  mealLocationId: string | null;
+  count: number;
+}
 export interface PresenceResult {
   date: string;
   presentCount: number;
+  /** Кемпэд байгаа ч хоол авдаггүй (C-04) — presentCount-д орсон, хоолны тоонд ороогүй */
+  noMealCount: number;
+  byPosition: PresencePositionBreakdown[];
   lines: PresenceLine[];
   breakdown: PresenceBreakdown[];
   personDays: string;
@@ -105,6 +123,8 @@ export function computePresence(employees: PresenceEmployee[], date: string, set
   const lines = new Map<string, PresenceLine>();
   const breakdown = new Map<string, PresenceBreakdown>();
   const unknownShift: PresenceResult['warnings']['unknownShift'] = [];
+  const byPosition = new Map<string, PresencePositionBreakdown>();
+  let noMeal = 0;
   let present = 0;
   let total = 0;
   let needsCamp = false;
@@ -113,13 +133,18 @@ export function computePresence(employees: PresenceEmployee[], date: string, set
     const day = employeeDay(e, date, settings);
     if (!day) continue;
     present++;
+    if (e.mealsIncluded === false) {
+      noMeal++;
+      continue;
+    }
     if (day.kind === 'FULL_DAY' && day.shift === null) {
       unknownShift.push({ employeeId: e.id, employeeCode: e.employeeCode, fullName: e.fullName, departmentCode: e.departmentCode });
     }
     const group = day.kind === 'MOVEMENT' ? 'MOVEMENT' : (day.shift ?? 'UNKNOWN');
     for (const slot of day.slots) {
-      const loc = slot.place === 'DEPT' ? e.departmentLocationId : defaultMealLocationId;
-      if (slot.place === 'CAMP') needsCamp = true;
+      // 'DEPT' = ажлын хоол (Өдөр/Шөнө) → ажилтан/албан тушаалын байршил, байхгүй бол кемпийн анхдагч
+      const loc = slot.place === 'DEPT' ? (e.workMealLocationId ?? defaultMealLocationId) : defaultMealLocationId;
+      if (loc === defaultMealLocationId) needsCamp = true;
       const lk = `${slot.meal}|${loc}`;
       const line = lines.get(lk) ?? { mealType: slot.meal, mealLocationId: loc, count: 0 };
       line.count++;
@@ -128,6 +153,10 @@ export function computePresence(employees: PresenceEmployee[], date: string, set
       const b = breakdown.get(bk) ?? { departmentCode: e.departmentCode, group, mealType: slot.meal, mealLocationId: loc, count: 0 };
       b.count++;
       breakdown.set(bk, b);
+      const pk = `${e.positionName ?? ''}|${slot.meal}|${loc}`;
+      const pb = byPosition.get(pk) ?? { positionName: e.positionName ?? null, mealType: slot.meal, mealLocationId: loc, count: 0 };
+      pb.count++;
+      byPosition.set(pk, pb);
       total++;
     }
   }
@@ -135,6 +164,8 @@ export function computePresence(employees: PresenceEmployee[], date: string, set
   return {
     date,
     presentCount: present,
+    noMealCount: noMeal,
+    byPosition: [...byPosition.values()].sort((a, b) => String(a.positionName ?? '').localeCompare(String(b.positionName ?? '')) || byMeal(a, b)),
     lines: [...lines.values()].sort((a, b) => byMeal(a, b) || String(a.mealLocationId).localeCompare(String(b.mealLocationId))),
     breakdown: [...breakdown.values()].sort((a, b) => a.departmentCode.localeCompare(b.departmentCode) || a.group.localeCompare(b.group) || byMeal(a, b)),
     // Хүн-өдөр = нийт хоол ÷ 3 (ERD v4) — 4 оронтой

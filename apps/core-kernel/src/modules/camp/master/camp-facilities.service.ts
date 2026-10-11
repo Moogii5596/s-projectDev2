@@ -14,7 +14,7 @@ import { BulkRoomsDto, CreateBuildingDto, CreateRoomDto, QueryActiveOnlyDto, Que
 const P = CAMP_PERMISSIONS;
 /** Өрөөг кемпийн мастер эсвэл өрөөний эрхтэй хүн удирдана (ERD v4 §2.2: катеринг админ room.manage-тэй) */
 const ROOM_WRITE = [P.ROOM_MANAGE, P.MASTER_MANAGE];
-const BUILDING_SELECT = { id: true, code: true, name: true, isActive: true, createdAt: true, updatedAt: true } as const;
+const BUILDING_SELECT = { id: true, code: true, name: true, isActive: true, typeId: true, type: { select: { name: true } }, createdAt: true, updatedAt: true } as const;
 const ROOM_SELECT = {
   id: true,
   buildingId: true,
@@ -28,7 +28,7 @@ const ROOM_SELECT = {
   building: { select: { code: true, name: true } },
 } as const;
 
-const BUILDING_AUDIT_FIELDS = ['code', 'name', 'isActive'] as const;
+const BUILDING_AUDIT_FIELDS = ['code', 'name', 'isActive', 'typeId'] as const;
 const ROOM_AUDIT_FIELDS = ['buildingId', 'roomNo', 'floor', 'capacity', 'status', 'note'] as const;
 
 /** Байр, өрөө (Шат 2.4). Дүүргэлт (сул/дүүрсэн) Шат 3.5-д тооцоологдоно. */
@@ -39,6 +39,13 @@ export class CampFacilitiesService {
     private readonly access: CampAccessService,
     private readonly audit: CampAuditService,
   ) {}
+
+  /** v0.2.1 (C-12): байрны төрөл — байгууллагын каталог, идэвхтэй */
+  private async assertBuildingType(tx: Tx, tenantId: string, typeId: string) {
+    const t = await tx.campBuildingType.findFirst({ where: { id: typeId, tenantId }, select: { isActive: true, name: true } });
+    if (!t) throw badRequest('camp.err.catalog.building_type_not_found');
+    if (!t.isActive) throw badRequest('camp.err.catalog.building_type_inactive', { name: t.name });
+  }
 
   async listBuildings(tenantId: string, authId: string, campId: string, q: QueryActiveOnlyDto) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
@@ -65,7 +72,8 @@ export class CampFacilitiesService {
         await getCampOr404(tx, tenantId, campId);
         const dup = await tx.campBuilding.findFirst({ where: { tenantId, campId, code: dto.code }, select: { id: true } });
         if (dup) throw conflict('camp.err.facilities.1', { code: dto.code });
-        const b = await tx.campBuilding.create({ data: { tenantId, campId, code: dto.code, name: dto.name }, select: BUILDING_SELECT });
+        if (dto.typeId) await this.assertBuildingType(tx, tenantId, dto.typeId);
+        const b = await tx.campBuilding.create({ data: { tenantId, campId, code: dto.code, name: dto.name, typeId: dto.typeId ?? null }, select: BUILDING_SELECT });
         await this.audit.record(tx, {
           tenantId, campId, entityType: 'building', entityId: b.id, action: 'CREATE', actorUserId,
           fields: BUILDING_AUDIT_FIELDS, before: null, after: b, summaryParams: { code: b.code, name: b.name },
@@ -84,15 +92,20 @@ export class CampFacilitiesService {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         const b = await tx.campBuilding.findFirst({ where: { id, tenantId, campId }, select: BUILDING_SELECT });
         if (!b) throw notFound('camp.err.facilities.2');
+        if (dto.typeId && dto.typeId !== b.typeId) await this.assertBuildingType(tx, tenantId, dto.typeId);
         if (dto.isActive === false) {
           const active = await tx.campRoom.count({ where: { tenantId, buildingId: id, status: { not: 'INACTIVE' } } });
           if (active > 0) throw conflict('camp.err.facilities.3', { active });
+          // v0.2.1 (C-12): байранд шууд байрласан хөрөнгө (актлагдаагүй) — эхлээд шилжүүлнэ
+          const assets = await tx.campAsset.count({ where: { tenantId, campId, buildingId: id, condition: { not: 'WRITTEN_OFF' } } });
+          if (assets > 0) throw conflict('camp.err.facilities.9', { assets });
         }
         const after = await tx.campBuilding.update({
           where: { id },
           data: {
             ...(dto.name !== undefined ? { name: dto.name } : {}),
             ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+            ...(dto.typeId !== undefined ? { typeId: dto.typeId } : {}),
           },
           select: BUILDING_SELECT,
         });

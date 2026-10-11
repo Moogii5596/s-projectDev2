@@ -16,6 +16,7 @@ const ASSET_ROW = {
   name: 'Хөргөгч',
   serialNo: null,
   roomId: 'r1',
+  buildingId: null,
   condition: CampAssetCondition.GOOD,
   acquiredDate: new Date('2026-01-15T00:00:00.000Z'),
   acquiredCost: new Prisma.Decimal('1500000.5'),
@@ -24,8 +25,9 @@ const ASSET_ROW = {
   updatedAt: new Date('2026-10-01T00:00:00Z'),
   category: { name: 'Цахилгаан бараа' },
   room: { roomNo: '101', building: { code: 'B1' } },
+  building: null,
 };
-const CORE = { id: 'as1', roomId: 'r1', condition: CampAssetCondition.GOOD, note: null, inventoryNo: 'INV-1' };
+const CORE = { id: 'as1', roomId: 'r1', buildingId: null as string | null, condition: CampAssetCondition.GOOD, note: null, inventoryNo: 'INV-1' };
 
 describe('CampAssetsService — ангилал (Шат 4.3)', () => {
   let s: ReturnType<typeof setup>;
@@ -92,7 +94,7 @@ describe('CampAssetsService — хөрөнгө (Шат 4.3)', () => {
     expect(s.tx.campAsset.create.mock.calls[0][0].data).toMatchObject({ tenantId: 't1', campId: 'c1', roomId: 'r1', condition: 'GOOD' });
     expect(s.tx.campAsset.create.mock.calls[0][0].data.acquiredDate).toEqual(new Date('2026-01-15T00:00:00.000Z'));
     expect(s.tx.campAssetMovement.create).toHaveBeenCalledWith({
-      data: { tenantId: 't1', campId: 'c1', assetId: 'as1', fromRoomId: null, toRoomId: 'r1', movedBy: 'cu1', reason: 'Анхны байршуулалт' },
+      data: { tenantId: 't1', campId: 'c1', assetId: 'as1', fromRoomId: null, toRoomId: 'r1', toBuildingId: null, movedBy: 'cu1', reason: 'Анхны байршуулалт' },
     });
     expect(res.acquiredDate).toBe('2026-01-15');
     expect(res.acquiredCost).toBe('1500000.50');
@@ -150,11 +152,11 @@ describe('CampAssetsService — хөрөнгө (Шат 4.3)', () => {
     s.tx.campAsset.findFirst.mockResolvedValueOnce(CORE);
     await svc.move('t1', 'a1', 'c1', 'as1', { toRoomId: 'r2', reason: 'Солив' });
     expect(s.tx.campAsset.updateMany).toHaveBeenCalledWith({
-      where: { id: 'as1', tenantId: 't1', roomId: 'r1', condition: { not: 'WRITTEN_OFF' } },
-      data: { roomId: 'r2' },
+      where: { id: 'as1', tenantId: 't1', roomId: 'r1', buildingId: null, condition: { not: 'WRITTEN_OFF' } },
+      data: { roomId: 'r2', buildingId: null },
     });
     expect(s.tx.campAssetMovement.create).toHaveBeenCalledWith({
-      data: { tenantId: 't1', campId: 'c1', assetId: 'as1', fromRoomId: 'r1', toRoomId: 'r2', movedBy: 'cu1', reason: 'Солив' },
+      data: { tenantId: 't1', campId: 'c1', assetId: 'as1', fromRoomId: 'r1', fromBuildingId: null, toRoomId: 'r2', toBuildingId: null, movedBy: 'cu1', reason: 'Солив' },
     });
   });
 
@@ -187,8 +189,8 @@ describe('CampAssetsService — хөрөнгө (Шат 4.3)', () => {
     s.tx.campAsset.findFirst.mockResolvedValueOnce({ ...CORE, note: 'Хуучин тэмдэглэл' });
     await svc.writeOff('t1', 'a1', 'c1', 'as1', { reason: 'Эвдэрсэн' });
     const call = s.tx.campAsset.updateMany.mock.calls[0][0];
-    expect(call.where).toEqual({ id: 'as1', tenantId: 't1', roomId: 'r1', condition: { not: 'WRITTEN_OFF' } });
-    expect(call.data).toEqual({ condition: 'WRITTEN_OFF', roomId: null, note: `Хуучин тэмдэглэл\n[Актлав ${todayUb()}] Эвдэрсэн` });
+    expect(call.where).toEqual({ id: 'as1', tenantId: 't1', roomId: 'r1', buildingId: null, condition: { not: 'WRITTEN_OFF' } });
+    expect(call.data).toEqual({ condition: 'WRITTEN_OFF', roomId: null, buildingId: null, note: `Хуучин тэмдэглэл\n[Актлав ${todayUb()}] Эвдэрсэн` });
     expect(s.tx.campAssetMovement.create.mock.calls[0][0].data).toMatchObject({ fromRoomId: 'r1', toRoomId: null, reason: 'Актлав: Эвдэрсэн' });
   });
 
@@ -214,7 +216,8 @@ describe('CampAssetsService — хөрөнгө (Шат 4.3)', () => {
     const res = await svc.list('t1', 'a1', 'c1', { roomId: 'warehouse', q: 'inv', limit: 1 });
     const where = s.tx.campAsset.findMany.mock.calls[0][0].where;
     expect(where.roomId).toBeNull();
-    expect(where.OR).toHaveLength(3);
+    expect(where.buildingId).toBeNull(); // v0.2.1: байранд байрласан нь агуулахад биш
+    expect(where.AND[0].OR).toHaveLength(3);
     expect(res.hasMore).toBe(true);
     expect(res.data).toHaveLength(1);
     expect(res.data[0].acquiredCost).toBe('1500000.50');
@@ -231,5 +234,58 @@ describe('CampAssetsService — хөрөнгө (Шат 4.3)', () => {
     s.tx.campMaintenanceRequest.count.mockResolvedValueOnce(2);
     expect((await svc.get('t1', 'a1', 'c1', 'as1')).openMaintenance).toBe(2);
     await expect(svc.movements('t1', 'a1', 'c1', 'nope')).rejects.toThrow(NotFoundException);
+  });
+  // ── v0.2.1 (C-12): байранд (өрөөгүй) байрлуулах ──
+  it('v0.2.1 create: байранд → buildingId + анхны movement (toBuildingId); өрөө+байр хоёулаа → 400; идэвхгүй/өөр кемпийн байр → 400', async () => {
+    s.tx.campBuilding.findFirst.mockResolvedValueOnce({ code: 'B1', isActive: true });
+    await svc.create('t1', 'a1', 'c1', { categoryId: 'cat1', inventoryNo: 'INV-2', name: 'Гал унтраагуур', buildingId: 'b1' });
+    expect(s.tx.campBuilding.findFirst.mock.calls[0][0].where).toEqual({ id: 'b1', tenantId: 't1', campId: 'c1' });
+    expect(s.tx.campAsset.create.mock.calls[0][0].data).toMatchObject({ roomId: null, buildingId: 'b1' });
+    expect(s.tx.campAssetMovement.create.mock.calls[0][0].data).toMatchObject({ fromRoomId: null, toRoomId: null, toBuildingId: 'b1' });
+
+    await expect(svc.create('t1', 'a1', 'c1', { categoryId: 'cat1', inventoryNo: 'INV-3', name: 'X', roomId: 'r1', buildingId: 'b1' })).rejects.toThrow(/аль нэгэнд/);
+    s.tx.campBuilding.findFirst.mockResolvedValueOnce({ code: 'B9', isActive: false });
+    await expect(svc.create('t1', 'a1', 'c1', { categoryId: 'cat1', inventoryNo: 'INV-3', name: 'X', buildingId: 'b9' })).rejects.toThrow(/B9 идэвхгүй/);
+    s.tx.campBuilding.findFirst.mockResolvedValueOnce(null);
+    await expect(svc.create('t1', 'a1', 'c1', { categoryId: 'cat1', inventoryNo: 'INV-3', name: 'X', buildingId: 'bx' })).rejects.toThrow(/Байр олдсонгүй/);
+    expect(s.tx.campAsset.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('v0.2.1 move: өрөө → байр, байр → агуулах (from/to building), ижил байр → 400, хоёулаа → 400', async () => {
+    s.tx.campBuilding.findFirst.mockResolvedValue({ code: 'B1', isActive: true });
+    s.tx.campAsset.findFirst.mockResolvedValueOnce(CORE);
+    await svc.move('t1', 'a1', 'c1', 'as1', { toRoomId: null, toBuildingId: 'b1' });
+    expect(s.tx.campAsset.updateMany.mock.calls[0][0]).toEqual({
+      where: { id: 'as1', tenantId: 't1', roomId: 'r1', buildingId: null, condition: { not: 'WRITTEN_OFF' } },
+      data: { roomId: null, buildingId: 'b1' },
+    });
+    expect(s.tx.campAssetMovement.create.mock.calls[0][0].data).toMatchObject({ fromRoomId: 'r1', fromBuildingId: null, toRoomId: null, toBuildingId: 'b1' });
+
+    s.tx.campAsset.findFirst.mockResolvedValueOnce({ ...CORE, roomId: null, buildingId: 'b1' });
+    await svc.move('t1', 'a1', 'c1', 'as1', { toRoomId: null });
+    expect(s.tx.campAsset.updateMany.mock.calls[1][0].where).toMatchObject({ roomId: null, buildingId: 'b1' });
+    expect(s.tx.campAssetMovement.create.mock.calls[1][0].data).toMatchObject({ fromBuildingId: 'b1', toRoomId: null, toBuildingId: null });
+
+    s.tx.campAsset.findFirst.mockResolvedValueOnce({ ...CORE, roomId: null, buildingId: 'b1' });
+    await expect(svc.move('t1', 'a1', 'c1', 'as1', { toRoomId: null, toBuildingId: 'b1' })).rejects.toThrow(/энэ байранд/);
+    s.tx.campAsset.findFirst.mockResolvedValueOnce(CORE);
+    await expect(svc.move('t1', 'a1', 'c1', 'as1', { toRoomId: 'r2', toBuildingId: 'b1' })).rejects.toThrow(/аль нэгэнд/);
+    expect(s.tx.campAssetMovement.create).toHaveBeenCalledTimes(2);
+  });
+
+  it('v0.2.1 writeOff: байранд байсан → buildingId цэвэрлэж movement (fromBuildingId)', async () => {
+    s.tx.campAsset.findFirst.mockResolvedValueOnce({ ...CORE, roomId: null, buildingId: 'b1' });
+    await svc.writeOff('t1', 'a1', 'c1', 'as1', { reason: 'Эвдэрсэн' });
+    expect(s.tx.campAsset.updateMany.mock.calls[0][0].data).toMatchObject({ roomId: null, buildingId: null });
+    expect(s.tx.campAssetMovement.create.mock.calls[0][0].data).toMatchObject({ fromRoomId: null, fromBuildingId: 'b1', toRoomId: null });
+  });
+
+  it('v0.2.1 list: buildingId шүүлт = байранд шууд + тухайн байрны өрөөнүүдэд', async () => {
+    setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.REPORT_VIEW] }] });
+    s.tx.campAsset.findMany.mockResolvedValueOnce([]);
+    await svc.list('t1', 'a1', 'c1', { buildingId: 'b1', q: 'x' });
+    const where = s.tx.campAsset.findMany.mock.calls[0][0].where;
+    expect(where.OR).toEqual([{ buildingId: 'b1' }, { room: { buildingId: 'b1' } }]);
+    expect(where.AND[0].OR).toHaveLength(3); // хайлт OR-ийг дарахгүй
   });
 });

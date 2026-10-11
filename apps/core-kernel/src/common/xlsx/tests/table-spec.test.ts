@@ -97,7 +97,7 @@ describe('buildTemplate / buildExport', () => {
     expect(wb.worksheets.map((w) => w.name)).toEqual(['部门', '说明']);
     expect(wb.worksheets[0].getRow(1).getCell(1).value).toBe('部门编码');
     expect(wb.worksheets[0].getRow(2).getCell(1).value).toBe('KITCHEN');
-    expect(wb.worksheets[0].getCell('D2').dataValidation?.type).toBe('list');
+    expect(wb.worksheets[0].getCell('C2').dataValidation?.type).toBe('list');
 
     const exp = await buildExport(EMPLOYEES_SPEC, [
       { employeeCode: 'E1', fullName: 'Бат', position: null, phone: '99112233', email: null, organization: 'R1', department: 'ADM', crew: null, status: 'INACTIVE' },

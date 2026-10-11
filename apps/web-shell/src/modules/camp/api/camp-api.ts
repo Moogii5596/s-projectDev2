@@ -50,6 +50,11 @@ import type {
   DataImportResult,
   DataImportType,
   ExportType,
+  CatalogItem,
+  CatalogKind,
+  PositionSetting,
+  Stay,
+  StayShiftGroup,
 } from './types'
 
 const V1 = '/api/v1/camp'
@@ -85,6 +90,17 @@ export const campApi = {
   createOrganization: (body: OrganizationInput) => post<Organization>(`${V1}/organizations`, body),
   updateOrganization: (id: string, body: Partial<OrganizationInput> & { isActive?: boolean }) => patch<Organization>(`${V1}/organizations/${id}`, body),
 
+  // ── v0.2.1: байгууллагын каталог (албан тушаал, байрны төрөл) ──
+  catalog: (kind: CatalogKind, activeOnly = false) => get<CatalogItem[]>(`${V1}/${kind}`, { activeOnly }),
+  createCatalogItem: (kind: CatalogKind, name: string) => post<CatalogItem>(`${V1}/${kind}`, { name }),
+  updateCatalogItem: (kind: CatalogKind, id: string, body: { name?: string; isActive?: boolean }) => patch<CatalogItem>(`${V1}/${kind}/${id}`, body),
+  positionSettings: (campId: string) => get<PositionSetting[]>(campUrl(campId, '/position-settings')),
+  savePositionSetting: (
+    campId: string,
+    positionId: string,
+    body: { mealLocationId?: string | null; mealsIncluded?: boolean | null; shiftPattern?: ShiftSegment[] },
+  ) => put<unknown>(campUrl(campId, `/position-settings/${positionId}`), body),
+
   // ── Тохиргоо ───────────────────────────────────────────────
   settings: (campId: string) => get<CampSettings>(campUrl(campId, '/settings')),
   saveSettings: (campId: string, body: SettingsInput) => put<CampSettings>(campUrl(campId, '/settings'), body),
@@ -95,21 +111,21 @@ export const campApi = {
 
   // ── Байр, өрөө ─────────────────────────────────────────────
   buildings: (campId: string) => get<Building[]>(campUrl(campId, '/buildings')),
-  createBuilding: (campId: string, body: { code: string; name: string; rooms?: BulkRoomsInput }) =>
+  createBuilding: (campId: string, body: { code: string; name: string; typeId?: string | null; rooms?: BulkRoomsInput }) =>
     post<Building & { roomsCreated?: number; roomsSkipped?: string[] }>(campUrl(campId, '/buildings'), body),
   /** FB-07 (v0.2.0) */
   bulkRooms: (campId: string, buildingId: string, body: BulkRoomsInput) =>
     post<{ created: number; skipped: string[] }>(campUrl(campId, `/buildings/${buildingId}/rooms/bulk`), body),
-  updateBuilding: (campId: string, id: string, body: { name?: string; isActive?: boolean }) => patch<Building>(campUrl(campId, `/buildings/${id}`), body),
+  updateBuilding: (campId: string, id: string, body: { name?: string; isActive?: boolean; typeId?: string | null }) => patch<Building>(campUrl(campId, `/buildings/${id}`), body),
   rooms: (campId: string, q: { buildingId?: string; status?: RoomStatus } = {}) => get<Room[]>(campUrl(campId, '/rooms'), q),
   createRoom: (campId: string, body: RoomInput & { buildingId: string }) => post<Room>(campUrl(campId, '/rooms'), body),
   updateRoom: (campId: string, id: string, body: Partial<RoomInput> & { status?: RoomStatus }) => patch<Room>(campUrl(campId, `/rooms/${id}`), body),
 
   // ── Хэлтэс, баг ────────────────────────────────────────────
   departments: (campId: string) => get<Department[]>(campUrl(campId, '/departments')),
-  createDepartment: (campId: string, body: { code: string; name: string; mealLocationId: string; shiftPattern?: ShiftSegment[] }) =>
+  createDepartment: (campId: string, body: { code: string; name: string; shiftPattern?: ShiftSegment[] }) =>
     post<Department>(campUrl(campId, '/departments'), body),
-  updateDepartment: (campId: string, id: string, body: { name?: string; mealLocationId?: string; isActive?: boolean }) =>
+  updateDepartment: (campId: string, id: string, body: { name?: string; isActive?: boolean }) =>
     patch<Department>(campUrl(campId, `/departments/${id}`), body),
   setShiftPattern: (campId: string, id: string, segments: ShiftSegment[]) =>
     put<Department>(campUrl(campId, `/departments/${id}/shift-pattern`), { segments }),
@@ -123,6 +139,9 @@ export const campApi = {
   createEmployee: (campId: string, body: EmployeeInput) => post<Employee>(campUrl(campId, '/employees'), body),
   updateEmployee: (campId: string, id: string, body: Partial<EmployeeInput> & { status?: EmployeeStatus }) =>
     patch<Employee>(campUrl(campId, `/employees/${id}`), body),
+  /** v0.2.1 (Д-2): олон ажилтанд нэг дор (≤ 500) — null = цэвэрлэх (албан тушаалаас / анхдагч) */
+  bulkEmployees: (campId: string, body: { ids: string[]; mealsIncluded?: boolean | null; mealLocationId?: string | null; positionId?: string | null }) =>
+    post<{ updated: number }>(campUrl(campId, '/employees/bulk'), body),
 
   // ── Ирц ────────────────────────────────────────────────────
   /** Загвар xlsx (JWT-тэй тул blob-оор татна) */
@@ -141,6 +160,8 @@ export const campApi = {
   confirmImport: (campId: string, id: string) => post<ImportConfirmResult>(campUrl(campId, `/movement-imports/${id}/confirm`)),
   cancelImport: (campId: string, id: string) => post<unknown>(campUrl(campId, `/movement-imports/${id}/cancel`)),
   movements: (campId: string, q: MovementQuery) => get<Movement[]>(campUrl(campId, '/movements'), q),
+  /** v0.2.1 (C-14): D өдөр кемпэд байгаа хүмүүс, тооцоолсон ээлжтэй */
+  stays: (campId: string, date: string, shift?: StayShiftGroup) => get<Stay[]>(campUrl(campId, '/stays'), { date, ...(shift ? { shift } : {}) }),
   /** FB-14 (v0.2.0): олон ажилтны ирц → импортын урсгал (PREVIEW) */
   manualMovements: (campId: string, body: { date: string; direction: Direction; meals?: MealType[] | null; shift?: ShiftType; employeeIds: string[] }) =>
     post<ImportPreview>(campUrl(campId, '/movement-imports/manual'), body),
@@ -174,9 +195,9 @@ export const campApi = {
   updateAssetCategory: (id: string, body: { name?: string; isActive?: boolean }) => patch<AssetCategory>(`${V1}/asset-categories/${id}`, body),
   assets: (campId: string, q: AssetQuery) => get<Page<Asset>>(campUrl(campId, '/assets'), q),
   asset: (campId: string, id: string) => get<Asset>(campUrl(campId, `/assets/${id}`)),
-  createAsset: (campId: string, body: AssetInput & { roomId?: string | null }) => post<Asset>(campUrl(campId, '/assets'), body),
+  createAsset: (campId: string, body: AssetInput & { roomId?: string | null; buildingId?: string | null }) => post<Asset>(campUrl(campId, '/assets'), body),
   updateAsset: (campId: string, id: string, body: Partial<AssetInput>) => patch<Asset>(campUrl(campId, `/assets/${id}`), body),
-  moveAsset: (campId: string, id: string, body: { toRoomId: string | null; reason?: string | null }) => post<Asset>(campUrl(campId, `/assets/${id}/move`), body),
+  moveAsset: (campId: string, id: string, body: { toRoomId: string | null; toBuildingId?: string | null; reason?: string | null }) => post<Asset>(campUrl(campId, `/assets/${id}/move`), body),
   writeOffAsset: (campId: string, id: string, reason: string) => post<Asset>(campUrl(campId, `/assets/${id}/write-off`), { reason }),
   assetMovements: (campId: string, id: string) => get<AssetMovement[]>(campUrl(campId, `/assets/${id}/movements`)),
 
@@ -221,6 +242,8 @@ export interface AssetQuery {
   limit?: number
   /** өрөөний UUID эсвэл 'warehouse' */
   roomId?: string
+  /** v0.2.1: байрны бүх хөрөнгө (байранд + өрөөнүүдэд) */
+  buildingId?: string
   categoryId?: string
   condition?: AssetCondition
   q?: string
@@ -264,6 +287,9 @@ export interface EmployeeQuery {
   crewId?: string
   organizationId?: string
   status?: EmployeeStatus
+  /** v0.2.1: UUID эсвэл 'none' */
+  positionId?: string
+  mealsIncluded?: boolean
 }
 
 export interface MovementQuery {
@@ -284,6 +310,10 @@ export interface EmployeeInput {
   employeeCode: string
   fullName: string
   position?: string | null
+  /** v0.2.1 */
+  positionId?: string | null
+  mealLocationId?: string | null
+  mealsIncluded?: boolean | null
   phone?: string | null
   email?: string | null
 }

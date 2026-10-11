@@ -32,6 +32,7 @@ const ASSET_SELECT = {
   name: true,
   serialNo: true,
   roomId: true,
+  buildingId: true,
   condition: true,
   acquiredDate: true,
   acquiredCost: true,
@@ -40,6 +41,7 @@ const ASSET_SELECT = {
   updatedAt: true,
   category: { select: { name: true } },
   room: { select: { roomNo: true, building: { select: { code: true } } } },
+  building: { select: { code: true, name: true } },
 } as const;
 
 type AssetRow = Prisma.CampAssetGetPayload<{ select: typeof ASSET_SELECT }>;
@@ -54,7 +56,7 @@ export const assetView = (a: AssetRow) => ({
 /**
  * Үндсэн хөрөнгө (Шат 4.3).
  *   - Ангилал = tenant түвшний лавлах: аль нэг кемпэд camp.asset.manage эрхтэй бол удирдана.
- *   - Хөрөнгө кемпэд харьяалагдана; room_id NULL = агуулах. Байршил зөвхөн move/write-off-оор өөрчлөгдөж,
+ *   - Хөрөнгө кемпэд харьяалагдана; room_id (өрөөнд) · building_id (v0.2.1: өрөөгүй, байранд) · хоёулаа NULL = агуулах. Байршил зөвхөн move/write-off-оор өөрчлөгдөж,
  *     шилжилт бүр camp_asset_movements-д бичигдэнэ (байршил + түүх НЭГ transaction).
  *   - WRITTEN_OFF (актлагдсан) хөрөнгө түгжигдэнэ — засах, шилжүүлэх, засварт оруулах боломжгүй (409).
  */
@@ -127,6 +129,13 @@ export class CampAssetsService {
     if (r.status === CampRoomStatus.INACTIVE) throw badRequest('camp.err.assets.5', { roomNo: r.roomNo });
   }
 
+  /** v0.2.1 (C-12): хөрөнгө байрлуулах байр — тухайн кемпийнх, идэвхтэй */
+  private async assertBuildingUsable(tx: Tx, tenantId: string, campId: string, buildingId: string) {
+    const b = await tx.campBuilding.findFirst({ where: { id: buildingId, tenantId, campId }, select: { code: true, isActive: true } });
+    if (!b) throw badRequest('camp.err.assets.20');
+    if (!b.isActive) throw badRequest('camp.err.assets.21', { code: b.code });
+  }
+
   private async assertInventoryNoFree(tx: Tx, tenantId: string, inventoryNo: string, exceptId?: string) {
     const dup = await tx.campAsset.findFirst({
       where: { tenantId, inventoryNo, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
@@ -144,7 +153,7 @@ export class CampAssetsService {
   private async getAssetOr404(tx: Tx, tenantId: string, campId: string, id: string) {
     const a = await tx.campAsset.findFirst({
       where: { id, tenantId, campId },
-      select: { id: true, roomId: true, condition: true, note: true, inventoryNo: true },
+      select: { id: true, roomId: true, buildingId: true, condition: true, note: true, inventoryNo: true },
     });
     if (!a) throw notFound('camp.err.assets.9');
     return a;
@@ -174,21 +183,24 @@ export class CampAssetsService {
       const where: Prisma.CampAssetWhereInput = {
         tenantId,
         campId,
-        ...(q.roomId === 'warehouse' ? { roomId: null } : q.roomId ? { roomId: q.roomId } : {}),
+        ...(q.roomId === 'warehouse' ? { roomId: null, buildingId: null } : q.roomId ? { roomId: q.roomId } : {}),
+        ...(q.buildingId ? { OR: [{ buildingId: q.buildingId }, { room: { buildingId: q.buildingId } }] } : {}),
         ...(q.categoryId ? { categoryId: q.categoryId } : {}),
         ...(q.condition ? { condition: q.condition } : {}),
-        ...(q.q
-          ? {
-              OR: [
-                { inventoryNo: { contains: q.q, mode: 'insensitive' } },
-                { name: { contains: q.q, mode: 'insensitive' } },
-                { serialNo: { contains: q.q, mode: 'insensitive' } },
-              ],
-            }
-          : {}),
-        ...(cursor
-          ? { AND: [{ OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }] }] }
-          : {}),
+        AND: [
+          ...(q.q
+            ? [
+                {
+                  OR: [
+                    { inventoryNo: { contains: q.q, mode: 'insensitive' as const } },
+                    { name: { contains: q.q, mode: 'insensitive' as const } },
+                    { serialNo: { contains: q.q, mode: 'insensitive' as const } },
+                  ],
+                },
+              ]
+            : []),
+          ...(cursor ? [{ OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }] }] : []),
+        ],
       };
       const rows = await tx.campAsset.findMany({ where, select: ASSET_SELECT, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: limit + 1 });
       const hasMore = rows.length > limit;
@@ -219,7 +231,10 @@ export class CampAssetsService {
         this.assertAcquiredDate(dto.acquiredDate);
         await this.assertCategoryUsable(tx, tenantId, dto.categoryId);
         const roomId = dto.roomId ?? null;
+        const buildingId = dto.buildingId ?? null;
+        if (roomId && buildingId) throw badRequest('camp.err.assets.19');
         if (roomId) await this.assertRoomUsable(tx, tenantId, campId, roomId);
+        if (buildingId) await this.assertBuildingUsable(tx, tenantId, campId, buildingId);
         await this.assertInventoryNoFree(tx, tenantId, dto.inventoryNo);
         const created = await tx.campAsset.create({
           data: {
@@ -230,6 +245,7 @@ export class CampAssetsService {
             name: dto.name,
             serialNo: dto.serialNo ?? null,
             roomId,
+            buildingId,
             condition: dto.condition ?? CampAssetCondition.GOOD,
             acquiredDate: dto.acquiredDate ? toDbDate(dto.acquiredDate) : null,
             acquiredCost: dto.acquiredCost === undefined || dto.acquiredCost === null ? null : new Prisma.Decimal(dto.acquiredCost),
@@ -238,9 +254,9 @@ export class CampAssetsService {
           select: ASSET_SELECT,
         });
         // Анхны байршуулалт ч түүхэнд үлдэнэ (агуулах → өрөө)
-        if (roomId) {
+        if (roomId || buildingId) {
           await tx.campAssetMovement.create({
-            data: { tenantId, campId, assetId: created.id, fromRoomId: null, toRoomId: roomId, movedBy: userId, reason: 'Анхны байршуулалт' },
+            data: { tenantId, campId, assetId: created.id, fromRoomId: null, toRoomId: roomId, toBuildingId: buildingId, movedBy: userId, reason: 'Анхны байршуулалт' },
           });
         }
         return assetView(created);
@@ -282,16 +298,31 @@ export class CampAssetsService {
         const a = await this.getAssetOr404(tx, tenantId, campId, id);
         CampAssetsService.assertNotWrittenOff(a);
         const to = dto.toRoomId;
-        if (to === a.roomId) throw badRequest(to ? 'camp.err.assets.17' : 'camp.err.assets.18');
+        const toBuilding = dto.toBuildingId ?? null;
+        if (to && toBuilding) throw badRequest('camp.err.assets.19');
+        if (to === a.roomId && toBuilding === a.buildingId) {
+          throw badRequest(to ? 'camp.err.assets.17' : toBuilding ? 'camp.err.assets.22' : 'camp.err.assets.18');
+        }
         if (to) await this.assertRoomUsable(tx, tenantId, campId, to);
+        if (toBuilding) await this.assertBuildingUsable(tx, tenantId, campId, toBuilding);
         // Optimistic: уншсанаас хойш байршил/төлөв өөрчлөгдсөн бол 0 мөр → 409
         const res = await tx.campAsset.updateMany({
-          where: { id, tenantId, roomId: a.roomId, condition: { not: CampAssetCondition.WRITTEN_OFF } },
-          data: { roomId: to },
+          where: { id, tenantId, roomId: a.roomId, buildingId: a.buildingId, condition: { not: CampAssetCondition.WRITTEN_OFF } },
+          data: { roomId: to, buildingId: toBuilding },
         });
         if (res.count === 0) throw conflict('camp.err.assets.15', { inventoryNo: a.inventoryNo });
         await tx.campAssetMovement.create({
-          data: { tenantId, campId, assetId: id, fromRoomId: a.roomId, toRoomId: to, movedBy: userId, reason: dto.reason ?? null },
+          data: {
+            tenantId,
+            campId,
+            assetId: id,
+            fromRoomId: a.roomId,
+            fromBuildingId: a.buildingId,
+            toRoomId: to,
+            toBuildingId: toBuilding,
+            movedBy: userId,
+            reason: dto.reason ?? null,
+          },
         });
         const fresh = await tx.campAsset.findFirstOrThrow({ where: { id, tenantId }, select: ASSET_SELECT });
         return assetView(fresh);
@@ -317,13 +348,22 @@ export class CampAssetsService {
         if (open) throw conflict('camp.err.assets.16', { inventoryNo: a.inventoryNo, requestNo: open.requestNo });
         const stamp = `[Актлав ${todayUb()}] ${dto.reason}`;
         const res = await tx.campAsset.updateMany({
-          where: { id, tenantId, roomId: a.roomId, condition: { not: CampAssetCondition.WRITTEN_OFF } },
-          data: { condition: CampAssetCondition.WRITTEN_OFF, roomId: null, note: a.note ? `${a.note}\n${stamp}` : stamp },
+          where: { id, tenantId, roomId: a.roomId, buildingId: a.buildingId, condition: { not: CampAssetCondition.WRITTEN_OFF } },
+          data: { condition: CampAssetCondition.WRITTEN_OFF, roomId: null, buildingId: null, note: a.note ? `${a.note}\n${stamp}` : stamp },
         });
         if (res.count === 0) throw conflict('camp.err.assets.14', { inventoryNo: a.inventoryNo });
-        if (a.roomId) {
+        if (a.roomId || a.buildingId) {
           await tx.campAssetMovement.create({
-            data: { tenantId, campId, assetId: id, fromRoomId: a.roomId, toRoomId: null, movedBy: userId, reason: `Актлав: ${dto.reason}`.slice(0, 500) },
+            data: {
+              tenantId,
+              campId,
+              assetId: id,
+              fromRoomId: a.roomId,
+              fromBuildingId: a.buildingId,
+              toRoomId: null,
+              movedBy: userId,
+              reason: `Актлав: ${dto.reason}`.slice(0, 500),
+            },
           });
         }
         const fresh = await tx.campAsset.findFirstOrThrow({ where: { id, tenantId }, select: ASSET_SELECT });
@@ -344,8 +384,12 @@ export class CampAssetsService {
           toRoomId: true,
           movedAt: true,
           reason: true,
-          fromRoom: { select: { roomNo: true } },
-          toRoom: { select: { roomNo: true } },
+          fromBuildingId: true,
+          toBuildingId: true,
+          fromRoom: { select: { roomNo: true, building: { select: { code: true } } } },
+          toRoom: { select: { roomNo: true, building: { select: { code: true } } } },
+          fromBuilding: { select: { code: true } },
+          toBuilding: { select: { code: true } },
           movedByUser: { select: { fullName: true, email: true } },
         },
         orderBy: [{ movedAt: 'desc' }, { id: 'desc' }],

@@ -17,6 +17,9 @@ export default function PresencePage() {
   const q = useQuery({ queryKey: [...campKeys.presence(campId), date], queryFn: () => campApi.presence(campId, date), enabled: !!date })
   const pivot = q.data ? pivotPresence(q.data.lines) : null
   const [showBreakdown, setShowBreakdown] = useState(false)
+  // v0.2.1: задаргаа хэлтэс × ээлж эсвэл албан тушаалаар
+  const [by, setBy] = useState<'department' | 'position'>('department')
+  const locName = (id: string | null) => q.data?.lines.find((l) => l.mealLocationId === id)?.mealLocationName ?? t('camp.presence.no_location')
 
   return (
     <div className="space-y-5">
@@ -37,6 +40,7 @@ export default function PresencePage() {
           <div className="flex gap-2 pb-1">
             <Badge tone="blue">{t('camp.meals.present', { n: q.data.presentCount })}</Badge>
             <Badge>{t('camp.meals.person_days', { n: q.data.personDays })}</Badge>
+            {(q.data.noMealCount ?? 0) > 0 && <Badge tone="yellow">{t('camp.meals.no_meal_n', { n: q.data.noMealCount ?? 0 })}</Badge>}
           </div>
         )}
       </div>
@@ -90,19 +94,38 @@ export default function PresencePage() {
         <Card
           title={t('camp.meals.breakdown')}
           actions={
-            <Button size="sm" variant="secondary" onClick={() => setShowBreakdown((v) => !v)}>
-              {showBreakdown ? t('camp.meals.hide') : t('camp.meals.show')}
-            </Button>
+            <div className="flex gap-2">
+              {showBreakdown && (
+                <select aria-label={t('camp.meals.breakdown_by')} className={`${inputSmCls} w-auto`} value={by} onChange={(e) => setBy(e.target.value as typeof by)}>
+                  <option value="department">{t('camp.meals.by_department')}</option>
+                  <option value="position">{t('camp.meals.by_position')}</option>
+                </select>
+              )}
+              <Button size="sm" variant="secondary" onClick={() => setShowBreakdown((v) => !v)}>
+                {showBreakdown ? t('camp.meals.hide') : t('camp.meals.show')}
+              </Button>
+            </div>
           }
         >
-          {showBreakdown ? (
+          {showBreakdown && by === 'position' ? (
+            <Table head={[t('camp.emp.col.position'), t('camp.att.col.meals'), t('camp.common.location'), t('camp.meals.count')]}>
+              {(q.data.byPosition ?? []).map((b, i) => (
+                <tr key={i}>
+                  <td className={td}>{b.positionName ?? t('camp.emp.no_position')}</td>
+                  <td className={td}>{MEAL_LABEL[b.mealType]}</td>
+                  <td className={td}>{locName(b.mealLocationId)}</td>
+                  <td className={`${td} tabular-nums`}>{b.count}</td>
+                </tr>
+              ))}
+            </Table>
+          ) : showBreakdown ? (
             <Table head={[t('camp.emp.department'), t('camp.meals.group'), t('camp.att.col.meals'), t('camp.common.location'), t('camp.meals.count')]}>
               {q.data.breakdown.map((b, i) => (
                 <tr key={i}>
                   <td className={td}>{b.departmentCode}</td>
                   <td className={td}>{PRESENCE_GROUP_LABEL[b.group] ?? b.group}</td>
                   <td className={td}>{MEAL_LABEL[b.mealType]}</td>
-                  <td className={td}>{q.data.lines.find((l) => l.mealLocationId === b.mealLocationId)?.mealLocationName ?? t('camp.presence.no_location')}</td>
+                  <td className={td}>{locName(b.mealLocationId)}</td>
                   <td className={`${td} tabular-nums`}>{b.count}</td>
                 </tr>
               ))}

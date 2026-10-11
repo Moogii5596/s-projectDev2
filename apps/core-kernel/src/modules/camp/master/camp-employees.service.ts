@@ -6,9 +6,11 @@ import { CampAuditService } from '../common/camp-audit.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
-import { getCampOr404 } from '../common/camp-lookup';
+import { assertMealLocation, getCampOr404, getRosterSettings } from '../common/camp-lookup';
+import { assertPosition, resolvePositionByName } from '../catalog/camp-catalog.service';
+import { effectiveEmployee, loadPositionDefaults } from '../attendance/camp-presence.service';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
-import { CreateEmployeeDto, QueryEmployeesDto, UpdateEmployeeDto } from './camp-master.dto';
+import { BulkEmployeesDto, CreateEmployeeDto, QueryEmployeesDto, UpdateEmployeeDto } from './camp-master.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
@@ -23,15 +25,20 @@ const EMPLOYEE_SELECT = {
   organizationId: true,
   departmentId: true,
   crewId: true,
+  positionId: true,
+  mealLocationId: true,
+  mealsIncluded: true,
   createdAt: true,
   updatedAt: true,
   organization: { select: { name: true } },
   department: { select: { code: true, name: true } },
   crew: { select: { code: true } },
+  positionRef: { select: { name: true } },
+  workMealLocation: { select: { name: true } },
 } as const;
 
 /** Түүхэд харьцуулах талбарууд (§0.4) */
-export const EMPLOYEE_AUDIT_FIELDS = ['employeeCode', 'fullName', 'position', 'phone', 'email', 'status', 'organizationId', 'departmentId', 'crewId'] as const;
+export const EMPLOYEE_AUDIT_FIELDS = ['employeeCode', 'fullName', 'position', 'phone', 'email', 'status', 'organizationId', 'departmentId', 'crewId', 'positionId', 'mealLocationId', 'mealsIncluded'] as const;
 const EMPLOYEE_AUDIT_SELECT = { id: true, ...Object.fromEntries(EMPLOYEE_AUDIT_FIELDS.map((f) => [f, true])) } as Record<string, true>;
 
 /**
@@ -50,7 +57,8 @@ export class CampEmployeesService {
     tx: Tx,
     tenantId: string,
     campId: string,
-    refs: { organizationId?: string; departmentId?: string; crewId?: string | null },
+    refs: { organizationId?: string; departmentId?: string; crewId?: string | null; mealLocationId?: string | null },
+    current?: { mealLocationId?: string | null },
   ) {
     if (refs.organizationId !== undefined) {
       const org = await tx.campOrganization.findFirst({ where: { id: refs.organizationId, tenantId }, select: { isActive: true } });
@@ -67,6 +75,23 @@ export class CampEmployeesService {
       if (!c) throw badRequest('camp.err.employees.5');
       if (!c.isActive) throw badRequest('camp.err.employees.6');
     }
+    // v0.2.1: ажлын хоолны байршил — тухайн кемпийнх, идэвхтэй (одоогийнхоо хэвээр үлдээвэл идэвхгүй ч болно)
+    if (refs.mealLocationId && refs.mealLocationId !== current?.mealLocationId) await assertMealLocation(tx, tenantId, campId, refs.mealLocationId);
+  }
+
+  /** `positionId` (каталог) эсвэл хуучин `position` текст → {positionId, position(текст)} */
+  private async resolvePosition(tx: Tx, tenantId: string, dto: { positionId?: string | null; position?: string | null }, currentId?: string | null) {
+    if (dto.positionId !== undefined) {
+      if (dto.positionId === null) return { positionId: null, position: null };
+      const p = await assertPosition(tx, tenantId, dto.positionId, currentId);
+      return { positionId: p.id, position: p.name };
+    }
+    if (dto.position !== undefined) {
+      if (!dto.position) return { positionId: null, position: null };
+      const p = await resolvePositionByName(tx, tenantId, dto.position, currentId);
+      return { positionId: p.id, position: p.name };
+    }
+    return {};
   }
 
   private async assertCodeUnique(tx: Tx, tenantId: string, code: string, exceptId?: string) {
@@ -97,6 +122,8 @@ export class CampEmployeesService {
         ...(q.crewId ? { crewId: q.crewId === 'none' ? null : q.crewId } : {}),
         ...(q.organizationId ? { organizationId: q.organizationId } : {}),
         ...(q.status ? { status: q.status } : {}),
+        ...(q.positionId ? { positionId: q.positionId === 'none' ? null : q.positionId } : {}),
+        ...(q.mealsIncluded !== undefined ? { mealsIncluded: q.mealsIncluded } : {}),
         ...(q.q
           ? { OR: [{ employeeCode: { contains: q.q, mode: 'insensitive' } }, { fullName: { contains: q.q, mode: 'insensitive' } }] }
           : {}),
@@ -112,7 +139,7 @@ export class CampEmployeesService {
         take: limit + 1,
       });
       const hasMore = rows.length > limit;
-      const data = rows.slice(0, limit);
+      const data = await this.withEffective(tx, tenantId, campId, rows.slice(0, limit));
       const last = data[data.length - 1];
       return { data, nextCursor: hasMore && last ? encodeCursor(last.id, last.createdAt) : null, hasMore };
     });
@@ -123,7 +150,7 @@ export class CampEmployeesService {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       const e = await tx.campEmployee.findFirst({ where: { id, tenantId, campId }, select: EMPLOYEE_SELECT });
       if (!e) throw notFound('camp.err.employees.8');
-      return e;
+      return (await this.withEffective(tx, tenantId, campId, [e]))[0];
     });
   }
 
@@ -132,8 +159,9 @@ export class CampEmployeesService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_MANAGE);
         await getCampOr404(tx, tenantId, campId);
-        await this.assertRefs(tx, tenantId, campId, { organizationId: dto.organizationId, departmentId: dto.departmentId, crewId: dto.crewId ?? null });
+        await this.assertRefs(tx, tenantId, campId, { organizationId: dto.organizationId, departmentId: dto.departmentId, crewId: dto.crewId ?? null, mealLocationId: dto.mealLocationId });
         await this.assertCodeUnique(tx, tenantId, dto.employeeCode);
+        const pos = await this.resolvePosition(tx, tenantId, dto);
         const created = await tx.campEmployee.create({
           data: {
             tenantId,
@@ -143,7 +171,10 @@ export class CampEmployeesService {
             crewId: dto.crewId ?? null,
             employeeCode: dto.employeeCode,
             fullName: dto.fullName,
-            position: dto.position ?? null,
+            position: pos.position ?? null,
+            positionId: pos.positionId ?? null,
+            mealLocationId: dto.mealLocationId ?? null,
+            mealsIncluded: dto.mealsIncluded ?? null,
             phone: dto.phone ?? null,
             email: dto.email ? dto.email.toLowerCase() : null,
           },
@@ -165,13 +196,14 @@ export class CampEmployeesService {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_MANAGE);
         const e = await tx.campEmployee.findFirst({ where: { id, tenantId, campId }, select: EMPLOYEE_AUDIT_SELECT });
         if (!e) throw notFound('camp.err.employees.8');
-        await this.assertRefs(tx, tenantId, campId, { organizationId: dto.organizationId, departmentId: dto.departmentId, crewId: dto.crewId });
+        await this.assertRefs(tx, tenantId, campId, { organizationId: dto.organizationId, departmentId: dto.departmentId, crewId: dto.crewId, mealLocationId: dto.mealLocationId }, e as { mealLocationId?: string | null });
         if (dto.employeeCode !== undefined) await this.assertCodeUnique(tx, tenantId, dto.employeeCode, id);
-        const fields = ['organizationId', 'departmentId', 'crewId', 'employeeCode', 'fullName', 'position', 'phone', 'email', 'status'] as const;
-        const data = Object.fromEntries(
-          fields.filter((f) => dto[f] !== undefined).map((f) => [f, f === 'email' && dto.email ? dto.email.toLowerCase() : dto[f]]),
-        );
-        const updated = await tx.campEmployee.update({ where: { id }, data, select: EMPLOYEE_SELECT });
+        const fields = ['organizationId', 'departmentId', 'crewId', 'employeeCode', 'fullName', 'phone', 'email', 'status', 'mealLocationId', 'mealsIncluded'] as const;
+        const data = {
+          ...Object.fromEntries(fields.filter((f) => dto[f] !== undefined).map((f) => [f, f === 'email' && dto.email ? dto.email.toLowerCase() : dto[f]])),
+          ...(await this.resolvePosition(tx, tenantId, dto, (e as { positionId?: string | null }).positionId)),
+        };
+        const updated = await tx.campEmployee.update({ where: { id }, data: data as Prisma.CampEmployeeUncheckedUpdateInput, select: EMPLOYEE_SELECT });
         await this.audit.record(tx, {
           tenantId, campId, entityType: 'employee', entityId: id, action: 'UPDATE', actorUserId,
           fields: EMPLOYEE_AUDIT_FIELDS, before: e, after: updated,
@@ -179,6 +211,71 @@ export class CampEmployeesService {
         });
         return updated;
       }),
+    );
+  }
+
+  /**
+   * v0.2.1 — UI-д "эффектив" утга: ажилтан ?? албан тушаал(кемп) ?? анхдагч (хоолны тооцоотой ижил `effectiveEmployee`).
+   * `mealSource`: EMPLOYEE | POSITION | DEFAULT
+   */
+  private async withEffective<T extends { positionId: string | null; mealLocationId: string | null; mealsIncluded: boolean | null }>(tx: Tx, tenantId: string, campId: string, rows: T[]) {
+    if (rows.length === 0) return [];
+    const [defaults, locs, settings] = await Promise.all([
+      loadPositionDefaults(tx, tenantId, campId),
+      tx.campMealLocation.findMany({ where: { tenantId, campId }, select: { id: true, name: true } }),
+      getRosterSettings(tx, tenantId, campId),
+    ]);
+    const locName = new Map(locs.map((l) => [l.id, l.name]));
+    return rows.map((r) => {
+      const eff = effectiveEmployee(r, defaults, []);
+      const p = r.positionId ? defaults.get(r.positionId) : undefined;
+      const locId = eff.workMealLocationId ?? settings.defaultMealLocationId;
+      return {
+        ...r,
+        effective: {
+          mealLocationId: locId,
+          mealLocationName: locId ? (locName.get(locId) ?? null) : null,
+          mealLocationSource: r.mealLocationId ? 'EMPLOYEE' : p?.mealLocationId ? 'POSITION' : 'DEFAULT',
+          mealsIncluded: eff.mealsIncluded,
+          mealsIncludedSource: r.mealsIncluded !== null ? 'EMPLOYEE' : p?.mealsIncluded != null ? 'POSITION' : 'DEFAULT',
+        },
+      };
+    });
+  }
+
+  /** v0.2.1 (Д-2) — олон ажилтанд нэг дор (≤ 500): хоол авах / ажлын хоолны байршил / албан тушаал. Нэг transaction, audit. */
+  async bulkUpdate(tenantId: string, authId: string, campId: string, dto: BulkEmployeesDto) {
+    return withCampErrors(() =>
+      inTenantTx(
+        this.prisma,
+        tenantId,
+        async (tx) => {
+          const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_MANAGE);
+          if (dto.mealsIncluded === undefined && dto.mealLocationId === undefined && dto.positionId === undefined) throw badRequest('camp.err.employees.bulk_empty');
+          const before = await tx.campEmployee.findMany({ where: { tenantId, campId, id: { in: dto.ids } }, select: EMPLOYEE_AUDIT_SELECT });
+          if (before.length !== dto.ids.length) throw badRequest('camp.err.employees.bulk_not_found', { n: dto.ids.length - before.length });
+          if (dto.mealLocationId) await assertMealLocation(tx, tenantId, campId, dto.mealLocationId);
+          const pos = dto.positionId !== undefined ? await this.resolvePosition(tx, tenantId, { positionId: dto.positionId }) : {};
+          const data = {
+            ...(dto.mealsIncluded !== undefined ? { mealsIncluded: dto.mealsIncluded } : {}),
+            ...(dto.mealLocationId !== undefined ? { mealLocationId: dto.mealLocationId } : {}),
+            ...pos,
+          };
+          await tx.campEmployee.updateMany({ where: { tenantId, campId, id: { in: dto.ids } }, data });
+          const after = await tx.campEmployee.findMany({ where: { tenantId, campId, id: { in: dto.ids } }, select: EMPLOYEE_AUDIT_SELECT });
+          const prev = new Map(before.map((b) => [b.id as unknown as string, b]));
+          await this.audit.recordMany(
+            tx,
+            after.map((a) => ({
+              tenantId, campId, entityType: 'employee' as const, entityId: a.id as unknown as string, action: 'UPDATE' as const, actorUserId,
+              fields: EMPLOYEE_AUDIT_FIELDS, before: prev.get(a.id as unknown as string) ?? null, after: a as unknown as { id: string } & Record<string, unknown>,
+              summaryParams: { code: String(a.employeeCode), name: String(a.fullName) },
+            })),
+          );
+          return { updated: after.length };
+        },
+        { timeout: 30_000 },
+      ),
     );
   }
 }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { campApi, type AssetQuery } from '../api/camp-api'
-import type { Asset, AssetCondition, Room } from '../api/types'
+import type { Asset, AssetCondition, Building, Room } from '../api/types'
 import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
 import { P } from '../lib/permissions'
@@ -10,11 +10,34 @@ import { CONDITION_LABEL } from '../lib/labels'
 import { formatMoney } from '../lib/money'
 import { todayUb } from '../lib/dates'
 import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../components/ui'
-import i18n from '../../../i18n'
+import { decodeLocation, movementFrom, movementTo, roomLabel } from '../lib/asset-location'
 import { useTranslation } from 'react-i18next'
 
 const COND_TONE: Record<AssetCondition, 'green' | 'yellow' | 'gray'> = { GOOD: 'green', DAMAGED: 'yellow', WRITTEN_OFF: 'gray' }
-const roomLabel = (a: { room: { roomNo: string; building: { code: string } } | null }) => (a.room ? `${a.room.building.code}-${a.room.roomNo}` : i18n.t('camp.asset.warehouse'))
+function LocationSelect({ id, value, onChange, rooms, buildings }: { id: string; value: string; onChange: (v: string) => void; rooms: Room[]; buildings: Building[] }) {
+  const { t } = useTranslation()
+  return (
+    <select id={id} className={inputCls} value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{t('camp.asset.warehouse')}</option>
+      {buildings.length > 0 && (
+        <optgroup label={t('camp.asset.group_buildings')}>
+          {buildings.map((b) => (
+            <option key={b.id} value={`b:${b.id}`}>
+              {t('camp.asset.in_building', { code: b.code })} · {b.name}
+            </option>
+          ))}
+        </optgroup>
+      )}
+      <optgroup label={t('camp.asset.group_rooms')}>
+        {rooms.map((r) => (
+          <option key={r.id} value={`r:${r.id}`}>
+            {r.building.code}-{r.roomNo}
+          </option>
+        ))}
+      </optgroup>
+    </select>
+  )
+}
 
 /** /camp/:campId/assets — үндсэн хөрөнгө: жагсаалт, бүртгэх, засах, шилжүүлэх, актлах, түүх */
 export default function AssetsPage() {
@@ -23,6 +46,7 @@ export default function AssetsPage() {
   const perms = useCampPermissions(campId)
   const canEdit = perms.can(P.ASSET_MANAGE)
   const rooms = useQuery({ queryKey: campKeys.rooms(campId), queryFn: () => campApi.rooms(campId) })
+  const buildings = useQuery({ queryKey: campKeys.buildings(campId), queryFn: () => campApi.buildings(campId) })
   const cats = useQuery({ queryKey: campKeys.assetCategories, queryFn: () => campApi.assetCategories(false) })
   const [filter, setFilter] = useState<AssetQuery>({})
   const [search, setSearch] = useState('')
@@ -39,6 +63,7 @@ export default function AssetsPage() {
   const rows = list.data?.pages.flatMap((p) => p.data) ?? []
   const setF = (k: keyof AssetQuery, v: string) => setFilter((f) => ({ ...f, [k]: v || undefined }))
   const usableRooms = (rooms.data ?? []).filter((r) => r.status !== 'INACTIVE')
+  const activeBuildings = (buildings.data ?? []).filter((b) => b.isActive)
 
   return (
     <Card
@@ -59,6 +84,14 @@ export default function AssetsPage() {
           {usableRooms.map((r) => (
             <option key={r.id} value={r.id}>
               {r.building.code}-{r.roomNo}
+            </option>
+          ))}
+        </select>
+        <select aria-label={t('camp.asset.filter_building')} className={`${inputSmCls} w-auto`} value={filter.buildingId ?? ''} onChange={(e) => setF('buildingId', e.target.value)}>
+          <option value="">{t('camp.asset.all_buildings')}</option>
+          {activeBuildings.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.code} · {b.name}
             </option>
           ))}
         </select>
@@ -113,12 +146,13 @@ export default function AssetsPage() {
           </Button>
         </div>
       )}
-      {editing && <AssetModal campId={campId} asset={editing === 'new' ? null : editing} rooms={usableRooms} onClose={() => setEditing(null)} />}
+      {editing && <AssetModal campId={campId} asset={editing === 'new' ? null : editing} rooms={usableRooms} buildings={activeBuildings} onClose={() => setEditing(null)} />}
       {detailId && (
         <AssetDetailModal
           campId={campId}
           id={detailId}
           rooms={usableRooms}
+          buildings={activeBuildings}
           canEdit={canEdit}
           canMaintain={perms.can(P.MAINTENANCE_CREATE)}
           onEdit={(a) => {
@@ -132,7 +166,7 @@ export default function AssetsPage() {
   )
 }
 
-function AssetModal({ campId, asset, rooms, onClose }: { campId: string; asset: Asset | null; rooms: Room[]; onClose: () => void }) {
+function AssetModal({ campId, asset, rooms, buildings, onClose }: { campId: string; asset: Asset | null; rooms: Room[]; buildings: Building[]; onClose: () => void }) {
   const { t } = useTranslation()
   const cats = useQuery({ queryKey: campKeys.assetCategories, queryFn: () => campApi.assetCategories(false) })
   const [f, setF] = useState({
@@ -140,7 +174,7 @@ function AssetModal({ campId, asset, rooms, onClose }: { campId: string; asset: 
     name: asset?.name ?? '',
     serialNo: asset?.serialNo ?? '',
     categoryId: asset?.categoryId ?? '',
-    roomId: '',
+    location: '',
     condition: (asset?.condition ?? 'GOOD') as AssetCondition,
     acquiredDate: asset?.acquiredDate ?? '',
     acquiredCost: asset?.acquiredCost ?? '',
@@ -158,7 +192,7 @@ function AssetModal({ campId, asset, rooms, onClose }: { campId: string; asset: 
     note: f.note.trim() || null,
   })
   const m = useCampMutation(
-    () => (asset ? campApi.updateAsset(campId, asset.id, base()) : campApi.createAsset(campId, { ...base(), roomId: f.roomId || null })),
+    () => (asset ? campApi.updateAsset(campId, asset.id, base()) : campApi.createAsset(campId, { ...base(), ...decodeLocation(f.location) })),
     [campKeys.assets(campId)],
     onClose,
   )
@@ -203,16 +237,7 @@ function AssetModal({ campId, asset, rooms, onClose }: { campId: string; asset: 
       </div>
       {!asset && (
         <Field label={t('camp.common.location')} hint={t('camp.asset.location_hint')}>
-          {(id) => (
-            <select id={id} className={inputCls} value={f.roomId} onChange={(e) => set('roomId', e.target.value)}>
-              <option value="">{t('camp.asset.warehouse')}</option>
-              {rooms.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.building.code}-{r.roomNo}
-                </option>
-              ))}
-            </select>
-          )}
+          {(id) => <LocationSelect id={id} value={f.location} onChange={(v) => set('location', v)} rooms={rooms} buildings={buildings} />}
         </Field>
       )}
       <div className="grid grid-cols-3 gap-3">
@@ -239,6 +264,7 @@ function AssetDetailModal({
   campId,
   id,
   rooms,
+  buildings,
   canEdit,
   canMaintain,
   onEdit,
@@ -247,6 +273,7 @@ function AssetDetailModal({
   campId: string
   id: string
   rooms: Room[]
+  buildings: Building[]
   canEdit: boolean
   canMaintain: boolean
   onEdit: (a: Asset) => void
@@ -263,7 +290,14 @@ function AssetDetailModal({
     setMode('view')
     setReason('')
   }
-  const move = useCampMutation(() => campApi.moveAsset(campId, id, { toRoomId: toRoom || null, reason: reason.trim() || null }), [campKeys.assets(campId)], reset)
+  const move = useCampMutation(
+    () => {
+      const to = decodeLocation(toRoom)
+      return campApi.moveAsset(campId, id, { toRoomId: to.roomId, toBuildingId: to.buildingId, reason: reason.trim() || null })
+    },
+    [campKeys.assets(campId), campKeys.roomBoard(campId)],
+    reset,
+  )
   const writeOff = useCampMutation(() => campApi.writeOffAsset(campId, id, reason.trim()), [campKeys.assets(campId)], reset)
   const a = asset.data
   const locked = a?.condition === 'WRITTEN_OFF'
@@ -335,16 +369,7 @@ function AssetDetailModal({
             <div className="border border-gray-200 rounded-lg p-3 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <Field label={t('camp.asset.new_location')}>
-                  {(fid) => (
-                    <select id={fid} className={inputCls} value={toRoom} onChange={(e) => setToRoom(e.target.value)}>
-                      <option value="">{t('camp.asset.warehouse')}</option>
-                      {rooms.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.building.code}-{r.roomNo}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                  {(fid) => <LocationSelect id={fid} value={toRoom} onChange={setToRoom} rooms={rooms} buildings={buildings} />}
                 </Field>
                 <Field label={t('camp.shifts.reason')}>{(fid) => <input id={fid} className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />}</Field>
               </div>
@@ -384,8 +409,8 @@ function AssetDetailModal({
                 {history.data.map((h) => (
                   <tr key={h.id}>
                     <td className={`${td} whitespace-nowrap`}>{h.movedAt.slice(0, 16).replace('T', ' ')}</td>
-                    <td className={td}>{h.fromRoom?.roomNo ?? t('camp.asset.warehouse')}</td>
-                    <td className={td}>{h.toRoom?.roomNo ?? t('camp.asset.warehouse')}</td>
+                    <td className={td}>{movementFrom(h)}</td>
+                    <td className={td}>{movementTo(h)}</td>
                     <td className={td}>{h.reason ?? ''}</td>
                     <td className={`${td} text-gray-500`}>{h.movedByUser.fullName ?? h.movedByUser.email}</td>
                   </tr>

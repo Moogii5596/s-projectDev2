@@ -10,7 +10,9 @@ import { assertDate, assertRange } from './range';
 import { buildAttendanceTemplate, parseAttendanceXlsx, ParsedRow } from './import-parser';
 import { planImport, PlannedRow } from './import-planner';
 import { applyPlan, loadPlannerState, lockCampAttendance } from './attendance-state';
-import { CreateMovementDto, ManualMovementsDto, QueryImportsDto, RangeQueryDto } from './camp-attendance.dto';
+import { CreateMovementDto, ManualMovementsDto, QueryImportsDto, RangeQueryDto, StayShiftGroup } from './camp-attendance.dto';
+import { loadPresenceEmployees } from './camp-presence.service';
+import { employeeDay } from './presence';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
@@ -252,7 +254,11 @@ export class CampAttendanceService {
   }
 
   /** D өдөр кемпэд байгаа (D-г хамарсан stay) ажилтнууд — ирсэн/явсан/бүтэн өдөр */
-  async listStays(tenantId: string, authId: string, campId: string, date: string) {
+  /**
+   * D өдрийн ирцийн жагсаалт. v0.2.1 (C-14): мөр бүрт тооцоолсон ээлж `shiftGroup` (DAY | NIGHT | UNKNOWN | MOVEMENT —
+   * хоолны тооцоотой ИЖИЛ `employeeDay`), албан тушаал, хоол авах эсэх (эффектив); `shift` өгвөл шүүнэ.
+   */
+  async listStays(tenantId: string, authId: string, campId: string, date: string, shift?: StayShiftGroup) {
     assertDate(date);
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
@@ -265,11 +271,29 @@ export class CampAttendanceService {
         },
         orderBy: { employee: { employeeCode: 'asc' } },
       });
-      return rows.map((r) => {
+      const { settings, employees } = await loadPresenceEmployees(tx, tenantId, campId, date);
+      const info = new Map(
+        employees.map((e) => {
+          const day = employeeDay(e, date, settings);
+          const shiftGroup: StayShiftGroup = !day ? 'UNKNOWN' : day.kind === 'MOVEMENT' ? 'MOVEMENT' : (day.shift ?? 'UNKNOWN');
+          return [e.id, { shiftGroup, positionName: e.positionName ?? null, mealsIncluded: e.mealsIncluded !== false }] as const;
+        }),
+      );
+      const out = rows.map((r) => {
         const start = fromDbDate(r.startDate);
         const end = r.endDate ? fromDbDate(r.endDate) : null;
-        return { ...r, startDate: start, endDate: end, dayType: start === date ? 'ARRIVAL' : end === date ? 'DEPARTURE' : 'FULL_DAY' };
+        const i = info.get(r.employee.id);
+        return {
+          ...r,
+          startDate: start,
+          endDate: end,
+          dayType: start === date ? 'ARRIVAL' : end === date ? 'DEPARTURE' : 'FULL_DAY',
+          shiftGroup: i?.shiftGroup ?? ('UNKNOWN' as StayShiftGroup),
+          positionName: i?.positionName ?? null,
+          mealsIncluded: i?.mealsIncluded ?? true,
+        };
       });
+      return shift ? out.filter((r) => r.shiftGroup === shift) : out;
     });
   }
 }

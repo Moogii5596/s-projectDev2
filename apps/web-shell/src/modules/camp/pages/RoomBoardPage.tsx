@@ -33,6 +33,7 @@ export default function RoomBoardPage() {
   const { campId = '' } = useParams()
   const perms = useCampPermissions(campId)
   const canEdit = perms.can(P.ROOM_MANAGE)
+  const canRepair = perms.can(P.MAINTENANCE_CREATE)
   const [date, setDate] = useState(todayUb())
   const board = useQuery({ queryKey: [...campKeys.roomBoard(campId), date], queryFn: () => campApi.roomBoard(campId, date), enabled: !!date })
   // самбарт хуваарилалтын id ирдэггүй — дуусгах/шилжүүлэхэд хэрэгтэй
@@ -156,6 +157,31 @@ export default function RoomBoardPage() {
                     <Badge tone="red">{t('camp.board.inactive_n', { n: r.inactiveOccupants ?? 0 })}</Badge>
                   </div>
                 )}
+                {/* v0.2.1 (C-12): нээлттэй засвар + өрөөний хөрөнгө */}
+                {(r.openMaintenance?.length ?? 0) > 0 && (
+                  <ul className="mt-1 space-y-0.5 text-xs" aria-label={t('camp.board.open_repairs')}>
+                    {r.openMaintenance?.map((m) => (
+                      <li key={m.id}>
+                        <Link to={`../maintenance/${m.id}`} className="text-amber-800 hover:underline">
+                          🔧 {m.requestNo} · {m.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {(r.assets?.length ?? 0) > 0 && (
+                  <details className="mt-1 text-xs text-gray-600">
+                    <summary className="cursor-pointer select-none">{t('camp.board.assets_n', { n: r.assets?.length ?? 0 })}</summary>
+                    <ul className="mt-1 space-y-0.5 pl-3">
+                      {r.assets?.map((a) => (
+                        <li key={a.id}>
+                          <span className="font-mono text-gray-500">{a.inventoryNo}</span> {a.name}
+                          {a.condition === 'DAMAGED' && <span className="ml-1 text-amber-700">({t('camp.board.damaged')})</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
                 <ul className="mt-2 space-y-1 text-sm">
                   {r.occupants.length === 0 && <li className="text-gray-400">{t('camp.board.no_alloc')}</li>}
                   {r.occupants.map((o) => {
@@ -192,11 +218,18 @@ export default function RoomBoardPage() {
                     )
                   })}
                 </ul>
-                {canEdit && r.roomStatus === 'ACTIVE' && (
-                  <div className="mt-2">
-                    <Button variant="ghost" onClick={() => setAllocTarget({ room: r })}>
-                      {t('camp.board.allocate')}
-                    </Button>
+                {((canEdit && r.roomStatus === 'ACTIVE') || canRepair) && (
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    {canEdit && r.roomStatus === 'ACTIVE' && (
+                      <Button variant="ghost" onClick={() => setAllocTarget({ room: r })}>
+                        {t('camp.board.allocate')}
+                      </Button>
+                    )}
+                    {canRepair && (
+                      <Link to={`../maintenance?new=1&roomId=${r.id}`} className="text-sm text-gray-600 hover:text-blue-700 hover:underline">
+                        {t('camp.board.repair_request')}
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>

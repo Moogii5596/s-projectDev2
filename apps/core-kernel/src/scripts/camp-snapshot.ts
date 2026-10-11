@@ -122,6 +122,11 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
   });
   if (opts.tenantSlug && tenants.length === 0) throw new Error(`Байгууллага "${opts.tenantSlug}" олдсонгүй`);
 
+  // v0.2.0-ийн schema (staging snapshot A): ажилтны хоолны байршлын багана алга → хэлтсийнхээр (loadPresence legacy)
+  const cols = await prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'camp_employees' AND column_name = 'meal_location_id'`;
+  const legacy = Number(cols[0]?.n ?? 0) === 0;
+
   const camps: Record<string, CampSnapshotCamp> = {};
   for (const t of tenants) {
     await prisma.$transaction(
@@ -134,7 +139,7 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
           const locName = new Map(locs.map((l) => [l.id, l.name]));
           const meals: Record<string, CampSnapshotDay> = {};
           for (const d of days) {
-            const p = await loadPresence(tx as Tx, t.id, c.id, d);
+            const p = await loadPresence(tx as Tx, t.id, c.id, d, { legacy });
             const m: Record<string, number> = {};
             for (const l of p.lines) {
               const k = `${l.mealType}@${l.mealLocationId ? (locName.get(l.mealLocationId) ?? l.mealLocationId) : '-'}`;

@@ -132,6 +132,14 @@ export class CampSettingsService {
     });
     if (depts.length > 0) {
       throw conflict('camp.err.settings.8', { from: currentDays, to: rosterOnDays, codes: depts.map((d) => d.code).join(', ') });
+    }    // v0.2.1 (Д-1): кемп × албан тушаалын ээлжийн загвар ч ростерын урттай холбоотой
+    const positions = await tx.campPositionSetting.findMany({
+      where: { tenantId, campId, shiftPatterns: { some: {} } },
+      select: { position: { select: { name: true } } },
+      orderBy: { position: { name: 'asc' } },
+    });
+    if (positions.length > 0) {
+      throw conflict('camp.err.settings.10', { from: currentDays, to: rosterOnDays, names: positions.map((p) => p.position.name).join(', ') });
     }
   }
 
@@ -177,10 +185,12 @@ export class CampSettingsService {
         if (dto.isActive === false) {
           const isDefault = await tx.campSetting.findFirst({ where: { tenantId, campId, defaultMealLocationId: id }, select: { id: true } });
           if (isDefault) throw conflict('camp.err.settings.6');
-          const depts = await tx.campDepartment.findMany({ where: { tenantId, campId, mealLocationId: id, isActive: true }, select: { code: true } });
-          if (depts.length > 0) {
-            throw conflict('camp.err.settings.7', { codes: depts.map((d) => d.code).join(', ') });
-          }
+          // v0.2.1 (Q1): байршлыг ажилтан / албан тушаалын тохиргоо ашигладаг (хэлтэс биш)
+          const [employees, positions] = await Promise.all([
+            tx.campEmployee.count({ where: { tenantId, campId, mealLocationId: id, status: 'ACTIVE' } }),
+            tx.campPositionSetting.count({ where: { tenantId, campId, mealLocationId: id } }),
+          ]);
+          if (employees + positions > 0) throw conflict('camp.err.settings.9', { employees, positions });
         }
         return tx.campMealLocation.update({
           where: { id },

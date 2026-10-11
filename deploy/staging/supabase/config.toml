@@ -66,9 +66,16 @@ enable_anonymous_sign_ins = false
 minimum_password_length = 12
 
 [auth.rate_limit]
-# Caddy-ийн ард бүх хүсэлт нэг IP-ээс ирнэ → нийт байгууллагад хуваалцсан хязгаар (5 мин тутам)
+# SEC-007: GoTrue IP хязгаарыг зөвхөн GOTRUE_RATE_LIMIT_HEADER-тэй үед хэрэглэдэг (CLI тохируулдаггүй) →
+# эдгээр нь нэвтрэлтэд бараг үйлчлэхгүй. Нууц үг таахаас доорх hook хамгаална.
 sign_in_sign_ups = 120
 token_refresh = 300
+
+# PIL-07 (SEC-007): бүртгэл тус бүрт 15 мин-д 5 буруу нууц үг → 15 мин түгжинэ (429).
+# Функц: supabase/migrations/20261012006_auth_password_guard.sql. Тайлах: DELETE FROM auth_guard.password_failures WHERE user_id = '<id>'
+[auth.hook.password_verification_attempt]
+enabled = true
+uri = "pg-functions://postgres/auth_guard/hook_password_verification_attempt"
 
 [auth.email]
 # АНХААР: энэ нь "имэйлээр бүртгүүлэх" биш, ИМЭЙЛ PROVIDER-ийг бүхэлд нь (нэвтрэлт ч) асаана/унтраана

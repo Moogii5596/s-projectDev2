@@ -155,19 +155,28 @@ function Buildings({
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [withRooms, setWithRooms] = useState(false)
+  const [typeId, setTypeId] = useState('')
   const [range, setRange] = useState<RangeForm>(defaultRange())
+  // v0.2.1 (Q4): байрны төрөл — байгууллагын каталог (Системийн тохиргоо)
+  const types = useQuery({ queryKey: campKeys.catalog('building-types'), queryFn: () => campApi.catalog('building-types') })
+  const activeTypes = (types.data ?? []).filter((x) => x.isActive)
   const plan = withRooms ? planRooms(rangeInput(range), []) : null
   const add = useCampMutation(
-    () => campApi.createBuilding(campId, { code: code.trim(), name: name.trim(), ...(withRooms ? { rooms: rangeInput(range) } : {}) }),
-    [campKeys.buildings(campId), campKeys.rooms(campId)],
+    () => campApi.createBuilding(campId, { code: code.trim(), name: name.trim(), typeId: typeId || null, ...(withRooms ? { rooms: rangeInput(range) } : {}) }),
+    [campKeys.buildings(campId), campKeys.rooms(campId), campKeys.catalog('building-types')],
     () => {
       setCode('')
       setName('')
+      setTypeId('')
       setWithRooms(false)
       setRange(defaultRange())
     },
   )
   const toggle = useCampMutation((b: Building) => campApi.updateBuilding(campId, b.id, { isActive: !b.isActive }), [campKeys.buildings(campId)])
+  const setType = useCampMutation(
+    (v: { b: Building; typeId: string }) => campApi.updateBuilding(campId, v.b.id, { typeId: v.typeId || null }),
+    [campKeys.buildings(campId), campKeys.catalog('building-types')],
+  )
   const itemCls = (active: boolean) =>
     `w-full flex items-center justify-between gap-2 px-2 py-2 text-left text-sm rounded-lg ${active ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-gray-50'}`
   return (
@@ -183,27 +192,49 @@ function Buildings({
             </button>
           </li>
           {rows.map((b) => (
-            <li key={b.id} className="flex items-center gap-1">
+            <li key={b.id} className="space-y-1">
               <button type="button" className={itemCls(selected === b.id)} onClick={() => onSelect(b.id)} aria-pressed={selected === b.id}>
                 <span>
                   <span className="font-mono text-gray-500 mr-2">{b.code}</span>
                   {b.name}
+                  {b.type && !canEdit && <span className="ml-2 text-xs text-gray-500">· {b.type.name}</span>}
                 </span>
                 <span className="flex items-center gap-2 text-gray-500 whitespace-nowrap">
                   {t('camp.facilities.rooms_beds', { rooms: b.activeRooms ?? b._count?.rooms ?? 0, beds: b.capacity ?? 0 })}
                   {!b.isActive && <ActiveBadge active={false} />}
                 </span>
               </button>
-              {canRoom && b.isActive && (
-                <Button variant="ghost" onClick={() => onBulk(b)} title={t('camp.facilities.bulk_title', { code: b.code })}>
-                  {t('camp.facilities.bulk_short')}
-                </Button>
-              )}
-              {canEdit && (
-                <Button variant="ghost" onClick={() => toggle.mutate(b)}>
-                  {b.isActive ? t('camp.common.deactivate') : t('camp.common.activate')}
-                </Button>
-              )}
+              {/* v0.2.1: үйлдлүүд тусдаа мөрөнд — нарийн самбарт товч далдлагдахгүй (e2e FB-07) */}
+              <div className="flex flex-wrap items-center gap-2 pl-2">
+                {canEdit && (
+                  <select
+                    aria-label={t('camp.facilities.type_of', { code: b.code })}
+                    className={`${inputSmCls} w-28`}
+                    value={b.typeId ?? ''}
+                    disabled={setType.isPending}
+                    onChange={(e) => setType.mutate({ b, typeId: e.target.value })}
+                  >
+                    <option value="">{t('camp.facilities.no_type')}</option>
+                    {(types.data ?? [])
+                      .filter((x) => x.isActive || x.id === b.typeId)
+                      .map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {x.name}
+                        </option>
+                      ))}
+                  </select>
+                )}
+                {canRoom && b.isActive && (
+                  <Button variant="ghost" onClick={() => onBulk(b)} title={t('camp.facilities.bulk_title', { code: b.code })}>
+                    {t('camp.facilities.bulk_short')}
+                  </Button>
+                )}
+                {canEdit && (
+                  <Button variant="ghost" onClick={() => toggle.mutate(b)}>
+                    {b.isActive ? t('camp.common.deactivate') : t('camp.common.activate')}
+                  </Button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -223,6 +254,16 @@ function Buildings({
               {t('camp.common.add')}
             </Button>
           </div>
+          {activeTypes.length > 0 && (
+            <select aria-label={t('camp.facilities.building_type')} className={inputCls} value={typeId} onChange={(e) => setTypeId(e.target.value)}>
+              <option value="">{t('camp.facilities.no_type')}</option>
+              {activeTypes.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.name}
+                </option>
+              ))}
+            </select>
+          )}
           <label className="inline-flex items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={withRooms} onChange={(e) => setWithRooms(e.target.checked)} /> {t('camp.facilities.with_rooms')}
           </label>
@@ -230,7 +271,7 @@ function Buildings({
         </form>
       )}
       <p className="text-xs text-gray-400">{t('camp.facilities.deactivate_hint')}</p>
-      <ErrorBox error={add.error ?? toggle.error} />
+      <ErrorBox error={add.error ?? toggle.error ?? setType.error} />
     </div>
   )
 }

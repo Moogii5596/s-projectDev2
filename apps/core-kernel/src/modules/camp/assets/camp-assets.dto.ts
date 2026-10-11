@@ -38,6 +38,10 @@ export class CreateAssetDto {
   @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'roomId UUID байх ёстой' })
   roomId?: string | null;
 
+  /** v0.2.1 (C-12): өрөөгүй, байранд (коридор, гал тогоо г.м.). roomId-тай хамт өгч болохгүй */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'buildingId UUID байх ёстой' })
+  buildingId?: string | null;
+
   @IsOptional() @IsEnum(CampAssetCondition)
   condition?: CampAssetCondition;
 
@@ -84,6 +88,10 @@ export class MoveAssetDto {
   @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'toRoomId UUID эсвэл null' })
   toRoomId!: string | null;
 
+  /** v0.2.1 (C-12): байр руу (өрөөгүй). toRoomId = null үед л */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'toBuildingId UUID эсвэл null' })
+  toBuildingId?: string | null;
+
   @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(500)
   reason?: string | null;
 }
@@ -98,6 +106,8 @@ export class QueryAssetsDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit?: number;
   /** өрөөний UUID эсвэл 'warehouse' (агуулах) */
   @IsOptional() @IsString() @Matches(/^(warehouse|[0-9a-fA-F-]{36})$/, { message: "roomId UUID эсвэл 'warehouse'" }) roomId?: string;
+  /** v0.2.1: байрны бүх хөрөнгө (байранд шууд + тухайн байрны өрөөнүүдэд) */
+  @IsOptional() @IsUUID('all', { message: 'buildingId UUID байх ёстой' }) buildingId?: string;
   @IsOptional() @IsUUID() categoryId?: string;
   @IsOptional() @IsEnum(CampAssetCondition) condition?: CampAssetCondition;
   @IsOptional() @Transform(trim) @IsString() @MaxLength(100) q?: string;

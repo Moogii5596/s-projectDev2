@@ -141,6 +141,36 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
     expect(cancel.body.status).toBe('CANCELLED');
   });
 
+  it('v0.2.1: албан тушаал (каталог, нэрийн нормчлол, шинийг үүсгэнэ), ажлын хоолны байршил (нэрээр), хоол авах — preview өөрчлөлт, confirm', async () => {
+    const pre = await it_.api().post(DI('/employees')).set(it_.as('admin')).send({
+      rows: [
+        { employeeCode: 'E-71', fullName: 'Хоолгүй', organization: it_.ids.orgReg, department: 'ADM', position: 'Харуул', mealLocation: 'гал тогоо', mealsIncluded: 'Үгүй' },
+        { employeeCode: 'E-72', fullName: 'Хоёр дахь', organization: it_.ids.orgReg, department: 'ADM', position: '  харуул ', mealsIncluded: '否' },
+        { employeeCode: 'E-73', fullName: 'Буруу байршил', organization: it_.ids.orgReg, department: 'ADM', mealLocation: 'Байхгүй газар' },
+      ],
+    });
+    expect(pre.status).toBe(201);
+    expect(pre.body.rows.map((r: { op: string }) => r.op)).toEqual(['create', 'create', 'error']);
+    expect(pre.body.rows[2].errors[0]).toMatchObject({ column: 'mealLocation', code: 'row.ref_not_found' });
+    expect(await it_.prismaAdmin.campPosition.count({ where: { tenantId: it_.tenantId, name: { equals: 'Харуул', mode: 'insensitive' } } })).toBe(0); // preview бичихгүй
+    const ok = await it_.api().post(DI(`/employees/${pre.body.import.id}/confirm`)).set(it_.as('admin')).send({ skipErrors: true });
+    expect(ok.body).toMatchObject({ created: 2, skipped: 1 });
+    const pos = await it_.prismaAdmin.campPosition.findMany({ where: { tenantId: it_.tenantId, name: { equals: 'Харуул', mode: 'insensitive' } } });
+    expect(pos).toHaveLength(1); // " харуул " → ижил албан тушаал
+    const rows = await it_.prismaAdmin.campEmployee.findMany({ where: { tenantId: it_.tenantId, employeeCode: { in: ['E-71', 'E-72'] } }, orderBy: { employeeCode: 'asc' } });
+    expect(rows.map((e) => [e.employeeCode, e.positionId, e.mealLocationId, e.mealsIncluded])).toEqual([
+      ['E-71', pos[0].id, it_.ids.loc, false],
+      ['E-72', pos[0].id, null, false],
+    ]);
+    // Дахин импорт: хоол авах → тийм, байршил хоосон (= анхдагч руу) — өөрчлөлт "хуучин → шинэ"
+    const again = await it_.api().post(DI('/employees')).set(it_.as('admin')).send({
+      rows: [{ employeeCode: 'E-71', fullName: 'Хоолгүй', organization: it_.ids.orgReg, department: 'ADM', position: 'Харуул', mealLocation: '', mealsIncluded: 'Тийм' }],
+    });
+    expect(again.body.rows[0].op).toBe('update');
+    expect(again.body.rows[0].changes).toEqual({ mealLocation: { from: 'Гал тогоо', to: null }, mealsIncluded: { from: false, to: true } });
+    await it_.api().post(DI(`/employees/${again.body.import.id}/cancel`)).set(it_.as('admin'));
+  });
+
   it('экспорт (en) → буцааж импорт = бүгд өөрчлөлтгүй (формат ижил)', async () => {
     const exp = await it_.api().get(it_.camp('/export/employees')).set(it_.as('admin', { 'Accept-Language': 'en' })).buffer(true).parse(binary as never);
     expect(exp.status).toBe(200);
@@ -150,7 +180,8 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
     expect(sheet.rows.find((r) => r[0] === 'E-1')).toContain('Active');
     const back = await it_.api().post(DI('/employees')).set(it_.as('admin')).attach('file', exp.body as Buffer, 'export.xlsx');
     expect(back.status).toBe(201);
-    expect(back.body.import).toMatchObject({ totalRows: 2, unchangedRows: 2, createRows: 0, updateRows: 0, errorRows: 0 });
+    // v0.2.1: E-71/E-72 (албан тушаал, хоолны байршил, хоол авах = үгүй) ч өөрчлөлтгүй буцаж уншигдана
+    expect(back.body.import).toMatchObject({ totalRows: 4, unchangedRows: 4, createRows: 0, updateRows: 0, errorRows: 0 });
   });
 
   it('зэрэгцээ confirm → нэг нь 200, нөгөө нь 409 (давхар үүсэхгүй)', async () => {
@@ -182,7 +213,7 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
 });
 
 describe('🏢 Хэлтэс ба өрөөний экспорт', () => {
-  it('хэлтэс: шинэ (байршлын нэрээр), байршилгүй шинэ → алдаа, идэвхтэй ажилтантай хэлтсийг идэвхгүй → алдаа', async () => {
+  it('хэлтэс (v0.2.1, Д-4): хоолны байршлын багана үл тоогдоно (хуучин файл эвдрэхгүй); идэвхтэй ажилтантай хэлтсийг идэвхгүй → алдаа', async () => {
     const res = await it_.api().post(DI('/departments')).set(it_.as('admin')).send({
       rows: [
         { code: 'KITCHEN', name: 'Гал тогоо', mealLocation: 'гал тогоо', active: 'Тийм' },
@@ -191,13 +222,12 @@ describe('🏢 Хэлтэс ба өрөөний экспорт', () => {
       ],
     });
     expect(res.status).toBe(201);
-    expect(res.body.rows.map((r: { op: string }) => r.op)).toEqual(['create', 'error', 'error']);
-    expect(res.body.rows[1].errors[0]).toMatchObject({ column: 'mealLocation', code: 'row.required' });
+    expect(res.body.rows.map((r: { op: string }) => r.op)).toEqual(['create', 'create', 'error']);
     expect(res.body.rows[2].errors[0]).toMatchObject({ code: 'row.dept_has_active' });
     const ok = await it_.api().post(DI(`/departments/${res.body.import.id}/confirm`)).set(it_.as('admin')).send({ skipErrors: true });
-    expect(ok.body).toMatchObject({ created: 1, skipped: 2 });
+    expect(ok.body).toMatchObject({ created: 2, skipped: 1 });
     const d = await it_.prismaAdmin.campDepartment.findFirstOrThrow({ where: { tenantId: it_.tenantId, campId: it_.ids.c1, code: 'KITCHEN' } });
-    expect(d.mealLocationId).toBe(it_.ids.loc);
+    expect(d.mealLocationId).toBeNull();
     expect(await it_.prismaAdmin.campAuditLog.count({ where: { tenantId: it_.tenantId, entityId: d.id, action: 'IMPORT' } })).toBe(1);
   });
 

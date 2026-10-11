@@ -60,6 +60,9 @@ export interface Building {
   isActive: boolean
   createdAt: string
   updatedAt: string
+  /** v0.2.1 (C-12): байрны төрөл (байгууллагын каталог) */
+  typeId?: string | null
+  type?: { name: string } | null
   /** FB-07 (v0.2.0): нийт өрөө, идэвхтэй өрөө, идэвхтэй өрөөний нийт багтаамж */
   _count?: { rooms: number }
   activeRooms?: number
@@ -89,11 +92,10 @@ export interface Department {
   id: string
   code: string
   name: string
-  mealLocationId: string
+  /** v0.2.1 (Д-4): хэлтэст хоолны байршил байхгүй — ажилтан / албан тушаал дээр */
   isActive: boolean
   createdAt: string
   updatedAt: string
-  mealLocation: { name: string }
   shiftPatterns: ShiftSegment[]
   /** FB-03 (v0.2.0) */
   _count?: { employees: number }
@@ -182,6 +184,61 @@ export interface Employee {
   organization: { name: string }
   department: { code: string; name: string }
   crew: { code: string } | null
+  /** v0.2.1 (Q1, Д-2): каталогийн албан тушаал; ажилтны өөрийн утга (null = албан тушаалаас / анхдагч) */
+  positionId?: string | null
+  mealLocationId?: string | null
+  mealsIncluded?: boolean | null
+  positionRef?: { name: string } | null
+  /** Эцсийн (эффектив) утга ба эх сурвалж */
+  effective?: EmployeeEffective
+}
+
+export type ValueSource = 'EMPLOYEE' | 'POSITION' | 'DEFAULT'
+export interface EmployeeEffective {
+  mealLocationId: string | null
+  mealLocationName: string | null
+  mealLocationSource: ValueSource
+  mealsIncluded: boolean
+  mealsIncludedSource: ValueSource
+}
+
+/** v0.2.1 — байгууллагын каталог (албан тушаал, байрны төрөл) */
+export interface CatalogItem {
+  id: string
+  name: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  /** албан тушаал: идэвхтэй ажилтны тоо (бүх кемп) */
+  activeEmployees?: number
+  /** байрны төрөл: байрны тоо */
+  buildings?: number
+}
+export type CatalogKind = 'positions' | 'building-types'
+
+/** v0.2.1 — кемп × албан тушаалын анхдагч */
+export interface PositionSetting {
+  positionId: string
+  name: string
+  isActive: boolean
+  activeEmployees: number
+  mealLocationId: string | null
+  mealLocationName: string | null
+  mealsIncluded: boolean | null
+  shiftPattern: ShiftSegment[]
+}
+
+/** v0.2.1 (C-14) — D өдрийн ирцийн жагсаалт */
+export type StayShiftGroup = 'DAY' | 'NIGHT' | 'UNKNOWN' | 'MOVEMENT'
+export interface Stay {
+  id: string
+  startDate: string
+  endDate: string | null
+  dayType: 'ARRIVAL' | 'DEPARTURE' | 'FULL_DAY'
+  shiftGroup: StayShiftGroup
+  positionName: string | null
+  mealsIncluded: boolean
+  employee: { id: string; employeeCode: string; fullName: string; department: { code: string; name: string }; crew: { code: string } | null }
 }
 
 export interface Page<T> {
@@ -304,6 +361,9 @@ export interface BoardRoom {
   /** FB-12 (v0.2.0): идэвхгүй ажилтан хуваарилагдсан хэвээр */
   inactiveOccupants?: number
   occupants: BoardOccupant[]
+  /** v0.2.1 (C-12): өрөөний хөрөнгө (актлагдаагүй), нээлттэй засвар */
+  assets?: { id: string; inventoryNo: string; name: string; condition: AssetCondition }[]
+  openMaintenance?: { id: string; requestNo: string; title: string; priority: MaintenancePriority; status: MaintenanceStatus; blocksRoom: boolean }[]
 }
 
 export interface RoomBoard {
@@ -316,6 +376,9 @@ export interface RoomBoard {
 export interface Presence {
   date: string
   presentCount: number
+  /** v0.2.1 (C-04): кемпэд байгаа ч хоол авдаггүй (presentCount-д орсон) */
+  noMealCount?: number
+  byPosition?: { positionName: string | null; mealType: MealType; mealLocationId: string | null; count: number }[]
   lines: { mealType: MealType; mealLocationId: string | null; mealLocationName: string | null; count: number }[]
   breakdown: { departmentCode: string; group: string; mealType: MealType; mealLocationId: string | null; count: number }[]
   personDays: string
@@ -348,6 +411,8 @@ export interface Asset {
   name: string
   serialNo: string | null
   roomId: string | null
+  /** v0.2.1 (C-12): өрөөгүй, байранд */
+  buildingId?: string | null
   condition: AssetCondition
   /** 'YYYY-MM-DD' */
   acquiredDate: string | null
@@ -358,6 +423,7 @@ export interface Asset {
   updatedAt: string
   category: { name: string }
   room: { roomNo: string; building: { code: string } } | null
+  building?: { code: string; name: string } | null
   /** зөвхөн дэлгэрэнгүйд */
   openMaintenance?: number
 }
@@ -368,8 +434,11 @@ export interface AssetMovement {
   toRoomId: string | null
   movedAt: string
   reason: string | null
-  fromRoom: { roomNo: string } | null
-  toRoom: { roomNo: string } | null
+  fromRoom: { roomNo: string; building?: { code: string } } | null
+  toRoom: { roomNo: string; building?: { code: string } } | null
+  /** v0.2.1 */
+  fromBuilding?: { code: string } | null
+  toBuilding?: { code: string } | null
   movedByUser: { fullName: string | null; email: string }
 }
 

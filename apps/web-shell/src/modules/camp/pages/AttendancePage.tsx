@@ -4,11 +4,12 @@ import { useQuery } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
 import { campApi, type MovementQuery } from '../api/camp-api'
-import type { Direction, ImportPreview, ImportRowError, MealType, ShiftType } from '../api/types'
+import type { Direction, ImportPreview, ImportRowError, MealType, ShiftType, StayShiftGroup } from '../api/types'
 import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
 import { P } from '../lib/permissions'
-import { DIRECTION_LABEL, IMPORT_STATUS_LABEL, KIND_LABEL, MEAL_LABEL, MEAL_ORDER, SHIFT_LABEL } from '../lib/labels'
+import { DIRECTION_LABEL, IMPORT_STATUS_LABEL, KIND_LABEL, MEAL_LABEL, MEAL_ORDER, SHIFT_LABEL, STAY_GROUPS, STAY_GROUP_LABEL } from '../lib/labels'
+import { filterStays, type StayFilter } from '../lib/stays'
 import { addDays, todayUb } from '../lib/dates'
 import { rangeProblem } from '../lib/calendar'
 import { type MealMode, mealsPayload } from '../lib/meals'
@@ -38,8 +39,86 @@ export default function AttendancePage() {
   return (
     <div className="space-y-5" ref={topRef}>
       {canImport && <ImportCard campId={campId} preview={preview} setPreview={setPreview} />}
+      <DayListCard campId={campId} />
       <MovementsCard campId={campId} canEdit={canImport} onPreview={showPreview} />
     </div>
+  )
+}
+
+// ── v0.2.1 (C-14): D өдөр кемпэд байгаа хүмүүс — тооцоолсон ээлжээр ────────────
+
+const GROUP_TONE: Record<StayShiftGroup, 'yellow' | 'blue' | 'gray' | 'green'> = { DAY: 'yellow', NIGHT: 'blue', UNKNOWN: 'gray', MOVEMENT: 'green' }
+
+function DayListCard({ campId }: { campId: string }) {
+  const { t } = useTranslation()
+  const [date, setDate] = useState(todayUb())
+  const [f, setF] = useState<StayFilter>({ group: '', departmentCode: '', position: '', q: '' })
+  const list = useQuery({ queryKey: [...campKeys.stays(campId), date], queryFn: () => campApi.stays(campId, date), enabled: !!date })
+  const all = list.data ?? []
+  const rows = filterStays(all, f)
+  const count = (g: StayShiftGroup | '') => filterStays(all, { ...f, group: g }).length
+  const deptCodes = [...new Set(all.map((s) => s.employee.department.code))].sort()
+  const set = (k: keyof StayFilter, v: string) => setF((p) => ({ ...p, [k]: v }))
+
+  return (
+    <Card title={t('camp.day.title')}>
+      <p className="text-xs text-gray-500 mb-3">{t('camp.day.help')}</p>
+      <div className="flex flex-wrap items-end gap-2 mb-3">
+        <Field label={t('camp.att.col.date')}>{(id) => <input id={id} type="date" className={inputSmCls} value={date} onChange={(e) => setDate(e.target.value)} />}</Field>
+        <div className="flex gap-1 pb-0.5">
+          <Button size="sm" variant="secondary" onClick={() => setDate(addDays(date, -1))} aria-label={t('camp.board.prev')}>
+            ‹
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setDate(addDays(date, 1))} aria-label={t('camp.board.next')}>
+            ›
+          </Button>
+        </div>
+        <select aria-label={t('camp.day.filter_department')} className={`${inputSmCls} w-auto`} value={f.departmentCode} onChange={(e) => set('departmentCode', e.target.value)}>
+          <option value="">{t('camp.filter.all_departments')}</option>
+          {deptCodes.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <input aria-label={t('camp.day.filter_position')} placeholder={t('camp.att.position')} className={`${inputSmCls} w-32`} value={f.position} onChange={(e) => set('position', e.target.value)} />
+        <input aria-label={t('camp.day.filter_search')} placeholder={t('camp.picker.search')} className={`${inputSmCls} w-40`} value={f.q} onChange={(e) => set('q', e.target.value)} />
+      </div>
+      <div className="flex flex-wrap gap-1 mb-3" role="group" aria-label={t('camp.day.shift_filter')}>
+        {(['', ...STAY_GROUPS] as const).map((g) => (
+          <button
+            key={g || 'all'}
+            type="button"
+            aria-pressed={f.group === g}
+            onClick={() => set('group', g)}
+            className={`rounded-full px-3 py-1 text-sm ${f.group === g ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          >
+            {g ? STAY_GROUP_LABEL[g] : t('camp.day.all')} <span className="opacity-80">({count(g)})</span>
+          </button>
+        ))}
+      </div>
+      {list.isLoading && <Loading />}
+      <ErrorBox error={list.error} onRetry={() => list.refetch()} />
+      {list.data && rows.length === 0 && <Empty>{t('camp.day.empty')}</Empty>}
+      {rows.length > 0 && (
+        <Table head={[t('camp.common.code'), t('camp.common.name'), t('camp.emp.department'), t('camp.emp.col.position'), t('camp.emp.crew'), t('camp.day.shift'), t('camp.emp.col.meals_included')]}>
+          {rows.map((s) => (
+            <tr key={s.id}>
+              <td className={`${td} font-mono`}>{s.employee.employeeCode}</td>
+              <td className={td}>{s.employee.fullName}</td>
+              <td className={td}>{s.employee.department.code}</td>
+              <td className={`${td} text-gray-600`}>{s.positionName ?? '—'}</td>
+              <td className={td}>{s.employee.crew?.code ?? '—'}</td>
+              <td className={td}>
+                <Badge tone={GROUP_TONE[s.shiftGroup]}>{STAY_GROUP_LABEL[s.shiftGroup]}</Badge>
+                {s.dayType !== 'FULL_DAY' && <span className="ml-1 text-xs text-gray-500">{t(`camp.day.type.${s.dayType}`)}</span>}
+              </td>
+              <td className={td}>{s.mealsIncluded ? t('camp.common.yes') : <Badge tone="yellow">{t('camp.emp.no_meals')}</Badge>}</td>
+            </tr>
+          ))}
+        </Table>
+      )}
+    </Card>
   )
 }
 

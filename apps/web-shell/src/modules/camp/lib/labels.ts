@@ -14,6 +14,7 @@ import type {
   OrgType,
   RoomStatus,
   ShiftType,
+  StayShiftGroup,
 } from '../api/types'
 
 /**
@@ -36,6 +37,9 @@ export const ORG_TYPE_LABEL = labels<OrgType>('org_type', ['MAIN', 'SUBCONTRACTO
 export const ORG_SERVICE_LABEL = labels<OrgServiceType>('org_service', ['CATERING', 'WASTE_TRANSPORT', 'SEWAGE_TRANSPORT', 'WASTE_DISPOSAL', 'SEWAGE_DISPOSAL', 'OTHER'])
 export const ROOM_STATUS_LABEL = labels<RoomStatus>('room_status', ['ACTIVE', 'MAINTENANCE', 'INACTIVE'])
 export const SHIFT_LABEL = labels<ShiftType>('shift', ['DAY', 'NIGHT'])
+/** v0.2.1 (C-14): D өдрийн тооцоолсон ээлж */
+export const STAY_GROUPS: StayShiftGroup[] = ['DAY', 'NIGHT', 'UNKNOWN', 'MOVEMENT']
+export const STAY_GROUP_LABEL = labels<StayShiftGroup>('stay_group', STAY_GROUPS)
 export const SYSTEM_ROLE_LABEL = labels<string>('system_role', ['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN'])
 export const MEAL_LABEL = labels<MealType>('meal', ['BREAKFAST', 'LUNCH', 'DINNER', 'NIGHT'])
 export const MEAL_ORDER: MealType[] = ['BREAKFAST', 'LUNCH', 'DINNER', 'NIGHT']

@@ -192,8 +192,6 @@ describe('CampDepartmentsService (Шат 2.4)', () => {
   });
 
   it('create: байршил өөр кемпийнх → 400; загвартай үүсгэхэд ростерын урттай шалгаж нэгтгэн бичнэ', async () => {
-    await expect(svc.create('t1', 'a1', 'c1', { code: 'MINE', name: 'Уул', mealLocationId: 'l9' })).rejects.toThrow(/байршил энэ кемпэд олдсонгүй/);
-    s.tx.campMealLocation.findFirst.mockResolvedValue({ id: 'l1', isActive: true });
     s.tx.campDepartment.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'new-id' });
     s.tx.campSetting.findFirst.mockResolvedValueOnce({ rosterOnDays: 14, changeoverWeekday: 3 });
     await svc.create('t1', 'a1', 'c1', {
@@ -207,6 +205,9 @@ describe('CampDepartmentsService (Шат 2.4)', () => {
         { tenantId: 't1', departmentId: 'new-id', dayFrom: 8, dayTo: 14, shift: 'NIGHT' },
       ],
     });
+    // v0.2.1 (Д-4): хэлтсийн хоолны байршлыг үл тооно (хуучин клиент илгээсэн ч бичихгүй, шалгахгүй)
+    expect(s.tx.campMealLocation.findFirst).not.toHaveBeenCalled();
+    expect(s.tx.campDepartment.create.mock.calls[0][0].data).not.toHaveProperty('mealLocationId');
   });
 
   it('setShiftPattern: цоорхойтой → 400 (юу ч устгахгүй); хоосон → устгаад бичихгүй', async () => {
@@ -227,12 +228,14 @@ describe('CampDepartmentsService (Шат 2.4)', () => {
     expect(s.tx.campDepartmentShiftPattern.createMany).toHaveBeenCalledTimes(1);
   });
 
-  it('update: идэвхтэй ажилтантай хэлтэс идэвхгүй → 409; байршил солих шалгалттай', async () => {
+  it('update: идэвхтэй ажилтантай хэлтэс идэвхгүй → 409; v0.2.1: mealLocationId-г үл тооно', async () => {
     s.tx.campDepartment.findFirst.mockResolvedValue({ id: 'd1' });
     s.tx.campEmployee.count.mockResolvedValueOnce(4);
     await expect(svc.update('t1', 'a1', 'c1', 'd1', { isActive: false })).rejects.toThrow(/идэвхтэй 4 ажилтан/);
-    await expect(svc.update('t1', 'a1', 'c1', 'd1', { mealLocationId: 'l9' })).rejects.toThrow(/байршил энэ кемпэд олдсонгүй/);
     expect(s.tx.campDepartment.update).not.toHaveBeenCalled();
+    await svc.update('t1', 'a1', 'c1', 'd1', { mealLocationId: 'l9' });
+    expect(s.tx.campMealLocation.findFirst).not.toHaveBeenCalled();
+    expect(s.tx.campDepartment.update.mock.calls[0][0].data).not.toHaveProperty('mealLocationId');
   });
 });
 

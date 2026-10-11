@@ -114,7 +114,8 @@ test.describe.serial('Кемп v0.2.0', () => {
     await dlg.getByRole('tab', { name: 'Хүснэгтээр оруулах' }).click();
     await dlg.getByLabel('Хэлтсийн код 1').fill('KITCHEN');
     await dlg.getByLabel('Нэр 1').fill('Гал тогоо');
-    await dlg.getByLabel('Хоол идэх байршил 1').fill('гал тогоо');
+    // v0.2.1 (Д-4): хэлтсийн хүснэгтэд хоолны байршлын багана байхгүй
+    await expect(dlg.getByLabel('Хоол идэх байршил 1')).toHaveCount(0);
     await dlg.getByRole('button', { name: 'Шалгах' }).click();
     await dlg.getByRole('button', { name: 'Баталгаажуулах (1 мөр)' }).click();
     await dlg.getByRole('button', { name: 'Хаах' }).last().click();
@@ -140,7 +141,7 @@ test.describe.serial('Кемп v0.2.0', () => {
     await page.getByRole('button', { name: 'Батлах' }).click();
     await expect(page.getByText(/Баталгаажлаа: 2 бүртгэл/)).toBeVisible();
     await page.getByLabel('Эхлэх').fill(addDays(WED, -1));
-    await page.getByLabel('Албан тушаал').fill('тогооч');
+    await page.getByLabel('Албан тушаал', { exact: true }).fill('тогооч');
     await expect(page.getByRole('row', { name: new RegExp(ec(1)) })).toBeVisible();
     await page.getByLabel('Ростероор шүүх').selectOption({ label: 'Ростергүй' });
     await expect(page.getByText('Энэ хугацаанд ирц бүртгэгдээгүй')).toBeVisible();

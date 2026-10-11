@@ -170,6 +170,29 @@ Windows Update: Settings → Windows Update → **Active hours** (ажлын ц�
 
 Шалгах: `Get-ScheduledTask -TaskName 'S-Project Pilot*'` · Гараар асаах: `Start-ScheduledTask 'S-Project Pilot'`.
 
+### 9а. Мониторинг — унавал мэдэгдэл (v0.2.1, PIL-04)
+
+Машин унтарсан, интернэт тасарсан, backend унасан, нөөц бүтэлгүйтсэн үед **таны утас/имэйл рүү** мэдэгдэл ирнэ. Заавал биш, гэхдээ пилотод зөвлөнө.
+
+1. [healthchecks.io](https://healthchecks.io) (үнэгүй) → 2 check үүсгэнэ:
+   - **S-Project Pilot** — Period **10 мин**, Grace **10 мин**
+   - **S-Project Backup** — Period **1 өдөр**, Grace **2 цаг**
+   - Integrations → Email (эсвэл Telegram) идэвхжүүлнэ.
+2. Ping URL-уудыг `.env`-д (нууц үг биш, гэхдээ нийтэд бүү тавь):
+   ```
+   PILOT_HEALTHCHECK_URL=https://hc-ping.com/<pilot-uuid>
+   PILOT_HEALTHCHECK_BACKUP_URL=https://hc-ping.com/<backup-uuid>
+   ```
+3. `pilot.ps1 check` (URL-ийн хэлбэрийг шалгана) → `Start-ScheduledTask 'S-Project Pilot'` (watchdog дахин асаана) → `pilot.ps1 status` → "healthcheck ping илгээв".
+
+Ажиллагаа:
+- `run` (watchdog): эрүүл үед 5 мин тутам (`PILOT_HEALTHCHECK_INTERVAL_SEC`) ping; backend унавал / health 2 удаа дараалан алдвал / Caddy унавал шууд `/fail`. Машин, интернэт, watchdog бүхэлдээ зогсвол ping тасарч healthchecks өөрөө мэдэгдэнэ.
+- `status`: гараар ажиллуулахад мөн ping (эрүүл бол OK, үгүй бол `/fail`).
+- `backup`: амжилттай бол backup check руу OK; нөөц эсвэл хуулбар бүтэлгүйтвэл `/fail`. `PILOT_HEALTHCHECK_BACKUP_URL` хоосон бол зөвхөн алдааг `PILOT_HEALTHCHECK_URL` руу `/fail` илгээнэ.
+- Ping амжилтгүй бол пилотыг зогсоохгүй, зөвхөн `logs\pilot.log`-д бичнэ (URL-ийг логт бичихгүй).
+
+**Гаднаас uptime шалгалт (нэмэлт):** UptimeRobot (үнэгүй, 5 мин) → HTTP(s) monitor → `https://<машин>.<tailnet>.ts.net/api/v1/health` (хариу 200). Энэ нь Funnel + Caddy + backend-ийг интернэтээс шалгана — healthchecks нь машин дотроос, UptimeRobot нь гаднаас.
+
 ## 10. Хэрэглэгч удирдах
 
 ```powershell
@@ -190,6 +213,11 @@ Windows Update: Settings → Windows Update → **Active hours** (ажлын ц�
 `--camp-role`: `CAMP_ADMIN` (бүх кемп, эрх олгоно) · `CAMP_MANAGER` · `CATERING_ADMIN` — **бүх кемпэд**. Тодорхой нэг кемпэд эрх → апп-д Кемп → **Хэрэглэгчийн роль**.
 `--role` заавал (байгаа хэрэглэгчид ч одоогийн role-ийг бичнэ). Нууц үгийг мессенжерийн бүлэгт бичихгүй.
 
+**Нэвтрэлтийн түгжээ (v0.2.1, PIL-07):** нэг бүртгэлд 15 минутад **5 буруу нууц үг → 15 минут түгжинэ** (зөв нууц үгтэй ч "Хэт олон буруу оролдлого — N минутын дараа…", 3 хэлээр). Зөв нэвтэрвэл тоолуур тэглэнэ. Хэрэглэгч хүлээж чадахгүй бол:
+```powershell
+.\deploy\pilot\pilot.ps1 unlock worker@sinohydro.mn
+```
+
 ## 11. Өдөр тутам
 
 | Команд | Юу |
@@ -205,7 +233,8 @@ Windows Update: Settings → Windows Update → **Active hours** (ажлын ц�
 
 - Агуулга: `public` schema-ийн бүх өгөгдөл + `auth.users`, `auth.identities` (нэвтрэх эрх, нууц үгийн hash) + migration жагсаалт + manifest. Schema нь кодын migration-оос.
 - Файл: `PILOT_BACKUP_DIR\sinohydro-YYYYMMDD-HHMMSS.7z`, `PILOT_BACKUP_KEEP_DAYS` (14) хоногоос хуучныг устгана.
-- **7 хоногт нэг удаа** нөөцийг өөр төхөөрөмж рүү (USB / OneDrive) хуулна.
+- **2 дахь хуулбар (v0.2.1, PIL-05):** `.env`-д `PILOT_BACKUP_COPY_DIR=` (OneDrive / USB / өөр диск — `PILOT_BACKUP_DIR`-ээс ӨӨР) тохируулбал нөөц бүрийг тэнд хуулж SHA256-аар тулгана, хуучныг ижил `PILOT_BACKUP_KEEP_DAYS`-ээр устгана. Хуулбар бүтэлгүйтвэл үндсэн нөөц хэвээр, `backup.log`-д `COPY FAIL` + мониторинг `/fail`. `pilot.ps1 status` сүүлийн хуулбарыг харуулна.
+- Хуулбар тохируулаагүй бол **7 хоногт нэг удаа** нөөцийг өөр төхөөрөмж рүү (USB / OneDrive) гараар хуулна.
 
 Сэргээх (**одоогийн өгөгдөл устна** — slug бичиж баталгаажуулна):
 ```powershell
@@ -293,8 +322,11 @@ pnpm camp:snapshot --compare E:\MoogiiDev\Staging\a.json E:\MoogiiDev\Staging\b.
 #    ✅ A = B  → пилотыг §13-аар шинэчилнэ.   ❌ зөрүү → пилотод ХИЙХГҮЙ, зөрүүний жагсаалтыг надад илгээнэ (тоо л, нэр байхгүй)
 # F. Нэвтэрч шалгах: http://127.0.0.1:8089 (зөвхөн энэ машинаас) — пилотын хэрэглэгчийн нууц үгээр
 # G. Дуусахад зогсоох (өгөгдөл хадгалагдана; дараагийн дадлагад restore дахин хийнэ)
+# H. (v0.2.1+) Нэвтрэлтийн түгжээ — staging-д байгаа туршилтын хэрэглэгчээр (6 буруу нууц үг → 400×5, 429; дараа нь түгжээг тайлна)
+& $st auth-test test@sinohydro.mn -Profile staging -Root $sr
 & $st stop -All -Profile staging -Root $sr
 ```
+- `init` нь Supabase-ийн `config.toml` өөрчлөгдсөн бол (жнь v0.2.1-ийн нэвтрэлтийн hook) migration-ы дараа Supabase-ийг **дахин асаана** (~1-2 мин, өгөгдөл хадгалагдана). v0.2.1 руу анх шинэчлэхэд нэг удаа заавал болно.
 - Замыг **бүтэн** (E:\...) бичнэ. Snapshot: кемп бүрт өнөөдөр − 35 … + 7 хоногийн хоолны тоо (хоол × байршил), хүн, хүн-өдөр, өрөөний самбарын нийлбэр, мастер/үйл ажиллагааны тоо. Файлд **хувийн мэдээлэл байхгүй** (тоо, кемп/байршлын нэр) — гэхдээ git-д оруулахгүй.
 - Staging нь пилотын нөөцийг агуулна → `.env.staging`, `E:\MoogiiDev\Staging\backups` пилоттой ижил хамгаалалт; дадлага дууссаны дараа `stop -All`.
 - `upgrade` нь staging-ийн өөрийн нөөцийг `staging-sinohydro-*.7z` нэрээр авна (пилотын нөөцтэй холилдохгүй).

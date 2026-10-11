@@ -124,16 +124,23 @@ beforeAll(async () => {
     vatRate: 10, changeoverWeekday: 3, rosterOnDays: 14, rosterOffDays: 14, mealOrderCutoffTime: null, defaultMealLocationId: ids.locCamp,
   });
   if (st.status !== 200) throw new Error(`settings ${st.status}`);
+  // v0.2.1 (Q1, Д-4): хэлтэст хоолны байршил БАЙХГҮЙ (илгээсэн ч үл тооно) — уурхайчдын "Уул" нь албан тушаалын кемпийн анхдагч
   ids.mine = await post(camp('/departments'), {
-    code: 'MINE', name: 'Уул', mealLocationId: ids.locMine,
+    code: 'MINE', name: 'Уул', mealLocationId: ids.locCamp,
     shiftPattern: [{ dayFrom: 1, dayTo: 7, shift: 'DAY' }, { dayFrom: 8, dayTo: 14, shift: 'NIGHT' }],
   });
-  ids.adm = await post(camp('/departments'), { code: 'ADM', name: 'Захиргаа', mealLocationId: ids.locCamp, shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] });
+  ids.adm = await post(camp('/departments'), { code: 'ADM', name: 'Захиргаа', shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] });
+  ids.posMiner = await post(`${V1}/positions`, { name: 'Уурхайчин' });
+  const ps = await api().put(camp(`/position-settings/${ids.posMiner}`)).set(auth()).send({ mealLocationId: ids.locMine });
+  if (ps.status !== 200) throw new Error(`position-settings ${ps.status} ${JSON.stringify(ps.body)}`);
   ids.crewA = await post(camp('/crews'), { code: 'A', rosterAnchorDate: '2026-10-07' });
   ids.crewC = await post(camp('/crews'), { code: 'C', rosterAnchorDate: '2026-10-21' });
   ids.org = await post(`${V1}/organizations`, { name: 'Уурхай', orgType: 'MAIN' });
   for (const [code, dept, crew] of [['E1', ids.mine, ids.crewA], ['E2', ids.mine, ids.crewA], ['E3', ids.adm, null], ['E4', ids.mine, ids.crewC]] as const) {
-    ids[code] = await post(camp('/employees'), { organizationId: ids.org, departmentId: dept, crewId: crew, employeeCode: code, fullName: `Ажилтан ${code}` });
+    ids[code] = await post(camp('/employees'), {
+      organizationId: ids.org, departmentId: dept, crewId: crew, employeeCode: code, fullName: `Ажилтан ${code}`,
+      ...(dept === ids.mine ? { positionId: ids.posMiner } : {}),
+    });
   }
   const b = await post(camp('/buildings'), { code: 'B1', name: 'Байр 1' });
   ids.r101 = await post(camp('/rooms'), { buildingId: b, roomNo: '101', capacity: 1 });

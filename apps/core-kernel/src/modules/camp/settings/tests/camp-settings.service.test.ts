@@ -73,6 +73,16 @@ describe('CampSettingsService (Шат 2.3)', () => {
     await expect(svc.updateSettings('t1', 'a1', 'c1', { ...dto, rosterOnDays: 10 })).resolves.toMatchObject({ rosterOnDays: 10 });
   });
 
+  it('v0.2.1 update: ростерын урт өөрчлөгдөж, энэ кемпэд загвартай албан тушаал байвал → 409 (нэрсийг нэрлэнэ)', async () => {
+    s.tx.campMealLocation.findFirst.mockResolvedValue({ id: 'loc1', isActive: true });
+    s.tx.campSetting.findFirst.mockResolvedValue({ rosterOnDays: 14 });
+    s.tx.campDepartment.findMany.mockResolvedValueOnce([]);
+    s.tx.campPositionSetting.findMany.mockResolvedValueOnce([{ position: { name: 'Жолооч' } }, { position: { name: 'Тогооч' } }]);
+    await expect(svc.updateSettings('t1', 'a1', 'c1', { ...dto, rosterOnDays: 10 })).rejects.toThrow(/14 → 10 .*Жолооч, Тогооч/);
+    expect(s.tx.campPositionSetting.findMany.mock.calls[0][0].where).toEqual({ tenantId: 't1', campId: 'c1', shiftPatterns: { some: {} } });
+    expect(s.tx.campSetting.upsert).not.toHaveBeenCalled();
+  });
+
   it('update: ростер өөрчлөгдөөгүй бол хэлтэс шалгахгүй; upsert өгөгдөл зөв (Decimal, Time, null)', async () => {
     s.tx.campMealLocation.findFirst.mockResolvedValue({ id: 'loc1', isActive: true });
     s.tx.campSetting.findFirst.mockResolvedValue({ rosterOnDays: 14 });
@@ -120,12 +130,15 @@ describe('CampSettingsService (Шат 2.3)', () => {
     expect(s.tx.campMealLocation.create).toHaveBeenCalledWith(expect.objectContaining({ data: { tenantId: 't1', campId: 'c1', name: 'Уулын хэсэг' } }));
   });
 
-  it('meal location идэвхгүй болгох: анхдагч байршил → 409; идэвхтэй хэлтэс ашиглаж байвал → 409 (код нэрлэнэ)', async () => {
+  it('meal location идэвхгүй болгох: анхдагч байршил → 409; v0.2.1: идэвхтэй ажилтан / албан тушаалын тохиргоо ашиглаж байвал → 409 (тоо)', async () => {
     s.tx.campMealLocation.findFirst.mockResolvedValue({ id: 'loc1' });
     s.tx.campSetting.findFirst.mockResolvedValueOnce({ id: 's1' });
     await expect(svc.updateMealLocation('t1', 'a1', 'c1', 'loc1', { isActive: false })).rejects.toThrow(/анхдагч байршлыг/);
-    s.tx.campDepartment.findMany.mockResolvedValueOnce([{ code: 'MINE' }]);
-    await expect(svc.updateMealLocation('t1', 'a1', 'c1', 'loc1', { isActive: false })).rejects.toThrow(/Идэвхтэй хэлтэс .*MINE/);
+    s.tx.campEmployee.count.mockResolvedValueOnce(3);
+    s.tx.campPositionSetting.count.mockResolvedValueOnce(1);
+    await expect(svc.updateMealLocation('t1', 'a1', 'c1', 'loc1', { isActive: false })).rejects.toThrow(/3 идэвхтэй ажилтан, 1 албан тушаал/);
+    expect(s.tx.campEmployee.count.mock.calls[0][0].where).toEqual({ tenantId: 't1', campId: 'c1', mealLocationId: 'loc1', status: 'ACTIVE' });
+    expect(s.tx.campDepartment.findMany).not.toHaveBeenCalled(); // хэлтсийн байршлыг уншихаа больсон (Д-4)
     expect(s.tx.campMealLocation.update).not.toHaveBeenCalled();
     await svc.updateMealLocation('t1', 'a1', 'c1', 'loc1', { isActive: false });
     expect(s.tx.campMealLocation.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'loc1' }, data: { isActive: false } }));

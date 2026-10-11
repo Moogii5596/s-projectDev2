@@ -5,7 +5,7 @@ import { CampAuditService } from '../common/camp-audit.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
-import { assertMealLocation, getCampOr404, getRosterSettings } from '../common/camp-lookup';
+import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
 import { CreateDepartmentDto, QueryActiveOnlyDto, SetShiftPatternDto, UpdateDepartmentDto } from './camp-master.dto';
 import { normalizeShiftPattern, ShiftSegment } from './shift-pattern';
 import { conflict, notFound } from '../../../common/i18n/app-error';
@@ -15,16 +15,14 @@ const DEPT_SELECT = {
   id: true,
   code: true,
   name: true,
-  mealLocationId: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
-  mealLocation: { select: { name: true } },
   shiftPatterns: { select: { dayFrom: true, dayTo: true, shift: true }, orderBy: { dayFrom: 'asc' as const } },
 } as const;
 
 /** Түүхэд харьцуулах талбарууд (§0.4); ээлжийн загвар JSON-оор */
-const DEPT_AUDIT_FIELDS = ['code', 'name', 'mealLocationId', 'isActive', 'shiftPatterns'] as const;
+const DEPT_AUDIT_FIELDS = ['code', 'name', 'isActive', 'shiftPatterns'] as const;
 
 /** Хэлтэс + ээлжийн загвар (Шат 2.4). Бичих: тухайн кемпийн `camp.master.manage`. */
 @Injectable()
@@ -95,11 +93,10 @@ export class CampDepartmentsService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         await getCampOr404(tx, tenantId, campId);
-        await assertMealLocation(tx, tenantId, campId, dto.mealLocationId);
         const dup = await tx.campDepartment.findFirst({ where: { tenantId, campId, code: dto.code }, select: { id: true } });
         if (dup) throw conflict('camp.err.departments.2', { code: dto.code });
         const d = await tx.campDepartment.create({
-          data: { tenantId, campId, code: dto.code, name: dto.name, mealLocationId: dto.mealLocationId },
+          data: { tenantId, campId, code: dto.code, name: dto.name },
           select: { id: true },
         });
         if (dto.shiftPattern) await this.replacePattern(tx, tenantId, campId, d.id, dto.shiftPattern);
@@ -110,13 +107,12 @@ export class CampDepartmentsService {
     );
   }
 
-  /** Байршлыг солиход өмнөх хоолны захиалга өөрчлөгдөхгүй (мөрөнд snapshot) — ERD v4 */
+  /** v0.2.1 (Q1): хоолны байршил хэлтсээс хасагдсан — `mealLocationId` (хуучин клиент) үл тоогдоно */
   async update(tenantId: string, authId: string, campId: string, id: string, dto: UpdateDepartmentDto) {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         const before = await this.getDept(tx, tenantId, campId, id);
-        if (dto.mealLocationId !== undefined) await assertMealLocation(tx, tenantId, campId, dto.mealLocationId);
         if (dto.isActive === false) {
           const active = await tx.campEmployee.count({ where: { tenantId, departmentId: id, status: 'ACTIVE' } });
           if (active > 0) throw conflict('camp.err.departments.3', { active });
@@ -125,7 +121,6 @@ export class CampDepartmentsService {
           where: { id },
           data: {
             ...(dto.name !== undefined ? { name: dto.name } : {}),
-            ...(dto.mealLocationId !== undefined ? { mealLocationId: dto.mealLocationId } : {}),
             ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
           },
         });

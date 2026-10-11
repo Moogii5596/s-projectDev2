@@ -5,7 +5,7 @@ import { cellText, parseDateCell } from '../../../common/xlsx/cells';
 import { badRequest } from '../../../common/i18n/app-error';
 
 /**
- * Ирцийн xlsx задлагч (Шат 3.3). Багана (англи эсвэл монгол, том жижиг үсэг хамаарахгүй):
+ * Ирцийн xlsx задлагч (Шат 3.3). Багана (англи, монгол эсвэл хятад — I18N-02; том жижиг үсэг, төгсгөлийн * хамаарахгүй):
  *   employee_code* | date* | direction* (ARRIVAL/DEPARTURE) | meals (BREAKFAST,LUNCH,DINNER,NIGHT | NONE) | shift (DAY/NIGHT)
  * meals: ростерын бол заавал биш (анхдагч), ээлжийн бус бол ЗААВАЛ (хоол идэхгүй бол NONE) — планнер шалгана.
  */
@@ -24,33 +24,42 @@ export interface ParsedRow {
 }
 
 const norm = (s: string) => s.trim().toUpperCase().replace(/\s+/g, ' ');
+/** Толгой: "date*", "日期 *" → "DATE", "日期" */
+const normHeader = (s: string) => norm(s).replace(/\s*\*+$/, '');
 
 const HEADERS: Record<string, string[]> = {
-  employeeCode: ['EMPLOYEE_CODE', 'EMPLOYEE CODE', 'CODE', 'КОД', 'АЖИЛТНЫ КОД', 'АЖИЛТНЫ_КОД'],
-  date: ['DATE', 'ОГНОО'],
-  direction: ['DIRECTION', 'ЧИГЛЭЛ'],
-  meals: ['MEALS', 'MEAL', 'ХООЛ'],
-  shift: ['SHIFT', 'ЭЭЛЖ'],
+  employeeCode: ['EMPLOYEE_CODE', 'EMPLOYEE CODE', 'CODE', 'КОД', 'АЖИЛТНЫ КОД', 'АЖИЛТНЫ_КОД', '员工编号', '员工代码', '工号'],
+  date: ['DATE', 'ОГНОО', '日期'],
+  direction: ['DIRECTION', 'ЧИГЛЭЛ', '方向', '进出'],
+  meals: ['MEALS', 'MEAL', 'ХООЛ', '餐', '餐别', '用餐'],
+  shift: ['SHIFT', 'ЭЭЛЖ', '班次'],
 };
 const DIRECTIONS: Record<string, CampMovementDirection> = {
   ARRIVAL: CampMovementDirection.ARRIVAL, IN: CampMovementDirection.ARRIVAL, 'ИРСЭН': CampMovementDirection.ARRIVAL, 'ИРЭХ': CampMovementDirection.ARRIVAL,
   DEPARTURE: CampMovementDirection.DEPARTURE, OUT: CampMovementDirection.DEPARTURE, 'ЯВСАН': CampMovementDirection.DEPARTURE, 'ЯВАХ': CampMovementDirection.DEPARTURE,
+  '到达': CampMovementDirection.ARRIVAL, '离开': CampMovementDirection.DEPARTURE,
 };
 const MEALS: Record<string, CampMealType> = {
   BREAKFAST: CampMealType.BREAKFAST, B: CampMealType.BREAKFAST, 'ӨГЛӨӨ': CampMealType.BREAKFAST,
   LUNCH: CampMealType.LUNCH, L: CampMealType.LUNCH, 'ӨДӨР': CampMealType.LUNCH,
   DINNER: CampMealType.DINNER, D: CampMealType.DINNER, 'ОРОЙ': CampMealType.DINNER,
   NIGHT: CampMealType.NIGHT, N: CampMealType.NIGHT, 'ШӨНӨ': CampMealType.NIGHT,
+  '早餐': CampMealType.BREAKFAST, '午餐': CampMealType.LUNCH, '晚餐': CampMealType.DINNER, '夜宵': CampMealType.NIGHT,
 };
-const NONE = new Set(['NONE', '-', 'ҮГҮЙ']);
-const SHIFTS: Record<string, CampShiftType> = { DAY: CampShiftType.DAY, 'ӨДӨР': CampShiftType.DAY, NIGHT: CampShiftType.NIGHT, 'ШӨНӨ': CampShiftType.NIGHT };
+const NONE = new Set(['NONE', '-', 'ҮГҮЙ', '无', '不用餐']);
+const SHIFTS: Record<string, CampShiftType> = {
+  DAY: CampShiftType.DAY, 'ӨДӨР': CampShiftType.DAY, '白班': CampShiftType.DAY,
+  NIGHT: CampShiftType.NIGHT, 'ШӨНӨ': CampShiftType.NIGHT, '夜班': CampShiftType.NIGHT,
+};
+/** Хятад хоолыг тусгаарлагчгүй бичсэн ч ("午餐晚餐") салгана */
+const ZH_MEAL_RE = /(早餐|午餐|晚餐|夜宵)/g;
 const MEAL_ORDER = [CampMealType.BREAKFAST, CampMealType.LUNCH, CampMealType.DINNER, CampMealType.NIGHT];
 
 // cellText, parseDateCell → common/xlsx/cells.ts (v0.2.0 §0.5, зан төлөв ижил)
 export { parseDateCell };
 
 export function parseMeals(text: string): { meals: CampMealType[] | null; error?: string } {
-  const tokens = norm(text).split(/[,;\s]+/).filter(Boolean);
+  const tokens = norm(text.replace(ZH_MEAL_RE, ' $1 ')).split(/[,;，；、\s]+/).filter(Boolean);
   if (tokens.length === 0) return { meals: null };
   if (tokens.some((tok) => NONE.has(tok))) {
     return tokens.length === 1 ? { meals: [] } : { meals: null, error: t('camp.row.meals_none_mixed') };
@@ -75,7 +84,7 @@ export async function parseAttendanceXlsx(buffer: Buffer): Promise<ParsedRow[]> 
 
   const col: Partial<Record<keyof typeof HEADERS, number>> = {};
   ws.getRow(1).eachCell((cell, c) => {
-    const h = norm(cellText(cell.value));
+    const h = normHeader(cellText(cell.value));
     for (const [field, aliases] of Object.entries(HEADERS)) if (aliases.includes(h)) col[field as keyof typeof HEADERS] = c;
   });
   const missing = (['employeeCode', 'date', 'direction'] as const).filter((f) => col[f] === undefined);
@@ -114,7 +123,49 @@ export async function parseAttendanceXlsx(buffer: Buffer): Promise<ParsedRow[]> 
   return rows;
 }
 
-/** Загвар файл: "Ирц" (толгой + жишээ + dropdown) ба "Заавар" хуудас */
+/** Ирцийн загварын заавар — хуудасны нэр → мөрүүд (I18N-02) */
+export const ATTENDANCE_HELP: Record<string, string[]> = {
+  'Заавар_MN': [
+    'Ирцийн импорт — заавар',
+    'employee_code: ажилтны код (заавал)',
+    'date: YYYY-MM-DD (заавал). Ирээдүйн огноо зөвшөөрнө (маргаашийн ирэлтийг урьдчилан оруулж болно)',
+    'direction: ARRIVAL (ирсэн) / DEPARTURE (явсан) (заавал)',
+    'meals: BREAKFAST, LUNCH, DINNER, NIGHT — таслалаар. Хоол идэхгүй бол NONE.',
+    '   • Ростерын ирэлт/явалт (багийн ирэх Лхагва / явах Пүрэв): хоосон бол анхдагч (ирэлт → DINNER, явалт → BREAKFAST)',
+    '   • Ээлжийн бус ирэлт/явалт: ЗААВАЛ бөглөнө',
+    'shift: DAY / NIGHT — зөвхөн ARRIVAL мөрөнд; ирсэн өдрөөс явах хүртэл (эсвэл ажлын өдрийн тоогоор) ээлжийн зохицуулалт үүснэ',
+    'Монгол утга ч хүлээн авна: ИРСЭН/ЯВСАН, ӨГЛӨӨ/ӨДӨР/ОРОЙ/ШӨНӨ, ӨДӨР/ШӨНӨ',
+    'Хятад толгой, утга ч хүлээн авна: 员工编号/日期/方向/餐/班次; 到达/离开; 早餐/午餐/晚餐/夜宵 (无); 白班/夜班',
+    'Өгөгдлийг зөвхөн эхний "Ирц" хуудсанд бичнэ.',
+  ],
+  'Заавар_EN': [
+    'Attendance import — instructions',
+    'employee_code: employee code (required)',
+    'date: YYYY-MM-DD (required). Future dates are allowed (e.g. enter tomorrow\'s arrival in advance)',
+    'direction: ARRIVAL / DEPARTURE (required)',
+    'meals: BREAKFAST, LUNCH, DINNER, NIGHT — comma separated. NONE if no meals.',
+    '   • Roster arrival/departure (crew arrives Wednesday / leaves Thursday): blank = default (arrival → DINNER, departure → BREAKFAST)',
+    '   • Off-roster arrival/departure: REQUIRED',
+    'shift: DAY / NIGHT — ARRIVAL rows only; applies from the arrival date until departure (or for the number of work days)',
+    'Mongolian values are accepted: ИРСЭН/ЯВСАН, ӨГЛӨӨ/ӨДӨР/ОРОЙ/ШӨНӨ, ӨДӨР/ШӨНӨ',
+    'Chinese headers and values are accepted: 员工编号/日期/方向/餐/班次; 到达/离开; 早餐/午餐/晚餐/夜宵 (无); 白班/夜班',
+    'Enter data on the first sheet ("Ирц") only.',
+  ],
+  'Заавар_中文': [
+    '考勤导入 — 说明',
+    'employee_code（员工编号）：必填',
+    'date（日期）：YYYY-MM-DD，必填。允许未来日期（可提前录入明天的到达）',
+    'direction（方向）：ARRIVAL/到达 或 DEPARTURE/离开，必填',
+    'meals（餐）：早餐、午餐、晚餐、夜宵（或 BREAKFAST, LUNCH, DINNER, NIGHT），用逗号或顿号分隔。不用餐填 无（NONE）。',
+    '   • 轮班到达/离开（班组周三到达 / 周四离开）：留空则按默认（到达 → 晚餐，离开 → 早餐）',
+    '   • 非轮班到达/离开：必须填写',
+    'shift（班次）：白班/DAY 或 夜班/NIGHT — 仅用于到达行；从到达日起至离开（或按工作天数）生效',
+    '表头可用中文：员工编号 / 日期 / 方向 / 餐 / 班次',
+    '数据只填写在第一个工作表（"Ирц"）中。',
+  ],
+};
+
+/** Загвар файл: "Ирц" (толгой + жишээ + dropdown) ба "Заавар_MN/EN/中文" хуудсууд */
 export async function buildAttendanceTemplate(): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Ирц');
@@ -133,21 +184,14 @@ export async function buildAttendanceTemplate(): Promise<Buffer> {
     ws.getCell(`C${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"ARRIVAL,DEPARTURE"'] };
     ws.getCell(`E${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"DAY,NIGHT"'] };
   }
-  const help = wb.addWorksheet('Заавар');
-  help.getColumn(1).width = 110;
-  [
-    'Ирцийн импорт — заавар',
-    'employee_code: ажилтны код (заавал)',
-    'date: YYYY-MM-DD (заавал). Ирээдүйн огноо зөвшөөрнө (маргаашийн ирэлтийг урьдчилан оруулж болно)',
-    'direction: ARRIVAL (ирсэн) / DEPARTURE (явсан) (заавал)',
-    'meals: BREAKFAST, LUNCH, DINNER, NIGHT — таслалаар. Хоол идэхгүй бол NONE.',
-    '   • Ростерын ирэлт/явалт (багийн ирэх Лхагва / явах Пүрэв): хоосон бол анхдагч (ирэлт → DINNER, явалт → BREAKFAST)',
-    '   • Ээлжийн бус ирэлт/явалт: ЗААВАЛ бөглөнө',
-    'shift: DAY / NIGHT — зөвхөн ARRIVAL мөрөнд; ирсэн өдрөөс явах хүртэл (эсвэл ажлын өдрийн тоогоор) ээлжийн зохицуулалт үүснэ',
-    'Монгол утга ч хүлээн авна: ИРСЭН/ЯВСАН, ӨГЛӨӨ/ӨДӨР/ОРОЙ/ШӨНӨ, ӨДӨР/ШӨНӨ',
-  ].forEach((t, i) => {
-    help.getCell(`A${i + 1}`).value = t;
-    if (i === 0) help.getCell('A1').font = { bold: true, size: 13 };
-  });
+  // I18N-02: "Заавар" хэл тус бүрээр тусдаа хуудас (эхний хуудас "Ирц" хэвээр — задлагч worksheets[0]-ийг уншина)
+  for (const [name, lines] of Object.entries(ATTENDANCE_HELP)) {
+    const help = wb.addWorksheet(name);
+    help.getColumn(1).width = 110;
+    lines.forEach((text, i) => {
+      help.getCell(`A${i + 1}`).value = text;
+    });
+    help.getCell('A1').font = { bold: true, size: 13 };
+  }
   return Buffer.from(await wb.xlsx.writeBuffer());
 }

@@ -11,6 +11,7 @@ import {
   CreateRoomAllocationDto,
   CreateShiftAdjustmentsDto,
   DateQueryDto,
+  StaysQueryDto,
   EndRoomAllocationDto,
   ManualMovementsDto,
   QueryAllocationsDto,
@@ -122,9 +123,9 @@ export class CampAttendanceController {
   }
 
   @Get('stays')
-  stays(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Query() q: DateQueryDto) {
+  stays(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Query() q: StaysQueryDto) {
     const u = reqUser(req);
-    return this.attendance.listStays(u.tenantId, u.id, campId, q.date);
+    return this.attendance.listStays(u.tenantId, u.id, campId, q.date, q.shift);
   }
 
   // ── Ээлж ──

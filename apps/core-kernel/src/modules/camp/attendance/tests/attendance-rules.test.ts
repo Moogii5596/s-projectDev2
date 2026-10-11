@@ -96,7 +96,7 @@ describe('Хоолны дүрэм', () => {
 
 describe('Presence — D өдрийн суурь тоо (ERD v4 жишээнүүд)', () => {
   const emp = (over: Partial<PresenceEmployee>): PresenceEmployee => ({
-    id: 'e1', employeeCode: 'E001', fullName: 'Бат', departmentCode: 'MINE', departmentLocationId: 'loc-mine',
+    id: 'e1', employeeCode: 'E001', fullName: 'Бат', departmentCode: 'MINE', workMealLocationId: 'loc-mine',
     crewAnchor: ANCHOR, pattern: MINE_7_7, adjustments: [],
     stays: [{ startDate: '2026-10-07', endDate: '2026-10-22', arrivalMeals: [D], departureMeals: [B] }],
     ...over,
@@ -157,7 +157,7 @@ describe('Presence — D өдрийн суурь тоо (ERD v4 жишээнүү
       [
         emp({ id: 'a' }),
         emp({ id: 'b', employeeCode: 'E002' }),
-        emp({ id: 'c', employeeCode: 'E003', departmentCode: 'ADM', departmentLocationId: 'loc-camp', crewAnchor: null, pattern: ADM_14,
+        emp({ id: 'c', employeeCode: 'E003', departmentCode: 'ADM', workMealLocationId: 'loc-camp', crewAnchor: null, pattern: ADM_14,
           stays: [{ startDate: '2026-10-01', endDate: null, arrivalMeals: [D], departureMeals: null }] }),
         emp({ id: 'x', stays: [] }),
       ],

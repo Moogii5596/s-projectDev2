@@ -5,6 +5,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -20,6 +21,14 @@ const DATE_MSG = (f: string) => ({ message: `${f} YYYY-MM-DD` });
 export class DateQueryDto {
   @IsString() @Matches(ISO_DATE, DATE_MSG('date'))
   date!: string;
+}
+
+/** v0.2.1 (C-14): ирцийн жагсаалт — тухайн өдрийн тооцоолсон ээлжээр шүүх */
+export const STAY_SHIFT_GROUPS = ['DAY', 'NIGHT', 'UNKNOWN', 'MOVEMENT'] as const;
+export type StayShiftGroup = (typeof STAY_SHIFT_GROUPS)[number];
+export class StaysQueryDto extends DateQueryDto {
+  @IsOptional() @IsIn(STAY_SHIFT_GROUPS, { message: `shift: ${STAY_SHIFT_GROUPS.join(' | ')}` })
+  shift?: StayShiftGroup;
 }
 
 export class RangeQueryDto {

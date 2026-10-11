@@ -30,8 +30,14 @@ import { CampMaintenanceService } from './maintenance/camp-maintenance.service';
  * Шат 4 (үндсэн хөрөнгө, засвар + сэлбэгийн зардал). DatabaseModule, AppCacheModule нь global.
  * Guard/interceptor нь APP_GUARD-аар (RULE-07) — controller-д decorator хэрэггүй.
  */
+import { CampBuildingTypesController, CampPositionsController, CampPositionSettingsController } from './catalog/camp-catalog.controller';
+import { CampCatalogService } from './catalog/camp-catalog.service';
+
 @Module({
   controllers: [
+    CampPositionsController,
+    CampBuildingTypesController,
+    CampPositionSettingsController,
     CampRbacController,
     CampSettingsController,
     CampsController,
@@ -45,6 +51,7 @@ import { CampMaintenanceService } from './maintenance/camp-maintenance.service';
     CampDataController,
   ],
   providers: [
+    CampCatalogService,
     CampAccessService,
     CampAuditService,
     CampDataImportService,

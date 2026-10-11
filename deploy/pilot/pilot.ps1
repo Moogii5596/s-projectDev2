@@ -15,10 +15,12 @@
     status                Процесс, health, контейнер, Tailscale Funnel
     onboard --slug= ...   Байгууллага + эзэмшигч (pnpm pilot:onboard)
     user --email= ...     Хэрэглэгч нэмэх/засах (pnpm pilot:user)
-    backup                Шифрлэсэн нөөц (7-Zip AES-256) → PILOT_BACKUP_DIR, хуучныг устгана
+    backup                Шифрлэсэн нөөц (7-Zip AES-256) → PILOT_BACKUP_DIR (+ хуулбар PILOT_BACKUP_COPY_DIR), хуучныг устгана
     restore <файл.7z>     Нөөцөөс сэргээх (ОДООГИЙН ӨГӨГДӨЛ УСТНА — баталгаажуулалт асууна)
     upgrade -Tag <tag>    Шинэ хувилбар: нөөц → зогсоох → git fetch/checkout <tag> → init → build → start → health
                           (бохир git tree бол эхлэхгүй; алдаа гарвал буцаах заавар хэвлэнэ)
+    auth-test <имэйл>     (зөвхөн -Profile staging) Нэвтрэлтийн түгжээ (PIL-07): 6 буруу нууц үг → 400×5, 429; дараа нь түгжээг тайлна
+    unlock <имэйл>        5 буруу нууц үгээр түгжигдсэн бүртгэлийг шууд тайлах (PIL-07)
     firewall              (Админ) Windows Firewall: dev/пилотын портуудыг гаднаас хаах
     install-tasks         Task Scheduler: нэвтрэхэд `run`, өдөр бүр 02:00 `backup`
     uninstall-tasks       Task Scheduler-ийн даалгавруудыг устгах
@@ -28,6 +30,8 @@
     staging               .env.staging, Supabase s-project-staging (56521/56522, Studio 56523), Redis 56579,
                           backend 3200, Caddy 8089, нөөц staging-<slug>-*.7z. Тусдаа clone-д (-Root) ажиллуулна;
                           Task Scheduler / Funnel-гүй. Шинэчлэлийн дадлага: runbook §13в
+  Мониторинг (PIL-04, заавал биш): PILOT_HEALTHCHECK_URL — run (watchdog) / status ping илгээнэ, унавал /fail.
+                          PILOT_HEALTHCHECK_BACKUP_URL — backup-ийн дүн (хоосон бол алдааг л үндсэн URL руу /fail).
   -Root <хавтас>          Кодын хавтас (анхдагч: энэ скриптийн ../..). Хуучин tag-ийн clone-д шинэ скриптийг ашиглахад
 
   Windows PowerShell 5.1 + PowerShell 7-д ажиллана. Энэ файл UTF-8 BOM-той (5.1 кирилл зөв уншина).
@@ -145,6 +149,29 @@ function Get-Cfg([hashtable] $cfg, [string] $key, [string] $default = '') {
   return $default
 }
 
+# ── Мониторинг (PIL-04): healthchecks.io-ийн ping. URL хоосон бол юу ч хийхгүй; алдаа хэзээ ч шидэхгүй ──
+# $Kind: 'main' (PILOT_HEALTHCHECK_URL) | 'backup' (PILOT_HEALTHCHECK_BACKUP_URL; хоосон бол зөвхөн /fail-ийг main руу)
+# URL-д check-ийн токен байдаг тул лог/дэлгэцэнд URL-ийг хэвлэхгүй.
+function Send-HealthPing([hashtable] $cfg, [string] $Kind = 'main', [switch] $Fail, [string] $Message = '') {
+  $url = Get-Cfg $cfg 'PILOT_HEALTHCHECK_URL'
+  if ($Kind -eq 'backup') {
+    $bu = Get-Cfg $cfg 'PILOT_HEALTHCHECK_BACKUP_URL'
+    if ($bu) { $url = $bu } elseif (-not $Fail) { return $false }
+  }
+  if (-not $url) { return $false }
+  $target = $url.TrimEnd('/')
+  if ($Fail) { $target += '/fail' }
+  $body = "$Instance $Kind $Message"
+  if ($body.Length -gt 1000) { $body = $body.Substring(0, 1000) }
+  try {
+    $null = Invoke-WebRequest -Uri $target -Method Post -Body ([Text.Encoding]::UTF8.GetBytes($body)) -ContentType 'text/plain; charset=utf-8' -TimeoutSec 10 -UseBasicParsing
+    return $true
+  } catch {
+    Write-Log 'pilot.log' "healthcheck ping ($Kind$(if ($Fail) { '/fail' })) амжилтгүй: $($_.Exception.Message)"
+    return $false
+  }
+}
+
 function Import-PilotEnv {
   $envFile = Join-Path $Root $Prof.EnvFile
   if (-not (Test-Path $envFile)) {
@@ -180,6 +207,10 @@ function Test-PilotEnv([hashtable] $cfg, [switch] $NeedBackup) {
   if ($sec -eq $DemoJwtSecret) { $errors.Add('SUPABASE_AUTH_JWT_SECRET = Supabase-ийн НИЙТЭД ИЛ demo нууц — солино') }
   if ((Get-Cfg $cfg 'JWT_SECRET').Length -lt 32) { $errors.Add('JWT_SECRET 32+ тэмдэгт байх ёстой') }
   if ((Get-Cfg $cfg 'JWT_SECRET') -match 'CHANGE') { $errors.Add('JWT_SECRET жишээ утга хэвээр') }
+  foreach ($k in @('PILOT_HEALTHCHECK_URL', 'PILOT_HEALTHCHECK_BACKUP_URL')) {
+    $u = Get-Cfg $cfg $k
+    if ($u -and $u -notmatch '^https://[^\s/]+/\S*$') { $errors.Add("$k нь https://... URL байх ёстой") }
+  }
 
   $dbUrl = Get-Cfg $cfg 'DATABASE_URL'
   if ($dbUrl -notmatch '^postgres(?:ql)?://app_user:') { $errors.Add('DATABASE_URL нь app_user-ээр (RLS) холбогдох ёстой') }
@@ -287,6 +318,22 @@ function Start-PilotRedis {
   Write-Ok "Redis ($RedisContainer, 127.0.0.1:$($Prof.RedisPort))"
 }
 
+# PIL-07: config.toml-ийн өөрчлөлт (жнь [auth.hook.*]) ажиллаж буй Supabase-д үйлчлэхгүй — `supabase start` үед л уншина.
+# Асаасан үеийн config.toml-ийн SHA256-г run\supabase-config.sha256-д хадгалж, init үед зөрвөл дахин асаана.
+function Get-SupabaseConfigHash {
+  return (Get-FileHash -LiteralPath (Join-Path (Join-Path $PilotDir 'supabase') 'config.toml') -Algorithm SHA256).Hash
+}
+function Get-SupabaseConfigStampFile { return Join-Path $RunDir 'supabase-config.sha256' }
+function Save-SupabaseConfigStamp {
+  New-Item -ItemType Directory -Force -Path $RunDir | Out-Null
+  Set-Content -Path (Get-SupabaseConfigStampFile) -Value (Get-SupabaseConfigHash) -Encoding ASCII
+}
+function Test-SupabaseConfigChanged {
+  $f = Get-SupabaseConfigStampFile
+  $prev = if (Test-Path $f) { (Get-Content -Path $f -Raw).Trim() } else { '' }
+  return ($prev -ne (Get-SupabaseConfigHash))
+}
+
 function Start-PilotSupabase([hashtable] $cfg) {
   # env() → SUPABASE_AUTH_JWT_SECRET. Байхгүй бол CLI demo нууцаар асдаг тул заавал шалгана
   if ((Get-Cfg $cfg 'SUPABASE_AUTH_JWT_SECRET').Length -lt 32) { Stop-Pilot2 'SUPABASE_AUTH_JWT_SECRET алга' }
@@ -297,6 +344,7 @@ function Start-PilotSupabase([hashtable] $cfg) {
     Invoke-Supabase -Arguments @('start') | Out-Null
     $keys = Get-SupabaseKeys
     if ($null -eq $keys) { Stop-Pilot2 'supabase status — түлхүүр уншиж чадсангүй' }
+    Save-SupabaseConfigStamp
   }
   Assert-KeysSecure $keys $cfg['SUPABASE_AUTH_JWT_SECRET']
   Set-KeysEnv $keys
@@ -479,6 +527,32 @@ function Start-Pilot([int] $DockerTimeoutSec = 300) {
 # ── Нөөцлөлт ─────────────────────────────────────────────────
 $BackupAuthTables = @('auth.users', 'auth.identities')
 
+# PIL-05: нөөцийг 2 дахь хавтас руу (OneDrive/USB). Хуулбарын алдаа үндсэн нөөцийг эвдэхгүй — $false буцаана.
+function Copy-BackupToSecondary([hashtable] $cfg, [string] $archive, [string] $pattern, [int] $keep) {
+  $copyDir = Get-Cfg $cfg 'PILOT_BACKUP_COPY_DIR'
+  if (-not $copyDir) { return $true }
+  try {
+    $src = (Resolve-Path -LiteralPath (Split-Path -Parent $archive)).Path.TrimEnd('\', '/')
+    New-Item -ItemType Directory -Force -Path $copyDir | Out-Null
+    $dst = (Resolve-Path -LiteralPath $copyDir).Path.TrimEnd('\', '/')
+    if ($src -ieq $dst) { throw 'PILOT_BACKUP_COPY_DIR = PILOT_BACKUP_DIR (өөр хавтас/диск заана)' }
+    $dest = Join-Path $dst (Split-Path -Leaf $archive)
+    Copy-Item -LiteralPath $archive -Destination $dest -Force
+    $h1 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+    $h2 = (Get-FileHash -LiteralPath $dest -Algorithm SHA256).Hash
+    if ($h1 -ne $h2) { throw "хуулбарын SHA256 таарахгүй ($dest)" }
+    Write-Ok "хуулбар: $dest"
+    Write-Log 'backup.log' "COPY OK $dest"
+    $old = Get-ChildItem -Path $dst -Filter $pattern | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$keep) }
+    foreach ($f in $old) { Remove-Item $f.FullName -Force; Write-Host "  хуучин хуулбар устгав: $($f.Name)" }
+    return $true
+  } catch {
+    Write-Warn2 "Нөөцийн хуулбар амжилтгүй (үндсэн нөөц хэвээр): $($_.Exception.Message)"
+    Write-Log 'backup.log' "COPY FAIL $($_.Exception.Message)"
+    return $false
+  }
+}
+
 function Invoke-Backup {
   $cfg = Import-PilotEnv
   Assert-PilotEnv $cfg -NeedBackup
@@ -524,11 +598,16 @@ function Invoke-Backup {
     Write-Ok "$archive ($size KB; tenants $($c[0]), хэрэглэгч $($c[1]), migration $($versions.Count))"
     Write-Log 'backup.log' "OK $archive ${size}KB tenants=$($c[0]) users=$($c[1])"
 
-    $old = Get-ChildItem -Path $dir -Filter "$($Prof.BackupPrefix)$slug-*.7z" | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$keep) }
+    $pattern = "$($Prof.BackupPrefix)$slug-*.7z"
+    $old = Get-ChildItem -Path $dir -Filter $pattern | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$keep) }
     foreach ($f in $old) { Remove-Item $f.FullName -Force; Write-Host "  хуучин нөөц устгав: $($f.Name)" }
+    $copied = Copy-BackupToSecondary $cfg $archive $pattern $keep
+    if ($copied) { $null = Send-HealthPing $cfg 'backup' -Message "OK $(Split-Path -Leaf $archive) ${size}KB" }
+    else { $null = Send-HealthPing $cfg 'backup' -Fail -Message "backup OK, copy FAIL ($(Split-Path -Leaf $archive))" }
     return $archive
   } catch {
     Write-Log 'backup.log' "FAIL $($_.Exception.Message)"
+    $null = Send-HealthPing $cfg 'backup' -Fail -Message "backup FAIL: $($_.Exception.Message)"
     throw
   } finally {
     Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
@@ -750,6 +829,57 @@ function Assert-PilotProfile([string] $what) {
   if (-not $Prof.Tasks) { Stop-Pilot2 "$what зөвхөн pilot профайлд (одоо: $Instance)" }
 }
 
+# PIL-07: нэвтрэлтийн түгжээг (auth_guard hook) Caddy-ээр дамжуулж шалгах. Пилотын бодит хэрэглэгчийг түгжихгүйн тулд ЗӨВХӨН staging.
+function Get-HttpStatus([string] $url, [string] $body, [hashtable] $headers) {
+  try {
+    $r = Invoke-WebRequest -Uri $url -Method Post -Body $body -ContentType 'application/json' -Headers $headers -UseBasicParsing -TimeoutSec 15
+    return [int] $r.StatusCode
+  } catch {
+    $resp = $null
+    if ($_.Exception.PSObject.Properties['Response']) { $resp = $_.Exception.Response }
+    if ($resp) { return [int] $resp.StatusCode }
+    return -1
+  }
+}
+
+function Invoke-AuthTest([string] $email) {
+  if ($Instance -ne 'staging') { Stop-Pilot2 'auth-test зөвхөн -Profile staging (пилотын хэрэглэгчийг түгжихгүй)' }
+  if ($email -notmatch "^[^'\s;]+@[^'\s;]+$") { Stop-Pilot2 'auth-test <имэйл> — staging-д байгаа туршилтын хэрэглэгчийн имэйл' }
+  $cfg = Import-PilotEnv
+  $keys = Get-SupabaseKeys
+  if ($null -eq $keys) { Stop-Pilot2 'Supabase ажиллахгүй (pilot.ps1 start -Profile staging)' }
+  $n = Invoke-DbSql "SELECT count(*) FROM auth.users WHERE lower(email) = lower('$email')" -Capture
+  if (((@($n.Out) -join '').Trim()) -ne '1') { Stop-Pilot2 "хэрэглэгч олдсонгүй: $email" }
+  $guard = Invoke-DbSql "SELECT count(*) FROM pg_proc p JOIN pg_namespace s ON s.oid = p.pronamespace WHERE s.nspname = 'auth_guard' AND p.proname = 'hook_password_verification_attempt'" -Capture
+  if (((@($guard.Out) -join '').Trim()) -ne '1') { Stop-Pilot2 'auth_guard функц алга → pilot.ps1 init -Profile staging (migration)' }
+  $unlock = "DELETE FROM auth_guard.password_failures f USING auth.users u WHERE u.id = f.user_id AND lower(u.email) = lower('$email')"
+  Invoke-DbSql $unlock | Out-Null
+  $http = Get-Cfg $cfg 'PILOT_HTTP_PORT' $Prof.HttpPort
+  $url = "http://127.0.0.1:$http/auth/v1/token?grant_type=password"
+  Write-Step "Нэвтрэлтийн түгжээ: $email → $url (6 буруу нууц үг)"
+  $codes = @()
+  try {
+    for ($i = 1; $i -le 6; $i++) {
+      $body = @{ email = $email; password = "wrong-$([guid]::NewGuid().ToString('N'))" } | ConvertTo-Json -Compress
+      $codes += Get-HttpStatus $url $body @{ apikey = $keys['ANON_KEY'] }
+    }
+  } finally {
+    Invoke-DbSql $unlock | Out-Null   # туршилтын хэрэглэгчийг түгжээтэй үлдээхгүй
+  }
+  $got = $codes -join ' '
+  if ($got -eq '400 400 400 400 400 429') { Write-Ok "PIL-07 OK: $got (түгжээ тайлагдсан)" }
+  else { Stop-Pilot2 "PIL-07: хүлээсэн '400 400 400 400 400 429', ирсэн '$got' (config.toml [auth.hook.password_verification_attempt], migration 20261012006)" }
+}
+
+# PIL-07: түгжигдсэн бүртгэлийг шууд тайлах (15 мин хүлээлгүй)
+function Invoke-Unlock([string] $email) {
+  if ($email -notmatch "^[^'\s;]+@[^'\s;]+$") { Stop-Pilot2 'unlock <имэйл>' }
+  $null = Import-PilotEnv
+  $r = Invoke-DbSql "WITH d AS (DELETE FROM auth_guard.password_failures f USING auth.users u WHERE u.id = f.user_id AND lower(u.email) = lower('$email') RETURNING 1) SELECT count(*) FROM d" -Capture
+  $n = (@($r.Out) -join '').Trim()
+  if ($n -eq '1') { Write-Ok "$email — түгжээ/тоолуур тэглэв" } else { Write-Ok "$email — түгжээгүй байна" }
+}
+
 function Set-PilotFirewall {
   Assert-Windows -Admin
   Get-NetFirewallRule -DisplayName $FirewallRule -ErrorAction SilentlyContinue | Remove-NetFirewallRule
@@ -807,14 +937,21 @@ function Invoke-Watchdog {
   Write-Step 'Watchdog: 30 секунд тутам шалгана (Ctrl+C — зогсоох; процессууд үргэлжилнэ)'
   $port = Get-Cfg $cfg 'PORT' $Prof.Port
   $fails = 0
+  # PIL-04: эрүүл үед PILOT_HEALTHCHECK_INTERVAL_SEC (анхдагч 300) тутам ping; асуудал гарвал шууд /fail (дахин давтахдаа мөн интервалаар)
+  $pingEvery = [int] (Get-Cfg $cfg 'PILOT_HEALTHCHECK_INTERVAL_SEC' '300')
+  $lastPing = [datetime]::MinValue
+  $lastOk = $null
   while ($true) {
     Start-Sleep -Seconds 30
+    $problem = ''
     try {
       if ($null -eq (Get-PilotProcess 'backend' 'node')) {
         Write-Log 'pilot.log' 'backend down → restart'
+        $problem = 'backend down → restart'
         Start-Backend $cfg
       } elseif (-not (Wait-Http "http://127.0.0.1:$port/api/v1/health" 10)) {
         $fails++
+        if ($fails -ge 2) { $problem = "backend health fail #$fails" }   # нэг удаагийн саатлаар /fail илгээхгүй
         Write-Log 'pilot.log' "backend health fail #$fails"
         if ($fails -ge 3) {
           Write-Log 'pilot.log' 'backend unhealthy x3 → restart'
@@ -825,10 +962,17 @@ function Invoke-Watchdog {
       } else { $fails = 0 }
       if ($null -eq (Get-PilotProcess 'caddy' 'caddy')) {
         Write-Log 'pilot.log' 'caddy down → restart'
+        $problem = (@($problem, 'caddy down → restart') | Where-Object { $_ }) -join '; '
         Start-Caddy $cfg
       }
     } catch {
       Write-Log 'pilot.log' "watchdog error: $($_.Exception.Message)"
+      $problem = "watchdog error: $($_.Exception.Message)"
+    }
+    $ok = ($problem -eq '')
+    if (($ok -ne $lastOk) -or (((Get-Date) - $lastPing).TotalSeconds -ge $pingEvery)) {
+      if ($ok) { $sent = Send-HealthPing $cfg 'main' -Message 'watchdog OK' } else { $sent = Send-HealthPing $cfg 'main' -Fail -Message $problem }
+      if ($sent) { $lastPing = Get-Date; $lastOk = $ok }
     }
   }
 }
@@ -842,7 +986,8 @@ function Show-Status {
     $p = Get-PilotProcess $n[0] $n[1]
     if ($p) { Write-Ok "$($n[0]) PID $($p.Id)" } else { Write-Warn2 "$($n[0]) ажиллахгүй" }
   }
-  if (Wait-Http "http://127.0.0.1:$port/api/v1/health" 3) { Write-Ok "backend health (127.0.0.1:$port)" } else { Write-Warn2 'backend health алга' }
+  $healthy = Wait-Http "http://127.0.0.1:$port/api/v1/health" 3
+  if ($healthy) { Write-Ok "backend health (127.0.0.1:$port)" } else { Write-Warn2 'backend health алга' }
   if (Wait-Http "http://127.0.0.1:$http/api/v1/health" 3) { Write-Ok "gateway health (127.0.0.1:$http)" } else { Write-Warn2 'gateway (Caddy) health алга' }
   Invoke-Native 'docker' @('ps', '--filter', "name=$ProjectId", '--format', '{{.Names}}  {{.Status}}') -AllowFail | Out-Null
   if (Get-Command tailscale -ErrorAction SilentlyContinue) {
@@ -853,6 +998,15 @@ function Show-Status {
   if ($bdir -and (Test-Path $bdir)) {
     $last = Get-ChildItem -Path $bdir -Filter '*.7z' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if ($last) { Write-Ok "сүүлийн нөөц: $($last.Name) ($($last.LastWriteTime))" } else { Write-Warn2 'нөөц алга' }
+  }
+  $cdir = Get-Cfg $cfg 'PILOT_BACKUP_COPY_DIR'
+  if ($cdir) {
+    $lastCopy = if (Test-Path $cdir) { Get-ChildItem -Path $cdir -Filter '*.7z' | Sort-Object LastWriteTime -Descending | Select-Object -First 1 } else { $null }
+    if ($lastCopy) { Write-Ok "сүүлийн хуулбар: $($lastCopy.Name) ($($lastCopy.LastWriteTime))" } else { Write-Warn2 "хуулбар алга ($cdir)" }
+  }
+  if (Get-Cfg $cfg 'PILOT_HEALTHCHECK_URL') {
+    if ($healthy) { $sent = Send-HealthPing $cfg 'main' -Message 'status OK' } else { $sent = Send-HealthPing $cfg 'main' -Fail -Message 'status: backend health алга' }
+    if ($sent) { Write-Ok 'healthcheck ping илгээв' } else { Write-Warn2 'healthcheck ping амжилтгүй (logs\pilot.log)' }
   }
 }
 
@@ -903,6 +1057,13 @@ function Invoke-Init {
   Start-PilotSupabase $cfg | Out-Null
   Write-Step 'Migration (шинэ байвал)'
   Invoke-Supabase -Arguments @('migration', 'up', '--local') | Out-Null
+  # Migration-ы ДАРАА (hook-ийн функц бэлэн болсны дараа) шинэ config.toml-оор дахин асаана. Өгөгдөл хадгалагдана (--no-backup БИШ).
+  # Тэмдэг алга (v0.2.1-ээс өмнөх суулгалт) бол нэг удаа дахин асаана.
+  if (Test-SupabaseConfigChanged) {
+    Write-Step 'Supabase config.toml өөрчлөгдсөн → дахин асаана (өгөгдөл хадгалагдана, ~1-2 мин)'
+    Invoke-Supabase -Arguments @('stop') | Out-Null
+    Start-PilotSupabase $cfg | Out-Null
+  }
   Set-AppUserPassword $cfg
   Write-Ok 'init дууслаа → pilot.ps1 build'
 }
@@ -986,6 +1147,8 @@ try {
     'backup' { Invoke-Backup | Out-Null }
     'restore' { $f = $null; if ($Rest) { $f = $Rest[0] }; Invoke-Restore $f }
     'upgrade' { $t = $Tag; if (-not $t -and $Rest) { $t = $Rest[0] }; Invoke-Upgrade $t }
+    'auth-test' { $e = ''; if ($Rest) { $e = $Rest[0] }; Invoke-AuthTest $e }
+    'unlock' { $e = ''; if ($Rest) { $e = $Rest[0] }; Invoke-Unlock $e }
     'firewall' { Set-PilotFirewall }
     'install-tasks' { Install-PilotTasks }
     'uninstall-tasks' { Uninstall-PilotTasks }

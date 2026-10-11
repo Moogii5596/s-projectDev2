@@ -8,6 +8,7 @@ import { CampDepartmentsService } from './camp-departments.service';
 import { CampCrewsService } from './camp-crews.service';
 import { CampEmployeesService } from './camp-employees.service';
 import {
+  BulkEmployeesDto,
   BulkRoomsDto,
   CreateBuildingDto,
   CreateCampDto,
@@ -203,6 +204,14 @@ export class CampMasterController {
   getEmployee(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Param('id', uuid()) id: string) {
     const u = reqUser(req);
     return this.employees.get(u.tenantId, u.id, campId, id);
+  }
+
+  /** v0.2.1 (Д-2) — олон ажилтанд нэг дор (хоол авах / хоолны байршил / албан тушаал). ':id'-аас ӨМНӨ */
+  @Post('employees/bulk')
+  @HttpCode(200)
+  bulkEmployees(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Body() dto: BulkEmployeesDto) {
+    const u = reqUser(req);
+    return this.employees.bulkUpdate(u.tenantId, u.id, campId, dto);
   }
 
   @Post('employees')

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CampEmployeeStatus, CampRoomStatus } from '@prisma/client';
+import { CampAssetCondition, CampEmployeeStatus, CampRoomStatus } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
@@ -9,6 +9,7 @@ import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
 import { addDays, coversDay } from './camp-date';
 import { expectedNight, RosterSettings } from './roster';
 import { assertDate } from './range';
+import { OPEN_STATUSES } from '../maintenance/maintenance-flow';
 import { CreateRoomAllocationDto, EndRoomAllocationDto, QueryAllocationsDto } from './camp-attendance.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
@@ -171,7 +172,7 @@ export class CampRoomsService {
 /** Өрөөний самбар (D шөнө) — transaction дотроос (API + `camp:snapshot` CLI, v0.2.0 §0.2) */
 export async function computeRoomBoard(tx: Tx, tenantId: string, campId: string, date: string) {
   const d = toDbDate(date);
-  const [rooms, allocations, stays] = await Promise.all([
+  const [rooms, allocations, stays, assets, maint] = await Promise.all([
     tx.campRoom.findMany({
       where: { tenantId, campId, status: { not: CampRoomStatus.INACTIVE } },
       select: { id: true, roomNo: true, floor: true, capacity: true, status: true, building: { select: { code: true, name: true } } },
@@ -186,7 +187,25 @@ export async function computeRoomBoard(tx: Tx, tenantId: string, campId: string,
       where: { tenantId, campId, startDate: { lte: d }, OR: [{ endDate: null }, { endDate: { gt: d } }] },
       select: { employee: { select: { id: true, employeeCode: true, fullName: true, department: { select: { code: true } }, crew: { select: { code: true } } } } },
     }),
+    // v0.2.1 (C-12): өрөөний хөрөнгө (актлагдаагүй) + нээлттэй засвар
+    tx.campAsset.findMany({
+      where: { tenantId, campId, roomId: { not: null }, condition: { not: CampAssetCondition.WRITTEN_OFF } },
+      select: { id: true, roomId: true, inventoryNo: true, name: true, condition: true },
+      orderBy: [{ inventoryNo: 'asc' }],
+    }),
+    tx.campMaintenanceRequest.findMany({
+      where: { tenantId, campId, roomId: { not: null }, status: { in: [...OPEN_STATUSES] } },
+      select: { id: true, roomId: true, requestNo: true, title: true, priority: true, status: true, blocksRoom: true },
+      orderBy: [{ createdAt: 'asc' }],
+    }),
   ]);
+  const group = <T extends { roomId: string | null }>(rows: T[]) => {
+    const m = new Map<string, Omit<T, 'roomId'>[]>();
+    for (const { roomId, ...rest } of rows) if (roomId) m.set(roomId, [...(m.get(roomId) ?? []), rest]);
+    return m;
+  };
+  const assetsByRoom = group(assets);
+  const maintByRoom = group(maint);
   const tonight = new Set(stays.map((s) => s.employee.id));
   const allocated = new Set(allocations.map((a) => a.employee.id));
   const byRoom = new Map<string, typeof allocations>();
@@ -202,6 +221,8 @@ export async function computeRoomBoard(tx: Tx, tenantId: string, campId: string,
       // FB-12 (v0.2.0): идэвхгүй болсон ажилтан өрөөнд хуваарилагдсан хэвээр
       inactiveOccupants: occ.filter((o) => o.status === 'INACTIVE').length,
       occupants: occ.map(({ crew: _crew, ...rest }) => rest),
+      assets: assetsByRoom.get(r.id) ?? [],
+      openMaintenance: maintByRoom.get(r.id) ?? [],
     };
   });
   return {

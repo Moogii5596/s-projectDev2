@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { campApi, type EmployeeQuery } from '../api/camp-api'
-import type { Employee, EmployeeStatus } from '../api/types'
+import type { CatalogItem, Employee, EmployeeStatus, ValueSource } from '../api/types'
+import { inherited } from '../lib/effective'
 import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
 import { P } from '../lib/permissions'
@@ -16,6 +17,8 @@ const IMPORT_COLUMNS: GridColumn[] = [
   { key: 'employeeCode', label: 'camp.emp.col.code', required: true },
   { key: 'fullName', label: 'camp.emp.col.full_name', required: true },
   { key: 'position', label: 'camp.emp.col.position' },
+  { key: 'mealLocation', label: 'camp.emp.col.meal_location' },
+  { key: 'mealsIncluded', label: 'camp.emp.col.meals_included' },
   { key: 'phone', label: 'camp.emp.col.phone' },
   { key: 'email', label: 'camp.emp.col.email' },
   { key: 'organization', label: 'camp.emp.col.organization', required: true },
@@ -24,7 +27,20 @@ const IMPORT_COLUMNS: GridColumn[] = [
   { key: 'status', label: 'camp.emp.col.status' },
 ]
 
-/** /camp/:campId/employees — ажилтан (employee_code = ирцийн импортын түлхүүр). Бичих: employee.manage */
+/** <select>-ийн утга ↔ boolean | null ('' = албан тушаалаас / анхдагч) */
+const toTri = (v: string): boolean | null => (v === '' ? null : v === 'yes')
+const fromTri = (v: boolean | null | undefined) => (v === null || v === undefined ? '' : v ? 'yes' : 'no')
+
+function SourceTag({ source }: { source: ValueSource }) {
+  const { t } = useTranslation()
+  if (source === 'EMPLOYEE') return null
+  return <span className="ml-1 text-[11px] text-gray-400">({t(`camp.emp.source.${source}`)})</span>
+}
+
+/**
+ * /camp/:campId/employees — ажилтан (employee_code = ирцийн импортын түлхүүр). Бичих: employee.manage
+ * v0.2.1: албан тушаал (каталог), ажлын хоолны байршил, хоол авах — эцсийн утга + эх сурвалж; олноор үйлдэл (Д-2).
+ */
 export default function EmployeesPage() {
   const { t } = useTranslation()
   const { campId = '' } = useParams()
@@ -36,6 +52,8 @@ export default function EmployeesPage() {
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState<Employee | 'new' | null>(null)
   const [importing, setImporting] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const positions = useQuery({ queryKey: campKeys.catalog('positions'), queryFn: () => campApi.catalog('positions') })
 
   const q: EmployeeQuery = { ...filter, q: search.trim() || undefined, limit: 50 }
   const list = useInfiniteQuery({
@@ -45,7 +63,18 @@ export default function EmployeesPage() {
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   })
   const rows = list.data?.pages.flatMap((p) => p.data) ?? []
-  const setF = (k: keyof EmployeeQuery, v: string) => setFilter((f) => ({ ...f, [k]: v || undefined }))
+  const setF = (k: keyof EmployeeQuery, v: string) => {
+    setSelected(new Set())
+    setFilter((f) => ({ ...f, [k]: v || undefined }))
+  }
+  const toggle = (id: string) =>
+    setSelected((p) => {
+      const n = new Set(p)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id))
 
   return (
     <Card
@@ -85,24 +114,84 @@ export default function EmployeesPage() {
             </option>
           ))}
         </select>
+        <select aria-label={t('camp.filter.position')} className={`${inputSmCls} w-auto`} value={filter.positionId ?? ''} onChange={(e) => setF('positionId', e.target.value)}>
+          <option value="">{t('camp.filter.all_positions')}</option>
+          <option value="none">{t('camp.emp.no_position')}</option>
+          {positions.data?.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
         <select aria-label={t('camp.filter.status')} className={`${inputSmCls} w-auto`} value={filter.status ?? ''} onChange={(e) => setF('status', e.target.value)}>
           <option value="">{t('camp.filter.all_statuses')}</option>
           <option value="ACTIVE">{EMPLOYEE_STATUS_LABEL.ACTIVE}</option>
           <option value="INACTIVE">{EMPLOYEE_STATUS_LABEL.INACTIVE}</option>
         </select>
       </div>
+      {canEdit && selected.size > 0 && (
+        <BulkBar campId={campId} ids={[...selected]} positions={positions.data ?? []} onDone={() => setSelected(new Set())} />
+      )}
       {list.isLoading && <Loading />}
       <ErrorBox error={list.error} onRetry={() => list.refetch()} />
       {list.data && rows.length === 0 && <Empty>{t('camp.emp.empty')}</Empty>}
       {rows.length > 0 && (
-        <Table head={[t('camp.common.code'), t('camp.common.name'), t('camp.emp.col.position'), t('camp.emp.department'), t('camp.emp.crew'), t('camp.emp.organization'), t('camp.common.status'), '']}>
+        <Table
+          head={[
+            ...(canEdit
+              ? [
+                  <input
+                    key="all"
+                    type="checkbox"
+                    aria-label={t('camp.emp.select_all')}
+                    checked={allSelected}
+                    onChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))}
+                  />,
+                ]
+              : []),
+            t('camp.common.code'),
+            t('camp.common.name'),
+            t('camp.emp.col.position'),
+            t('camp.emp.department'),
+            t('camp.emp.crew'),
+            t('camp.emp.col.meal_location'),
+            t('camp.emp.col.meals_included'),
+            t('camp.emp.organization'),
+            t('camp.common.status'),
+            '',
+          ]}
+        >
           {rows.map((e) => (
-            <tr key={e.id}>
+            <tr key={e.id} className={selected.has(e.id) ? 'bg-blue-50/50' : ''}>
+              {canEdit && (
+                <td className={td}>
+                  <input type="checkbox" aria-label={t('camp.emp.select', { code: e.employeeCode })} checked={selected.has(e.id)} onChange={() => toggle(e.id)} />
+                </td>
+              )}
               <td className={`${td} font-mono`}>{e.employeeCode}</td>
               <td className={`${td} font-medium text-gray-900`}>{e.fullName}</td>
-              <td className={`${td} text-gray-600`}>{e.position ?? '—'}</td>
+              <td className={`${td} text-gray-600`}>{e.positionRef?.name ?? e.position ?? '—'}</td>
               <td className={td}>{e.department.code}</td>
               <td className={td}>{e.crew?.code ?? <span className="text-gray-400">{t('camp.emp.no_crew')}</span>}</td>
+              <td className={td}>
+                {e.effective ? (
+                  <>
+                    {e.effective.mealLocationName ?? '—'}
+                    <SourceTag source={e.effective.mealLocationSource} />
+                  </>
+                ) : (
+                  '—'
+                )}
+              </td>
+              <td className={td}>
+                {e.effective &&
+                  (e.effective.mealsIncluded ? (
+                    <span className="text-gray-700">{t('camp.common.yes')}</span>
+                  ) : (
+                    <Badge tone="yellow">{t('camp.emp.no_meals')}</Badge>
+                  ))}
+                {e.effective && <SourceTag source={e.effective.mealsIncludedSource} />}
+              </td>
               <td className={`${td} text-gray-600`}>{e.organization.name}</td>
               <td className={td}>
                 <Badge tone={e.status === 'ACTIVE' ? 'green' : 'gray'}>{EMPLOYEE_STATUS_LABEL[e.status]}</Badge>
@@ -132,7 +221,7 @@ export default function EmployeesPage() {
           type="employees"
           title={t('camp.emp.import_title')}
           columns={IMPORT_COLUMNS}
-          invalidate={[campKeys.employees(campId), campKeys.departments(campId), campKeys.crews(campId)]}
+          invalidate={[campKeys.employees(campId), campKeys.departments(campId), campKeys.crews(campId), campKeys.catalog('positions'), ...campKeys.operational(campId)]}
           onClose={() => setImporting(false)}
         />
       )}
@@ -145,10 +234,16 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
   const orgs = useQuery({ queryKey: [...campKeys.organizations, 'active'], queryFn: () => campApi.organizations({ activeOnly: true }) })
   const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => campApi.departments(campId) })
   const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => campApi.crews(campId) })
+  const positions = useQuery({ queryKey: campKeys.catalog('positions'), queryFn: () => campApi.catalog('positions') })
+  const posSettings = useQuery({ queryKey: campKeys.positionSettings(campId), queryFn: () => campApi.positionSettings(campId) })
+  const settings = useQuery({ queryKey: campKeys.settings(campId), queryFn: () => campApi.settings(campId) })
+  const locations = useQuery({ queryKey: campKeys.mealLocations(campId), queryFn: () => campApi.mealLocations(campId) })
   const [f, setF] = useState({
     employeeCode: emp?.employeeCode ?? '',
     fullName: emp?.fullName ?? '',
-    position: emp?.position ?? '',
+    positionId: emp?.positionId ?? '',
+    mealLocationId: emp?.mealLocationId ?? '',
+    mealsIncluded: fromTri(emp?.mealsIncluded),
     phone: emp?.phone ?? '',
     email: emp?.email ?? '',
     organizationId: emp?.organizationId ?? '',
@@ -160,7 +255,9 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
   const body = () => ({
     employeeCode: f.employeeCode.trim(),
     fullName: f.fullName.trim(),
-    position: f.position.trim() || null,
+    positionId: f.positionId || null,
+    mealLocationId: f.mealLocationId || null,
+    mealsIncluded: toTri(f.mealsIncluded),
     phone: f.phone.trim() || null,
     email: f.email.trim() || null,
     organizationId: f.organizationId,
@@ -174,6 +271,10 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
   )
   const activeDepts = (depts.data ?? []).filter((d) => d.isActive || d.id === f.departmentId)
   const activeCrews = (crews.data ?? []).filter((c) => c.isActive || c.id === f.crewId)
+  const usablePositions = (positions.data ?? []).filter((p) => p.isActive || p.id === f.positionId)
+  const usableLocations = (locations.data ?? []).filter((l) => l.isActive || l.id === f.mealLocationId)
+  const inh = inherited(f.positionId, posSettings.data, locations.data?.find((l) => l.id === settings.data?.defaultMealLocationId))
+  const inhFrom = t(`camp.emp.source.${inh.from}`)
   const ready = f.employeeCode.trim() && f.fullName.trim() && f.organizationId && f.departmentId
 
   return (
@@ -200,8 +301,43 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Field label={t('camp.emp.col.position')}>{(id) => <input id={id} className={inputCls} value={f.position} onChange={(e) => set('position', e.target.value)} maxLength={100} />}</Field>
+        <Field label={t('camp.emp.col.position')} hint={t('camp.emp.position_hint')}>
+          {(id) => (
+            <select id={id} className={inputCls} value={f.positionId} onChange={(e) => set('positionId', e.target.value)}>
+              <option value="">{t('camp.emp.no_position')}</option>
+              {usablePositions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.isActive ? '' : ` (${t('camp.common.inactive')})`}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
         <Field label={t('camp.emp.col.phone')}>{(id) => <input id={id} className={inputCls} value={f.phone} onChange={(e) => set('phone', e.target.value)} maxLength={50} />}</Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t('camp.emp.col.meal_location')} hint={t('camp.emp.meal_location_hint')}>
+          {(id) => (
+            <select id={id} className={inputCls} value={f.mealLocationId} onChange={(e) => set('mealLocationId', e.target.value)}>
+              <option value="">{t('camp.emp.inherit', { from: inhFrom, value: inh.locationName ?? '—' })}</option>
+              {usableLocations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label={t('camp.emp.col.meals_included')} hint={t('camp.emp.meals_hint')}>
+          {(id) => (
+            <select id={id} className={inputCls} value={f.mealsIncluded} onChange={(e) => set('mealsIncluded', e.target.value)}>
+              <option value="">{t('camp.emp.inherit', { from: inhFrom, value: inh.mealsIncluded ? t('camp.common.yes') : t('camp.emp.no_meals') })}</option>
+              <option value="yes">{t('camp.common.yes')}</option>
+              <option value="no">{t('camp.emp.no_meals')}</option>
+            </select>
+          )}
+        </Field>
       </div>
       <Field label={t('camp.emp.col.email')} hint={t('camp.emp.email_hint')}>
         {(id) => <input id={id} type="email" className={inputCls} value={f.email} onChange={(e) => set('email', e.target.value)} maxLength={254} />}
@@ -258,5 +394,87 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
       )}
       <ErrorBox error={m.error ?? orgs.error ?? depts.error} />
     </Modal>
+  )
+}
+
+/** v0.2.1 (Д-2) — сонгосон ажилтнуудад нэг дор: хоол авах / ажлын хоолны байршил / албан тушаал (нэг transaction, түүхэнд) */
+function BulkBar({ campId, ids, positions, onDone }: { campId: string; ids: string[]; positions: CatalogItem[]; onDone: () => void }) {
+  const { t } = useTranslation()
+  const locations = useQuery({ queryKey: campKeys.mealLocations(campId), queryFn: () => campApi.mealLocations(campId) })
+  const [action, setAction] = useState<'' | 'meals' | 'location' | 'position'>('')
+  const [value, setValue] = useState('')
+  const m = useCampMutation(
+    () =>
+      campApi.bulkEmployees(campId, {
+        ids,
+        ...(action === 'meals' ? { mealsIncluded: toTri(value) } : {}),
+        ...(action === 'location' ? { mealLocationId: value || null } : {}),
+        ...(action === 'position' ? { positionId: value || null } : {}),
+      }),
+    [campKeys.employees(campId), campKeys.positionSettings(campId), ...campKeys.operational(campId)],
+    () => {
+      setAction('')
+      setValue('')
+      onDone()
+    },
+  )
+  return (
+    <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 flex flex-wrap items-center gap-2 text-sm" role="region" aria-label={t('camp.emp.bulk.title')}>
+      <span className="font-medium text-blue-900">{t('camp.emp.bulk.selected', { n: ids.length })}</span>
+      <select
+        aria-label={t('camp.emp.bulk.action')}
+        className={`${inputSmCls} w-auto`}
+        value={action}
+        onChange={(e) => {
+          setAction(e.target.value as typeof action)
+          setValue(e.target.value === 'meals' ? 'no' : '')
+        }}
+      >
+        <option value="">{t('camp.emp.bulk.choose')}</option>
+        <option value="meals">{t('camp.emp.col.meals_included')}</option>
+        <option value="location">{t('camp.emp.col.meal_location')}</option>
+        <option value="position">{t('camp.emp.col.position')}</option>
+      </select>
+      {action === 'meals' && (
+        <select aria-label={t('camp.emp.bulk.value')} className={`${inputSmCls} w-auto`} value={value} onChange={(e) => setValue(e.target.value)}>
+          <option value="no">{t('camp.emp.no_meals')}</option>
+          <option value="yes">{t('camp.common.yes')}</option>
+          <option value="">{t('camp.emp.bulk.reset')}</option>
+        </select>
+      )}
+      {action === 'location' && (
+        <select aria-label={t('camp.emp.bulk.value')} className={`${inputSmCls} w-auto`} value={value} onChange={(e) => setValue(e.target.value)}>
+          <option value="">{t('camp.emp.bulk.reset')}</option>
+          {locations.data
+            ?.filter((l) => l.isActive)
+            .map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+        </select>
+      )}
+      {action === 'position' && (
+        <select aria-label={t('camp.emp.bulk.value')} className={`${inputSmCls} w-auto`} value={value} onChange={(e) => setValue(e.target.value)}>
+          <option value="">{t('camp.emp.no_position')}</option>
+          {positions
+            .filter((p) => p.isActive)
+            .map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+        </select>
+      )}
+      <Button size="sm" disabled={!action} loading={m.isPending} onClick={() => m.mutate(undefined)}>
+        {t('camp.emp.bulk.apply')}
+      </Button>
+      <Button size="sm" variant="ghost" onClick={onDone}>
+        {t('camp.emp.bulk.clear')}
+      </Button>
+      <div className="w-full">
+        <ErrorBox error={m.error} />
+      </div>
+    </div>
   )
 }

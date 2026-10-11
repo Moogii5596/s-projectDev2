@@ -315,7 +315,9 @@ describe('🔢 MR дугаар [CONC-002]', () => {
           .send({ title: `conc-${i}`, items: [{ description: 'x', quantity: 1, unitPrice: 1 }] }),
       ),
     );
-    expect(rs.map((r) => r.status)).toEqual(Array(30).fill(201));
+    // QA-09 (v0.2.1): унавал ЯМАР алдаа гарсныг (статус + body) мессежид харуулна — шалтгааныг таахгүй, баримтаар батална
+    const bad = rs.map((r, i) => ({ i, status: r.status, body: r.status === 201 ? undefined : r.body })).filter((x) => x.status !== 201);
+    expect(bad, `QA-09: ${JSON.stringify(bad)}`).toEqual([]);
     const nums = rs.map((r) => Number(String(r.body.mrNumber).split('-').pop())).sort((a, b) => a - b);
     expect(new Set(nums).size).toBe(30);
     expect(nums).toEqual(Array.from({ length: 30 }, (_, i) => before + 1 + i));

@@ -261,14 +261,14 @@ export class CampMaintenanceService {
         if (dto.assetId) {
           const asset = await tx.campAsset.findFirst({
             where: { id: dto.assetId, tenantId, campId },
-            select: { inventoryNo: true, roomId: true, condition: true },
+            select: { inventoryNo: true, roomId: true, buildingId: true, condition: true },
           });
           if (!asset) throw badRequest('camp.err.maintenance.5');
           if (asset.condition === CampAssetCondition.WRITTEN_OFF) {
             throw conflict('camp.err.maintenance.6', { inventoryNo: asset.inventoryNo });
           }
           if (roomId && asset.roomId !== roomId) {
-            throw badRequest(asset.roomId ? 'camp.err.maintenance.7' : 'camp.err.maintenance.17', { inventoryNo: asset.inventoryNo });
+            throw badRequest(asset.roomId ? 'camp.err.maintenance.7' : asset.buildingId ? 'camp.err.maintenance.asset_in_building' : 'camp.err.maintenance.17', { inventoryNo: asset.inventoryNo });
           }
           roomId ??= asset.roomId; // зөвхөн хөрөнгө өгвөл түүний одоогийн өрөө
         } else if (roomId) {

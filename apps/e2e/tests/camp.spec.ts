@@ -103,7 +103,8 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
     const dlg = page.getByRole('dialog');
     await dlg.getByLabel('Код').fill('MINE');
     await dlg.getByLabel('Нэр').fill('Уулын хэсэг');
-    await dlg.getByLabel('Хоол идэх байршил').selectOption({ label: 'Уулын хэсэг' });
+    // v0.2.1 (Q1, Д-4): хэлтэст хоолны байршил байхгүй — ажилтан / албан тушаал дээр
+    await expect(dlg.getByLabel('Хоол идэх байршил')).toHaveCount(0);
     await dlg.getByRole('button', { name: 'Хадгалах' }).click();
     await expect(dlg).toBeHidden();
 

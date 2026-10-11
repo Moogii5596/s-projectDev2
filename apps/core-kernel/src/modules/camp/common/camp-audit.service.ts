@@ -7,7 +7,7 @@ import { inTenantTx, Tx } from './camp-tx';
 import { badRequest } from '../../../common/i18n/app-error';
 
 /** v0.2.0-д түүх хөтлөх бичлэгүүд (v0.2.x-д нэмэгдэнэ) */
-export const CAMP_AUDIT_ENTITIES = ['employee', 'department', 'crew', 'building', 'room'] as const;
+export const CAMP_AUDIT_ENTITIES = ['employee', 'department', 'crew', 'building', 'room', 'position_setting'] as const;
 export type CampAuditEntity = (typeof CAMP_AUDIT_ENTITIES)[number];
 
 export type AuditScalar = string | number | boolean | null;

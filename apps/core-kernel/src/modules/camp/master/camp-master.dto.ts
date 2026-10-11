@@ -88,6 +88,10 @@ export class CreateBuildingDto {
   @Transform(trim) @IsString() @IsNotEmpty({ message: 'name шаардлагатай' }) @MaxLength(200)
   name!: string;
 
+  /** v0.2.1 (C-12): байрны төрөл (каталог) */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'typeId UUID байх ёстой' })
+  typeId?: string | null;
+
   /** FB-07: байр үүсгэхдээ өрөөнүүдийг нэг transaction-д (заавал биш) */
   @IsOptional() @ValidateNested() @Type(() => BulkRoomsDto)
   rooms?: BulkRoomsDto;
@@ -96,6 +100,10 @@ export class CreateBuildingDto {
 export class UpdateBuildingDto {
   @IsOptional() @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(200)
   name?: string;
+
+  /** v0.2.1 (C-12): null = төрөлгүй */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'typeId UUID байх ёстой' })
+  typeId?: string | null;
 
   @IsOptional() @IsBoolean()
   isActive?: boolean;
@@ -223,8 +231,9 @@ export class CreateDepartmentDto {
   @Transform(trim) @IsString() @IsNotEmpty({ message: 'name шаардлагатай' }) @MaxLength(200)
   name!: string;
 
-  @IsUUID('all', { message: 'mealLocationId UUID байх ёстой' })
-  mealLocationId!: string;
+  /** v0.2.1 (Q1): ҮЛ ТООГДОНО — хоолны байршил ажилтан / албан тушаал дээр. Хуучин клиентийн хүсэлт эвдрэхгүйн тулд хүлээн авна */
+  @IsOptional() @IsUUID('all', { message: 'mealLocationId UUID байх ёстой' })
+  mealLocationId?: string;
 
   /** Үүсгэхдээ ээлжийн загвар өгч болно (заавал биш) */
   @IsOptional() @IsArray() @ArrayMinSize(1) @ArrayMaxSize(28) @ValidateNested({ each: true }) @Type(() => ShiftSegmentDto)
@@ -235,6 +244,7 @@ export class UpdateDepartmentDto {
   @IsOptional() @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(200)
   name?: string;
 
+  /** v0.2.1 (Q1): ҮЛ ТООГДОНО (хуучин клиент) */
   @IsOptional() @IsUUID('all', { message: 'mealLocationId UUID байх ёстой' })
   mealLocationId?: string;
 
@@ -292,6 +302,18 @@ export class CreateEmployeeDto {
   /** v0.2.0 — ADR-003-ын бэлтгэл (заавал биш) */
   @IsOptional() @Transform(trimOrNull) @IsEmail({}, { message: 'email буруу байна' }) @MaxLength(254)
   email?: string | null;
+
+  /** v0.2.1 (C-01): каталогийн албан тушаал. null = хасах. Өгвөл `position` текстийг үл тоомсорлоно */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'positionId UUID байх ёстой' })
+  positionId?: string | null;
+
+  /** v0.2.1 (Q1): ажлын хоолны байршил — ЭЦСИЙН. null = албан тушаалын анхдагч / кемпийн анхдагч */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'mealLocationId UUID байх ёстой' })
+  mealLocationId?: string | null;
+
+  /** v0.2.1 (Q3): хоол авах — ЭЦСИЙН. null = албан тушаалын анхдагч (эсвэл тийм) */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsBoolean()
+  mealsIncluded?: boolean | null;
 }
 
 export class UpdateEmployeeDto {
@@ -322,6 +344,18 @@ export class UpdateEmployeeDto {
 
   @IsOptional() @IsEnum(CampEmployeeStatus)
   status?: CampEmployeeStatus;
+
+  /** v0.2.1 (C-01): каталогийн албан тушаал. null = хасах. Өгвөл `position` текстийг үл тоомсорлоно */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'positionId UUID байх ёстой' })
+  positionId?: string | null;
+
+  /** v0.2.1 (Q1): ажлын хоолны байршил — ЭЦСИЙН. null = албан тушаалын анхдагч / кемпийн анхдагч */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'mealLocationId UUID байх ёстой' })
+  mealLocationId?: string | null;
+
+  /** v0.2.1 (Q3): хоол авах — ЭЦСИЙН. null = албан тушаалын анхдагч (эсвэл тийм) */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsBoolean()
+  mealsIncluded?: boolean | null;
 }
 
 export class QueryEmployeesDto {
@@ -332,6 +366,25 @@ export class QueryEmployeesDto {
   @IsOptional() @Matches(/^(none|[0-9a-fA-F-]{36})$/, { message: 'crewId UUID эсвэл none' }) crewId?: string;
   @IsOptional() @IsUUID() organizationId?: string;
   @IsOptional() @IsEnum(CampEmployeeStatus) status?: CampEmployeeStatus;
+  /** v0.2.1: UUID эсвэл 'none' (албан тушаалгүй) */
+  @IsOptional() @Matches(/^(none|[0-9a-fA-F-]{36})$/, { message: 'positionId UUID эсвэл none' }) positionId?: string;
+  /** v0.2.1: хоол авах эсэх (эффектив биш — ажилтан дээр тохируулсан утга) */
+  @IsOptional() @Transform(toBool) @IsBoolean() mealsIncluded?: boolean;
   /** Код эсвэл нэрээр хайх (хэсэгчилсэн, том жижиг үсэг үл хамаарна) */
   @IsOptional() @Transform(trim) @IsString() @MaxLength(100) q?: string;
+}
+
+/** v0.2.1 (Д-2) — олон ажилтанд нэг дор: хоол авах / ажлын хоолны байршил / албан тушаал */
+export class BulkEmployeesDto {
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(500) @ArrayUnique() @IsUUID('all', { each: true })
+  ids!: string[];
+
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsBoolean()
+  mealsIncluded?: boolean | null;
+
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all')
+  mealLocationId?: string | null;
+
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all')
+  positionId?: string | null;
 }
