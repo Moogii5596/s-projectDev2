@@ -619,7 +619,17 @@ function Invoke-Self([string] $cmd) {
   if ($Instance -ne 'pilot') { $a += @('-Profile', $Instance) }
   if ($Root -ne $DefaultRoot) { $a += @('-Root', $Root) }
   Write-Step "pilot.ps1 $cmd ($Instance)"
-  Invoke-Native -Exe $exe -Arguments $a | Out-Null
+  # PS-003: `& exe | Out-Host` нь stdout-ыг PIPE-аар холбодог. `start`-ийн асаасан backend/Caddy (Start-Process) тэр
+  # pipe-ийн handle-ийг удамшуулж авдаг тул дэд процесс дууссан ч pipe хаагдахгүй → upgrade мөнхөд хүлээнэ (Windows).
+  # → Process.Start, redirect-гүй (консолыг шууд хуваалцана), зөвхөн тухайн процессыг хүлээнэ.
+  $psi = New-Object System.Diagnostics.ProcessStartInfo
+  $psi.FileName = $exe
+  $psi.Arguments = ($a | ForEach-Object { if ($_ -eq '' -or $_ -match '[\s"]') { '"' + (($_ -replace '"', '\"') -replace '(\\+)$', '$1$1') + '"' } else { $_ } }) -join ' '
+  $psi.UseShellExecute = $false
+  $psi.WorkingDirectory = (Get-Location).Path
+  $p = [System.Diagnostics.Process]::Start($psi)
+  $p.WaitForExit()
+  if ($p.ExitCode -ne 0) { Stop-Pilot2 "pilot.ps1 $cmd → exit $($p.ExitCode)" }
 }
 
 function Get-SelfCommand {

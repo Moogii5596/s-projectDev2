@@ -101,6 +101,7 @@
 | TEST-019 | CONC-002 тест (30 зэрэгцээ MR) postgres горимын бүтэн ажиллуулалтад 4-өөс 1 удаа унав | "Flaky" гэж хаахгүй (TEST-015) — QA-09-д бүртгэж, шалтгааныг (pool `maxWait` 2с / tx 5с) шалгана |
 | PROC-013 | Таньд өгсөн зааварт `pnpm supabase:reset`-ийн дараа `dev:test-user` ба `camp_e2e_grant.sql` орхигдож e2e унав (нэвтрэлт, дараа нь 403) | DB reset-ийн дараа CI-ийн дараалал бүтнээрээ: `db:generate` → `dev:test-user` → `camp_e2e_grant.sql` → тест |
 | CI-005 | CI (v0.1.5-аас хойш шалгаагүй, QA-01): Node 20 → supabase-js "native WebSocket not found"; unit-ийн өмнө `prisma generate` алга → `UserRole` undefined | CI-ийн Node = Dockerfile/машинтай ижил (22); `db:generate`-ийг install-ийн дараа; CI-г release бүрт шалгана |
+| PS-003 | `upgrade`: дэд `pilot.ps1 start`-ийг `& exe \| Out-Host`-оор дуудсан → backend/Caddy stdout pipe-ийн handle-ийг удамшиж, pipe хаагдахгүй → Windows-д мөнхөд хүлээв (Linux shim тестэд илрээгүй) | Урт амьдрах процесс асаадаг дэд скриптийг `Process.Start` (redirect-гүй) + `WaitForExit()`-аар; Windows-ийн тусгай зан төлөвийг shim-ээр баталсан гэж үзэхгүй |
 
 ---
 
@@ -1245,13 +1246,19 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** `ci.yml`: хоёр job-д `node-version: 22`; install-ийн дараа `pnpm db:generate`.
 **Дүрэм:** CI-ийн орчин (Node, generate алхам) = Dockerfile/production-тэй ижил; release бүрт CI ногоон эсэхийг "дуусах нөхцөл"-д заавал шалгана.
 
+### [PS-003] `pilot.ps1 upgrade` staging дээр "start"-ын дараа гацав
+**Тохиолдсон (2026-10-11 20:12, staging дадлага):** `upgrade -Tag v0.2.0 -Profile staging` → init, build, start бүгд `[OK]` ("Пилот ажиллаж байна") ч эх процесс цааш явсангүй (health шалгалт, `upgrade.log OK`, мессеж гараагүй). Staging өөрөө амжилттай шинэчлэгдэж ажиллаж байсан.
+**Шалтгаан:** `Invoke-Self` нь дэд `powershell -File pilot.ps1 start`-ийг `Invoke-Native` (`& exe | Out-Host`) — stdout-ыг **pipe**-аар уншина. Дэд процессын `Start-Process`-оор асаасан backend (node) ба Caddy нь удамшдаг handle-уудыг (тэр pipe-ийн бичих үзүүрийг) авч, урт хугацаанд ажилладаг тул дэд процесс дууссан ч pipe EOF болохгүй → эх процесс мөнхөд хүлээнэ. Linux дээрх pwsh + shim тест (.NET Unix нь бусад fd-г CLOEXEC болгодог) үүнийг илрүүлээгүй.
+**Шийдэл:** `Invoke-Self` → `System.Diagnostics.Process.Start` (`UseShellExecute=$false`, redirect-гүй — консолыг шууд хуваалцана) + `WaitForExit()` (зөвхөн тэр процессыг), exit code шалгана; аргументийн хашилт (зай, төгсгөлийн `\`).
+**Дүрэм:** Урт амьдрах процесс асаадаг командыг pipe-аар бүү дууд. Windows-ийн процесс/handle-ийн зан төлөвийг Linux shim тестээр "баталгаатай" гэж үзэхгүй — Windows дээрх анхны ажиллуулалтыг staging дээр.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
-| 2026-10-11 | §21 (v0.2.0): FE-008, PROC-012, TEST-017, TEST-018, OPS-004, PS-002, TEST-019, PROC-013, CI-005 |
+| 2026-10-11 | §21 (v0.2.0): FE-008, PROC-012, TEST-017, TEST-018, OPS-004, PS-002, TEST-019, PROC-013, CI-005, PS-003 |
 | 2026-10-11 | §20: PROC-011 (commit хийгээгүй файлыг дарж бичсэн) |
 | 2026-10-10 | §20: FE-007 (/login ↔ /camp давталт) |
 | 2026-10-10 | §20: OPS-003 (auth.email enable_signup) |
