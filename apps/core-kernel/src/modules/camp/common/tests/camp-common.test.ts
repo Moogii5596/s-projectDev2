@@ -49,7 +49,9 @@ describe('CampAccessService (Шат 2.1)', () => {
       global: [P.REPORT_VIEW],
       byCamp: { c1: [P.HAUL_APPROVE, P.MEAL_ORDER, P.REPORT_VIEW].sort() },
     });
-    expect(s.tx.campUserRole.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 't1', userId: 'cu1' } }));
+    // v0.2.2 D-01: эцсийн эрх = camp_user_permissions; camp_user_roles (олголт) guard-д уншигдахгүй
+    expect(s.tx.campUserPermission.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 't1', userId: 'cu1' } }));
+    expect(s.tx.campUserRole.findMany).not.toHaveBeenCalled();
     expect(s.cache.set).toHaveBeenCalledWith('cache:camp:t1:perms:cu1', actor.perms, 300);
   });
 
@@ -60,7 +62,7 @@ describe('CampAccessService (Шат 2.1)', () => {
     const actor = await s.access.resolve(s.tx as never, 't1', 'a1');
     expect(actor.perms).toBe(cached);
     expect(s.tx.coreUser.findFirst).toHaveBeenCalledTimes(1);
-    expect(s.tx.campUserRole.findMany).not.toHaveBeenCalled();
+    expect(s.tx.campUserPermission.findMany).not.toHaveBeenCalled();
   });
 
   it('OWNER / ADMIN → tenant admin (бүх кемп, бүх эрх); REQUESTER биш', async () => {

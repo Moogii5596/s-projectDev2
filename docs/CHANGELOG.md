@@ -9,9 +9,24 @@
 
 ## [Unreleased]
 
+### ⚠️ Зан төлөвийн өөрчлөлт (v0.2.2 Блок 1)
+- **Роль = загвар:** "Роль ба эрх" дээр ролийн эрхийг өөрчилж хадгалахад хэрэглэгчийн эрх **автоматаар өөрчлөгдөхгүй** — "N хэрэглэгчид хэрэгжүүлэх" цонх (хэн юу авах/алдахыг урьдчилж харуулна) → батлах. Алгасвал ролийн баганад "⚠ хэрэгжээгүй" товч үлдэнэ (ADR-003 §2.4)
+- **Кемп админ** засвар эхлүүлэх, хаах эрхтэй болно (Q9: `camp.maintenance.parts`, `camp.maintenance.close`)
+
+### Нэмэгдсэн (v0.2.2 Блок 1)
+- Хэрэглэгчийн эцсийн эрх `camp_user_permissions` (эрх шалгагчийн ганц эх сурвалж); "Ажилтан" системийн роль (өөрийн засварын хүсэлт)
+- API: `GET roles/:id/apply-preview`, `POST roles/:id/apply`, `GET|POST users/:userId/permissions` (шууд эрх), `DELETE user-permissions/:id`, `GET|PUT positions/:positionId/role-templates`; `GET roles` → `pendingUsers`
+- Эрхийн өөрчлөлт бүр өөрчлөлтийн түүхэд (роль олгох/хасах, шууд эрх, загвар хэрэгжүүлэх, албан тушаалын загвар)
+- `camp:snapshot`: байгууллага бүрийн эрхийн жагсаалт (хувийн мэдээлэлгүй) + `--expect=v022-q9`
+
+### Migration (зөвхөн нэмэлт)
+- `20261013001_camp_user_permissions.sql` — хүснэгт + trigger + одоогийн эрхийг яг хэвээр шилжүүлэх (A = B)
+- `20261013002_camp_position_role_templates.sql` — албан тушаал → загвар, `CampRoleCode += EMPLOYEE`
+- `20261013003_camp_roles_v022_seed.sql` — "Ажилтан" роль, Q9
+
 ### Баримт
 - `deploy/pilot/tests/pilot.shim.ps1`: Windows PowerShell 5.1-ээр ажиллуулах команд — `powershell -NoProfile -ExecutionPolicy Bypass -File deploy/pilot/tests/pilot.shim.ps1` (pwsh 7 суугаагүй машинд)
-- v0.2.2 техникийн төлөвлөгөө: `docs/08_Roadmap/V.0.2/07_v0.2.2_tech_plan.md` (батлуулахаар)
+- v0.2.2 техникийн төлөвлөгөө: `docs/08_Roadmap/V.0.2/07_v0.2.2_tech_plan.md` (✅ батлагдсан 2026-10-12)
 
 ---
 

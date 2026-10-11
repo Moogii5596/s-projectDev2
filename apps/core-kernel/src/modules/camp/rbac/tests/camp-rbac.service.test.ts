@@ -26,7 +26,7 @@ describe('CampRbacService (Шат 2.2)', () => {
 
   beforeEach(() => {
     s = setup();
-    svc = new CampRbacService(s.prisma as never, s.access);
+    svc = new CampRbacService(s.prisma as never, s.access, s.audit);
   });
 
   it('roles.manage-гүй (кемпийн роль.manage ч хангалтгүй — tenant түвшин) → 403, юу ч бичихгүй', async () => {
@@ -84,9 +84,13 @@ describe('CampRbacService (Шат 2.2)', () => {
     expect(s.tx.campRole.findFirst).toHaveBeenLastCalledWith({ where: { tenantId: 't1', name: 'Бусад', NOT: { id: 'r1' } }, select: { id: true } });
   });
 
-  it('setRolePermissions: бүхэлд нь солино (deleteMany → createMany), системийн рольд ч зөвшөөрнө, cache цэвэрлэнэ', async () => {
+  it('setRolePermissions: бүхэлд нь солино (deleteMany → createMany), системийн рольд ч зөвшөөрнө; v0.2.2: хэрэглэгчийн эрх автоматаар өөрчлөгдөхгүй (cache хэвээр, pendingUsers)', async () => {
     asManager();
     s.tx.campRole.findFirst.mockResolvedValue(role({ isSystem: true, systemCode: CampRoleCode.CAMP_MANAGER }));
+    // өмнөх (findRole #1) ба дараах (#2) төлөв ялгаатай → audit мөр бичигдэнэ
+    s.tx.campRole.findFirst
+      .mockResolvedValueOnce(role({ isSystem: true, systemCode: CampRoleCode.CAMP_MANAGER, permissions: [] }))
+      .mockResolvedValueOnce(role({ isSystem: true, systemCode: CampRoleCode.CAMP_MANAGER, permissions: [{ permissionCode: P.MEAL_ORDER }] }));
     await svc.setRolePermissions('t1', 'a1', 'r1', { permissionCodes: [P.MEAL_ORDER, P.HAUL_APPROVE] });
     expect(s.tx.campRolePermission.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 't1', roleId: 'r1' } });
     expect(s.tx.campRolePermission.createMany).toHaveBeenCalledWith({
@@ -95,7 +99,10 @@ describe('CampRbacService (Шат 2.2)', () => {
         { tenantId: 't1', roleId: 'r1', permissionCode: P.HAUL_APPROVE },
       ],
     });
-    expect(s.cache.invalidateTenant).toHaveBeenCalledWith('t1');
+    // v0.2.2 ADR-003 §2.4: загвар өөрчлөгдсөн ч эцсийн эрх өөрчлөгдөхгүй → cache цэвэрлэх шаардлагагүй
+    expect(s.cache.invalidateTenant).not.toHaveBeenCalled();
+    expect(s.tx.campUserPermission.deleteMany).not.toHaveBeenCalled();
+    expect(s.tx.campAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ entityType: 'role', summaryKey: 'audit.role.update' }) }));
     // хоосон багц → зөвхөн устгана
     s.tx.campRolePermission.createMany.mockClear();
     await svc.setRolePermissions('t1', 'a1', 'r1', { permissionCodes: [] });
@@ -146,9 +153,16 @@ describe('CampRbacService (Шат 2.2)', () => {
   it('removeUserRole: байхгүй → 404; байвал устгаж cache цэвэрлэнэ', async () => {
     asManager();
     await expect(svc.removeUserRole('t1', 'a1', 'x')).rejects.toThrow(NotFoundException);
-    s.tx.campUserRole.findFirst.mockResolvedValueOnce({ id: 'ur1' });
+    s.tx.campUserRole.findFirst.mockResolvedValueOnce({
+      id: 'ur1', userId: 'u1', roleId: 'r1', campId: null, role: { name: 'Кемп менежер' }, user: { email: 'm@x', fullName: null },
+    });
     await svc.removeUserRole('t1', 'a1', 'ur1');
     expect(s.tx.campUserRole.delete).toHaveBeenCalledWith({ where: { id: 'ur1' } });
+    // TEMPLATE эрх DB-ийн CASCADE-ээр (D-09) — app код шууд устгахгүй
+    expect(s.tx.campUserPermission.deleteMany).not.toHaveBeenCalled();
+    expect(s.tx.campAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ entityType: 'user_role', action: 'DEACTIVATE', summaryParams: { name: 'Кемп менежер', user: 'm@x' } }),
+    }));
     expect(s.cache.invalidateTenant).toHaveBeenCalledTimes(1);
   });
 
@@ -186,7 +200,7 @@ describe('Эрхийн V1/V2 хүрээ (D8, 2026-10-09)', () => {
 
   it('listPermissions: DB-ийн мөр бүрт availableIn нэмнэ (DB-ээс юу ч хасахгүй)', async () => {
     const s = setup();
-    const svc = new CampRbacService(s.prisma as never, s.access);
+    const svc = new CampRbacService(s.prisma as never, s.access, s.audit);
     s.tx.campPermission.findMany.mockResolvedValueOnce([
       { code: P.SETTINGS_MANAGE, name: 'Тохиргоо', sortOrder: 10 },
       { code: P.REPORT_VIEW, name: 'Зардлын тайлан харах', sortOrder: 170 },
@@ -206,3 +220,92 @@ describe('Эрхийн V1/V2 хүрээ (D8, 2026-10-09)', () => {
     await expect(s.access.requireAccess(s.tx as never, 't1', 'a1', 'c1')).resolves.toMatchObject({ userId: 'cu1' });
   });
 });
+
+describe('CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүлэх, шууд эрх)', () => {
+  let s: ReturnType<typeof setup>;
+  let svc: CampRbacService;
+  beforeEach(() => {
+    s = setup();
+    svc = new CampRbacService(s.prisma as never, s.access, s.audit);
+    setActor(s.tx, { roles: [{ campId: null, perms: [P.ROLES_MANAGE] }] });
+    s.tx.campRole.findFirst.mockResolvedValue({
+      id: 'r1', name: 'Кемп админ', description: null, isSystem: true, systemCode: CampRoleCode.CAMP_ADMIN,
+      createdAt: new Date(), updatedAt: new Date(), permissions: [], _count: { userRoles: 2 },
+    });
+  });
+
+  const assignments = () => {
+    s.tx.campUserRole.findMany.mockResolvedValue([
+      { id: 'ur1', userId: 'u1', campId: null, permissions: [{ permissionCode: P.REPORT_VIEW }, { permissionCode: P.MEAL_ORDER }] },
+      { id: 'ur2', userId: 'u2', campId: 'c1', permissions: [{ permissionCode: P.REPORT_VIEW }, { permissionCode: P.MAINTENANCE_CLOSE }] },
+    ]);
+    s.tx.campRolePermission.findMany.mockResolvedValue([{ permissionCode: P.REPORT_VIEW }, { permissionCode: P.MAINTENANCE_CLOSE }]);
+  };
+
+  it('applyRoleTemplate: зөвхөн зөрүүтэй олголтод TEMPLATE мөр нэмэх/хасах, DIRECT хөндөхгүй, audit + cache', async () => {
+    assignments();
+    s.tx.campUserPermission.deleteMany.mockResolvedValue({ count: 1 });
+    s.tx.campUserPermission.createMany.mockResolvedValue({ count: 1 });
+    const res = await svc.applyRoleTemplate('t1', 'a1', 'r1');
+    expect(res).toEqual({ roleId: 'r1', affectedUsers: 1, added: 1, removed: 1 });
+    expect(s.tx.campUserPermission.deleteMany).toHaveBeenCalledTimes(1);
+    expect(s.tx.campUserPermission.deleteMany).toHaveBeenCalledWith({
+      where: { tenantId: 't1', userRoleId: 'ur1', source: 'TEMPLATE', permissionCode: { in: [P.MEAL_ORDER] } },
+    });
+    expect(s.tx.campUserPermission.createMany).toHaveBeenCalledWith({
+      data: [{ tenantId: 't1', userId: 'u1', permissionCode: P.MAINTENANCE_CLOSE, campId: null, source: 'TEMPLATE', userRoleId: 'ur1' }],
+    });
+    expect(s.tx.campAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ summaryKey: 'audit.role_apply.update' }) }));
+    expect(s.cache.invalidateTenant).toHaveBeenCalledWith('t1');
+  });
+
+  it('previewRoleApply: юу ч бичихгүй; хэрэглэгч бүрийн + / −', async () => {
+    assignments();
+    s.tx.coreUser.findMany.mockResolvedValue([{ id: 'u1', email: 'a@x', fullName: 'A' }]);
+    const p = await svc.previewRoleApply('t1', 'a1', 'r1');
+    expect(p.affectedUsers).toBe(1);
+    expect(p.items).toEqual([{ userRoleId: 'ur1', userId: 'u1', campId: null, add: [P.MAINTENANCE_CLOSE], remove: [P.MEAL_ORDER], user: { id: 'u1', email: 'a@x', fullName: 'A' } }]);
+    expect(s.tx.campUserPermission.createMany).not.toHaveBeenCalled();
+    expect(s.tx.campUserPermission.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('эрхгүй хэрэглэгч → 403 (бүх шинэ endpoint)', async () => {
+    setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.ROLES_MANAGE] }] }); // зөвхөн нэг кемпийн — tenant түвшинд хүрэлцэхгүй
+    await expect(svc.applyRoleTemplate('t1', 'a1', 'r1')).rejects.toThrow(ForbiddenException);
+    await expect(svc.grantDirectPermission('t1', 'a1', 'u1', { permissionCode: P.REPORT_VIEW })).rejects.toThrow(ForbiddenException);
+    await expect(svc.revokeDirectPermission('t1', 'a1', 'x')).rejects.toThrow(ForbiddenException);
+    await expect(svc.setPositionTemplates('t1', 'a1', 'pos1', { templates: [] })).rejects.toThrow(ForbiddenException);
+  });
+
+  it('grantDirectPermission: үл мэдэгдэх код → 400, давхардал → 409, амжилттай → DIRECT + createdBy', async () => {
+    await expect(svc.grantDirectPermission('t1', 'a1', 'u1', { permissionCode: 'camp.fake.perm' })).rejects.toThrow(BadRequestException);
+    s.tx.coreUser.findFirst.mockImplementation(async (a: { where: Record<string, unknown> }) =>
+      'authId' in a.where ? { id: 'cu-actor', role: UserRole.REQUESTER } : { id: 'u1', isActive: true, email: 'u@x', fullName: null });
+    s.tx.campUserPermission.findFirst.mockResolvedValueOnce({ id: 'dup' });
+    await expect(svc.grantDirectPermission('t1', 'a1', 'u1', { permissionCode: P.REPORT_VIEW })).rejects.toThrow(ConflictException);
+    s.tx.campUserPermission.create.mockResolvedValueOnce({ id: 'p1', userId: 'u1', permissionCode: P.REPORT_VIEW, campId: null, source: 'DIRECT', createdAt: new Date() });
+    await svc.grantDirectPermission('t1', 'a1', 'u1', { permissionCode: P.REPORT_VIEW });
+    expect(s.tx.campUserPermission.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: { tenantId: 't1', userId: 'u1', permissionCode: P.REPORT_VIEW, campId: null, source: 'DIRECT', createdBy: 'cu-actor' },
+    }));
+  });
+
+  it('revokeDirectPermission: TEMPLATE мөрийг хасахгүй (400), DIRECT-ийг хасна', async () => {
+    s.tx.campUserPermission.findFirst.mockResolvedValueOnce({ id: 'p1', userId: 'u1', permissionCode: P.REPORT_VIEW, campId: null, source: 'TEMPLATE', user: { email: 'u@x', fullName: null } });
+    await expect(svc.revokeDirectPermission('t1', 'a1', 'p1')).rejects.toThrow(BadRequestException);
+    expect(s.tx.campUserPermission.delete).not.toHaveBeenCalled();
+    s.tx.campUserPermission.findFirst.mockResolvedValueOnce({ id: 'p2', userId: 'u1', permissionCode: P.REPORT_VIEW, campId: null, source: 'DIRECT', user: { email: 'u@x', fullName: null } });
+    await svc.revokeDirectPermission('t1', 'a1', 'p2');
+    expect(s.tx.campUserPermission.delete).toHaveBeenCalledWith({ where: { id: 'p2' } });
+  });
+
+  it('setPositionTemplates: давхардсан роль → 400, өөр tenant-ийн роль → 400', async () => {
+    s.tx.campPosition.findFirst.mockResolvedValue({ id: 'pos1', name: 'Тогооч' });
+    await expect(svc.setPositionTemplates('t1', 'a1', 'pos1', { templates: [
+      { roleId: 'r1', scope: 'ALL_CAMPS' }, { roleId: 'r1', scope: 'EMPLOYEE_CAMP' },
+    ] })).rejects.toThrow(BadRequestException);
+    s.tx.campRole.count.mockResolvedValueOnce(0);
+    await expect(svc.setPositionTemplates('t1', 'a1', 'pos1', { templates: [{ roleId: 'r-other', scope: 'ALL_CAMPS' }] })).rejects.toThrow(BadRequestException);
+  });
+});
+

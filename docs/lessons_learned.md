@@ -107,6 +107,9 @@
 | PROC-014 | Пилот шинэчлэх гар зааварт "`git status` хоосон байх ёстой" гэж бичсэн ч хоосон биш бол ЗОГС гэж заагаагүй → checkout цуцлагдсаныг анзаарахгүй хуучин кодоор init/build хийгдэв; админ эрх шаардлагатай алхмыг энгийн цонхонд | Гар заавар бүрт алхам бүрийн хүлээгдэх гаралт + "өөр бол ЗОГС"; админ шаардах командуудыг тусад нь; аль болох скрипт (`upgrade`)-ээр шалгуулна |
 | SEC-007 | Caddy `trusted_proxies`-гүй → Funnel-ийн XFF хаягдаж бүх хэрэглэгч `127.0.0.1`; GoTrue IP хязгаар header-гүй бол үйлчлэхгүй | `trusted_proxies static 127.0.0.1/32 ::1/128` + GoTrue-д header; staging 429 тест |
 | TEST-021 | Cloud-д `prisma generate` engine татах гэж 403 | `PRISMA_SCHEMA_ENGINE_BINARY` / `PRISMA_QUERY_ENGINE_LIBRARY` → хоосон файл (зөвхөн unit тест) |
+| TEST-022 | Harness client-ийг дахин generate хийхэд wasm loader-ийн засвар арилж "wasm module undefined" | Засварыг `gen.sh`-д оруулна; generate бүрийн дараа автоматаар |
+| TEST-023 | Зан төлөв өөрчлөхөд (роль засах ≠ шууд эрх) зөвхөн CI-д ажилладаг (GoTrue) integration тест хуучныг хүлээж байв | Өөрчлөхөөс өмнө `test/`-ээс endpoint-ийг grep хийж хүлээлтийг шинэчилнэ |
+| PROC-016 | `git ls-files` кирилл нэртэй файлыг octal escape-ээр гаргаж `tar -T` унав | `git ls-files -z` + `tar --null -T` |
 
 ---
 
@@ -1308,12 +1311,28 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** Хоосон файл үүсгээд `PRISMA_SCHEMA_ENGINE_BINARY=<хоосон>` `PRISMA_QUERY_ENGINE_LIBRARY=<хоосон.so.node>` `npx prisma generate` — Prisma 5 DMMF-ийг wasm-аар гаргадаг тул client (төрөл, enum) үүснэ, татахгүй. Unit тест (DB-гүй) 583/583.
 **Дүрэм:** Зөвхөн unit тест/typecheck-д. Бодит DB-тэй integration-д TEST-010-ийн wasm + `@prisma/adapter-pg` harness хэрэглэнэ. Төсөлд (CI, пилот) хэзээ ч хэрэглэхгүй.
 
+
+### [TEST-022] Harness: schema өөрчлөөд client-ийг дахин generate хийхэд wasm loader-ийн засвар арилсан
+**Тохиолдсон (v0.2.2 Блок 1):** TEST-010-ийн harness-д `client/wasm.js`-ийн `#wasm-engine-loader`-ийг гараар `fs.readFileSync`-ээр сольсон. Prisma schema-д шинэ model нэмээд дахин generate хийхэд файл шинээр үүсэж засвар алга болов → `The loaded wasm module was unexpectedly undefined`.
+**Шийдэл:** Засварыг generate скрипт (`gen.sh`)-д нэгтгэв — generate бүрийн дараа автоматаар (idempotent).
+**Дүрэм:** Үүсгэгддэг (generated) файлд гараар засвар хийхгүй; хийх бол үүсгэх скриптийн нэг алхам болгоно.
+**Нэмэлт (GoTrue-гүй integration):** Service-ийг `app_user` (RLS) `PrismaClient`-ээр шууд үүсгэж, `core_users`-ийг санамсаргүй `authId`-тай оруулбал GoTrue хэрэггүй (`test/camp-v022-perms.integration.spec.ts`) → cloud harness-д ч, CI-д ч ажиллана.
+
+### [TEST-023] Зан төлөвийн өөрчлөлт → зөвхөн CI-д ажилладаг тест хуучин хүлээлттэй үлдэх эрсдэл
+**Илэрсэн (урьдчилан, v0.2.2 Блок 1):** ADR-003 §2.4: роль = загвар, засахад хэрэглэгчийн эрх автоматаар өөрчлөгдөхгүй. `camp-master.integration.spec.ts` (GoTrue шаарддаг → cloud-д ажиллахгүй) "роль засахад manager шууд 201" гэж хүлээж байв → таны CI-д унах байсан.
+**Шийдэл:** Тестийг шинэ урсгалд (засах → 403 хэвээр → `POST roles/:id/apply` → 201) шилжүүлэв.
+**Дүрэм:** API-ийн зан төлөв өөрчлөхөөс өмнө `grep -rn '<endpoint>' test/ apps/e2e` — ажиллуулж чадахгүй тестийн хүлээлтийг ч шинэчилнэ.
+
+### [PROC-016] Кирилл нэртэй файл `git ls-files | tar -T`-д алга болов
+**Тохиолдсон:** `git ls-files` нь ASCII бус нэрийг `"docs/S Project_ \320\242…"` хэлбэрээр (core.quotePath) гаргадаг → `tar: Cannot stat`.
+**Шийдэл:** `git ls-files -co --exclude-standard -z | … | tar czf x.tgz --null -T -`.
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-12 | §22 (v0.2.2 Блок 1): TEST-022 (harness generate), TEST-023 (зан төлөв ↔ CI-only тест), PROC-016 (git ls-files -z) |
 | 2026-10-11 | §22 (v0.2.1 #14): SEC-007 (Caddy XFF / GoTrue IP хязгаар), TEST-021 (cloud prisma generate) |
 | 2026-10-11 | §22 (v0.2.1): FE-009, TEST-020, DATA-001, PROC-015 |
 | 2026-10-11 | §21 (v0.2.0): FE-008, PROC-012, TEST-017, TEST-018, OPS-004, PS-002, TEST-019, PROC-013, CI-005, PS-003, CI-006, CI-007, PROC-014 |

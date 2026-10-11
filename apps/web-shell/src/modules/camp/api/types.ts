@@ -145,8 +145,18 @@ export interface Role {
   systemCode: string | null
   permissionCodes: string[]
   userCount: number
+  /** v0.2.2: загвар өөрчлөгдөөд хэрэгжүүлээгүй олголттой хэрэглэгчийн тоо */
+  pendingUsers?: number
   createdAt: string
   updatedAt: string
+}
+
+/** v0.2.2 — загвар хэрэгжүүлэхийн урьдчилсан харагдац */
+export interface RoleApplyPreview {
+  roleId: string
+  roleName: string
+  affectedUsers: number
+  items: { userRoleId: string; userId: string; campId: string | null; add: string[]; remove: string[]; user: { id: string; email: string; fullName: string | null } | null }[]
 }
 
 export interface UserRole {

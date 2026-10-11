@@ -12,6 +12,8 @@ import { useTranslation } from 'react-i18next'
 /**
  * /camp/admin/roles — роль × эрхийн матриц (roles.manage, tenant түвшин).
  * V2 эрх (availableIn = 'v2') харагдахгүй, гэхдээ роль эзэмшиж байвал хадгалахад хасагдахгүй.
+ * v0.2.2 (ADR-003 §2.4): роль = загвар. Хадгалахад хэрэглэгчийн эрх АВТОМАТААР өөрчлөгдөхгүй →
+ * "N хэрэглэгчид хэрэгжүүлэх" цонх (урьдчилсан харагдац → батлах); алгасвал баганад "хэрэгжээгүй" товч үлдэнэ.
  */
 export default function RolesPage() {
   const { t } = useTranslation()
@@ -22,6 +24,8 @@ export default function RolesPage() {
   const [draft, setDraft] = useState<Record<string, string[]>>({})
   const [roleModal, setRoleModal] = useState<Role | 'new' | null>(null)
   const [deleting, setDeleting] = useState<Role | null>(null)
+  /** Хэрэгжүүлэх дараалал (хадгалсны дараа pendingUsers > 0 рольууд) */
+  const [applyQueue, setApplyQueue] = useState<Role[]>([])
 
   const visible = useMemo(() => visiblePermissions(catalog.data ?? []), [catalog.data])
   const visibleCodes = visible.map((p) => p.code)
@@ -30,10 +34,15 @@ export default function RolesPage() {
 
   const save = useCampMutation(
     async () => {
-      for (const r of changed) await campApi.setRolePermissions(r.id, mergeRolePermissions(r.permissionCodes, visibleCodes, draft[r.id]))
+      const saved: Role[] = []
+      for (const r of changed) saved.push(await campApi.setRolePermissions(r.id, mergeRolePermissions(r.permissionCodes, visibleCodes, draft[r.id])))
+      return saved
     },
     [campKeys.roles, campKeys.all],
-    () => setDraft({}),
+    (saved) => {
+      setDraft({})
+      setApplyQueue(saved.filter((r) => (r.pendingUsers ?? 0) > 0))
+    },
   )
 
   if (perms.isLoading) return <Loading />
@@ -74,6 +83,16 @@ export default function RolesPage() {
                     <th key={r.id} className="px-2 py-2 text-center font-medium text-gray-700 min-w-[7rem]">
                       <div>{r.name}</div>
                       <div className="text-[11px] font-normal text-gray-400">{t('camp.roles.users', { n: r.userCount })}</div>
+                      {(r.pendingUsers ?? 0) > 0 && (
+                        <button
+                          type="button"
+                          className="mt-1 text-[11px] font-medium text-amber-700 hover:underline"
+                          title={t('camp.roles.pending_hint')}
+                          onClick={() => setApplyQueue([r])}
+                        >
+                          ⚠ {t('camp.roles.pending', { n: r.pendingUsers })}
+                        </button>
+                      )}
                       <div className="mt-1 space-x-2">
                         <button type="button" className="text-[11px] text-blue-600 hover:underline" onClick={() => setRoleModal(r)}>
                           {t('camp.common.edit')}
@@ -122,6 +141,7 @@ export default function RolesPage() {
       )}
       {roleModal && <RoleModal role={roleModal === 'new' ? null : roleModal} onClose={() => setRoleModal(null)} />}
       {deleting && <DeleteRoleModal role={deleting} onClose={() => setDeleting(null)} />}
+      {applyQueue[0] && <ApplyRoleModal key={applyQueue[0].id} role={applyQueue[0]} onClose={() => setApplyQueue((q) => q.slice(1))} />}
     </div>
   )
 }
@@ -188,3 +208,47 @@ function DeleteRoleModal({ role, onClose }: { role: Role; onClose: () => void })
     </Modal>
   )
 }
+
+/** v0.2.2 — загварыг тухайн рольтой хэрэглэгчдэд хэрэгжүүлэх: хэрэглэгч бүрийн + / − эрх → батлах */
+function ApplyRoleModal({ role, onClose }: { role: Role; onClose: () => void }) {
+  const { t } = useTranslation()
+  const preview = useQuery({ queryKey: [...campKeys.roles, 'apply', role.id], queryFn: () => campApi.roleApplyPreview(role.id) })
+  const catalog = useQuery({ queryKey: campKeys.permissions, queryFn: campApi.permissions })
+  const nameOf = (code: string) => catalog.data?.find((p) => p.code === code)?.name ?? code
+  const m = useCampMutation(() => campApi.applyRole(role.id), [campKeys.roles, campKeys.all], onClose)
+  const items = preview.data?.items ?? []
+  return (
+    <Modal
+      title={t('camp.roles.apply_title', { name: role.name })}
+      onClose={onClose}
+      wide
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            {t('camp.roles.apply_later')}
+          </Button>
+          <Button onClick={() => m.mutate(undefined)} loading={m.isPending} disabled={!preview.data || items.length === 0}>
+            {t('camp.roles.apply_confirm', { n: preview.data?.affectedUsers ?? 0 })}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-gray-700">{t('camp.roles.apply_intro')}</p>
+      {preview.isLoading && <Loading />}
+      {preview.data && items.length === 0 && <p className="text-sm text-gray-500">{t('camp.roles.apply_none')}</p>}
+      {items.length > 0 && (
+        <ul className="mt-2 max-h-80 overflow-y-auto divide-y divide-gray-100 text-sm">
+          {items.map((i) => (
+            <li key={i.userRoleId} className="py-2">
+              <div className="font-medium text-gray-900">{i.user?.fullName || i.user?.email || i.userId}</div>
+              {i.add.length > 0 && <div className="text-green-700">+ {i.add.map(nameOf).join(', ')}</div>}
+              {i.remove.length > 0 && <div className="text-red-700">− {i.remove.map(nameOf).join(', ')}</div>}
+            </li>
+          ))}
+        </ul>
+      )}
+      <ErrorBox error={preview.error ?? m.error} />
+    </Modal>
+  )
+}
+

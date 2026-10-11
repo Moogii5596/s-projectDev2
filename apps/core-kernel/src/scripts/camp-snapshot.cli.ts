@@ -4,6 +4,7 @@
  *   pnpm camp:snapshot --env=<.env файл> --out=a.json [--today=YYYY-MM-DD] [--slug=sinohydro] [--past=35] [--future=7]
  *   pnpm camp:snapshot --env=<.env файл> --out=b.json --like=a.json   → A-тай ижил today / муж / slug
  *   pnpm camp:snapshot --compare a.json b.json          → зөрүүгүй бол exit 0, зөрүүтэй бол жагсаалт + exit 1
+ *   pnpm camp:snapshot --compare a.json b.json --expect=v022-q9  → v0.2.1 → v0.2.2: зөвхөн Q9-ийн эрх (Кемп админ × засвар эхлүүлэх/хаах) нэмэгдэхийг зөвшөөрнө
  *
  * --env өгөөгүй бол repo-ийн root .env. DB = SYSTEM_DATABASE_URL (эсвэл DATABASE_URL), зөвхөн localhost.
  * Зөвхөн уншина (READ ONLY transaction) — пилот / staging аль алинд нь аюулгүй.
@@ -13,7 +14,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import { diffDays, todayUb, isRealIsoDate } from '../modules/camp/attendance/camp-date';
-import { buildSnapshot, CampSnapshot, compareSnapshots, summarize } from './camp-snapshot';
+import { buildSnapshot, CampSnapshot, compareSnapshots, PermsExpectation, summarize } from './camp-snapshot';
 import { assertLocalUrl, parseDotenv } from './test-user';
 
 const argv = process.argv.slice(2);
@@ -27,13 +28,14 @@ function readSnapshot(p: string): CampSnapshot {
   return s;
 }
 
-function compare(aPath: string, bPath: string): number {
+function compare(aPath: string, bPath: string, expect: PermsExpectation): number {
   const a = readSnapshot(aPath);
   const b = readSnapshot(bPath);
   console.log(`A: ${aPath} (${a.meta.generatedAt}, ${a.meta.db}, v${a.meta.appVersion ?? '?'})`);
   console.log(`B: ${bPath} (${b.meta.generatedAt}, ${b.meta.db}, v${b.meta.appVersion ?? '?'})`);
   if (a.today !== b.today) console.log(`⚠  today ялгаатай (${a.today} ≠ ${b.today}) — B-г --today=${a.today}-аар дахин авна уу`);
-  const diff = compareSnapshots(a, b);
+  if (expect !== 'none') console.log(`ℹ  эрхийн хүлээгдэж буй зөрүү: ${expect}`);
+  const diff = compareSnapshots(a, b, expect);
   if (diff.length === 0) {
     console.log(`✅ A = B (${Object.keys(a.camps).length} кемп, ${a.from} … ${a.to})`);
     for (const l of summarize(a)) console.log(`   ${l}`);
@@ -92,8 +94,10 @@ async function main(): Promise<number> {
   const i = argv.indexOf('--compare');
   if (i >= 0) {
     const [a, b] = argv.slice(i + 1);
-    if (!a || !b) throw new Error('Хэрэглээ: camp:snapshot --compare a.json b.json');
-    return compare(a, b);
+    if (!a || !b || a.startsWith('--') || b.startsWith('--')) throw new Error('Хэрэглээ: camp:snapshot --compare a.json b.json [--expect=v022-q9]');
+    const expect = (arg('expect') ?? 'none') as PermsExpectation;
+    if (expect !== 'none' && expect !== 'v022-q9') throw new Error(`--expect буруу: ${expect} (v022-q9)`);
+    return compare(a, b, expect);
   }
   return snapshot();
 }

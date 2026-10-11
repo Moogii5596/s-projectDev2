@@ -1,5 +1,6 @@
-import { ArrayMaxSize, ArrayUnique, IsArray, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, ValidateIf } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { CampTemplateScope } from '@prisma/client';
 import { trim, trimOrNull } from '../common/camp-dto.util';
 
 export class CreateCampRoleDto {
@@ -47,4 +48,30 @@ export class QueryUserRolesDto {
 
 export class QueryMyPermissionsDto {
   @IsOptional() @IsUUID() campId?: string;
+}
+
+// ── v0.2.2 Блок 1 (ADR-003 §2.4) ─────────────────────────────
+
+/** Шууд (DIRECT) эрх олгох */
+export class GrantDirectPermissionDto {
+  @IsString() @IsNotEmpty() @MaxLength(100)
+  permissionCode!: string;
+
+  /** null / байхгүй = бүх кемп */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'campId UUID байх ёстой' })
+  campId?: string | null;
+}
+
+export class PositionTemplateItemDto {
+  @IsUUID('all', { message: 'roleId UUID байх ёстой' })
+  roleId!: string;
+
+  @IsEnum(CampTemplateScope)
+  scope!: CampTemplateScope;
+}
+
+/** Албан тушаалын загварын багцыг бүхэлд нь солино */
+export class SetPositionTemplatesDto {
+  @IsArray() @ArrayMaxSize(20) @ValidateNested({ each: true }) @Type(() => PositionTemplateItemDto)
+  templates!: PositionTemplateItemDto[];
 }

@@ -289,14 +289,21 @@ describe('👥 Кемпийн роль → эрх (зөвхөн тэр кемп�
     expect((await api().post(camp('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E010', fullName: 'x' })).status).toBe(403);
   });
 
-  it('админ "Кемп менежер"-т employee.manage нэмэхэд manager шууд үүсгэж чадна (201); буцаахад 403', async () => {
+  it('админ "Кемп менежер"-т employee.manage нэмж ХЭРЭГЖҮҮЛЭХЭД manager үүсгэж чадна (201); буцааж хэрэгжүүлэхэд 403 (v0.2.2: загвар ≠ автомат)', async () => {
     const roles = (await api().get(`${V1}/roles`).set(as('admin'))).body;
     const original: string[] = roles.find((r: { id: string }) => r.id === ids.roleManager).permissionCodes;
     const put = (codes: string[]) => api().put(`${V1}/roles/${ids.roleManager}/permissions`).set(as('admin')).send({ permissionCodes: codes });
-    expect((await put([...original, 'camp.employee.manage'])).status).toBe(200);
+    const apply = () => api().post(`${V1}/roles/${ids.roleManager}/apply`).set(as('admin')).send({});
+    const added = await put([...original, 'camp.employee.manage']);
+    expect(added.status).toBe(200);
+    expect(added.body.pendingUsers).toBeGreaterThan(0);
+    // ADR-003 §2.4: хэрэгжүүлэхээс өмнө эрх өөрчлөгдөхгүй
+    expect((await api().post(camp('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E012', fullName: 'x' })).status).toBe(403);
+    expect((await apply()).status).toBe(200);
     const ok = await api().post(camp('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E010', fullName: 'Менежерийн нэмсэн' });
     expect(ok.status).toBe(201);
     expect((await put(original)).status).toBe(200);
+    expect((await apply()).status).toBe(200);
     expect((await api().post(camp('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E011', fullName: 'x' })).status).toBe(403);
     expect((await put(['camp.unknown.perm'])).status).toBe(400);
   });

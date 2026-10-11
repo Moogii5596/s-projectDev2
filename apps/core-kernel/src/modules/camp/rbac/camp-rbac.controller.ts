@@ -5,13 +5,15 @@ import { CampRbacService } from './camp-rbac.service';
 import {
   AssignUserRoleDto,
   CreateCampRoleDto,
+  GrantDirectPermissionDto,
   QueryMyPermissionsDto,
   QueryUserRolesDto,
+  SetPositionTemplatesDto,
   SetRolePermissionsDto,
   UpdateCampRoleDto,
 } from './camp-rbac.dto';
 
-/** Шат 2.2 — /api/v1/camp/{permissions,me,users,roles,user-roles} */
+/** Шат 2.2 — /api/v1/camp/{permissions,me,users,roles,user-roles}; v0.2.2 — user-permissions, positions/:id/role-templates */
 @Controller('camp')
 export class CampRbacController {
   constructor(private readonly rbac: CampRbacService) {}
@@ -81,5 +83,51 @@ export class CampRbacController {
   remove(@Req() req: FastifyRequest, @Param('id', new ParseUUIDPipe()) id: string) {
     const u = reqUser(req);
     return this.rbac.removeUserRole(u.tenantId, u.id, id);
+  }
+
+  // ── v0.2.2 Блок 1 (ADR-003 §2.4) ──────────────────────────
+
+  @Get('roles/:id/apply-preview')
+  applyPreview(@Req() req: FastifyRequest, @Param('id', new ParseUUIDPipe()) id: string) {
+    const u = reqUser(req);
+    return this.rbac.previewRoleApply(u.tenantId, u.id, id);
+  }
+
+  @Post('roles/:id/apply')
+  @HttpCode(200)
+  apply(@Req() req: FastifyRequest, @Param('id', new ParseUUIDPipe()) id: string) {
+    const u = reqUser(req);
+    return this.rbac.applyRoleTemplate(u.tenantId, u.id, id);
+  }
+
+  @Get('users/:userId/permissions')
+  userPermissions(@Req() req: FastifyRequest, @Param('userId', new ParseUUIDPipe()) userId: string) {
+    const u = reqUser(req);
+    return this.rbac.listUserPermissions(u.tenantId, u.id, userId);
+  }
+
+  @Post('users/:userId/permissions')
+  @HttpCode(201)
+  grantDirect(@Req() req: FastifyRequest, @Param('userId', new ParseUUIDPipe()) userId: string, @Body() dto: GrantDirectPermissionDto) {
+    const u = reqUser(req);
+    return this.rbac.grantDirectPermission(u.tenantId, u.id, userId, dto);
+  }
+
+  @Delete('user-permissions/:id')
+  revokeDirect(@Req() req: FastifyRequest, @Param('id', new ParseUUIDPipe()) id: string) {
+    const u = reqUser(req);
+    return this.rbac.revokeDirectPermission(u.tenantId, u.id, id);
+  }
+
+  @Get('positions/:positionId/role-templates')
+  positionTemplates(@Req() req: FastifyRequest, @Param('positionId', new ParseUUIDPipe()) positionId: string) {
+    const u = reqUser(req);
+    return this.rbac.getPositionTemplates(u.tenantId, u.id, positionId);
+  }
+
+  @Put('positions/:positionId/role-templates')
+  setPositionTemplates(@Req() req: FastifyRequest, @Param('positionId', new ParseUUIDPipe()) positionId: string, @Body() dto: SetPositionTemplatesDto) {
+    const u = reqUser(req);
+    return this.rbac.setPositionTemplates(u.tenantId, u.id, positionId, dto);
   }
 }

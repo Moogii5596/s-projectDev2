@@ -40,7 +40,7 @@ export const SHIFT_LABEL = labels<ShiftType>('shift', ['DAY', 'NIGHT'])
 /** v0.2.1 (C-14): D өдрийн тооцоолсон ээлж */
 export const STAY_GROUPS: StayShiftGroup[] = ['DAY', 'NIGHT', 'UNKNOWN', 'MOVEMENT']
 export const STAY_GROUP_LABEL = labels<StayShiftGroup>('stay_group', STAY_GROUPS)
-export const SYSTEM_ROLE_LABEL = labels<string>('system_role', ['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN'])
+export const SYSTEM_ROLE_LABEL = labels<string>('system_role', ['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN', 'EMPLOYEE'])
 export const MEAL_LABEL = labels<MealType>('meal', ['BREAKFAST', 'LUNCH', 'DINNER', 'NIGHT'])
 export const MEAL_ORDER: MealType[] = ['BREAKFAST', 'LUNCH', 'DINNER', 'NIGHT']
 export const DIRECTION_LABEL = labels<Direction>('direction', ['ARRIVAL', 'DEPARTURE'])

@@ -45,15 +45,16 @@ export class CampAccessService {
     const cached = await this.cache.get<CampPermissionSet>(key);
     if (cached) return { userId: user.id, perms: cached };
 
-    const rows = await tx.campUserRole.findMany({
+    // v0.2.2 D-01: эцсийн эрх = camp_user_permissions (TEMPLATE + DIRECT). Нэг эрх олон эх сурвалжаас → Set.
+    const rows = await tx.campUserPermission.findMany({
       where: { tenantId, userId: user.id },
-      select: { campId: true, role: { select: { permissions: { select: { permissionCode: true } } } } },
+      select: { campId: true, permissionCode: true },
     });
     const global = new Set<string>();
     const byCamp: Record<string, Set<string>> = {};
     for (const row of rows) {
       const target = row.campId === null ? global : (byCamp[row.campId] ??= new Set<string>());
-      for (const p of row.role.permissions) target.add(p.permissionCode);
+      target.add(row.permissionCode);
     }
     const perms: CampPermissionSet = {
       isTenantAdmin: TENANT_ADMIN_ROLES.includes(user.role),

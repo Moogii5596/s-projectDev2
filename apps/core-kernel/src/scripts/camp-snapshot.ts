@@ -5,6 +5,10 @@
  *   - meals    — [өнөөдөр − 35 … өнөөдөр + 7] өдөр бүрийн хоолны суурь тоо (хоол × байршил), хүн, хүн-өдөр, тодорхойгүй ээлж
  *   - rooms    — өнөөдрийн өрөөний самбарын нийлбэр (өрөө, багтаамж, хонож буй, сул, дүүрэн, хуваарилалтгүй)
  *   - counts   — мастер / үйл ажиллагааны өгөгдлийн тоо (төлөвөөр)
+ * Байгууллага бүрт (v0.2.2 §5.1):
+ *   - perms    — эрхийн жагсаалт "<core_users.id>|<эрх>|<кемпийн код | *>" (хувийн мэдээлэлгүй):
+ *                legacy = camp_user_roles ⋈ camp_role_permissions (v0.2.1 schema дээр ч), effective = camp_user_permissions (байвал),
+ *                campAdmins = Кемп админ рольтой олголт "<user>|<кемп | *>" (Q9-ийн хүлээгдэж буй зөрүүг тооцоход)
  *
  * Зөвхөн УНШИНА (READ ONLY transaction). Хуучин хувилбарын schema дээр ч ажиллана: v0.1.6-д байсан багана л уншина.
  */
@@ -41,7 +45,40 @@ export interface CampSnapshot {
   to: string;
   /** "<tenant slug>/<camp code>" → кемп */
   camps: Record<string, CampSnapshotCamp>;
+  /** v0.2.2 — tenant slug → эрх (хуучин хэрэгслээр авсан файлд алга) */
+  perms?: Record<string, CampSnapshotPerms>;
 }
+
+export interface CampSnapshotPerms {
+  /** camp_user_roles ⋈ camp_role_permissions (DISTINCT, эрэмбэтэй) */
+  legacy: string[];
+  /** camp_user_permissions (DISTINCT, эрэмбэтэй); хүснэгт байхгүй (v0.2.1) бол null */
+  effective: string[] | null;
+  /** Кемп админ (system_code = CAMP_ADMIN) олголтууд "<user>|<кемп | *>" */
+  campAdmins: string[];
+}
+
+/** Guard-ийн бодитоор шалгадаг эрх: v0.2.2+ → effective, v0.2.1 → legacy */
+export const enforcedPerms = (p: CampSnapshotPerms): string[] => p.effective ?? p.legacy;
+
+/** Q9 (v0.2.2): Кемп админ олголт бүрт засвар эхлүүлэх (parts) + хаах (close) */
+export const Q9_PERMS = ['camp.maintenance.parts', 'camp.maintenance.close'] as const;
+
+/** A → B-д хүлээгдэж буй (зөвхөн нэмэгдэх) мөрүүд: B-ийн Кемп админ олголт × Q9, A-д байгаагүй нь */
+export function expectedQ9Additions(a: CampSnapshotPerms, b: CampSnapshotPerms): Set<string> {
+  const had = new Set(enforcedPerms(a));
+  const out = new Set<string>();
+  for (const g of b.campAdmins) {
+    const [user, camp] = g.split('|');
+    for (const code of Q9_PERMS) {
+      const k = `${user}|${code}|${camp}`;
+      if (!had.has(k)) out.add(k);
+    }
+  }
+  return out;
+}
+
+export type PermsExpectation = 'none' | 'v022-q9';
 
 export interface SnapshotOptions {
   today: string;
@@ -127,7 +164,12 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
     WHERE table_schema = 'public' AND table_name = 'camp_employees' AND column_name = 'meal_location_id'`;
   const legacy = Number(cols[0]?.n ?? 0) === 0;
 
+  const permTable = await prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'camp_user_permissions'`;
+  const hasEffective = Number(permTable[0]?.n ?? 0) > 0;
+
   const camps: Record<string, CampSnapshotCamp> = {};
+  const perms: Record<string, CampSnapshotPerms> = {};
   for (const t of tenants) {
     await prisma.$transaction(
       async (tx) => {
@@ -160,6 +202,7 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
             counts: await COUNTS(tx as Tx, t.id, c.id),
           };
         }
+        perms[t.slug] = await loadPerms(tx as Tx, t.id, hasEffective);
       },
       { timeout: 120_000, maxWait: 10_000, isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
@@ -171,11 +214,71 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
     from,
     to,
     camps,
+    perms,
   };
 }
 
+/** Байгууллагын эрхийн жагсаалт (READ ONLY tx дотор). Raw SQL — v0.2.1 schema-д Prisma model-гүй хүснэгт байж болно. */
+async function loadPerms(tx: Tx, tenantId: string, hasEffective: boolean): Promise<CampSnapshotPerms> {
+  const legacy = await tx.$queryRaw<{ k: string }[]>`
+    SELECT DISTINCT ur.user_id::text || '|' || rp.permission_code || '|' || COALESCE(c.code, '*') AS k
+    FROM camp_user_roles ur
+    JOIN camp_role_permissions rp ON rp.tenant_id = ur.tenant_id AND rp.role_id = ur.role_id
+    LEFT JOIN camps c ON c.tenant_id = ur.tenant_id AND c.id = ur.camp_id
+    WHERE ur.tenant_id = ${tenantId}::uuid ORDER BY 1`;
+  const effective = hasEffective
+    ? await tx.$queryRaw<{ k: string }[]>`
+        SELECT DISTINCT up.user_id::text || '|' || up.permission_code || '|' || COALESCE(c.code, '*') AS k
+        FROM camp_user_permissions up
+        LEFT JOIN camps c ON c.tenant_id = up.tenant_id AND c.id = up.camp_id
+        WHERE up.tenant_id = ${tenantId}::uuid ORDER BY 1`
+    : null;
+  const admins = await tx.$queryRaw<{ k: string }[]>`
+    SELECT DISTINCT ur.user_id::text || '|' || COALESCE(c.code, '*') AS k
+    FROM camp_user_roles ur
+    JOIN camp_roles r ON r.tenant_id = ur.tenant_id AND r.id = ur.role_id AND r.system_code::text = 'CAMP_ADMIN'
+    LEFT JOIN camps c ON c.tenant_id = ur.tenant_id AND c.id = ur.camp_id
+    WHERE ur.tenant_id = ${tenantId}::uuid ORDER BY 1`;
+  // ORDER BY (DB collation) ≠ JS эрэмбэ байж болно → JS-ээр дахин эрэмбэлнэ (файл тогтвортой)
+  const sorted = (rows: { k: string }[]) => rows.map((r) => r.k).sort();
+  return { legacy: sorted(legacy), effective: effective ? sorted(effective) : null, campAdmins: sorted(admins) };
+}
+
+/**
+ * Эрхийн харьцуулалт (v0.2.2 §5.1/5.2): A-ийн бодит эрх ↔ B-ийн бодит эрх (+ / − мөр).
+ * expect = 'v022-q9' → Q9-ийн хүлээгдэж буй нэмэлтийг зөвшөөрнө; хүлээгдэж буй мөр B-д алга бол мөн зөрүү.
+ * Мөн B дотор legacy ≠ effective бол (upgrade-ийн ДАРАА шууд авахад) зөрүү — шилжүүлэлт буруу.
+ */
+export function comparePerms(a: CampSnapshot, b: CampSnapshot, expect: PermsExpectation = 'none'): string[] {
+  const out: string[] = [];
+  if (!a.perms || !b.perms) {
+    if (a.perms || b.perms) out.push('perms: нэг файлд алга — A ба B-г хоёуланг v0.2.2-ын хэрэгслээр авна уу');
+    return out;
+  }
+  for (const slug of [...new Set([...Object.keys(a.perms), ...Object.keys(b.perms)])].sort()) {
+    const pa = a.perms[slug];
+    const pb = b.perms[slug];
+    if (!pa || !pb) {
+      out.push(`perms.${slug}: ${pa ? 'B' : 'A'}-д алга`);
+      continue;
+    }
+    const ea = new Set(enforcedPerms(pa));
+    const eb = new Set(enforcedPerms(pb));
+    const allowed = expect === 'v022-q9' ? expectedQ9Additions(pa, pb) : new Set<string>();
+    for (const k of [...eb].sort()) if (!ea.has(k) && !allowed.has(k)) out.push(`perms.${slug}: + ${k}`);
+    for (const k of [...ea].sort()) if (!eb.has(k)) out.push(`perms.${slug}: − ${k}`);
+    for (const k of [...allowed].sort()) if (!eb.has(k)) out.push(`perms.${slug}: хүлээгдэж буй Q9 алга ${k}`);
+    if (pb.effective) {
+      const lb = new Set(pb.legacy);
+      const diff = pb.effective.filter((k) => !lb.has(k)).length + pb.legacy.filter((k) => !eb.has(k)).length;
+      if (diff > 0) out.push(`perms.${slug}: B дотор legacy ≠ effective (${diff} мөр) — шилжүүлэлт эсвэл загвар хэрэгжүүлээгүй`);
+    }
+  }
+  return out;
+}
+
 /** Хоёр утгын зөрүүг "зам: a → b" хэлбэрээр (meta-г алгасна) */
-export function compareSnapshots(a: CampSnapshot, b: CampSnapshot): string[] {
+export function compareSnapshots(a: CampSnapshot, b: CampSnapshot, expect: PermsExpectation = 'none'): string[] {
   const out: string[] = [];
   if (a.format !== b.format) out.push(`format: ${a.format} → ${b.format}`);
   const walk = (path: string, x: unknown, y: unknown) => {
@@ -186,15 +289,16 @@ export function compareSnapshots(a: CampSnapshot, b: CampSnapshot): string[] {
     }
     if (x !== y) out.push(`${path}: ${JSON.stringify(x) ?? '(алга)'} → ${JSON.stringify(y) ?? '(алга)'}`);
   };
-  const { meta: _ma, format: _fa, ...ra } = a;
-  const { meta: _mb, format: _fb, ...rb } = b;
+  const { meta: _ma, format: _fa, perms: _pa, ...ra } = a;
+  const { meta: _mb, format: _fb, perms: _pb, ...rb } = b;
   walk('', ra, rb);
+  out.push(...comparePerms(a, b, expect));
   return out;
 }
 
 /** Хураангуй (хүнд уншихад): кемп бүрийн нийт хоол, хүн-өдөр, өрөө */
 export function summarize(s: CampSnapshot): string[] {
-  return Object.entries(s.camps).map(([k, c]) => {
+  const camps = Object.entries(s.camps).map(([k, c]) => {
     const days = Object.values(c.meals);
     const meals = days.reduce((n, d) => n + Object.values(d.meals).reduce((x, y) => x + y, 0), 0);
     const pd = meals / 3;
@@ -202,4 +306,10 @@ export function summarize(s: CampSnapshot): string[] {
       (c.counts['employees.ACTIVE'] ?? 0) + (c.counts['employees.INACTIVE'] ?? 0)
     }`;
   });
+  const perms = Object.entries(s.perms ?? {}).map(([slug, p]) =>
+    `${slug}: эрх ${enforcedPerms(p).length} мөр (${p.effective ? 'camp_user_permissions' : 'хуучин зам'}) · хэрэглэгч ${
+      new Set(enforcedPerms(p).map((k) => k.split('|')[0])).size
+    } · Кемп админ олголт ${p.campAdmins.length}`,
+  );
+  return [...camps, ...perms];
 }

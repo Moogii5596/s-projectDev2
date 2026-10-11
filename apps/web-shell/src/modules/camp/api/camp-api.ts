@@ -36,6 +36,7 @@ import type {
   PermissionDef,
   Presence,
   Role,
+  RoleApplyPreview,
   Room,
   RoomAllocation,
   RoomBoard,
@@ -75,6 +76,9 @@ export const campApi = {
   updateRole: (id: string, body: { name?: string; description?: string | null }) => patch<Role>(`${V1}/roles/${id}`, body),
   deleteRole: (id: string) => del<unknown>(`${V1}/roles/${id}`),
   setRolePermissions: (id: string, permissionCodes: string[]) => put<Role>(`${V1}/roles/${id}/permissions`, { permissionCodes }),
+  /** v0.2.2 — загвар өөрчилсний дараа хэрэглэгчдэд хэрэгжүүлэх (автоматаар биш) */
+  roleApplyPreview: (id: string) => get<RoleApplyPreview>(`${V1}/roles/${id}/apply-preview`),
+  applyRole: (id: string) => post<{ roleId: string; affectedUsers: number; added: number; removed: number }>(`${V1}/roles/${id}/apply`, {}),
   userRoles: (q: { userId?: string; roleId?: string; campId?: string } = {}) => get<UserRole[]>(`${V1}/user-roles`, q),
   assignUserRole: (body: { userId: string; roleId: string; campId: string | null }) => post<unknown>(`${V1}/user-roles`, body),
   removeUserRole: (id: string) => del<unknown>(`${V1}/user-roles/${id}`),
