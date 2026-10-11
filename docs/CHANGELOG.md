@@ -9,11 +9,13 @@
 
 ## [Unreleased]
 
-_(одоогоор алга)_
+### Баримт
+- `deploy/pilot/tests/pilot.shim.ps1`: Windows PowerShell 5.1-ээр ажиллуулах команд — `powershell -NoProfile -ExecutionPolicy Bypass -File deploy/pilot/tests/pilot.shim.ps1` (pwsh 7 суугаагүй машинд)
+- v0.2.2 техникийн төлөвлөгөө: `docs/08_Roadmap/V.0.2/07_v0.2.2_tech_plan.md` (батлуулахаар)
 
 ---
 
-## [v0.2.1] — (tag хүлээгдэж байна) — Хоолны тооцоо албан тушаалаар, хоолгүй ажилтан, байрны төрөл, мониторинг, нэвтрэлтийн хамгаалалт
+## [v0.2.1] — 2026-10-12 — Хоолны тооцоо албан тушаалаар, хоолгүй ажилтан, байрны төрөл, мониторинг, нэвтрэлтийн хамгаалалт
 
 > Төлөвлөгөө: `docs/08_Roadmap/V.0.2/04_v0.2.1_tech_plan.md` · Явц: `05_v0.2.1_progress.md` · Санал: `docs/pilot-feedback.md` FB-01, 04, 12 (үлдсэн), 14 (ээлжээр)
 > Суулгах: **эхлээд staging (runbook §13в) — A = B + `pilot.ps1 auth-test`**, дараа нь `pilot.ps1 upgrade -Tag v0.2.1` · Туршилт: `docs/pilot-test-guide.md` §5в · Сургамж: lessons §22

@@ -1,7 +1,9 @@
 ﻿# v0.2.1 #15 — pilot.ps1-ийн shim тест (PIL-04 мониторинг, PIL-05 хуулбар, PIL-07 Supabase дахин асаалт)
 #   docker / 7z / pnpm / Invoke-WebRequest-ийг function-оор орлуулна (function нь cmdlet/exe-ээс түрүүлж дуудагдана).
 #   Docker, Supabase, сүлжээ хэрэггүй; пилотын өгөгдөлд ХҮРЭХГҮЙ (түр хавтсанд хуурамч root үүсгэнэ).
-#   Ажиллуулах (Windows PowerShell 5.1 / pwsh 7):  pwsh -NoProfile -File deploy/pilot/tests/pilot.shim.ps1
+#   Ажиллуулах — Windows PowerShell 5.1 (pwsh суугаагүй машин):
+#     powershell -NoProfile -ExecutionPolicy Bypass -File deploy/pilot/tests/pilot.shim.ps1
+#   Ажиллуулах — pwsh 7:  pwsh -NoProfile -File deploy/pilot/tests/pilot.shim.ps1
 $ErrorActionPreference = 'Stop'
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
 $T = Join-Path ([IO.Path]::GetTempPath()) "s-project-pilot-shim-$PID"; Remove-Item -Recurse -Force $T -ErrorAction SilentlyContinue
