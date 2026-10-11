@@ -102,6 +102,7 @@
 | PROC-013 | Таньд өгсөн зааварт `pnpm supabase:reset`-ийн дараа `dev:test-user` ба `camp_e2e_grant.sql` орхигдож e2e унав (нэвтрэлт, дараа нь 403) | DB reset-ийн дараа CI-ийн дараалал бүтнээрээ: `db:generate` → `dev:test-user` → `camp_e2e_grant.sql` → тест |
 | CI-005 | CI (v0.1.5-аас хойш шалгаагүй, QA-01): Node 20 → supabase-js "native WebSocket not found"; unit-ийн өмнө `prisma generate` алга → `UserRole` undefined | CI-ийн Node = Dockerfile/машинтай ижил (22); `db:generate`-ийг install-ийн дараа; CI-г release бүрт шалгана |
 | PS-003 | `upgrade`: дэд `pilot.ps1 start`-ийг `& exe \| Out-Host`-оор дуудсан → backend/Caddy stdout pipe-ийн handle-ийг удамшиж, pipe хаагдахгүй → Windows-д мөнхөд хүлээв (Linux shim тестэд илрээгүй) | Урт амьдрах процесс асаадаг дэд скриптийг `Process.Start` (redirect-гүй) + `WaitForExit()`-аар; Windows-ийн тусгай зан төлөвийг shim-ээр баталсан гэж үзэхгүй |
+| CI-006 | CI `setup-cli version: latest` → `supabase status -o env`-ээс `API_URL` гараагүй, хоосон `SUPABASE_URL`-аар integration 18 файл "supabaseUrl is required" | CLI-г lockfile-тэй ижил хувилбараар pin; шаардлагатай env хоосон бол тэр алхамдаа тодорхой мессежээр унагана |
 
 ---
 
@@ -1252,13 +1253,18 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** `Invoke-Self` → `System.Diagnostics.Process.Start` (`UseShellExecute=$false`, redirect-гүй — консолыг шууд хуваалцана) + `WaitForExit()` (зөвхөн тэр процессыг), exit code шалгана; аргументийн хашилт (зай, төгсгөлийн `\`).
 **Дүрэм:** Урт амьдрах процесс асаадаг командыг pipe-аар бүү дууд. Windows-ийн процесс/handle-ийн зан төлөвийг Linux shim тестээр "баталгаатай" гэж үзэхгүй — Windows дээрх анхны ажиллуулалтыг staging дээр.
 
+### [CI-006] CI: Supabase CLI "latest" → хоосон SUPABASE_URL
+**Тохиолдсон (2026-10-11 20:39):** CI-005-ийн дараа Unit ногоон болсон ч Integration 18/20 файл `Error: supabaseUrl is required`. "Supabase env" алхам `eval "$(… status -o env | grep '^API_URL=…')"` юу ч олоогүй ч алдаагүй өнгөрч, хоосон утгыг `$GITHUB_ENV`-д бичсэн. `setup-cli` нь `version: latest` (өмнөх run-д `toomanyrequests`, порт 54322-ийн алдаа ч энэ үед гарсан) — таны машин/lockfile `supabase@2.120.0` (`status -o env` = `API_URL`, `ANON_KEY`, `SERVICE_ROLE_KEY` — бинарийг шалгаж баталсан).
+**Шийдэл:** хоёр job-д `setup-cli version: 2.120.0`; түлхүүр алга бол түлхүүрийн нэрсийг (утгагүй) хэвлээд тэр алхамдаа унана.
+**Дүрэм:** CI-ийн хэрэгслийн хувилбарыг lockfile/машинтай ижил pin хийнэ ("latest" хориглоно); env бэлтгэх алхам хоосон утгыг "чимээгүй" дамжуулахгүй.
+
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
-| 2026-10-11 | §21 (v0.2.0): FE-008, PROC-012, TEST-017, TEST-018, OPS-004, PS-002, TEST-019, PROC-013, CI-005, PS-003 |
+| 2026-10-11 | §21 (v0.2.0): FE-008, PROC-012, TEST-017, TEST-018, OPS-004, PS-002, TEST-019, PROC-013, CI-005, PS-003, CI-006 |
 | 2026-10-11 | §20: PROC-011 (commit хийгээгүй файлыг дарж бичсэн) |
 | 2026-10-10 | §20: FE-007 (/login ↔ /camp давталт) |
 | 2026-10-10 | §20: OPS-003 (auth.email enable_signup) |

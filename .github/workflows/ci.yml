@@ -56,7 +56,7 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.120.0   # = pnpm-lock (таны машин) — "latest" гаралтын формат/зан төлөв өөрчлөгддөг [CI-006]
 
       # `supabase start` нь supabase/migrations/*.sql + seed.sql-г автоматаар ажиллуулдаг [CI-002]
       - name: Start Supabase (local)
@@ -64,7 +64,13 @@ jobs:
 
       - name: Supabase env
         run: |
-          eval "$(npx supabase status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=')"
+          npx supabase status -o env > /tmp/sb.env 2>/tmp/sb.err || true
+          eval "$(sed -E 's/^export //' /tmp/sb.env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=')"
+          # [CI-006] түлхүүр алга бол хоосон утгаар үргэлжлүүлэхгүй — гаралтын түлхүүрийн НЭРСИЙГ (утгагүй) хэвлээд унана
+          if [ -z "${API_URL:-}" ] || [ -z "${ANON_KEY:-}" ] || [ -z "${SERVICE_ROLE_KEY:-}" ]; then
+            echo "::error::supabase status -o env: API_URL/ANON_KEY/SERVICE_ROLE_KEY алга"; npx supabase --version
+            sed -E 's/=.*$/=…/' /tmp/sb.env; cat /tmp/sb.err; exit 1
+          fi
           echo "::add-mask::$SERVICE_ROLE_KEY"
           {
             echo "SUPABASE_URL=$API_URL"
@@ -120,14 +126,20 @@ jobs:
       - name: Setup Supabase
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.120.0   # = pnpm-lock (таны машин) — "latest" гаралтын формат/зан төлөв өөрчлөгддөг [CI-006]
 
       - name: Start Supabase
         run: npx supabase start
 
       - name: Supabase env
         run: |
-          eval "$(npx supabase status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=')"
+          npx supabase status -o env > /tmp/sb.env 2>/tmp/sb.err || true
+          eval "$(sed -E 's/^export //' /tmp/sb.env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=')"
+          # [CI-006] түлхүүр алга бол хоосон утгаар үргэлжлүүлэхгүй — гаралтын түлхүүрийн НЭРСИЙГ (утгагүй) хэвлээд унана
+          if [ -z "${API_URL:-}" ] || [ -z "${ANON_KEY:-}" ] || [ -z "${SERVICE_ROLE_KEY:-}" ]; then
+            echo "::error::supabase status -o env: API_URL/ANON_KEY/SERVICE_ROLE_KEY алга"; npx supabase --version
+            sed -E 's/=.*$/=…/' /tmp/sb.env; cat /tmp/sb.err; exit 1
+          fi
           echo "::add-mask::$SERVICE_ROLE_KEY"
           {
             echo "SUPABASE_URL=$API_URL"
