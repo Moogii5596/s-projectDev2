@@ -99,7 +99,7 @@
 | OPS-004 | Task Scheduler (`RestartCount 3`) нь restore/upgrade-ийн үед алсан watchdog-ийг 1 мин-д дахин асааж болзошгүй | Урт засвар үйлдлийн өмнө Task-ийг `Disable` → дуусахад (алдаатай ч) `Enable` |
 | PS-002 | pwsh shim: python shebang скрипт → `ProcessName` = `python3` → PID файлын шалгалт "ажиллаагүй" | Процессын нэрийг шалгадаг кодыг тестлэх shim нь жинхэнэ нэртэй (C wrapper + `PR_SET_PDEATHSIG`) |
 | TEST-019 | CONC-002 тест (30 зэрэгцээ MR) postgres горимын бүтэн ажиллуулалтад 4-өөс 1 удаа унав | "Flaky" гэж хаахгүй (TEST-015) — QA-09-д бүртгэж, шалтгааныг (pool `maxWait` 2с / tx 5с) шалгана |
-| PROC-013 | Таньд өгсөн зааварт `pnpm supabase:reset`-ийн дараа `pnpm dev:test-user` орхигдож e2e 6 тест "Invalid login credentials" | DB reset гэсэн алхам бүрийн дараа CI-ийн дарааллыг (`db:generate` → `dev:test-user`) заавал хамт бичнэ |
+| PROC-013 | Таньд өгсөн зааварт `pnpm supabase:reset`-ийн дараа `dev:test-user` ба `camp_e2e_grant.sql` орхигдож e2e унав (нэвтрэлт, дараа нь 403) | DB reset-ийн дараа CI-ийн дараалал бүтнээрээ: `db:generate` → `dev:test-user` → `camp_e2e_grant.sql` → тест |
 
 ---
 
@@ -1235,7 +1235,8 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 
 ### [PROC-013] Зааварт `dev:test-user` орхигдов → e2e 6 тест унав
 **Тохиолдсон (2026-10-11 19:10):** v0.2.0-ийг таны машин дээр шалгах зааварт `pnpm supabase:reset` (auth.users-ийг цэвэрлэнэ) бичээд `pnpm dev:test-user`-ийг орхисон → `admin@test.mn` алга → `loginAs` 6 тест "Invalid login credentials", 23 тест ажиллаагүй. Код буруу биш (cloud e2e 55/55).
-**Дүрэм:** DB reset орсон заавар бүрт CI-ийн дараалал: `supabase:reset` → `db:generate` → `dev:test-user` → тест. Зааврыг `.github/workflows/ci.yml`-тэй тулгаж бичнэ.
+**Хоёр дахь удаа (19:14):** `dev:test-user`-ийн дараа ч `camp_e2e_grant.sql` (admin@test.mn → Кемп админ) мөн орхигдсон → Кемпийн 4 тест `POST /camps → 403 camp.err.access.2`. Би зааврыг CI-тэй тулгалгүй, санахаараа бичсэн нь давтагдав.
+**Дүрэм:** DB reset орсон заавар бүрт CI-ийн дараалал бүтнээрээ: `supabase:reset` → `db:generate` → `dev:test-user` → `camp_e2e_grant.sql` → тест. Зааврыг `.github/workflows/ci.yml`-ийн "Prepare" алхмаас ХУУЛЖ бичнэ (санахаар биш). Docker контейнерийг нэрээр нь яг заана (`supabase_db_s-project` — пилотын `supabase_db_s-project-pilot`-тэй андуурахгүй).
 
 ---
 
