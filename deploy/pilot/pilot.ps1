@@ -994,6 +994,13 @@ function Show-Status {
     Write-Step 'Tailscale Funnel'
     Invoke-Native 'tailscale' @('funnel', 'status') -AllowFail | Out-Null
   }
+  # v0.2.2 D-14 (ADR-005): Cloudflare Tunnel — cloudflared Windows service (05_Cloudflare_Tunnel.md)
+  $cf = if (Get-Command Get-Service -ErrorAction SilentlyContinue) { Get-Service -Name 'cloudflared' -ErrorAction SilentlyContinue } else { $null }
+  if ($cf) {
+    if ($cf.Status -eq 'Running') { Write-Ok 'Cloudflare Tunnel (cloudflared service) ажиллаж байна' } else { Write-Warn2 "Cloudflare Tunnel (cloudflared service): $($cf.Status)" }
+  }
+  $pub = Get-Cfg $cfg 'PUBLIC_APP_URL'
+  if ($pub) { Write-Ok "нийтийн хаяг (PUBLIC_APP_URL): $pub" }
   $bdir = Get-Cfg $cfg 'PILOT_BACKUP_DIR'
   if ($bdir -and (Test-Path $bdir)) {
     $last = Get-ChildItem -Path $bdir -Filter '*.7z' | Sort-Object LastWriteTime -Descending | Select-Object -First 1

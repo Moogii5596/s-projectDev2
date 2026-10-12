@@ -40,6 +40,7 @@
 | `docs/03_Data_Models_and_Security/03_Module_Template.md` | Шинэ модуль: migration/RLS, `inTenantTx`, тест |
 | `docs/07_Tech_Stack_and_Environment/02_Local_Supabase_Docker_Windows.md` | Local орчин, `.env`, **тест командууд** (unit / integration / e2e + fixture) |
 | `docs/07_Tech_Stack_and_Environment/03_Enterprise_VPC_Deployment.md` | VPC runbook, **§5.5 app_user нууц үг + RLS аудит** |
+| `docs/02_System_Architecture/ADR-005_Org_Connectivity_Domains.md` · `docs/07_Tech_Stack_and_Environment/05_Cloudflare_Tunnel.md` | **Байгууллагын холболт** `<байгууллага>.gobiverse.website` (Cloudflare Tunnel, 5 төрөл, нэрлэх дүрэм) · байгууллага холбох заавар (2026-10-12) |
 | `docs/07_Tech_Stack_and_Environment/04_Pilot_Camp_Windows.md` | **v0.1.6 Кемп пилот**: нэг Windows машин, Tailscale Funnel, `deploy/pilot/pilot.ps1`, нөөц/сэргээлт |
 | `supabase/dev/rls_audit.sql` | RLS аудит (зөвхөн уншина) |
 
@@ -108,6 +109,7 @@
 - `01_Tech_Stack_Decision.md`
 - `03_Enterprise_VPC_Deployment.md` — Enterprise VPC (`DEPLOYMENT_MODE=dedicated`) байршуулах runbook
 - `04_Pilot_Camp_Windows.md` — Кемп пилот (v0.1.6): нэг машин, интернэтэд Tailscale Funnel-ээр ✨
+- `05_Cloudflare_Tunnel.md` — Байгууллага холбох: `<байгууллага>.gobiverse.website` → Cloudflare Tunnel (ADR-005) ✨
 - `02_Local_Supabase_Docker_Windows.md` — Supabase + Redis-г Docker дээр асаах, port, `.env`, Windows алдаанууд
 
 ### 08 — Хөгжүүлэлтийн төлөвлөгөө

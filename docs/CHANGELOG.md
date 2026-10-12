@@ -9,6 +9,11 @@
 
 ## [Unreleased]
 
+### Нэмэгдсэн (v0.2.2 Блок 2.5 — домэйн)
+- ADR-005: байгууллага бүр `<байгууллага>.gobiverse.website` (Cloudflare Tunnel; 5 төрөл); заавар `05_Cloudflare_Tunnel.md`
+- Caddyfile (пилот): бодит IP-г `CF-Connecting-IP`-ээс (Cloudflare), үгүй бол `X-Forwarded-For` (Funnel)
+- `pilot.ps1 status`: Cloudflare Tunnel (cloudflared service), `PUBLIC_APP_URL`
+
 ### ⚠️ Зан төлөвийн өөрчлөлт (v0.2.2 Блок 2 — нэвтрэлт)
 - **Нэвтрэх хуудас:** нэг талбар "Утас, нэвтрэх нэр эсвэл и-мэйл". Нэвтрэлт backend-ээр дамжина (`POST /api/v1/auth/sign-in`); хуучин имэйл + нууц үг хэвээр ажиллана
 - Нууц үг солих: толгойн мөрөнд нэр дээр дарж (`/change-password`); админ "солих шаардлагатай" болгосон бол бусад хуудас хаалттай

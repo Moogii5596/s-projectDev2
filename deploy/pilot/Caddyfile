@@ -18,7 +18,10 @@
 	# Caddy зөвхөн 127.0.0.1-д bind хийсэн тул гаднаас хуурамч XFF шууд ирэх боломжгүй.
 	servers {
 		trusted_proxies static 127.0.0.1/32 ::1/128
-		client_ip_headers X-Forwarded-For
+		# v0.2.2 D-14 (ADR-005): Cloudflare Tunnel (cloudflared, localhost) → CF-Connecting-IP (Cloudflare дарж бичдэг,
+		# хэрэглэгч хуурамчаар тавьж чадахгүй); байхгүй бол Funnel-ийн X-Forwarded-For. Header-ийг дарааллаар шалгана.
+		# ⚠️ Funnel нээлттэй үед Funnel-аар ирсэн хүн CF-Connecting-IP-г хуурамчаар тавьж болно → Funnel-ийг хаах (05_Cloudflare_Tunnel.md §6).
+		client_ip_headers CF-Connecting-IP X-Forwarded-For
 	}
 }
 
