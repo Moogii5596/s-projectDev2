@@ -56,8 +56,8 @@ port = 55327
 
 [auth]
 enabled = true
-site_url = "http://127.0.0.1:8088"
-additional_redirect_urls = []
+site_url = "https://sino.gobiverse.website"
+additional_redirect_urls = ["https://sino.gobiverse.website"]
 jwt_expiry = 3600
 # root .env-ийн SUPABASE_AUTH_JWT_SECRET (32+ тэмдэгт) — pilot.ps1 орчинд тохируулна
 jwt_secret = "env(SUPABASE_AUTH_JWT_SECRET)"
