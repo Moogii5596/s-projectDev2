@@ -3,11 +3,14 @@ import type { FastifyRequest } from 'fastify';
 import { reqUser } from '../common/camp-request';
 import { CampRbacService } from './camp-rbac.service';
 import { CampEmployeeLoginService } from './camp-employee-login.service';
+import { CampUserAccessService } from './camp-user-access.service';
 import {
   AssignUserRoleDto,
   CreateCampRoleDto,
   GrantDirectPermissionDto,
   LinkEmployeeUserDto,
+  CreateEmployeeUserDto,
+  CampInviteDto,
   PositionPreviewQueryDto,
   QueryMyPermissionsDto,
   QueryUserRolesDto,
@@ -22,6 +25,7 @@ export class CampRbacController {
   constructor(
     private readonly rbac: CampRbacService,
     private readonly login: CampEmployeeLoginService,
+    private readonly userAccess: CampUserAccessService,
   ) {}
 
   @Get('permissions')
@@ -166,5 +170,32 @@ export class CampRbacController {
   applyPositionTemplates(@Req() req: FastifyRequest, @Param('positionId', new ParseUUIDPipe()) positionId: string) {
     const u = reqUser(req);
     return this.login.applyPositionTemplates(u.tenantId, u.id, positionId);
+  }
+
+  // ── v0.2.2 Блок 3: нэвтрэх эрх үүсгэх, урилга (ADR-003 §2.3) ──
+
+  @Post('camps/:campId/employees/:id/create-user')
+  @HttpCode(201)
+  createEmployeeUser(
+    @Req() req: FastifyRequest,
+    @Param('campId', new ParseUUIDPipe()) campId: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: CreateEmployeeUserDto,
+  ) {
+    const u = reqUser(req);
+    return this.userAccess.createUserForEmployee(u.tenantId, u.tenantSlug, u.id, campId, id, dto.email);
+  }
+
+  @Post('users/:userId/invites')
+  @HttpCode(201)
+  inviteUser(@Req() req: FastifyRequest, @Param('userId', new ParseUUIDPipe()) userId: string, @Body() dto: CampInviteDto) {
+    const u = reqUser(req);
+    return this.userAccess.invite(u.tenantId, u.id, userId, dto.channel);
+  }
+
+  @Get('invites/options')
+  inviteOptions(@Req() req: FastifyRequest) {
+    const u = reqUser(req);
+    return this.userAccess.options(u.tenantId, u.id);
   }
 }

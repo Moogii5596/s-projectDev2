@@ -77,3 +77,6 @@ _tmp_*
 
 # Enterprise VPC env (ADR-001) — нууц утгатай, commit хийхгүй
 .env.vpc
+
+# Сургалтын материал — тусдаа private repo (s-project-learning)
+/_learning/

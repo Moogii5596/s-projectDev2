@@ -112,6 +112,7 @@
 | PROC-016 | `git ls-files` кирилл нэртэй файлыг octal escape-ээр гаргаж `tar -T` унав | `git ls-files -z` + `tar --null -T` |
 | AUTH-003 | GoTrue хүрэхгүй үед supabase-js throw хийхгүй, `AuthRetryableFetchError` (status 0) → "нууц үг буруу" 401 гарах байв | `!status \|\| status>=500 \|\| name==='AuthRetryableFetchError'` → 503 |
 | SEC-008 | Нэвтрэлтийн хязгаар бүх оролдлогыг тоолбол нэг WiFi/NAT-ийн олон ажилтан (ба e2e) 429 авна | Зөвхөн амжилтгүйг тоолох; амжилт тэглэнэ; IP-г зөвхөн Caddy `X-Real-IP`-тэй үед |
+| TEST-024 | Harness (adapter-pg): raw query-ийн `timestamptz` JS `Date` болохдоо цагийн бүс алдагдав → хугацаа дууссан токен "хүчинтэй" | Хугацаа/төлвийг SQL-д (`expires_at <= now()`) тооцох — JS `Date`-ээс хамаарахгүй |
 
 ---
 
@@ -1345,12 +1346,18 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 ### [PROC-004] (давтагдсан, 2026-10-12) CRLF файл Python-ий текст горимоор LF болов — 9 файл
 **Тохиолдсон:** Блок 2-т `auth/*.ts`, e2e helper, `ProtectedRoute.tsx` (CRLF) — `open(p).read()` / `write` → LF; sync-ийн hash `\r`-ийг хасдаг тул илрээгүй, git-д бүх мөр өөрчлөгдсөн мэт харагдах байв. Sync-ийн өмнөх шалгалтаар (base-д CR байсан эсэх) илэрч сэргээв.
 **Дүрэм (чангатгав):** засварын скрипт `open(p, newline='')` эсвэл bytes-ээр; sync-ийн өмнө `git diff --name-only`-ийн файл бүрт "base CRLF ↔ одоо" шалгана (G1 алхамд).
+
+### [TEST-024] Raw query-ийн `timestamptz` → JS `Date` хөрвүүлэлтэд найдах эрсдэл
+**Илэрсэн (v0.2.2 Блок 3, harness integration):** `core_user_invites.expires_at`-ийг `$queryRaw`-аар уншиж JS-д `now`-тэй харьцуулсан → DB-д хугацаа дууссан (1 цагийн өмнө) токен "хүчинтэй" гэж гарав. Harness-ийн `@prisma/adapter-pg` нь timestamptz-ийг цагийн бүсгүй уншсан (+8 цаг). Бодит Prisma engine-д зөв байж магадгүй ч ялгаа нь эрсдэл.
+**Шийдэл:** хугацаа/төлвийг SQL-д тооцно: `(expires_at <= now()) AS expired`, `(used_at IS NOT NULL) AS used`; "нэг удаа" = атом `UPDATE … WHERE used_at IS NULL AND expires_at > now() RETURNING`.
+**Дүрэм:** Аюулгүй байдлын шийдвэр (хугацаа, түгжээ) DB-ийн цаг (`now()`) дээр — app/driver-ийн Date хөрвүүлэлтэд найдахгүй.
 ---
 
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-13 | §22 (v0.2.2 Блок 3): TEST-024 (timestamptz ↔ JS Date — хугацааг SQL-д) |
 | 2026-10-12 | §22 (v0.2.2 Блок 2): AUTH-003 (GoTrue fetch алдаа ≠ буруу нууц үг), SEC-008 (хязгаар ↔ NAT), PROC-008 давтагдсан |
 | 2026-10-12 | §22 (v0.2.2 Блок 1): TEST-022 (harness generate), TEST-023 (зан төлөв ↔ CI-only тест), PROC-016 (git ls-files -z) |
 | 2026-10-11 | §22 (v0.2.1 #14): SEC-007 (Caddy XFF / GoTrue IP хязгаар), TEST-021 (cloud prisma generate) |

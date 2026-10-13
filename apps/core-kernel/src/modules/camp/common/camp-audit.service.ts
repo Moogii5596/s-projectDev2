@@ -11,6 +11,8 @@ export const CAMP_AUDIT_ENTITIES = [
   'employee', 'department', 'crew', 'building', 'room', 'position_setting',
   // v0.2.2 Блок 1 — эрх (tenant түвшин, campId = олголтын кемп эсвэл null)
   'role', 'role_apply', 'user_role', 'user_permission', 'position_template',
+  // v0.2.2 Блок 3
+  'user_account', 'user_invite',
 ] as const;
 export type CampAuditEntity = (typeof CAMP_AUDIT_ENTITIES)[number];
 

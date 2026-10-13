@@ -2,6 +2,8 @@ import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import ChangePasswordPage from './pages/ChangePasswordPage';
+import SetPasswordPage from './pages/SetPasswordPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import MRListPage from './pages/MRListPage';
@@ -27,6 +29,10 @@ export default function App() {
     <Routes>
       {/* Public */}
       <Route path="/login" element={<LoginPage />} />
+      {/* v0.2.2 Блок 3: нэвтрэлтгүй — урилга, нууц үг сэргээх */}
+      <Route path="/invite/:token" element={<SetPasswordPage />} />
+      <Route path="/reset/:token" element={<SetPasswordPage />} />
+      <Route path="/forgot" element={<ForgotPasswordPage />} />
 
       {/* Protected */}
       <Route element={<ProtectedRoute />}>

@@ -146,6 +146,12 @@ export class SignInService {
       WHERE tenant_id = ${tenantId}::uuid AND is_active AND username = ${id.value} LIMIT 2`);
   }
 
+  /** Host / dedicated → tenantId (TenantAuthGuard-тай нэг дүрэм) */
+  async tenantIdFromHost(host: string | undefined): Promise<string | null> {
+    const slug = resolveTenantSlug(this.deployment, host);
+    return slug ? this.tenantCache.getTenantId(slug) : null;
+  }
+
   async signIn(host: string | undefined, clientIp: string | undefined, identifier: string, password: string): Promise<SignInSession> {
     const slug = resolveTenantSlug(this.deployment, host);
     const tenantId = slug ? await this.tenantCache.getTenantId(slug) : null;

@@ -118,6 +118,7 @@ model CoreUser {
   campUserRoles             CampUserRole[]           @relation("CampUserRoleUser")
   campUserPermissions       CampUserPermission[]     @relation("CampUserPermissionUser")
   campEmployees             CampEmployee[]           @relation("CampEmployeeUser")
+  invites                   CoreUserInvite[]
   campShiftAdjustments      CampShiftAdjustment[]    @relation("CampShiftAdjustmentCreatedBy")
   campImportsUploaded       CampMovementImport[]     @relation("CampMovementImportUploadedBy")
   campImportsConfirmed      CampMovementImport[]     @relation("CampMovementImportConfirmedBy")
@@ -1771,4 +1772,35 @@ model CampBuildingType {
 
   @@unique([tenantId, id], map: "uq_camp_building_types_tenant_id")
   @@map("camp_building_types")
+}
+
+/// v0.2.2 Блок 3 (20261013005) — урилга / нууц үг сэргээх
+enum CoreInvitePurpose {
+  INVITE
+  RESET
+}
+
+enum CoreInviteChannel {
+  LINK
+  EMAIL
+}
+
+/// v0.2.2 Блок 3 (ADR-003 §2.3, D-03) — токены SHA-256 hash л хадгална (токен өөрөө хэзээ ч үгүй)
+model CoreUserInvite {
+  id        String            @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String            @map("tenant_id") @db.Uuid
+  userId    String            @map("user_id") @db.Uuid
+  tokenHash String            @unique(map: "uq_core_user_invites_token") @map("token_hash")
+  purpose   CoreInvitePurpose
+  channel   CoreInviteChannel
+  expiresAt DateTime          @map("expires_at") @db.Timestamptz
+  usedAt    DateTime?         @map("used_at") @db.Timestamptz
+  revokedAt DateTime?         @map("revoked_at") @db.Timestamptz
+  createdBy String?           @map("created_by") @db.Uuid
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  user CoreUser @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_core_user_invites_user")
+
+  @@map("core_user_invites")
 }

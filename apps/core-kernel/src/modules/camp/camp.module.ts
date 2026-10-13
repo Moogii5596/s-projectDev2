@@ -7,6 +7,7 @@ import { CampDataImportService } from './data/camp-data-import.service';
 import { CampRbacController } from './rbac/camp-rbac.controller';
 import { CampRbacService } from './rbac/camp-rbac.service';
 import { CampEmployeeLoginService } from './rbac/camp-employee-login.service';
+import { CampUserAccessService } from './rbac/camp-user-access.service';
 import { CampSettingsController } from './settings/camp-settings.controller';
 import { CampSettingsService } from './settings/camp-settings.service';
 import { CampMasterController, CampOrganizationsController, CampsController } from './master/camp-master.controller';
@@ -58,6 +59,7 @@ import { CampCatalogService } from './catalog/camp-catalog.service';
     CampDataImportService,
     CampRbacService,
     CampEmployeeLoginService,
+    CampUserAccessService,
     CampSettingsService,
     CampsService,
     CampFacilitiesService,

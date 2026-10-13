@@ -1,4 +1,4 @@
-import { ArrayMaxSize, ArrayUnique, IsArray, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsEmail, IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CampTemplateScope } from '@prisma/client';
 import { trim, trimOrNull } from '../common/camp-dto.util';
@@ -88,4 +88,17 @@ export class PositionPreviewQueryDto {
   /** 'none' = албан тушаалгүй */
   @ValidateIf((_o, v) => v !== 'none') @IsUUID('all', { message: 'positionId UUID эсвэл none' })
   positionId!: string;
+}
+
+// ── v0.2.2 Блок 3 (ADR-003 §2.3) ─────────────────────────────
+
+/** Ажилтны картаас хэрэглэгч үүсгэх. email: байхгүй → картынх; null → имэйлгүй (дотоод хаяг) */
+export class CreateEmployeeUserDto {
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsEmail({}, { message: 'Зөв имэйл оруулна уу' })
+  email?: string | null;
+}
+
+export class CampInviteDto {
+  @IsIn(['LINK', 'EMAIL'])
+  channel!: 'LINK' | 'EMAIL';
 }

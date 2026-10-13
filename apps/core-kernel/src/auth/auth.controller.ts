@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   Req,
+  Param,
   ForbiddenException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -15,7 +16,8 @@ import { TenantAuthGuard } from './tenant-auth.guard';
 import { TenantContextInterceptor } from './tenant-context.interceptor';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { ChangePasswordDto, SignInDto } from './dto/sign-in.dto';
+import { AcceptInviteDto, ChangePasswordDto, ForgotPasswordDto, SignInDto } from './dto/sign-in.dto';
+import { InviteService } from './invite.service';
 import { SignInService, clientIpOf } from './sign-in.service';
 import { SkipAuth } from '../common/decorators/skip-auth.decorator';
 import { AllowPasswordChangeRequired } from '../common/decorators/allow-password-change-required.decorator';
@@ -35,6 +37,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly signInService: SignInService,
+    private readonly inviteService: InviteService,
   ) {}
 
   /**
@@ -80,6 +83,29 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async signIn(@Body() dto: SignInDto, @Req() req: FastifyRequest) {
     return this.signInService.signIn(req.headers['host'], clientIpOf(req), dto.identifier, dto.password);
+  }
+
+  /** GET /api/v1/auth/invites/:token — v0.2.2 Блок 3 (нэвтрэлтгүй): хүчинтэй эсэх, нэр, нэвтрэх нэр */
+  @Get('invites/:token')
+  @SkipAuth()
+  async inspectInvite(@Param('token') token: string) {
+    return this.inviteService.inspect(token);
+  }
+
+  /** POST /api/v1/auth/invites/:token/accept — нууц үг үүсгэх (урилга / reset; нэг удаа) */
+  @Post('invites/:token/accept')
+  @SkipAuth()
+  @HttpCode(HttpStatus.OK)
+  async acceptInvite(@Param('token') token: string, @Body() dto: AcceptInviteDto) {
+    return this.inviteService.accept(token, dto.password);
+  }
+
+  /** POST /api/v1/auth/forgot-password — хариу үргэлж ижил (задруулахгүй) */
+  @Post('forgot-password')
+  @SkipAuth()
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto, @Req() req: FastifyRequest) {
+    return this.inviteService.forgot(req.headers['host'], clientIpOf(req), dto.identifier);
   }
 
   /** POST /api/v1/auth/change-password — D-06 (must_change_password үед ч нээлттэй) */

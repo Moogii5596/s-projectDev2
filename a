@@ -1,0 +1,16 @@
+warning: in the working copy of 'deploy/pilot/.env.pilot.example', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'deploy/pilot/Caddyfile', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'deploy/pilot/pilot.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/08_Roadmap/V.0.2/07_v0.2.2_tech_plan.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/08_Roadmap/V.0.2/08_v0.2.2_progress.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/CHANGELOG.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/INDEX.md', LF will be replaced by CRLF the next time Git touches it
+ deploy/pilot/.env.pilot.example                    |  5 [32m++++[m
+ deploy/pilot/Caddyfile                             |  5 [32m+++[m[31m-[m
+ deploy/pilot/pilot.ps1                             |  7 [32m+++++[m
+ .../04_Pilot_Camp_Windows.md                       |  2 [32m+[m[31m-[m
+ docs/08_Roadmap/V.0.2/07_v0.2.2_tech_plan.md       | 35 [32m++++++++++[m[31m------------[m
+ docs/08_Roadmap/V.0.2/08_v0.2.2_progress.md        |  5 [32m++[m[31m--[m
+ docs/CHANGELOG.md                                  |  5 [32m++++[m
+ docs/INDEX.md                                      |  2 [32m++[m
+ 8 files changed, 43 insertions(+), 23 deletions(-)

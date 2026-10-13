@@ -5,6 +5,9 @@ import { TenantCacheService } from './tenant-cache.service';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { SignInService } from './sign-in.service';
+import { UserAdminService } from './user-admin.service';
+import { MailerService } from './mailer.service';
+import { InviteService } from './invite.service';
 
 @Global()
 @Module({
@@ -15,7 +18,10 @@ import { SignInService } from './sign-in.service';
     TenantCacheService,
     AuthService,
     SignInService,
+    UserAdminService,
+    MailerService,
+    InviteService,
   ],
-  exports: [TenantAuthGuard, TenantContextInterceptor, TenantCacheService, AuthService],
+  exports: [TenantAuthGuard, TenantContextInterceptor, TenantCacheService, AuthService, SignInService, UserAdminService, InviteService],
 })
 export class AuthModule {}

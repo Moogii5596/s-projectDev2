@@ -9,6 +9,17 @@
 
 ## [Unreleased]
 
+### Нэмэгдсэн (v0.2.2 Блок 3 — урилга, нууц үг сэргээх)
+- Ажилтны картаас нэвтрэх эрх үүсгэх (имэйлгүй ажилтанд дотоод хаяг) — `POST /camp/camps/:campId/employees/:id/create-user`
+- Урилга: "Линк хуулах" (72 цаг, нэг удаа) / имэйлээр — `POST /camp/users/:userId/invites`; хуудас `/invite/:token`
+- "Нууц үг мартсан?" (`/forgot` → имэйлээр 1 цагийн линк, `/reset/:token`); хариу үргэлж ижил
+- Системийн имэйл (SMTP, 3 хэлний захидал) — `.env` `SMTP_*`; тохируулаагүй бол зөвхөн линк
+- SEC-005: хэрэглэгч үүсгэх ганц газар (`register` ч)
+- Хамаарал: `nodemailer` 6.10.1
+
+### Migration (v0.2.2 Блок 3, нэмэлт)
+- `20261013005_core_user_invites.sql` — урилга / reset токен (SHA-256 hash л)
+
 ### Нэмэгдсэн (v0.2.2 Блок 2.5 — домэйн)
 - ADR-005: байгууллага бүр `<байгууллага>.gobiverse.website` (Cloudflare Tunnel; 5 төрөл); заавар `05_Cloudflare_Tunnel.md`
 - Caddyfile (пилот): бодит IP-г `CF-Connecting-IP`-ээс (Cloudflare), үгүй бол `X-Forwarded-For` (Funnel)

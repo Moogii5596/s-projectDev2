@@ -1,5 +1,5 @@
 import { useState, FormEvent, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { HOME_PATH } from '../config/enabled-modules'
 import { CHANGE_PASSWORD_PATH } from '../lib/password-change'
@@ -108,6 +108,9 @@ export default function LoginPage() {
             {submitting ? t('auth.submitting') : t('auth.submit')}
           </button>
         </form>
+        <div className="mt-4 text-center">
+          <Link to="/forgot" className="text-sm text-blue-600 hover:underline">{t('auth.forgot.link')}</Link>
+        </div>
       </div>
     </div>
   )

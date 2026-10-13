@@ -2,7 +2,6 @@ import { Prisma } from '@prisma/client';
 import {
   Injectable,
   UnauthorizedException,
-  ConflictException,
   InternalServerErrorException,
   Logger,
   Optional,
@@ -10,10 +9,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PrismaTenantClientService } from '../db/prisma-tenant-client.service';
-import { inTenantTx } from '../db/tenant-tx';
 import { SystemPrismaService } from '../db/system-prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { UserAdminService } from './user-admin.service';
 
 export interface AuthResponse {
   accessToken: string;
@@ -48,67 +47,40 @@ export class AuthService {
     );
   }
 
+  /** v0.2.2 Блок 3: хэрэглэгч үүсгэх ганц газар — ижил Supabase client-ийг хуваалцана */
+  private get userAdmin(): UserAdminService {
+    return (this._userAdmin ??= new UserAdminService(this.configService, this.prisma, this.supabase));
+  }
+  private _userAdmin?: UserAdminService;
+
   /**
    * Шинэ хэрэглэгч бүртгэх
    * 1. Supabase Auth-д бүртгэх
    * 2. core_users-д sync хийх (tenant context шаардана)
    */
   async register(dto: RegisterDto, tenantId: string): Promise<AuthResponse> {
-    // 1. Supabase Auth-д бүртгэх
-    const { data: authData, error: authError } =
-      await this.supabase.auth.admin.createUser({
-        email: dto.email,
-        password: dto.password,
-        email_confirm: true, // development-д автоматаар confirm
-        user_metadata: { full_name: dto.fullName ?? '' },
-      });
-
-    if (authError) {
-      if (authError.message.toLowerCase().includes('already')) {
-        throw new ConflictException('Энэ email хаяг аль хэдийн бүртгэлтэй байна');
-      }
-      this.logger.error(`Auth register алдаа: ${authError.message}`);
-      throw new InternalServerErrorException('Бүртгэл үүсгэхэд алдаа гарлаа');
-    }
-
-    const authUser = authData.user;
-
-    // 2. core_users-д sync — tenant RLS context-тэй
-    try {
-      // Phase 4.8.3: set_config + create НЭГ transaction-д (өмнө нь тусдаа statement → app_user-д RLS татгалзана)
-      const coreUser = await inTenantTx(this.prisma, tenantId, (tx) =>
-        tx.coreUser.create({
-          data: {
-            tenantId,
-            authId: authUser.id,
-            email: dto.email,
-            fullName: dto.fullName ?? null,
-            role: 'REQUESTER',
-          },
-        }),
-      );
-
-      // 3. Login токен авах
-      const token = await this.getAccessToken(dto.email, dto.password);
-
-      return {
-        accessToken: token,
-        user: {
-          id: coreUser.id,
-          authId: coreUser.authId,
-          email: coreUser.email,
-          fullName: coreUser.fullName,
-          role: coreUser.role,
-          tenantId: coreUser.tenantId,
-        },
-      };
-    } catch (err) {
-      // core_users үүсгэж чадаагүй → Supabase auth user-г буцааж устгах (rollback)
-      await this.supabase.auth.admin.deleteUser(authUser.id);
-      this.logger.error(`core_users sync алдаа: ${(err as Error).message}`);
-      throw new InternalServerErrorException('Хэрэглэгч бүртгэхэд алдаа гарлаа');
-    }
+    // v0.2.2 Блок 3 (SEC-005 нэгтгэл): GoTrue + core_users үүсгэх ганц газар — UserAdminService (rollback-тай)
+    const coreUser = await this.userAdmin.createUser({
+      tenantId,
+      tenantSlug: '',
+      email: dto.email,
+      password: dto.password,
+      fullName: dto.fullName ?? null,
+    });
+    const token = await this.getAccessToken(coreUser.email, dto.password);
+    return {
+      accessToken: token,
+      user: {
+        id: coreUser.id,
+        authId: coreUser.authId,
+        email: coreUser.email,
+        fullName: coreUser.fullName,
+        role: coreUser.role,
+        tenantId: coreUser.tenantId,
+      },
+    };
   }
+
 
   /**
    * Email + нууц үгээр нэвтрэх

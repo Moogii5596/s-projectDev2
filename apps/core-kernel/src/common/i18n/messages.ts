@@ -19,6 +19,14 @@ export const MESSAGES = {
   'auth.password_same': { mn: 'Шинэ нууц үг одоогийнхоос өөр байх ёстой', en: 'The new password must differ from the current one', zh: '新密码必须与当前密码不同' },
   'auth.password_current_wrong': { mn: 'Одоогийн нууц үг буруу', en: 'The current password is incorrect', zh: '当前密码不正确' },
   'auth.password_weak': { mn: 'Шинэ нууц үг шаардлага хангахгүй (хамгийн багадаа 12 тэмдэгт)', en: 'The new password does not meet the requirements (at least 12 characters)', zh: '新密码不符合要求（至少 12 个字符）' },
+  // v0.2.2 Блок 3 — урилга, хэрэглэгч үүсгэх
+  'auth.user_exists': { mn: 'Энэ имэйлтэй хэрэглэгч аль хэдийн байна', en: 'A user with this email already exists', zh: '使用该邮箱的用户已存在' },
+  'auth.user_invalid': { mn: 'Хэрэглэгч үүсгэх боломжгүй ({reason})', en: 'The user could not be created ({reason})', zh: '无法创建用户（{reason}）' },
+  'auth.invite_invalid': { mn: 'Холбоос хүчингүй эсвэл хугацаа нь дууссан. Админаас шинэ холбоос аваарай', en: 'This link is invalid or has expired. Ask your administrator for a new one', zh: '链接无效或已过期。请向管理员索取新链接' },
+  'auth.invite_no_email': { mn: 'Энэ хэрэглэгч имэйлгүй — "Линк хуулах"-аар урина уу', en: 'This user has no email — use "Copy link" instead', zh: '该用户没有邮箱——请使用"复制链接"' },
+  'auth.mail_disabled': { mn: 'Системийн имэйл тохируулаагүй (SMTP) — "Линк хуулах"-аар урина уу', en: 'System email (SMTP) is not configured — use "Copy link" instead', zh: '未配置系统邮箱（SMTP）——请使用"复制链接"' },
+  'auth.public_url_missing': { mn: 'Нийтийн хаяг (PUBLIC_APP_URL) тохируулаагүй', en: 'The public address (PUBLIC_APP_URL) is not configured', zh: '未配置公开地址（PUBLIC_APP_URL）' },
+  'auth.mail_failed': { mn: 'Имэйл илгээж чадсангүй. Дахин оролдох эсвэл "Линк хуулах"-ыг ашиглана уу', en: 'The email could not be sent. Try again or use "Copy link"', zh: '邮件发送失败。请重试或使用"复制链接"' },
 
   // ── Орчуулгын засвар (Системийн тохиргоо → Орчуулга) ──
   'i18n.unknown_key': { mn: 'Үл мэдэгдэх түлхүүр: {key}', en: 'Unknown key: {key}', zh: '未知的键：{key}' },
@@ -340,6 +348,8 @@ export const MESSAGES = {
   'audit.user_permission.create': { mn: '"{user}" хэрэглэгчид "{code}" эрхийг шууд олгов', en: 'Directly granted permission "{code}" to user "{user}"', zh: '已直接授予用户"{user}"权限"{code}"' },
   'audit.user_permission.deactivate': { mn: '"{user}" хэрэглэгчээс шууд олгосон "{code}" эрхийг хасав', en: 'Removed the direct permission "{code}" from user "{user}"', zh: '已移除用户"{user}"的直接权限"{code}"' },
   'audit.position_template.update': { mn: '"{name}" албан тушаалын эрхийн загварыг өөрчлөв', en: 'Changed the permission templates of position "{name}"', zh: '修改了职位"{name}"的权限模板' },
+  'audit.user_account.create': { mn: '"{name}" ажилтанд нэвтрэх эрх үүсгэв', en: 'Created sign-in access for employee "{name}"', zh: '已为员工"{name}"创建登录权限' },
+  'audit.user_invite.create': { mn: '"{name}" хэрэглэгчид урилга үүсгэв ({channel})', en: 'Created an invitation for user "{name}" ({channel})', zh: '已为用户"{name}"创建邀请（{channel}）' },
   'camp.err.catalog.building_type_inactive': { mn: '"{name}" байрны төрөл идэвхгүй', en: 'Building type "{name}" is inactive', zh: '楼栋类型"{name}"已停用' },
   'camp.err.assets.19': { mn: 'Хөрөнгийг өрөө эсвэл байрны аль нэгэнд байрлуулна (хоёуланг нь биш)', en: 'Place the asset in either a room or a building, not both', zh: '资产只能放在房间或楼栋之一，不能同时' },
   'camp.err.assets.20': { mn: 'Байр олдсонгүй (энэ кемпэд)', en: 'Building not found (in this camp)', zh: '未找到楼栋（本营地）' },
