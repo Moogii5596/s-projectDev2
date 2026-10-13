@@ -17,12 +17,20 @@ tags: [release]
 
 ## [Unreleased]
 
+### Баримт бичиг — Codebase Atlas (2026-10-13)
+- `docs/09_Codebase/` — хөгжүүлэлтийн чат кодыг уншихгүйгээр контекст авах: [[00_Codebase_Map]] (эхлэх цэг), [[01_Backend_Modules]], [[04_Frontend_Map]], [[08_Patterns]]
+- Автомат каталог `pnpm docs:gen` / `pnpm docs:check` (`scripts/docs/gen-codebase-docs.mjs`, Node-оос өөр хамааралгүй): API (162 endpoint → service → эрх), DB (migration → хүснэгт/багана/RLS/policy), эрх + анхдагч роль, env + script, тест, frontend route
+- RULE-21 (баримтыг кодтой хамт шинэчлэх); [[02_core_kernel_schema]] → Deprecated
+
 ### Баримт бичиг — Obsidian vault (2026-10-13)
 - `docs/` = Obsidian vault: бүх `.md` (68) файлд YAML frontmatter (`title`, `type`, `status`, `last_updated`, `tags`)
 - `type`-д `Log`, `status`-д `Archived` утга нэмсэн (стандарт: [[INDEX]] → "Frontmatter стандарт")
 - Файл хоорондын лавлагаа (`` `…/X.md` ``, `[..](X.md)`) → `[[X]]` wiki-link (~320), dangling 0, orphan 0
 - [[INDEX]]-ийг MOC болгон дахин бүтэцлэв; байхгүй spec-үүд (04 SDK, 06 FIX-01~04) → "Missing Specs" жагсаалт
 - `_learning/` → `docs/_learning/` (git-ээс нуусан хэвээр: `.gitignore` `/docs/_learning/`); `build_pdf.py` frontmatter алгасдаг болсон
+- Хуучирсан баримт засвар: [[project-status]], [[01_Development_Roadmap]] (v0.2.0/v0.2.1 ✅, Air-Gapped → v0.4.0+), [[00_rules_and_context]] толгой, [[08_v0.2.2_progress]] commit-ууд; пилотын хаяг → `sino.gobiverse.website` ([[04_Pilot_Camp_Windows]], [[pilot-test-guide]]; Funnel хаасан)
+- Шинэ шийдвэрийн баримт: [[ADR-006_HR_Core_Module]] (HR модуль), [[PRD-06_Vision_Business_Model]] (алсын хараа, бизнес загвар); [[PRD-05_Internal_Social_Feed]] / [[ADR-004_Feed_Architecture]]-д 2026-10-13 тэмдэглэл; [[ADR-005_Org_Connectivity_Domains]] §2.4 нүүр хуудас
+- [[lessons_learned]] §24: MIG-002 (migration дугаарын дараалал)
 
 ### Нэмэгдсэн (v0.2.2 Блок 3 — урилга, нууц үг сэргээх)
 - Ажилтны картаас нэвтрэх эрх үүсгэх (имэйлгүй ажилтанд дотоод хаяг) — `POST /camp/camps/:campId/employees/:id/create-user`

@@ -2,7 +2,7 @@
 title: "Байгууллага холбох — Cloudflare Tunnel (`<байгууллага>.gobiverse.website`)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 tags: [deploy, stack]
 ---
 
@@ -57,7 +57,7 @@ tags: [deploy, stack]
    - [ ] ts.net хаяг ч зэрэг ажиллаж байна (шилжилт)
 4. Пилотын хэрэглэгчдэд шинэ хаягийг мэдэгдэх (утасны home screen shortcut-ийг шинэчлэх).
 
-## 6. Funnel-ийг хаах (~1 долоо хоногийн дараа)
+## 6. Funnel-ийг хаах — ✅ хийгдсэн (2026-10-13)
 Шалгах жагсаалт бүгд ✅, хэрэглэгчид шинэ хаягаар орж байгаа бол:
 ```powershell
 tailscale funnel reset

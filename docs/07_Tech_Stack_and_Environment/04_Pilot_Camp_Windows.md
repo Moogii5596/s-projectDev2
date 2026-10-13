@@ -2,7 +2,7 @@
 title: "04 — Кемп пилот: нэг Windows машин дээр интернэтэд нээх (v0.1.6, шинэчлэл/staging — v0.2.0)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 tags: [camp, pilot, stack]
 ---
 
@@ -12,6 +12,8 @@ tags: [camp, pilot, stack]
 > Холбоотой: `deploy/pilot/` (скрипт, тохиргоо), [[02_Local_Supabase_Docker_Windows]] (dev орчин),
 > [[03_Enterprise_VPC_Deployment]] (бүрэн VPC), [[lessons_learned]] §20
 
+> **Пилотын хаяг (2026-10-13-аас): `https://sino.gobiverse.website`** — Cloudflare Tunnel (`cloudflared` Windows service), заавар [[05_Cloudflare_Tunnel]], шийдвэр [[ADR-005_Org_Connectivity_Domains]]. Tailscale Funnel **хаагдсан** (§7 — түүх/нөөц).
+
 Пилот нь **хувийн мэдээлэлтэй** бодит өгөгдөлтэй ажиллана. Доорх аюулгүй байдлын алхмуудыг алгасахгүй.
 
 ---
@@ -20,9 +22,9 @@ tags: [camp, pilot, stack]
 
 ```
 Хэрэглэгчийн утас/компьютер
-   │  https://<машин>.<tailnet>.ts.net   (Tailscale Funnel — HTTPS сертификат автомат, домэйнгүй)
+   │  https://sino.gobiverse.website   (Cloudflare edge — HTTPS, CF-Connecting-IP)
    ▼
-Tailscale (энэ машин) ──► 127.0.0.1:8088  Caddy (deploy/pilot/Caddyfile)
+cloudflared (энэ машин, Windows service) ──► 127.0.0.1:8088  Caddy (deploy/pilot/Caddyfile)
                               ├─ /api/*                                   → 127.0.0.1:3100  backend (NestJS, dedicated: sinohydro)
                               ├─ /auth/v1/token | /auth/v1/user | /auth/v1/logout → 127.0.0.1:55321 Supabase Auth
                               ├─ /auth/*, /rest/*, /storage/*, /realtime/* …       → 404 (хаалттай)
@@ -127,7 +129,9 @@ cd E:\MoogiiDev\Pilot\s-project
 
 > Supabase-ийн DB (`postgres`/`supabase_admin`) нууц үг нь local-ийн анхдагч `postgres` хэвээр — тиймээс энэ дүрэм **заавал**.
 
-## 7. Интернэтэд нээх — Tailscale Funnel
+## 7. Интернэтэд нээх — Tailscale Funnel (⛔ 2026-10-13 хаасан — түүх / яаралтай нөөц)
+
+> **Одоо:** [[05_Cloudflare_Tunnel]]. Funnel-ийг дахин асаах нь `CF-Connecting-IP` хуурамчаар тавих эрсдэлтэй ([[ADR-005_Org_Connectivity_Domains]] §2.3) — зөвхөн Tunnel бүрэн унасан үед, түр.
 
 > **Холболт (2026-10-12):** `https://desktop-13n3elv.tail7fe33e.ts.net` ✅ ажиллаж байна. Домэйн `sino.gobiverse.website` (Spaceship DNS) нь CNAME → энэ хаяг, гэхдээ **Funnel өөрийн домэйныг дэмждэггүй** (зөвхөн `*.ts.net` сертификат) → домэйнээр нээхэд TLS алдаа. Шийдэл (2026-10-12): **Cloudflare Tunnel** — ADR-005, заавар [[05_Cloudflare_Tunnel]]. Funnel нь шилжилтийн үед нөөц хаяг, дараа нь хаана.
 
@@ -201,7 +205,7 @@ Windows Update: Settings → Windows Update → **Active hours** (ажлын ц�
 - `backup`: амжилттай бол backup check руу OK; нөөц эсвэл хуулбар бүтэлгүйтвэл `/fail`. `PILOT_HEALTHCHECK_BACKUP_URL` хоосон бол зөвхөн алдааг `PILOT_HEALTHCHECK_URL` руу `/fail` илгээнэ.
 - Ping амжилтгүй бол пилотыг зогсоохгүй, зөвхөн `logs\pilot.log`-д бичнэ (URL-ийг логт бичихгүй).
 
-**Гаднаас uptime шалгалт (нэмэлт):** UptimeRobot (үнэгүй, 5 мин) → HTTP(s) monitor → `https://<машин>.<tailnet>.ts.net/api/v1/health` (хариу 200). Энэ нь Funnel + Caddy + backend-ийг интернэтээс шалгана — healthchecks нь машин дотроос, UptimeRobot нь гаднаас.
+**Гаднаас uptime шалгалт (нэмэлт):** UptimeRobot (үнэгүй, 5 мин) → HTTP(s) monitor → `https://sino.gobiverse.website/api/v1/health` (хариу 200; Funnel үед `…ts.net` байсан бол солино). Энэ нь Cloudflare Tunnel + Caddy + backend-ийг интернэтээс шалгана — healthchecks нь машин дотроос, UptimeRobot нь гаднаас.
 
 ## 10. Хэрэглэгч удирдах
 

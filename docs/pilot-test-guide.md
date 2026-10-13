@@ -2,13 +2,13 @@
 title: "Кемп пилот — Бодит өгөгдөл оруулах ба туршилтын заавар (v0.1.6.1, v0.2.0)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 tags: [pilot]
 ---
 
 # Кемп пилот — Бодит өгөгдөл оруулах ба туршилтын заавар (v0.1.6.1, v0.2.0)
 
-> Байгууллага: **Sino Hydro** · Хаяг: https://desktop-13n3elv.tail7fe33e.ts.net · Үүсгэсэн: 2026-10-11
+> Байгууллага: **Sino Hydro** · Хаяг: **https://sino.gobiverse.website** (2026-10-13-аас; хуучин `…ts.net` Funnel хаяг хаагдсан) · Үүсгэсэн: 2026-10-11
 > Админ (систем) талын заавар: [[04_Pilot_Camp_Windows]] · Санал бүртгэх: [[pilot-feedback]]
 > **Пилот дууссан гэх шалгуур:** §7-ийн бүх мөр ✅ (шийдвэр D3, [[01_plan_draft]])
 
@@ -161,7 +161,7 @@ cd E:\MoogiiDev\Pilot\s-project
 | TC-v021-08 | **Мониторинг:** healthchecks.io 2 check (runbook §9а) → `pilot.ps1 status` | healthchecks дээр ping ирсэн; backend зогсоовол ≤ 1 мин-д `/fail` мэдэгдэл; асаахад OK |
 | TC-v021-09 | `PILOT_BACKUP_COPY_DIR` тохируулж `pilot.ps1 backup` | Хуулбар 2 хавтсанд; `backup.log`-д `COPY OK`; хавтсыг буруу заавал анхааруулга + `/fail`, үндсэн нөөц хэвээр |
 | TC-v021-10 | **Staging:** `pilot.ps1 auth-test <туршилтын имэйл> -Profile staging` | `PIL-07 OK: 400 400 400 400 400 429` |
-| TC-v021-11 | **Пилот:** утсаар (Funnel) нэвтрэх → `deploy\pilot\run\logs\caddy-access.log` | `client_ip` = утасны гадаад IP (`127.0.0.1` биш) |
+| TC-v021-11 | **Пилот:** утсаар (`sino.gobiverse.website`; v0.2.1 үед Funnel) нэвтрэх → `deploy\pilot\run\logs\caddy-access.log` | `client_ip` = утасны гадаад IP (`127.0.0.1` биш) |
 | TC-v021-12 | Өөрийн бүртгэлээр 5 удаа буруу нууц үг → 6 дахь удаа зөв нууц үг | "Хэт олон буруу оролдлого — N минутын дараа…" (3 хэлээр); `pilot.ps1 unlock <имэйл>` → шууд нэвтэрнэ; өөр хэрэглэгч энэ хугацаанд нэвтэрч чадна |
 
 ## 6. Аюулгүй байдал ба хувийн мэдээлэл (бүх хэрэглэгчид)

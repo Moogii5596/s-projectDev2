@@ -2,20 +2,22 @@
 title: "S Project — Claude Гарын Авлага: Дүрмүүд ба Codebase Байдал"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-10
+last_updated: 2026-10-13
 tags: [rules, roadmap]
 ---
 
 # S Project — Claude Гарын Авлага: Дүрмүүд ба Codebase Байдал
 
 > **Энэ файлыг Claude Sprint ажил эхлэхэд ЗААВАЛ уншина.**
-> RULE-01~20 + Codebase одоогийн байдал + MVP дууссан зүйлс бүгд энд байна.
-> Бусад structural docs унших шаардлагагүй.
-> **Одоогийн хувилбар: v0.4.0** | [[CHANGELOG]] | [[VERSIONING]]
+> RULE-01~21 энд. **Codebase-ийн одоогийн байдал → [[00_Codebase_Map]]** (`docs/09_Codebase/`, Codebase Atlas).
+>
+> **Унших дараалал (хөгжүүлэлт):** [[INDEX]] → спринтийн tech plan + progress → [[00_Codebase_Map]] → хамаарах модулийн хэсэг ([[01_Backend_Modules]] / [[04_Frontend_Map]]) → хэрэгцээгээр каталог ([[02_API_Catalog]], [[03_DB_Catalog]], [[05_Permissions_Catalog]], [[07_Test_Map]]) → [[08_Patterns]]. **Кодыг зөвхөн засах файлаа л нээнэ** — модуль хайх гэж бүх кодыг уншихгүй.
+> **Одоогийн хувилбар: `v0.2.2` хөгжүүлэлт** (сүүлийн release `v0.2.1`) | [[project-status]] | [[CHANGELOG]] | [[VERSIONING]]
+> ⚠️ Доорх «CODEBASE ОДООГИЙН БАЙДАЛ» нь **v0.1.0-ийн агшин (2026-09-21)** — хуучин дугаарлалтын «v0.4.0» = одоогийн `v0.1.0`. Сүүлийн байдлыг [[project-status]] болон одоогийн спринтийн progress-оос ([[08_v0.2.2_progress]]) ав.
 
 ---
 
-## ⚠️ ХАТУУ ДҮРМҮҮД (RULE-01 ~ RULE-20)
+## ⚠️ ХАТУУ ДҮРМҮҮД (RULE-01 ~ RULE-21)
 
 > Алхам болгонд шалгана. Зөрчвөл тест улаан болно.
 
@@ -110,12 +112,13 @@ tags: [rules, roadmap]
   # ХОРИГЛОНО: VITE_API_BASE_URL=http://localhost:3000 → CORS алдаа
   ```
 - **RULE-20** Frontend DTO field names → backend DTO-тай ТАМ АДИЛ байх ёстой. Эхлээд `*.dto.ts` файл шалгах, дараа frontend type бич.
+- **RULE-21** (2026-10-13) Код өөрчилсөн блок бүрийн төгсгөлд: `pnpm docs:gen` → `pnpm docs:check` ✓ + [[01_Backend_Modules]] / [[04_Frontend_Map]]-ийн хамаарах хэсгийг шинэчилнэ. Автомат каталогийг (`docs/09_Codebase/0[235679]_*`) гараар засахгүй. Шалтгаан: баримт кодоос хоцорвол (DOC-001) хөгжүүлэлтийн чат кодыг дахин уншиж контекст алдана. DoD: [[08_Patterns]] §6.
 
 ---
 
-## 📁 CODEBASE ОДООГИЙН БАЙДАЛ (v0.4.0 — Sprint 5 дууссаны дараа)
+## 📁 CODEBASE БАЙДАЛ — v0.1.0-ийн агшин (хуучин нэр v0.4.0, Sprint 5-ын дараа, 2026-09-21) — ⛔ DEPRECATED
 
-> Claude энэ хэсгийг унших хэрэгтэй — файл нээх шаардлагагүй.
+> ⛔ **Хуучирсан (түүх).** Одоогийн байдал: [[00_Codebase_Map]], [[01_Backend_Modules]], [[03_DB_Catalog]]. Энэ хэсгийг хөгжүүлэлтэд ашиглахгүй.
 
 **`apps/` дотор байгаа:**
 - `core-kernel/` — NestJS API (port 3000)
@@ -201,4 +204,4 @@ tags: [rules, roadmap]
 | [[VERSIONING]] | SemVer бодлого |
 | [[CHANGELOG]] | Хувилбарын өөрчлөлтийн жагсаалт |
 
-*Шинэчлэгдсэн: 2026-09-21 | v0.4.0*
+*RULE хэсэг: 2026-09-21 · толгой шинэчилсэн: 2026-10-13 (v0.2.2)*

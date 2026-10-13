@@ -1,12 +1,14 @@
 ---
 title: "Core Kernel Platform DB Schema Spec"
 type: "Database"
-status: "Active"
-last_updated: 2026-10-08
+status: "Deprecated"
+last_updated: 2026-10-13
 tags: [database]
 ---
 
 # Core Kernel Platform DB Schema Spec
+
+> ⛔ **Deprecated (2026-10-13):** анхны (MVP) schema spec — Кемп, auth, v0.2.x-ийн хүснэгт ороогүй. **Одоогийн schema: [[03_DB_Catalog]]** (migration-аас автоматаар, `pnpm docs:gen`).
 
 **Document ID:** SEC-02  
 **Project:** S Project  

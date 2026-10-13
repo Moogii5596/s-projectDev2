@@ -20,9 +20,11 @@ tags: [index, moc]
 | Баримт | Агуулга |
 |---|---|
 | [[00_rules_and_context]] | **RULE-01~20** — Sprint эхлэхдээ ЗААВАЛ уншина |
-| [[07_v0.2.2_tech_plan]] · [[08_v0.2.2_progress]] | **Одоогийн спринт** — v0.2.2 (хэрэглэгч, нэвтрэлт, урилга, эрх) |
+| [[07_v0.2.2_tech_plan]] · [[08_v0.2.2_progress]] | **Одоогийн спринт** — v0.2.2 (хэрэглэгч, нэвтрэлт, урилга, эрх + HR — [[ADR-006_HR_Core_Module]]) |
+| [[PRD-06_Vision_Business_Model]] | Алсын хараа ба бизнес загвар (2026-10-13) |
 | [[03_v0.2_full_plan]] | v0.2 бүтэн төлөвлөгөө (v0.2.1–v0.2.4) |
-| [[lessons_learned]] | **Нэгтгэсэн алдааны сургамж** (ганц үндсэн файл) |
+| [[00_Codebase_Map]] | **Codebase Atlas — хөгжүүлэлтийн эхлэх цэг** (кодыг уншихгүйгээр контекст авах) |
+| [[lessons_learned]] | **Нэгтгэсэн алдааны сургамж** (ганц үндсэн файл) — §24 = v0.2.2, §23 = баримт (DOC-002) |
 | [[project-status]] | Одоогийн явц, тест ажиллуулах заавар |
 | [[CHANGELOG]] · [[VERSIONING]] | SemVer changelog · хувилбаржуулалтын бодлого |
 
@@ -35,6 +37,7 @@ tags: [index, moc]
 - [[PRD-03_Functional_Specs]] — Функциональ тодорхойлолт
 - [[PRD-04_UI_UX_Architecture_Spec]] — UI/UX шаардлага
 - [[PRD-05_Internal_Social_Feed]] — Байгууллагын дотоод Feed (v0.3)
+- [[PRD-06_Vision_Business_Model]] — **Алсын хараа, бүх салбар, 2 төрлийн сүлжээ, бизнес загвар, худалдаа** (2026-10-13)
 
 ## 🏛 02 — Системийн архитектур
 
@@ -45,12 +48,13 @@ tags: [index, moc]
   - [[ADR-001_Tenant_Isolation]] — Tenant тусгаарлалт: shared RLS + Enterprise VPC; §4.1 RLS runtime (`app_user`)
   - [[ADR-003_Users_Login_Permissions]] — Хэрэглэгч, нэвтрэлт, эрхийн загвар (v0.2.2)
   - [[ADR-004_Feed_Architecture]] — Feed архитектур (v0.3)
-  - [[ADR-005_Org_Connectivity_Domains]] — Байгууллагын холболт `<байгууллага>.gobiverse.website`
+  - [[ADR-005_Org_Connectivity_Domains]] — Байгууллагын холболт `<байгууллага>.gobiverse.website` + нүүр хуудас (§2.4)
+  - [[ADR-006_HR_Core_Module]] — **HR модуль:** ажилтан/хэлтэс/ээлж/ирц Кемпээс үндсэн систем рүү (v0.2.2, 2026-10-13)
 
 ## 🗄 03 — Өгөгдлийн загвар ба аюулгүй байдал
 
 - [[01_PostgreSQL_MultiTenant_RLS_Spec]] — RLS policy
-- [[02_core_kernel_schema]] — Prisma schema
+- [[02_core_kernel_schema]] — ⛔ анхны schema spec (Deprecated → [[03_DB_Catalog]])
 - [[03_Module_Template]] — Шинэ модуль нэмэх загвар (migration/RLS, `inTenantTx`, тест)
 - [[S Project - System Risk Assessment & Audit Report]] — Эрсдэлийн үнэлгээ, аудитын тайлан (05_AI_Implementation_Prompts)
 
@@ -61,6 +65,16 @@ tags: [index, moc]
 - [[03_Enterprise_VPC_Deployment]] — Enterprise VPC runbook (`DEPLOYMENT_MODE=dedicated`), §5.5 app_user + RLS аудит
 - [[04_Pilot_Camp_Windows]] — Кемп пилот: нэг Windows машин, `deploy/pilot/pilot.ps1`, нөөц/сэргээлт
 - [[05_Cloudflare_Tunnel]] — Байгууллага холбох: Cloudflare Tunnel ([[ADR-005_Org_Connectivity_Domains]])
+
+## 🧱 09 — Codebase Atlas (`09_Codebase/`)
+
+> Хөгжүүлэлтийн чат кодыг дахин дахин уншихгүй — эндээс контекст авна (RULE-21). `pnpm docs:gen` / `pnpm docs:check`.
+
+- [[00_Codebase_Map]] — **эхлэх цэг:** унших дараалал, repo бүтэц, хүсэлтийн урсгал, "хаанаас олох вэ"
+- [[01_Backend_Modules]] — модуль бүрийн зорилго, гол файл, хүснэгт, эрх (Кемпийн 11 дэд модуль)
+- [[04_Frontend_Map]] — web-shell бүтэц, Кемп UI, i18n, шинэ хуудас нэмэх
+- [[08_Patterns]] — RULE хураангуй + жишээ файл (endpoint, migration, тест), DoD
+- 🤖 Автомат: [[02_API_Catalog]] (endpoint → service → эрх) · [[03_DB_Catalog]] (хүснэгт, багана, RLS) · [[05_Permissions_Catalog]] · [[06_Config_Env]] · [[07_Test_Map]] · [[09_Frontend_Routes]]
 
 ## 🗺 08 — Roadmap ба спринт
 

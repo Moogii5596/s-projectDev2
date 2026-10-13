@@ -11,6 +11,8 @@
     "test:e2e": "turbo run test:e2e",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
+    "docs:gen": "node scripts/docs/gen-codebase-docs.mjs",
+    "docs:check": "node scripts/docs/gen-codebase-docs.mjs --check",
     "clean": "turbo run clean && rm -rf node_modules",
     "db:generate": "cd apps/core-kernel && npx prisma generate",
     "dev:test-user": "pnpm --filter @s-project/core-kernel dev:test-user",

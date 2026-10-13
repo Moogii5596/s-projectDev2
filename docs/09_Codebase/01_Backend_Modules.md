@@ -1,0 +1,108 @@
+---
+title: "Backend модулиуд (core-kernel)"
+type: "Architecture"
+status: "Active"
+last_updated: 2026-10-13
+tags: [codebase, backend, camp, auth]
+---
+
+# Backend модулиуд (core-kernel)
+
+> Эх: `apps/core-kernel/src/`. Модуль бүр: **зорилго → гол файл → хүснэгт → эрх / API → тест → анхаарах**. Endpoint-ийн бүрэн жагсаалт [[02_API_Catalog]] (хэсгийн нэр = хавтасны зам), хүснэгт [[03_DB_Catalog]].
+> Зөвхөн даалгаварт хамаарах хэсгээ унш. Код өөрчлөгдөхөд энэ хэсгийг шинэчил (RULE-21). Эхлэх цэг: [[00_Codebase_Map]].
+
+## Агуулга
+- Суурь: [[#auth]] · [[#db]] · [[#common]] · [[#config, cache, gateway]] · [[#scripts]]
+- Бизнес: [[#MR + workflow]] · [[#budget, inventory, vendor, report (lite)]] · [[#event-bus]] · [[#tenant-admin, route-ingress, health]]
+- Кемп: [[#camp — нийтлэг]] · [[#camp/rbac]] · [[#camp/master]] · [[#camp/catalog]] · [[#camp/settings]] · [[#camp/attendance]] · [[#camp/assets]] · [[#camp/maintenance]] · [[#camp/data]] · [[#camp/costs, camp/audit]] · [[#camp — V2 (кодгүй)]]
+
+---
+
+## auth
+- **Зорилго:** нэвтрэлт (Supabase JWT), tenant тодорхойлох, хэрэглэгч үүсгэх, урилга / нууц үг сэргээх, имэйл.
+- **Гол файл:** `tenant-auth.guard.ts` (глобал APP_GUARD; JWT → tenant → membership; PERF-003 Supabase унасан үеийн 503) · `tenant-slug.ts` (Host → slug; dedicated горимд `DEDICATED_TENANT_SLUG`) · `tenant-cache.service.ts` (membership cache: эерэг 5 мин, сөрөг 30 сек — SEC-001) · `tenant-rate-limit.guard.ts` · `tenant-context.interceptor.ts` · `sign-in.service.ts` + `login-identifier.ts` (утас / username / имэйлээр нэвтрэх — v0.2.2 Блок 2, ADR-003 §2.2) · `user-admin.service.ts` (**хэрэглэгч үүсгэх ГАНЦ газар**, SEC-005) · `invite.service.ts` + `invite-token.ts` (токен = SHA-256 hash л хадгална) · `mailer.service.ts` + `auth-mail.ts` (SMTP, 3 хэл).
+- **Хүснэгт:** `core_users`, `core_user_invites`, `tenants`; нэвтрэлтийн түгжээ — `auth_guard.password_failures` (Supabase hook).
+- **Анхаарах:** `req.user.id` = authId (RULE-13). Шинэ public route → `@SkipAuth()`; нууц үг солих шаардлагатай хэрэглэгчид нээлттэй → `@AllowPasswordChangeRequired()`.
+- **Тест:** `auth.integration`, `tenant-auth-guard.integration`, `camp-v022-login/invite.integration` ([[07_Test_Map]]).
+
+## db
+- `prisma-tenant-client.service.ts` (AsyncLocalStorage tenant context; `prisma.service.ts` = alias) · `system-prisma.service.ts` (`SYSTEM_DATABASE_URL`, BYPASSRLS — зөвхөн системийн ажил) · `tenant-tx.ts` → **`inTenantTx(prisma, tenantId, fn)`** — `set_config('app.tenant_id')` + бүх query нэг transaction (RULE-03/04, RLS-004) · `redis.module.ts`.
+- **Дүрэм:** tenant өгөгдөл → үргэлж `inTenantTx`; `SystemPrismaService`-ийг tenant өгөгдөлд хэрэглэхгүй ([[08_Patterns]] §2).
+
+## common
+- `http/configure-app.ts` — ValidationPipe, угтвар, multipart; **main.ts ба integration тест хоёулаа** дуудна (VALID-001).
+- `i18n/` — `messages.ts` (backend мессеж mn/en/zh), `app-error.ts` (код + параметр), `i18n.interceptor.ts` + `i18n-overrides.service.ts` (байгууллагын орчуулгын засвар), `catalog.ts` (frontend + backend бүх түлхүүр), `i18n.controller.ts`.
+- `helpers/resolve-user-id.helper.ts` (authId → `core_users.id`), `helpers/require-role.helper.ts` (core role шалгах) · `decorators/` (`@SkipAuth`, `@AllowPasswordChangeRequired`) · `utils/cursor.ts` (cursor pagination, буруу UUID → 400) · `xlsx/` (Excel импорт/экспортын нийтлэг давхарга, v0.2.0).
+
+## config, cache, gateway
+- `config/env.config.ts` (env шалгалт, `DEPLOYMENT_MODE`, `DEDICATED_TENANT_SLUG`) · `deployment-mode.ts` (ADR-001: shared / dedicated) · `rate-limit.ts` · `app-version.ts` (`/health`-ийн хувилбар) · `cluster-restart.ts` · `prisma-log.ts`.
+- `cache/cache.service.ts` — Redis cache (PERF-*). `gateway/` — `DrainingInterceptor` (глобал, graceful shutdown), `dynamic-ingress-router.service.ts`.
+
+## scripts
+- CLI (`*.cli.ts`, pnpm script-ээр — [[06_Config_Env]]): `dev-test-user` (admin@test.mn), `e2e-fixture`, `pilot-admin` (`pnpm pilot:user`, `pilot:onboard`), `camp-snapshot` (upgrade-ийн өмнө/дараа A = B эрхийн тулгалт), `camp-login-report`.
+
+---
+
+## MR + workflow
+- **Модулиуд:** `material-requisition/` (MR CRUD, submit/approve/reject; `mr-approval.ts` — цэвэр батлалтын логик, SEC-004: үүсгэгч өөрөө батлахгүй) · `workflow/` (олон алхамт батлалт, `amount-router` дүнгээр, quorum, SLA `approval-sla.*`, `escalation.scheduler.ts` — Cron 15 мин, `delegation.*`, `idempotency.service.ts`, `pessimistic-lock.service.ts`, `workflow-definition.*` — OWNER/ADMIN) · `mr-lifecycle/` (MR төлөв солигдоход **тухайн transaction дотор** Budget/Inventory-г дууддаг; алдаа → бүх tx rollback).
+- **Хүснэгт:** `mr_headers`, `mr_items`, `approval_logs`, `workflow_*`, `idempotency_keys`.
+- **Event:** outbox `MR_SUBMITTED` / `MR_APPROVED` / `MR_REJECTED`.
+- **Тест:** `mr-crud`, `mr-approval`, `mr-workflow-approval`, `rls-leakage` integration; e2e `requisition-flow`, `advanced-workflow`.
+
+## budget, inventory, vendor, report (lite)
+- v0.1.5 Phase 4 — **хөнгөн** модулиуд (системийг турших зорилготой). `budget/` (`budget_periods`, `budget_allocations`, `budget_commitments`; MR-д хэлтсийн төсөв) · `inventory/` (`inventory_items`, нөөцлөл) · `vendor/` (хамгийн энгийн CRUD + RLS — **шинэ модулийн жишээ**, [[03_Module_Template]]) · `report/` (олон модулийг нэг tenant tx-д уншина).
+- Frontend: `/inventory`, `/vendors`, `/reports` (`VITE_MODULES`). Тест: `budget`, `modules-lite` integration.
+
+## event-bus
+- Transactional outbox: `outbox_events` (бизнес tx дотор бичнэ) → `outbox-poller.service.ts` (Cron 5 сек, `SKIP LOCKED`, retry 30с/120с/480с) → `redis-publisher.service.ts` → алдаатай бол `dlq.service.ts` (`dlq_events`). CloudEvents v1.0 (`cloud-events.adapter.ts`, тогтвортой id).
+- Тест: `event-bus.integration`. Гэрээний spec (`01_Shared_Event_Bus_Contract_Spec`) vault-д алга — [[INDEX]] → Missing Specs.
+
+## tenant-admin, route-ingress, health
+- `tenant-admin/` — tenant onboarding (`SuperAdminGuard` — платформын super admin). `route-ingress/` — `tenant_routes` бүртгэл. `health/` — health endpoint (🌐; хувилбар `config/app-version.ts`) — зам [[02_API_Catalog]].
+
+---
+
+## camp — нийтлэг
+- `camp.module.ts` — бүх дэд модулийг бүртгэнэ. Кемп = уурхайн кемпийн катеринг үйлчилгээ ([[01_plan_and_erd]]).
+- `common/camp-access.service.ts` — эрх шалгах: `require(tx, tenantId, authId, campId, codes)` (эрх), `requireAccess(...)` (кемпийн гишүүнчлэл л), `requireInAnyCamp`. **Tenant OWNER/ADMIN = бүх кемпийн бүх эрх** (анхны тохиргоо). · `camp-permissions.ts` — `CAMP_PERMISSIONS` (DB-тэй ЯГ ижил, [[05_Permissions_Catalog]]) · `camp-tx.ts` — `inTenantTx` + огноо/цагийн хөрвүүлэлт (`toDbDate`, `fromDbDate`…) · `camp-errors.ts` (DB алдаа → HTTP, нөөц хамгаалалт) · `camp-audit.service.ts` (`camp_audit_log`) · `camp-lookup.ts` (кемп байгаа эсэх — эрх шалгасны ДАРАА) · `camp-request.ts` (`reqUser(req)`) · `camp-i18n.ts`.
+- **Хэв маяг:** service-ийн public метод бүр `(tenantId, authId, campId, …)` → `withCampErrors(() => inTenantTx(...))` → эхэнд `access.require/requireAccess`. Эрхийн alias: `const P = CAMP_PERMISSIONS`.
+- **Шилжилт:** ажилтан / хэлтэс / ээлж / ирц / гэрээт байгууллага → HR модуль руу ([[ADR-006_HR_Core_Module]], v0.2.2).
+
+## camp/rbac
+- `camp-rbac.service.ts` (эрхийн каталог, роль, роль-эрх, `me/permissions`) · `camp-user-access.service.ts` (ажилтны картаас нэвтрэх эрх үүсгэх, урилга — v0.2.2 Блок 3) · `camp-employee-login.service.ts` (ажилтан ↔ хэрэглэгч холбох — Блок 2) · `template-diff.ts` (роль-загвар ↔ бодит эрхийн зөрүү, цэвэр функц).
+- **Хүснэгт:** `camp_permissions` (глобал), `camp_roles`, `camp_role_permissions`, `camp_user_roles`, **`camp_user_permissions`** (эцсийн эрхийн ганц эх сурвалж — Блок 1), `camp_position_role_templates`.
+- **Эрх:** `camp.roles.manage`. Загвар: [[ADR-003_Users_Login_Permissions]]. Тест: `camp-v022-perms`, `camp-master` integration.
+
+## camp/master
+- `camps.service.ts` (кемп — жагсаалт = хэрэглэгчийн эрхтэй кемп) · `camp-facilities.service.ts` (байр, өрөө; `room-range.ts` олон өрөө) · `camp-organizations.service.ts` (гэрээт байгууллага) · `camp-departments.service.ts` + `shift-pattern.ts` (хэлтэс, ээлжийн загвар) · `camp-crews.service.ts` (баг) · `camp-employees.service.ts` (ажилтан).
+- **Хүснэгт:** `camps`, `camp_buildings`, `camp_rooms`, `camp_organizations`, `camp_departments`, `camp_department_shift_patterns`, `camp_crews`, `camp_employees`.
+- **Эрх:** `camp.master.manage`, `camp.employee.manage`, `camp.room.manage`. Тест: `camp-master` integration, e2e `camp`.
+
+## camp/catalog
+- Байгууллагын каталог: албан тушаал (`camp_positions`, `camp_position_settings` — хоол/ээлж, `camp_position_shift_patterns`; v0.2.1 C-01), байрны төрөл (`camp_building_types`). Тест: `camp-v021` integration.
+
+## camp/settings
+- Кемпийн тохиргоо (НӨАТ, ростер, анхдагч хоолны байршил) — `camp_settings`, `camp_meal_locations`. Тохиргоогүй кемпэд DB DEFAULT-тай ижил анхдагч. Эрх: `camp.settings.manage`.
+
+## camp/attendance
+- **Ирц ба байрлалт.** `camp-attendance.service.ts` — xlsx импорт **PREVIEW → CONFIRM** (нэг tx, бүх мөр зөв үед л), гараар бүртгэл, байх хугацаа. Цэвэр функцүүд: `import-parser.ts` (mn/en/zh багана), `import-planner.ts`, `attendance-state.ts`, `roster.ts`, `shift-resolver.ts`, `meal-rules.ts`, `presence.ts`, `range.ts`, `camp-date.ts` (огноо = `'YYYY-MM-DD'` UTC string). `camp-shifts.service.ts` (ээлжийн зохицуулалт, календарь) · `camp-rooms.service.ts` (өрөө хуваарилалт, багтаамж — 28 хоногийн цонх) · `camp-presence.service.ts` (өдрийн хоолны суурь тоо — V2 хоолны захиалгын суурь).
+- **Хүснэгт:** `camp_movements`, `camp_movement_imports`, `camp_stays`, `camp_room_allocations`, `camp_shift_adjustments`.
+- **Эрх:** `camp.movement.import`, `camp.shift.adjust`, `camp.room.manage`. Тест: `camp-attendance` integration + `tests/__golden__` (golden файл), e2e `camp-ops`.
+- **HR руу шилжинэ** (ирц, ээлж — [[ADR-006_HR_Core_Module]]); өрөө/байрлалт кемпэд үлдэнэ.
+
+## camp/assets
+- Хөрөнгийн ангилал (tenant түвшин `/camp/asset-categories`) ба кемпийн хөрөнгө, хөдөлгөөн, акт. Хүснэгт: `camp_asset_categories`, `camp_assets`, `camp_asset_movements`. Эрх: `camp.asset.manage`. Тест: `camp-assets-maintenance` integration, e2e `camp-assets`.
+
+## camp/maintenance
+- Засварын хүсэлт + сэлбэг. **Төлвийн машин** `maintenance-flow.ts` (`TRANSITIONS`: start/complete → `parts`, reopen/close/cancel → `close`; өрөө түгжих/чөлөөлөх) — цэвэр өгөгдөл, unit тестээр бүрэн хамрагдсан. Хаахад сэлбэгийн зардал → `camp/costs`.
+- **Хүснэгт:** `camp_maintenance_requests`, `camp_maintenance_parts`. Эрх: `camp.maintenance.{create,parts,close}`.
+
+## camp/data
+- Excel / хүснэгтээр бөөнөөр оруулах, экспорт (v0.2.0 FB-02/FB-08): `camp-data-import.service.ts` (URL-ийн төрөл → handler), `departments.handler.ts`, `employees.handler.ts`, `rooms.export.ts`. Хүснэгт: `camp_data_imports`. Тест: `camp-data-import` integration.
+
+## camp/costs, camp/audit
+- `costs/cost-entry-writer.ts` — **нэгдсэн зардлын бичигч** (`camp_cost_entries` — тайлангийн ганц эх сурвалж, snapshot) · `vat.ts` (2 оронтой, ROUND_HALF_UP).
+- `audit/camp-audit.controller.ts` — `GET /camp/camps/:campId/audit` (`camp_audit_log`, v0.2.0 §0.4).
+
+## camp — V2 (кодгүй)
+- DB-д бий, service/API **хараахан алга** (D8 — V2): `camp_contracts*` (гэрээ, үнэ), `camp_haul_records` (бохир ус / хог), `camp_meal_orders`, `camp_meal_order_lines`. Эрх: `camp.contract.manage`, `camp.haul.*`, `camp.meal.*`, `camp.report.view`. Төлөвлөгөө: [[03_v0.2_full_plan]] (v0.2.3–v0.2.4).
