@@ -1,10 +1,13 @@
 ---
 title: "Core Kernel Platform DB Schema Spec"
 type: "Database"
-status: "Deprecated"
+status: "Archived"
 last_updated: 2026-10-13
 tags: [database]
 ---
+
+> 🗄 **Архив (2026-10-13):** 2026-09-ийн анхны хувилбар — одоогийн бодит байдалтай зөрнө (Kubernetes/gRPC/PgBouncer/`SET LOCAL`/Express г.м.). **Одоогийн баримт: [[03_DB_Catalog]].** Хөгжүүлэлтэд ашиглахгүй — зөвхөн түүх, санаа сэргээхэд.
+
 
 # Core Kernel Platform DB Schema Spec
 
@@ -12,7 +15,7 @@ tags: [database]
 
 **Document ID:** SEC-02  
 **Project:** S Project  
-**Location:** [[02_core_kernel_schema]]  
+**Location:** [[02_core_kernel_schema.v1]]  
 **Status:** Approved Technical Architecture  
 
 ---

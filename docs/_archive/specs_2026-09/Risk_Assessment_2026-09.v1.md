@@ -1,10 +1,13 @@
 ---
 title: "S Project - System Risk Assessment & Audit Report"
 type: "Log"
-status: "Active"
-last_updated: 2026-10-08
+status: "Archived"
+last_updated: 2026-10-13
 tags: [security]
 ---
+
+> 🗄 **Архив (2026-10-13):** 2026-09-ийн анхны хувилбар — одоогийн бодит байдалтай зөрнө (Kubernetes/gRPC/PgBouncer/`SET LOCAL`/Express г.м.). **Одоогийн баримт: [[ARCH-00_System_Overview]].** Хөгжүүлэлтэд ашиглахгүй — зөвхөн түүх, санаа сэргээхэд.
+
 
 S PROJECT: SYSTEM RISK ASSESSMENT & AUDIT REPORT
 Төсөл: S Project (Hybrid SaaS Multi-Tenant & Microkernel Architecture)

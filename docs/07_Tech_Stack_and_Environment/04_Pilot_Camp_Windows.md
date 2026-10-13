@@ -10,7 +10,7 @@ tags: [camp, pilot, stack]
 
 > Үүсгэсэн: 2026-10-10 (v0.1.6) | Байгууллага: **Sino Hydro** (`sinohydro`) | Модуль: **Кемп**
 > Холбоотой: `deploy/pilot/` (скрипт, тохиргоо), [[02_Local_Supabase_Docker_Windows]] (dev орчин),
-> [[03_Enterprise_VPC_Deployment]] (бүрэн VPC), [[lessons_learned]] §20
+> [[03_Enterprise_VPC_Deployment]] (бүрэн VPC), [[LL-03_Env_Ops_Pilot]] §20
 
 > **Пилотын хаяг (2026-10-13-аас): `https://sino.gobiverse.website`** — Cloudflare Tunnel (`cloudflared` Windows service), заавар [[05_Cloudflare_Tunnel]], шийдвэр [[ADR-005_Org_Connectivity_Domains]]. Tailscale Funnel **хаагдсан** (§7 — түүх/нөөц).
 

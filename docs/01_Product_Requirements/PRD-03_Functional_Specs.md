@@ -1,163 +1,56 @@
 ---
-title: "PRD-03_Functional_Specs"
+title: "PRD-03 — Функциональ тодорхойлолт (одоогийн модулиуд)"
 type: "PRD"
 status: "Active"
-last_updated: 2026-10-08
-tags: [core]
+last_updated: 2026-10-13
+tags: [prd, functional, camp, mr, auth]
 ---
 
-PRD-03: Functional Specifications & Reference Module (Material Requisition)
-Document ID: PRD-03
-Project: S Project
-Status: Approved
-Version: 1.1.0
-Owner: Lead IT Product Manager
+# PRD-03 — Функциональ тодорхойлолт (одоогийн модулиуд)
 
-1. Ерөнхий Зорилго
-Энэхүү баримт бичиг нь S Project-ийн Core Kernel болон Dynamic Reverse Proxy дээр ажиллах анхны суурь лавлах модуль болох Material Requisition (Бараа материалын шаардах хуудас)-ийн функциональ шаардлага, өгөгдлийн бүтэц, CRUD үйлдэл болон workflow-engine дундын модультой харилцах Approval State Machine-ийг тодорхойлно.
+> Хувилбар 2.0 (2026-10-13, бүрэн шинэчилсэн). **Юу хийдэг** (бизнесийн дүрэм) — энд; **хэрхэн** (файл, endpoint, хүснэгт) — [[01_Backend_Modules]], [[02_API_Catalog]], [[03_DB_Catalog]]. Хувилбар бүрийн өөрчлөлт: [[CHANGELOG]]. Анхны MR spec (event-д суурилсан workflow, `FULFILLED`, manifest): [[PRD-03_Functional_Specs.v1]] — архив.
+> Тэмдэглэгээ: ✅ хэрэгжсэн · 🔄 хийгдэж буй · 📋 төлөвлөсөн (хувилбар).
 
-2. Shared System Integration: workflow-engine
-Core Kernel "Zero Business Logic" байх тул шаталсан зөвшөөрлийн матриц нь Core дотор БИШ, дундын workflow-engine систем модульд төвлөрнө.
-Харилцааны зарчим:
-Material Requisition модуль нь зөвхөн баримтын DRAFT, төлөв хадгалалт болон бизнес валидацийг хариуцна.
-Баримт илгээгдэх үед (SUBMIT) уг модуль Core Event Bus-аар workflow.instance.start эвентийг илгээнэ.
-workflow-engine нь тухайн байгууллагын дүрэм (хэлтэс, төсөвт өртөг, албан тушаал)-ийн дагуу батлах дарааллыг үүсгэж удирдан, шат бүрийн үр дүнг эвентээр буцаана.
-Material Requisition модуль нь уг эвентийг сонсож өөрийн статусыг шинэчилнэ.
+## 1. Нэвтрэлт ба хэрэглэгч (✅ v0.2.2 Блок 1–3, 🔄 Блок 4–6)
+- Нэвтрэх: **утас (8 орон)** · username (утасгүй/гадаад ажилтан) · имэйл + нууц үг; server sign-in. Нэг бүртгэлд 15 минутад 5 буруу → 15 минут түгжинэ.
+- Хэрэглэгчийг **ажилтны картаас** үүсгэнэ → урилга: линк хуулах (72 цаг, нэг удаа) эсвэл имэйл (SMTP). "Нууц үг мартсан" — имэйлээр 1 цагийн линк; хариу үргэлж ижил (хэрэглэгч байгаа эсэхийг илчлэхгүй).
+- Анх нэвтрэхэд эсвэл админ шаардвал нууц үг солих (`must_change_password`).
+- Эрх: албан тушаал = эрхийн загвар; эцсийн эрх хэрэглэгч дээр (`camp_user_permissions`); загвар өөрчлөхөд preview → хэрэгжүүлэх.
+- 🔄 Блок 4: хэрэглэгч удирдах UI · Блок 5: профайл, **ажлаас гаргах** (огноо + шалтгаан, өрөө автоматаар чөлөөлөх, дахин орвол шинэ бүртгэл) · Блок 6: release. Дэлгэрэнгүй: [[07_v0.2.2_tech_plan]].
 
-3. Өгөгдлийн Бүтэц (Data Schema)
-3.1 Хүснэгт: mr_headers
-id (UUIDv7, Primary Key)
-tenant_id (UUIDv7, Indexed - PostgreSQL RLS-д ашиглагдана)
-mr_number (VARCHAR(50), Unique per Tenant, Жишээ нь: MR-2026-0001 эсвэл Tier 3-д MR-CAMP01-2026-0001)
-requested_by (UUIDv7, User ID)
-department_id (UUIDv7, Department ID)
-required_date (DATE, Шаардагдах огноо)
-priority (ENUM: LOW, NORMAL, HIGH, EMERGENCY)
-status (ENUM: DRAFT, PENDING_APPROVAL, PROVISIONALLY_APPROVED, APPROVED, REJECTED, FULFILLED, CANCELLED)
-total_estimated_amount (DECIMAL(18, 2), Нийт тооцоолсон дүн)
-purpose (TEXT, Шаардлагын зорилго, үндэслэл)
-rejection_reason (TEXT, Nullable, Татгалзсан шалтгаан)
-created_at, updated_at (TIMESTAMPTZ)
-3.2 Хүснэгт: mr_items
-id (UUIDv7, Primary Key)
-mr_id (UUIDv7, Foreign Key -> mr_headers.id, ON DELETE CASCADE)
-tenant_id (UUIDv7, Foreign Key)
-item_code (VARCHAR(50), Барааны код)
-item_name (VARCHAR(255), Барааны нэр)
-quantity (DECIMAL(12, 2))
-uom (VARCHAR(20), Хэмжих нэгж)
-estimated_unit_price (DECIMAL(18, 2))
-notes (VARCHAR(255))
+## 2. Кемп модуль
+### 2.1 Мастер өгөгдөл (✅)
+Кемп, байр (байрны төрөл), өрөө (олон өрөө нэг дор — дугаарын муж ≤ 500), хэлтэс (ээлжийн загвар), ростер (баг), гэрээт байгууллага, албан тушаал (хоолны байршил, өдөр/шөнийн ээлж — кемп тус бүрд анхдагч), хоолны байршил. Excel / "хүснэгтээр" бөөнөөр оруулах (ажилтан, хэлтэс): байгаа код = шинэчлэх; preview → confirm. Өөрчлөлтийн түүх (append-only audit).
 
-4. CRUD Эрхийн Матриц
-Үйлдэл (Action)
-Draft
-Pending Approval
-Approved / Provisionally Approved
-Rejected / Fulfilled / Cancelled
-Create
-Эрх бүхий ажилтан үүсгэнэ
-Хориглоно
-Хориглоно
-Хориглоно
-Read
-Үүсгэгч ажилтан, шууд удирдлага
-Үүсгэгч, Тухайн шатны Батлагч нар
-Бүх оролцогчид, Нярав, Санхүү
-Архивын хяналтын эрхтэй хэрэглэгчид
-Update
-Зөвхөн үүсгэгч ажилтан
-Засварлах боломжгүй (Locked)
-Засварлах боломжгүй (Locked)
-Засварлах боломжгүй (Locked)
-Delete
-Зөвхөн үүсгэгч ажилтан (Soft delete)
-Устгах боломжгүй
-Устгах боломжгүй
-Устгах боломжгүй
+### 2.2 Ажилтан (✅ → 🔄 HR руу)
+Код, нэр, утас, имэйл, байгууллага, хэлтэс, ростер, албан тушаал, хоолны байршил (override), **хоол авахгүй** (ирцэд тоологдох ч хоолонд орохгүй), төлөв. v0.2.2-д HR модуль руу шилжинэ ([[ADR-006_HR_Core_Module]]).
 
+### 2.3 Ирц, байрлалт, ээлж (✅)
+- Ирэлт/явалт: xlsx импорт (mn/en/zh багана) **preview → confirm** (бүх мөр зөв үед л), гараар, олон хүн нэг дор.
+- Байх хугацаа (stay), өрөө хуваарилалт (28 хоногийн багтаамжийн шалгалт), өрөөний самбар (Сул / Дутуу / Дүүрсэн / Хэтэрсэн).
+- Ээлж: албан тушаал → хэлтсийн загвар; бөөнөөр зохицуулах, календарь. Шүүлт: хэлтэс/ростер/албан тушаал/ээлж.
+- **Хоолны тоо:** өдрийн ирцээс хоолны байршил × хоолны төрлөөр (ажилтан → албан тушаал → кемпийн анхдагч); өдрийн хоол ÷ 3 = хүн-өдөр.
+- 📋 v0.2.3: C-13 календарь дээр шууд засах (→ HR).
 
-5. Approval State Machine Logic
-                       ┌────────────────────────┐
-                       │         DRAFT          │
-                       └───────────┬────────────┘
-                                   │
-                             (SUBMIT_EVENT)
-                                   │
-                                   ▼
-                       ┌────────────────────────┐
-        ┌─────────────>│    PENDING_APPROVAL    │<─────────────┐
-        │              └───────────┬────────────┘              │
-        │                          │                           │
-(Дараагийн шат руу:                ├──(REJECT_EVENT)─────────> [ REJECTED ]
- Next Approver)                    │                           │
-        │                          │                           │
-        └───────(APPROVE_STEP)─────┤                           │
-        [Хэрэв олон шатлалт        ▼ (Бүх шат дууссан үед)     │
-         батлах шаардлагатай бол] ┌────────────────────────┐   │
-                                  │        APPROVED        │   │
-                                  └───────────┬────────────┘   │
-                                              │                │
-                                        (FULFILL_EVENT)        │
-                                              │                │
-                                              ▼                │
-                                  ┌────────────────────────┐   │
-                                  │       FULFILLED        │   │
-                                  └────────────────────────┘   │
-                                                               │
-  * Хүсэлт гаргагчийн хүсэлтээр (DRAFT эсвэл PENDING үед): ────┴─> [ CANCELLED ]
-5.1 Төлөв Шилжилтийн Дүрмүүд:
-DRAFT -> PENDING_APPROVAL (SUBMIT):
-Валидаци: Хамгийн багадаа 1 мөр бараа орсон байх (items.length > 0), required_date ирээдүйн огноо байх, нийт дүн тооцоологдсон байх.
-Баримт шууд түгжигдэж (Read-Only) workflow.instance.start эвент цацагдана.
-PENDING_APPROVAL -> APPROVED (APPROVE):
-Tier 1: 1 шатлалт зөвшөөрөл (Хэлтсийн удирдлага зөвшөөрснөөр шууд APPROVED).
-Tier 2: Олон шатлалт урсгал (Шат 1: Хэлтсийн дарга -> Шат 2: Санхүү / Төсвийн хянагч).
-Tier 3 (Offline Edge Case): Офлайн орчинд криптограф түлхүүрээр гарын үсэг зурагдсан бол локал түвшинд PROVISIONALLY_APPROVED төлөвт шилжиж агуулахаас талбарт бараа гаргах эрх нээгдэнэ. Сүлжээ сэргэх үед төв серверт баталгаажиж APPROVED болно.
-PENDING_APPROVAL -> REJECTED (REJECT):
-Батлагч татгалзах үед заавал rejection_reason тайлбар бичнэ.
-Баримтын статус шууд REJECTED болж, хүсэлт гаргагчид мэдэгдэл очно.
-APPROVED -> FULFILLED (FULFILL):
-Нярав/Хангамжийн ажилтан агуулахаас барааг бүрэн олгож дууссанаар FULFILLED төлөвт шилжинэ.
+### 2.4 Хөрөнгө ба засвар (✅)
+- Хөрөнгийн ангилал (tenant), хөрөнгө (өрөө эсвэл байранд), хөдөлгөөн, акт (write-off). 📋 v0.2.3: C-10 хөрөнгийг ажилтанд бүртгэх.
+- Засварын хүсэлт: үүсгэх (ажилтан ч), төлөв `OPEN → IN_PROGRESS → DONE → CLOSED` (+ reopen, cancel), өрөө түгжих/чөлөөлөх, сэлбэг (зардал хаахад зардлын бүртгэлд). Эрх: үүсгэх / сэлбэг / хаах.
 
-6. Manifest.json Тодорхойлолт
-Модуль Core Kernel-д бүртгүүлэхдээ дараах метадатаг илгээнэ:
-{
-  "module_id": "material-requisition",
-  "name": "Бараа материалын шаардах хуудас",
-  "version": "1.0.0",
-  "dependencies": ["core-engine", "workflow-engine"],
-  "permissions": [
-    "requisition.create",
-    "requisition.read",
-    "requisition.update",
-    "requisition.delete",
-    "requisition.approve",
-    "requisition.fulfill"
-  ],
-  "api_routes": {
-    "base_path": "/api/v1/requisitions",
-    "target_port": 4001
-  },
-  "ui_hooks": {
-    "sidebar_menu": {
-      "label": "Шаардах хуудас",
-      "icon": "clipboard",
-      "path": "/requisitions"
-    }
-  },
-  "events_emitted": [
-    "requisition.created",
-    "requisition.submitted",
-    "requisition.approved",
-    "requisition.rejected",
-    "requisition.fulfilled"
-  ],
-  "events_listened": [
-    "workflow.step.approved",
-    "workflow.completed",
-    "workflow.rejected",
-    "inventory.stock.issued"
-  ]
-}
+### 2.5 Тохиргоо, орчуулга (✅)
+НӨАТ, ростер, анхдагч хоолны байршил; Системийн тохиргоо (байгууллага, роль, хэрэглэгчийн эрх, каталог); орчуулгыг Excel/CSV-ээр засах (OWNER/ADMIN).
 
+### 2.6 Кемп V2 (📋 v0.2.3–v0.2.4)
+Гэрээ + үнэ (V2-01), тээвэр / бохир ус, хог (V2-02; катеринг бүртгэж менежер батлах), хоолны захиалга (V2-03, ирцийн хоолны тоо дээр), зардлын тайлан гэрээний үнээр (V2-04). DB хүснэгт ба эрхийн код бэлэн, код хараахан алга. Төлөвлөгөө: [[03_v0.2_full_plan]], [[01_plan_and_erd]].
+
+## 3. Шаардах хуудас (MR) ба workflow (✅ v0.1)
+- Төлөв: `DRAFT → PENDING_APPROVAL → APPROVED / REJECTED`, `CANCELLED`. (`PROVISIONALLY_APPROVED` — Tier 3-т нөөцөлсөн, ашиглагдаагүй; `FULFILLED` — хэрэгжээгүй.)
+- Илгээх нөхцөл: ≥ 1 мөр бараа, шаардах огноо ирээдүйд. Татгалзахад шалтгаан заавал. **Үүсгэгч өөрөө батлахгүй** (SEC-004).
+- Батлалт = workflow definition: олон алхам, дүнгийн дүрэм (amount router), quorum, SLA + escalation (15 мин тутам), төлөөлөл (delegation). Definition-ийг OWNER/ADMIN удирдана.
+- Төлөв солигдоход **тухайн transaction дотор**: tenant төсөвтэй бол хэлтсийн төсөв шалгаж үлдэгдэл барина; агуулахад нөөцөлнө (дутвал боломжтойг нөөцөлж дутууг тэмдэглэнэ). Аль нэг нь алдаа өгвөл бүгд буцна.
+- Event: `MR_SUBMITTED` / `MR_APPROVED` / `MR_REJECTED` (outbox). Realtime: нээлттэй MR-ийн хуудас шинэчлэгдэнэ.
+
+## 4. Lite модулиуд (✅ v0.1.5 — туршилтын)
+Budget (үе, хуваарилалт, амлалт) · Inventory (бараа, нөөцлөл) · Vendor (CRUD) · Report (MR/төсөв/агуулахын нэгдсэн тойм). Шинэ модулийн загвар болгон ашиглана.
+
+## 5. Ирээдүйн модулиуд
+Дотоод Feed (v0.3 — [[PRD-05_Internal_Social_Feed]]), нийтийн сүлжээ ба худалдаа ([[PRD-06_Vision_Business_Model]]), HR-ийн ирцийн бүрэн загвар (томоохон ERP-ийн жишгээр судалсны дараа — [[ADR-006_HR_Core_Module]]).

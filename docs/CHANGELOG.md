@@ -17,10 +17,18 @@ tags: [release]
 
 ## [Unreleased]
 
+### Баримт бичиг — бүрэн шинжилгээ, context хэмнэлт (2026-10-13)
+- **[[CONTEXT]]** — Claude-ийн ганц эхлэх цэг (ажлын төрөл → файл, дүрэм, мэдээллийн ганц эх сурвалж)
+- 2026-09-ийн spec-үүдийг **бүрэн шинэчилсэн**: [[PRD-01_Core_Vision]], [[PRD-02_Tenant_Tiers]], [[PRD-03_Functional_Specs]], [[PRD-04_UI_UX_Architecture_Spec]], [[ARCH-05_UI_UX_Architecture_Spec]], [[01_Core_API_Gateway_ReverseProxy_Spec]], [[01_PostgreSQL_MultiTenant_RLS_Spec]], [[01_Tech_Stack_Decision]]; шинэ [[ARCH-00_System_Overview]]; хуучныг `_archive/specs_2026-09/` (`.v1`)
+- `lessons_learned` → `lessons/LL-01…07` + **автомат индекс** (152 ID); `pnpm docs:check` — vault шалгалт (frontmatter, линк, orphan, lessons ID)
+- Давхардал арилгасан: хувилбарын хүснэгт зөвхөн [[01_Development_Roadmap]]; [[project-status]], [[00_rules_and_context]], Roadmap-ийг товчилж түүхийг `_archive/`-д
+- Төлөвлөгөөний зөрчил: backlog-д "Төлөв" багана, C-10/C-13 → v0.2.3, V2-03 → v0.2.4; гарсан хувилбарын tech plan → Archived; Кемп төлөвлөгөөнд ADR-006 анхааруулга
+- [[LL-07_Docs]]: DOC-003 (ганц эх сурвалж)
+
 ### Баримт бичиг — Codebase Atlas (2026-10-13)
 - `docs/09_Codebase/` — хөгжүүлэлтийн чат кодыг уншихгүйгээр контекст авах: [[00_Codebase_Map]] (эхлэх цэг), [[01_Backend_Modules]], [[04_Frontend_Map]], [[08_Patterns]]
 - Автомат каталог `pnpm docs:gen` / `pnpm docs:check` (`scripts/docs/gen-codebase-docs.mjs`, Node-оос өөр хамааралгүй): API (162 endpoint → service → эрх), DB (migration → хүснэгт/багана/RLS/policy), эрх + анхдагч роль, env + script, тест, frontend route
-- RULE-21 (баримтыг кодтой хамт шинэчлэх); [[02_core_kernel_schema]] → Deprecated
+- RULE-21 (баримтыг кодтой хамт шинэчлэх); [[02_core_kernel_schema.v1]] → архив
 
 ### Баримт бичиг — Obsidian vault (2026-10-13)
 - `docs/` = Obsidian vault: бүх `.md` (68) файлд YAML frontmatter (`title`, `type`, `status`, `last_updated`, `tags`)
@@ -30,7 +38,7 @@ tags: [release]
 - `_learning/` → `docs/_learning/` (git-ээс нуусан хэвээр: `.gitignore` `/docs/_learning/`); `build_pdf.py` frontmatter алгасдаг болсон
 - Хуучирсан баримт засвар: [[project-status]], [[01_Development_Roadmap]] (v0.2.0/v0.2.1 ✅, Air-Gapped → v0.4.0+), [[00_rules_and_context]] толгой, [[08_v0.2.2_progress]] commit-ууд; пилотын хаяг → `sino.gobiverse.website` ([[04_Pilot_Camp_Windows]], [[pilot-test-guide]]; Funnel хаасан)
 - Шинэ шийдвэрийн баримт: [[ADR-006_HR_Core_Module]] (HR модуль), [[PRD-06_Vision_Business_Model]] (алсын хараа, бизнес загвар); [[PRD-05_Internal_Social_Feed]] / [[ADR-004_Feed_Architecture]]-д 2026-10-13 тэмдэглэл; [[ADR-005_Org_Connectivity_Domains]] §2.4 нүүр хуудас
-- [[lessons_learned]] §24: MIG-002 (migration дугаарын дараалал)
+- [[LL-06_Camp_v02]] §24: MIG-002 (migration дугаарын дараалал)
 
 ### Нэмэгдсэн (v0.2.2 Блок 3 — урилга, нууц үг сэргээх)
 - Ажилтны картаас нэвтрэх эрх үүсгэх (имэйлгүй ажилтанд дотоод хаяг) — `POST /camp/camps/:campId/employees/:id/create-user`
@@ -179,7 +187,7 @@ tags: [release]
 ## [v0.1.6] — 2026-10-10 — Кемп пилот (нэг Windows машин, интернэтэд нээлттэй) ✅
 
 > Runbook: [[04_Pilot_Camp_Windows]] · Төлөвлөгөө: [[01_analysis_and_plan_2026-10-08]] (v0.1.6)
-> Сургамж: [[lessons_learned]] §20
+> Сургамж: [[LL-03_Env_Ops_Pilot]] §20
 
 ### ⚠️ Зан төлөвийн өөрчлөлт
 - **`POST /api/v1/auth/register` [SEC-005]:** зөвхөн OWNER/ADMIN; tenant = нэвтэрсэн хэрэглэгчийнх (Host header-ээс биш). UI ашигладаггүй.
@@ -266,7 +274,7 @@ tags: [release]
 
 ### Засагдсан / баримтжуулсан
 - RULE-12 (RLS загвар) [RLS-004]-тэй нийцүүлсэн: `AS PERMISSIVE TO app_user` + GRANT (өмнө нь байхгүй `s_project_app_user` + RESTRICTIVE гэж буруу заасан)
-- [[lessons_learned]] §15: ENV-009/010, TEST-007/008/009, PRISMA-003, VALID-001, CONC-001, PROC-003/004, FE-004
+- [[LL-06_Camp_v02]] §15: ENV-009/010, TEST-007/008/009, PRISMA-003, VALID-001, CONC-001, PROC-003/004, FE-004
 
 ---
 

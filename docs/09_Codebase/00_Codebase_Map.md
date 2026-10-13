@@ -14,7 +14,7 @@ tags: [codebase, moc, onboarding]
 
 ## 1. Унших дараалал (хөгжүүлэлтийн чат)
 
-1. [[INDEX]] → одоогийн спринтийн tech plan + progress (жишээ нь [[07_v0.2.2_tech_plan]], [[08_v0.2.2_progress]])
+1. [[CONTEXT]] (ажлын төрөл → файл) → [[project-status]] → одоогийн спринтийн tech plan + progress (жишээ нь [[07_v0.2.2_tech_plan]], [[08_v0.2.2_progress]])
 2. **Энэ файл** → даалгаварт хамаарах модулийн хэсэг [[01_Backend_Modules]] / [[04_Frontend_Map]]
 3. Хэрэгцээгээр **зөвхөн холбогдох хэсгийг**: endpoint → [[02_API_Catalog]], хүснэгт → [[03_DB_Catalog]], эрх → [[05_Permissions_Catalog]], тест → [[07_Test_Map]]
 4. Код бичих дүрэм → [[08_Patterns]] (RULE-01~21-ийн хураангуй + жишээ файл), алдааны сургамж → [[lessons_learned]]

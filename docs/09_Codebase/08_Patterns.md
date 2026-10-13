@@ -93,4 +93,4 @@ SELECT camp_apply_tenant_rls('camp_example');  -- ENABLE + FORCE + policy + GRAN
 - [ ] Migration бол: local reset + `db:generate`; staging-д шалгах зүйлс progress-д бичсэн
 - [ ] `pnpm docs:gen` → `pnpm docs:check` ✓ (RULE-21)
 - [ ] [[01_Backend_Modules]] / [[04_Frontend_Map]]-ийн хамаарах хэсэг шинэчлэгдсэн
-- [ ] Спринтийн progress + [[project-status]]; алдаа гарсан бол [[lessons_learned]]
+- [ ] Спринтийн progress + [[project-status]]; алдаа гарсан бол `lessons/LL-*.md`-д `[ID]` (индекс [[lessons_learned]] автомат)

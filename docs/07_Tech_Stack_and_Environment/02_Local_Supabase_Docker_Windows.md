@@ -8,7 +8,7 @@ tags: [supabase, stack]
 
 # 02 — Local орчин: Supabase + Redis on Docker (Windows)
 
-> Шинэчлэгдсэн: 2026-10-10 (v0.1.5: `app_user` холболт, тест командууд) · 2026-10-08 (шинэ машин дээр бүрэн туршсан) | Холбоотой: `README.md` → Quick Start, `supabase/config.toml`, `docker-compose.dev.yml`, [[lessons_learned]] §12
+> Шинэчлэгдсэн: 2026-10-10 (v0.1.5: `app_user` холболт, тест командууд) · 2026-10-08 (шинэ машин дээр бүрэн туршсан) | Холбоотой: `README.md` → Quick Start, `supabase/config.toml`, `docker-compose.dev.yml`, [[LL-03_Env_Ops_Pilot]] §12
 
 S Project-ийн local хөгжүүлэлтэд **хоёр бүлэг контейнер** Docker Desktop дээр ажиллана:
 

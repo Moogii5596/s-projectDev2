@@ -1,0 +1,238 @@
+---
+title: "Lessons — Кемп модуль ба v0.2.x"
+type: "Log"
+status: "Active"
+last_updated: 2026-10-13
+tags: [lessons]
+---
+
+# Lessons — Кемп модуль ба v0.2.x
+
+> Индекс (ID → дүрэм): [[lessons_learned]]. Дэлгэрэнгүйг зөвхөн индексээс ID-гаа олсны дараа унш. Хэсгийн дугаар (§N) анхны нэгтгэсэн файлынхтай ижил.
+
+## 15. Camp Module (2026-10-09)
+
+### [ENV-009] PowerShell pipe (`Get-Content ... | docker exec -i ... psql`) кирилл үсгийг `?` болгодог
+**Алдаа:** `camp_schema_test.sql`-ийг pipe-ээр өгөхөд NOTICE-ууд `????` болж гарсан — зөвхөн дэлгэц биш, **SQL текст өөрөө** эвдэрнэ (`'Кемп админ'` → `'?????'`) → өгөгдөл буруу бичигдэх / тест худал унах эрсдэлтэй.
+**Шалтгаан:** Windows PowerShell 5.1-ийн `$OutputEncoding` анхдагчаар US-ASCII — native програм руу pipe хийхэд ASCII-аас бусад тэмдэгт `?` болно.
+**Шийдэл:** Файлыг контейнер руу хуулж `-f`-ээр ажиллуулна: `docker cp file.sql "${db}:/tmp/x.sql"` → `docker exec $db psql ... -f /tmp/x.sql`. Гаралтыг уншихад `[Console]::OutputEncoding = [Text.UTF8Encoding]::new()`.
+**Дүрэм:** Монгол текст агуулсан SQL-ийг PowerShell pipe-ээр ХЭЗЭЭ Ч өгөхгүй.
+
+### [TEST-007] Supabase local-д `postgres` superuser биш → `SET ROLE app_user` хориотой
+**Алдаа:** `ERROR: permission denied to set role "app_user"` (RLS тест `app_user` болж шилжих үед).
+**Шалтгаан:** Supabase-ийн `postgres` role нь BYPASSRLS-тэй ч superuser биш, `app_user`-ийн гишүүн биш. Cloud-ийн цэвэр PostgreSQL дээр `postgres` = superuser байсан тул тест тэнд давсан — орчны ялгаа.
+**Шийдэл:** SQL-ээр RLS тест хийхдээ Supabase-ийн superuser `supabase_admin`-аар холбогдоно: `docker exec -e PGPASSWORD=postgres $db psql -h 127.0.0.1 -U supabase_admin ...`. (`GRANT app_user TO postgres` хийхгүй — role-ийн эрхийг байнга өөрчилнө.)
+**Дүрэм:** Supabase дээр ажиллах SQL скриптийг бичихдээ `postgres` = superuser гэж бүү тооц (RLS-002-той холбоотой: bypass нь BYPASSRLS-ээс, superuser-ээс биш).
+
+
+### [ENV-010] Төслийн хавтсыг зөөсний дараа `tsc`: `Cannot find module '@s-project/shared-types'`
+**Алдаа:** `TS2307` — `import type { RequestUser } from '@s-project/shared-types'` бүхий 5 controller. Код өөрчлөгдөөгүй.
+**Шалтгаан:** pnpm (Windows) workspace package-ийг **junction**-оор холбодог, junction нь **бүтэн замтай**. Төслийг `E:\MoogiiDev\s-project` → `E:\MoogiiDev\Dev\s-project` зөөхөд `apps/core-kernel/node_modules/@s-project/*` хуучин зам руу заасаар үлдэж тасарсан.
+**Оношлох:** `(Get-Item apps\core-kernel\node_modules\@s-project\shared-types).Target` → хуучин зам гарвал энэ.
+**Шийдэл:** `pnpm install --frozen-lockfile` (node_modules-ийг дахин үүсгэнэ; `pnpm dev` зогссон байх [ENV-006]).
+**Дүрэм:** Төслийн хавтсыг зөөх/нэр солих бүрт `pnpm install` заавал.
+
+
+### [PRISMA-003] Prisma 5-ийн DB алдааны мессеж Rust Debug хэлбэртэй — хашилт escape-тэй (`\"`)
+**Алдаа:** `camp-errors.ts` EXCLUDE/CHECK алдааг 409/400 болгож чадаагүй (integration 2/25 унав) — unit тест давсан, учир нь тестийн мессежийг гараар "цэвэр" хэлбэрээр бичсэн байсан.
+**Шалтгаан:** `PrismaClientUnknownRequestError.message` = `... PostgresError { code: "23514", message: "... violates check constraint \"camp_rooms_capacity_check\"" ... }` — regex `constraint "(...)"` нь `\"`-тэй таарахгүй. Trigger-ийн мессеж (`CAMP_*: ...`) хашилтгүй тул давсан.
+**Шийдэл:** мессежийг эхлээд `.replace(/\\"/g, '"')`-ээр хэвийн болгох + SQLSTATE (`code: "23P01"` EXCLUDE, `"23514"` CHECK)-ээр нөөц таних. Unit тестэд Prisma-гийн бодит хэлбэрийн мессеж нэмсэн.
+**Дүрэм:** DB/гадаад системийн алдааны текстэд тулгуурласан код бичихдээ (1) mock-ийн мессежийг **бодит гаралтаас хуулж** бичнэ, (2) integration тестэд бодит алдаан дээр баталгаажуулна, (3) боломжтой бол текст биш код (SQLSTATE)-оор танина.
+
+
+### [VALID-001] 🔴 `enableImplicitConversion` → query `?activeOnly=false` нь `true` болдог
+**Алдаа:** main.ts-ийн ValidationPipe `transformOptions: { enableImplicitConversion: true }` — class-transformer нь `@Transform`-оос ӨМНӨ declared type-аар хөрвүүлнэ: `Boolean('false') === true`. `@Transform(({ value }) => value === 'true')` нь аль хэдийн `true` болсон утга авна → `?activeOnly=false` = шүүлттэй. Camp, vendor (`activeOnly`), inventory (`lowStock`), budget (`activeOnly`) — бүгд нөлөөлөгдсөн.
+**Яагаад нуугдсан:** integration тестүүд `new ValidationPipe({ whitelist: true, transform: true })` — main.ts-ээс ӨӨР тохиргоо (implicit conversion, forbidNonWhitelisted байхгүй).
+**Шийдэл:** `src/common/utils/query-bool.ts` → `queryBool` анхны утгыг (`obj[key]`) уншина; 4 модульд хэрэглэсэн. Camp integration тестүүд main.ts-тэй ИЖИЛ pipe ашигладаг болсон + регресс тест (хуучин кодоор унадгийг шалгасан).
+**Дүрэм:** (1) Query boolean → ЗААВАЛ `@Transform(queryBool)`. (2) Integration тестийн app тохиргоо (pipe, prefix, plugin) main.ts-тэй ИЖИЛ байх — өөр бол production алдааг нуудаг. (3) ✅ Шат 4.0: `src/common/http/configure-app.ts` → `main.ts` ба БҮХ integration spec `await configureApp(app)` (шинэ spec ч заавал).
+
+---
+
+### [CONC-001] 🔴 Snapshot бичих (засвар хаах → зардал) ба дэд мөр (сэлбэг) өөрчлөх race — trigger-ийн SELECT түгжээ авдаггүй
+**Илэрсэн:** Шат 4.4 дизайн шалгалт (Шат 1-ийн `camp_maintenance_parts_protect` trigger). Production-д гараагүй.
+**Алдаа:** Trigger хүсэлтийн төлвийг энгийн `SELECT`-ээр уншдаг байсан. READ COMMITTED-д: A transaction засварыг CLOSED болгож сэлбэгийг уншиж зардал бичиж байх зуур B transaction сэлбэг нэмбэл B-ийн trigger commit хийгдээгүй CLOSED-ийг харахгүй (DONE гэж харна) → сэлбэг нэмэгдэнэ, харин зардалд ОРОХГҮЙ → тайлан ба сэлбэгийн жагсаалт зөрнө.
+**Шийдэл:** (1) Migration `20261010002` §4: trigger `SELECT ... FOR SHARE` — хаах transaction-ийн мөрийн түгжээг хүлээгээд CLOSED-ийг харж татгалзана. (2) Хаах үед төлвийг ЭХЛЭЭД CLOSED болгож (мөр түгжигдэнэ), ДАРАА нь сэлбэг уншина → өмнө нь эхэлсэн сэлбэгийн transaction commit хийгдтэл UPDATE хүлээнэ. Хоёр чиглэлийг 2 psql session-оор шалгасан (хүлээгээд татгалзсан / хоцорсон сэлбэгийг харсан).
+**Дүрэм:** Эцэг мөрийн төлвөөс хамаарч дэд мөр бичихийг хориглох trigger/код → эцэг мөрийг `FOR SHARE` (эсвэл `FOR UPDATE`)-ээр унш. "Төлөв солих + дэд мөрөөс snapshot" үйлдэлд төлвийг эхэлж сольж, дараа нь дэд мөрийг унш. Нэгээс олон хүсэлт нэг нөөцийг (өрөөний төлөв) суллах/түгжих бол нөөцийн мөрийг `FOR UPDATE`-аар түгж.
+
+---
+
+### [PROC-003] Ажлын хавтсанд тасарсан өмнөх оролдлогын commit хийгдээгүй файлууд үлдэж шинэ кодтой холилдсон
+**Тохиолдсон:** Шат 8 багц 1 (web-shell). Өмнөх (хадгалагдаагүй, таны машин руу бичигдээгүй) оролдлогын `modules/camp/*`, `App.tsx`/`Layout.tsx` өөрчлөлт, e2e spec cloud-ийн хавтсанд үлдсэн байв. Шинэ кодын 4 файл хуучинг нь дарж бичиж, хоёр өөр бүтэц (`campApi.ts` ↔ `camp-api.ts`, `shiftPattern.ts` ↔ `shift-pattern.ts`, `routes.tsx` ↔ `CampRoutes.tsx`) зэрэгцэн оршсон; `App.tsx` хоёр давхар route-тэй болсон.
+**Шийдэл:** Хуучин файлуудыг scratch руу нөөцлөөд устгасан; `App.tsx`, `Layout.tsx`-ийг HEAD-ээс сэргээгээд зөвхөн шинэ өөрчлөлтийг дахин хэрэглэсэн; таны машин дээр хуучин хувилбар байхгүйг (device_list_dir) шалгасан. Ашиглах боломжтой хэсгийг (e2e grant SQL, vitest config) хянаж, шинэ UI-д тааруулж үлдээсэн.
+**Дүрэм:** Багц/шат эхлэхийн өмнө `git status --short`-ийг ЗААВАЛ шалгаж, untracked/modified файл бүрийн гарал үүслийг тодруулна. Шинэ файл бичихэд "created" биш "updated" гэсэн хариу ирвэл зогсож шалгана.
+
+---
+
+### [TEST-008] Playwright: `getByLabel`/`getByRole(name)` анхдагчаар том жижиг үсэг үл харгалзсан ДЭД мөр хайдаг
+**Тохиолдсон:** Шат 8 багц 2 — хуурамч API-тай браузерын шалгалт, e2e dry-run. `getByLabel('Өрөө')` нь "Одоогийн өрөөг …" checkbox болон dialog-ийн `aria-label`-тай ("Өрөө шилжүүлэх") давхцаж strict mode алдаа өгсөн; `'Эхлэх огноо'`, `'Ээлж'` (↔ "Хэлтэс, ээлж" холбоос), `'1-р өдөр'` (↔ "11-р өдөр") мөн адил. `<span>{code}</span>{name}` хоорондоо зайгүй тул нэр "E1Бат" болж regex таараагүй. `<th>` нь `scope`-гүй үед columnheader гэж танигдаагүй.
+**Шийдэл:** Тогтмол шошгод `{ exact: true }`; нэр/кодын хооронд `{' '}`; хүснэгтийн толгойд `scope="col"`; давтагдах элементэд (өрөөгүй ажилтны chip) `role="group"` + `aria-label`.
+**Дүрэм:** e2e/UI тест бичихдээ богино шошгыг ЗААВАЛ `exact`; spec-ийг таны машинд өгөхөөс өмнө хуурамч backend дээр dry-run хийнэ (энэ удаа spec-ийн 2 selector-ийн алдааг илрүүлсэн).
+**Дахин (багц 3, dry-run-аас ӨМНӨ кодыг уншихад илэрсэн):** `Modal`-ын "×" товч `aria-label="Хаах"` тул `getByRole('button', { name: /Хаах/ })` нь "Хаах (зардал бүртгэх)" товчтой давхцана → бүтэн нэрээр сонгосон. Дүрэм нэмэлт: цонх доторх товчийг сонгохдоо ui-kit-ийн өөрийн товчны нэр ("Хаах", "Болих")-тэй давхцах эсэхийг шалгана.
+
+### [TEST-009] Playwright route interception multipart файлын агуулгыг дамжуулдаггүй (`postDataBuffer` хоосон)
+**Тохиолдсон:** Шат 8 багц 2 — xlsx upload-ийн mock шалгалт "file талбар/xlsx алга" гэж унасан; бодит алдаа биш (CDP файл blob-ийг interception-д өгдөггүй).
+**Шийдэл:** Upload-ийг `route.continue()`-ээр vite proxy → жижиг echo сервер (localhost:3000) руу бодитоор илгээж байт, boundary, файлын нэрийг шалгасан (6512 байт xlsx → 6750 байт multipart). UI урсгалын mock нь зөвхөн Content-Type-ийг шалгана. Мөн axios-ийн анхдагч `Content-Type: application/json` FormData-г JSON болгодог тул upload-д `'multipart/form-data'` гэж тодорхой өгсөн (boundary-г browser нэмнэ).
+**Дүрэм:** Файл илгээх хүсэлтийг mock interception-ээр биш бодит HTTP-ээр шалгана; axios-ийн JSON анхдагчтай client-ээр FormData илгээхдээ Content-Type-ийг тодорхой заана.
+
+### [FE-004] Шат 8 frontend — хуурамч API-тай браузерын шалгалтаар илэрсэн UI алдаанууд (хэрэглэгчид хүрэхээс өмнө зассан)
+**Тохиолдсон:** Шат 8 багц 1–2 (cloud дээр tsc/eslint + 1400px/390px браузер шалгалт).
+1. `// eslint-disable-next-line react-hooks/exhaustive-deps` → web-shell-ийн eslint-д react-hooks plugin **байхгүй** тул "Definition for rule … was not found" алдаа. **Шийдэл:** ийм comment бичихгүй; dependency-г зөв өгөх эсвэл логикийг effect-ээс гаргах.
+2. Браузерын native validation (`required`, `type=number`) **англи** мессеж харуулсан. **Шийдэл:** form-д `noValidate`, шалгалтыг монгол мессежтэйгээр өөрсдөө (эсвэл backend-ийн монгол алдааг `ErrorBox`-оор).
+3. 390px-д хэвтээ гүйлгээ гарсан (grid, урт товч, nav). **Шийдэл:** `grid-cols-1 sm:grid-cols-N`, Card-д `min-w-0`, товчинд `whitespace-nowrap`, nav `flex-wrap`/`overflow-x-auto`; хүснэгт card дотроо гүйлгэгдэнэ.
+4. Tailwind class давхцал (`inputCls` + `py-1 text-sm` → аль нь ялах нь CSS-ийн дарааллаас хамаарна). **Шийдэл:** тусдаа `inputSmCls` хувилбар.
+5. `window.prompt` (нэр засах) — тест хийх боломжгүй, mobile-д муу. **Шийдэл:** inline засвар.
+**Дүрэм:** UI багц бүрийг хэрэглэгчид өгөхөөс өмнө 1400px + 390px-д `scrollWidth ≤ innerWidth` шалгаж, screenshot-оор нүдээр харна; native dialog/validation ашиглахгүй.
+
+### [PROC-004] Баримт засахад Python `open()` текст горим CRLF файлыг бүхэлд нь LF болгосон
+**Тохиолдсон:** Шат 9 — [[CHANGELOG]], [[project-status]], [[00_rules_and_context]] (CRLF) дээр хэдхэн мөр нэмэхэд `git diff --stat` 387/328/168 мөр өөрчлөгдсөн гэж харуулсан (universal newlines уншихдаа `\r\n` → `\n`, бичихдээ `\n`). Төхөөрөмж рүү хадгалахаас ӨМНӨ илэрсэн.
+**Шийдэл:** Мөрийн төгсгөлийг сэргээсэн (`sed 's/$/\r/'`) → diff зөвхөн нэмсэн мөрүүд.
+**Дүрэм:** Засварлах скриптэд `open(p, newline='')`; засварын дараа `git diff --stat`-ийн мөрийн тоо нь бодит өөрчлөлттэй таарч байгааг заавал шалгана (CRLF: `App.tsx`, `Layout.tsx`, `web-shell/package.json`, эдгээр 3 баримт).
+
+## 21. v0.2.0 — Олон хэл, бөөнөөр оруулах, staging/upgrade (2026-10-11)
+
+### [FE-008] Тохиргооны каталогийн линк кемпээс гаргаж хаяв
+**Тохиолдсон:** `CampSettingsPage` (route `settings/:section`) доторх каталогийн `NavLink to={`../${s}`}` → `/camp/:id/settings/meal-locations` биш `/camp/:id/meal-locations` (байхгүй route) руу очиж, `CampRoutes`-ийн fallback `/camp` руу буцаав. e2e (`camp-v020.spec.ts`) барьсан.
+**Шалтгаан:** React Router-ийн `..` анхдагчаар **route** шатлалаар (`relative="route"`), URL сегментээр биш.
+**Дүрэм:** Nested route-д харьцангуй линк → `relative="path"`; табын линк бүрийг e2e-д дарж URL-ийг шалгана.
+
+### [PROC-012] Үл үзэгдэх тэмдэгт (BOM) кодонд
+> ⚠️ **Давтагдсан (2026-10-13):** `scripts/docs/gen-codebase-docs.mjs`-ийн `.replace(/^\uFEFF/, '')` мөр Write хэрэгслээр жинхэнэ BOM болсон — eslint барьсан, Python-оор зассан. **Нэмэлт дүрэм:** шинэ файл бүрийг танд өгөхөөс өмнө тухайн машин дээр `eslint <файл>` ажиллуулна (cloud-д eslint-гүй бол).
+**Тохиолдсон:** CSV-ийн BOM-ийг арилгах `"\uFEFF"` мөрийг Write хэрэгслээр бичихэд escape биш жинхэнэ U+FEFF болж, eslint `no-irregular-whitespace` алдаа.
+**Дүрэм:** Escape дараалал, үл үзэгдэх тэмдэгттэй кодыг Python (`\\uFEFF`)-оор бичиж, `grep -P '\xEF\xBB\xBF'`-ээр шалгана.
+
+### [TEST-017] DB reset-ийн дараа эрхийн cache (Redis) хуучин
+**Тохиолдсон:** Harness DB-г reset + `camp_e2e_grant.sql` хийсний дараа e2e 403 — эрхийн жагсаалт Redis-д reset-ээс өмнөхөөрөө.
+**Дүрэм:** DB reset/seed/restore бүрийн дараа Redis `FLUSHALL` (`pilot.ps1 restore` аль хэдийн хийдэг; harness `db-reset.sh`-д нэмэв).
+
+### [TEST-018] Playwright substring + төлөв үлдээсэн тест
+**Тохиолдсон:** `getByRole('button', { name: 'Хаах' })` хоёр товч олж strict алдаа; хэлний тест `admin@test.mn`-ийн хэлийг `zh` болгож үлдээгээд дараагийн spec-үүд хятадаар нээгдэв.
+**Дүрэм:** `exact: true` (эсвэл `.last()` — зориуд); хэрэглэгчийн тохиргоог өөрчилсөн spec `afterAll`-д буцаана.
+
+### [OPS-004] Task Scheduler watchdog-ийг засвар үйлдлийн дундуур дахин асаах эрсдэл (урьдчилан сэргийлсэн)
+**Илэрсэн:** `upgrade`-ийг зохиохдоо: `install-tasks` нь `RestartCount 3 / 1 мин` — `Stop-Watchdog` процессыг алахад Task "амжилтгүй" гэж үзэж 1 минутын дараа `pilot.ps1 run`-ийг дахин асааж, build/restore-ийн дундуур backend асаах боломжтой (v0.1.6-ийн `restore`-д ч мөн).
+**Шийдэл:** `upgrade`/`restore` нь эхлээд Task-ийг `Stop` + `Disable`, дуусахад (алдаатай ч `finally`) `Enable` (`upgrade` амжилттай бол `Start`).
+**Дүрэм:** Автомат дахин асаагчтай (watchdog, Task, service) системд урт засвар хийхдээ асаагчийг өөрийг нь түр унтраана.
+
+### [PS-002] Shim-ийн процессын нэр
+**Тохиолдсон:** pwsh shim тестэд `node` нь python shebang скрипт → `Get-Process`-ийн `ProcessName` = `python3` → `Get-PilotProcess 'backend' 'node'` "ажиллаагүй" гэж `stop` юу ч зогсоосонгүй (тест барьсан, бодит Windows-д `node.exe` тул асуудалгүй).
+**Дүрэм:** Процессын нэр шалгадаг кодыг тестлэх shim нь жинхэнэ нэртэй байх (жижиг C wrapper, хүүхэд процесс `PR_SET_PDEATHSIG`-тэй).
+
+### [TEST-019] CONC-002 тест postgres горимын бүтэн ажиллуулалтад нэг удаа унав
+**Тохиолдсон:** Integration-ийг `DATABASE_URL=postgres`-оор 4 удаа бүтэн ажиллуулахад 1 удаа `30 зэрэгцээ MR үүсгэлт` унав; дангаар нь 2 удаа, бүтнээр 3 удаа ногоон.
+**Таамаг (батлагдаагүй):** 30 transaction advisory lock-оор цувран хүлээх үед Prisma interactive transaction-ийн `maxWait` 2с / `timeout` 5с хэтэрч 500 (harness-ийн wasm adapter удаан). v0.2.0-д MR код өөрчлөгдөөгүй.
+**Дүрэм:** TEST-015-ийн дагуу "flaky" гэж хаахгүй — QA-09-д бүртгэж, алдааны мессежийг барьж шалтгааныг батална.
+
+### [PROC-013] Зааварт `dev:test-user` орхигдов → e2e 6 тест унав
+**Тохиолдсон (2026-10-11 19:10):** v0.2.0-ийг таны машин дээр шалгах зааварт `pnpm supabase:reset` (auth.users-ийг цэвэрлэнэ) бичээд `pnpm dev:test-user`-ийг орхисон → `admin@test.mn` алга → `loginAs` 6 тест "Invalid login credentials", 23 тест ажиллаагүй. Код буруу биш (cloud e2e 55/55).
+**Хоёр дахь удаа (19:14):** `dev:test-user`-ийн дараа ч `camp_e2e_grant.sql` (admin@test.mn → Кемп админ) мөн орхигдсон → Кемпийн 4 тест `POST /camps → 403 camp.err.access.2`. Би зааврыг CI-тэй тулгалгүй, санахаараа бичсэн нь давтагдав.
+**Дүрэм:** DB reset орсон заавар бүрт CI-ийн дараалал бүтнээрээ: `supabase:reset` → `db:generate` → `dev:test-user` → `camp_e2e_grant.sql` → тест. Зааврыг `.github/workflows/ci.yml`-ийн "Prepare" алхмаас ХУУЛЖ бичнэ (санахаар биш). Docker контейнерийг нэрээр нь яг заана (`supabase_db_s-project` — пилотын `supabase_db_s-project-pilot`-тэй андуурахгүй).
+
+### [CI-005] CI улаан: Node 20, Prisma client generate-гүй unit тест
+**Тохиолдсон (2026-10-11, v0.2.0 push):** GitHub Actions "Lint · Unit · Integration · Build" — (1) `TenantOnboardingService` 6 тест: `Node.js detected but native WebSocket not found` (CI `node-version: 20`; `@supabase/supabase-js` realtime нь Node 22+-ийн native WebSocket шаарддаг — Dockerfile, таны машин 22); (2) `workflow-definition.*`, `require-role.helper` тест: `Cannot read properties of undefined (reading 'OWNER')` — unit алхмын өмнө `prisma generate` хийгдээгүй тул `@prisma/client`-ийн enum-ууд алга (e2e job-д л `db:generate` байсан).
+**Шалтгаан:** CI-г v0.1.5-аас хойш хэн ч шалгаагүй (QA-01, CI-004); local болон harness-д Prisma client аль хэдийн generate хийгдсэн байдаг тул илрээгүй.
+**Шийдэл:** `ci.yml`: хоёр job-д `node-version: 22`; install-ийн дараа `pnpm db:generate`.
+**Дүрэм:** CI-ийн орчин (Node, generate алхам) = Dockerfile/production-тэй ижил; release бүрт CI ногоон эсэхийг "дуусах нөхцөл"-д заавал шалгана.
+
+### [PS-003] `pilot.ps1 upgrade` staging дээр "start"-ын дараа гацав
+**Тохиолдсон (2026-10-11 20:12, staging дадлага):** `upgrade -Tag v0.2.0 -Profile staging` → init, build, start бүгд `[OK]` ("Пилот ажиллаж байна") ч эх процесс цааш явсангүй (health шалгалт, `upgrade.log OK`, мессеж гараагүй). Staging өөрөө амжилттай шинэчлэгдэж ажиллаж байсан.
+**Шалтгаан:** `Invoke-Self` нь дэд `powershell -File pilot.ps1 start`-ийг `Invoke-Native` (`& exe | Out-Host`) — stdout-ыг **pipe**-аар уншина. Дэд процессын `Start-Process`-оор асаасан backend (node) ба Caddy нь удамшдаг handle-уудыг (тэр pipe-ийн бичих үзүүрийг) авч, урт хугацаанд ажилладаг тул дэд процесс дууссан ч pipe EOF болохгүй → эх процесс мөнхөд хүлээнэ. Linux дээрх pwsh + shim тест (.NET Unix нь бусад fd-г CLOEXEC болгодог) үүнийг илрүүлээгүй.
+**Шийдэл:** `Invoke-Self` → `System.Diagnostics.Process.Start` (`UseShellExecute=$false`, redirect-гүй — консолыг шууд хуваалцана) + `WaitForExit()` (зөвхөн тэр процессыг), exit code шалгана; аргументийн хашилт (зай, төгсгөлийн `\`).
+**Дүрэм:** Урт амьдрах процесс асаадаг командыг pipe-аар бүү дууд. Windows-ийн процесс/handle-ийн зан төлөвийг Linux shim тестээр "баталгаатай" гэж үзэхгүй — Windows дээрх анхны ажиллуулалтыг staging дээр.
+
+### [CI-006] CI: Supabase CLI "latest" → хоосон SUPABASE_URL
+**Тохиолдсон (2026-10-11 20:39):** CI-005-ийн дараа Unit ногоон болсон ч Integration 18/20 файл `Error: supabaseUrl is required`. "Supabase env" алхам `eval "$(… status -o env | grep '^API_URL=…')"` юу ч олоогүй ч алдаагүй өнгөрч, хоосон утгыг `$GITHUB_ENV`-д бичсэн. `setup-cli` нь `version: latest` (өмнөх run-д `toomanyrequests`, порт 54322-ийн алдаа ч энэ үед гарсан) — таны машин/lockfile `supabase@2.120.0` (`status -o env` = `API_URL`, `ANON_KEY`, `SERVICE_ROLE_KEY` — бинарийг шалгаж баталсан).
+**Шийдэл:** хоёр job-д `setup-cli version: 2.120.0`; түлхүүр алга бол түлхүүрийн нэрсийг (утгагүй) хэвлээд тэр алхамдаа унана.
+**Дүрэм:** CI-ийн хэрэгслийн хувилбарыг lockfile/машинтай ижил pin хийнэ ("latest" хориглоно); env бэлтгэх алхам хоосон утгыг "чимээгүй" дамжуулахгүй.
+
+### [CI-007] Turbo 2 env-ийг шүүдэг → CI integration-д SUPABASE_URL алга
+**Тохиолдсон (2026-10-11 20:48):** CI-006-ийн дараа "Supabase env" алхам амжилттай (түлхүүр бүгд олдсон, хамгаалалт унаагүй) ч integration 18 файл дахин `supabaseUrl is required`.
+**Шалтгаан:** `pnpm turbo test:integration` — Turbo 2-ийн анхдагч **strict env mode** нь `turbo.json`-д зарлаагүй орчны хувьсагчийг task-ийн процесст дамжуулдаггүй. Local-д апп `.env` файлаас уншдаг тул илрээгүй; CI-д `.env` алга, бүх утга `$GITHUB_ENV`-ээр ирдэг. Баталгаа: ижил task `passThroughEnv`-гүй → `SB=undefined`, байвал `SB=http://x`. CI-006-ийн (CLI pin) засвар хэрэгтэй хэвээр боловч энэ алдааны жинхэнэ шалтгаан биш байсан — би нэг алдааг хоёр удаа буруу таамагласан.
+**Шийдэл:** `turbo.json` — `test`, `test:unit`, `test:integration`, `test:e2e`-д `passThroughEnv` (DB/Redis/JWT, `SUPABASE_*`, `VITE_*`, `E2E_*`, `TEST_*`, `RATE_LIMIT_*`, `NODE_ENV`, `CI`).
+**Дүрэм:** CI-ийн алдааг засахаасаа өмнө шалтгааныг туршилтаар батална (энд: turbo task-д env хэвлэх) — "магадгүй"-гээр засвар push хийхгүй.
+
+### [PROC-014] Пилотын шинэчлэл: checkout цуцлагдсан ч дараагийн алхмууд үргэлжлэв
+**Тохиолдсон (2026-10-11 21:11):** Миний гар заавар (v0.1.6.1-ийн `pilot.ps1`-д `upgrade` алга тул): `git status --short # хоосон байх ёстой` → пилотын хавтсанд commit хийгээгүй `CampLayout.tsx` (цэсний шошго засвар) байсан → `git checkout v0.2.0` "would be overwritten… Aborting" → `init`, `build` хуучин `v0.1.6.1` дээр ажиллаж, пилот хуучин хувилбараараа дахин асав. Мөн `Disable/Enable-ScheduledTask` админ бус цонхонд "Access is denied".
+**Хохирол:** алга (өгөгдөл, ажиллагаа хэвийн; локал засвар хадгалагдсан) — гэхдээ шинэчлэгдсэн гэж буруу ойлгох эрсдэлтэй байв.
+**Дүрэм:** Гар заавар бүрт алхам бүрийн **хүлээгдэх гаралт** ба "**өөр бол ЗОГС, надад илгээ**"; админ эрх шаардах алхмыг эхэнд нь тусгайлан; пилотын хавтсанд локал өөрчлөлт хийхгүй (хийсэн бол dev-д commit). v0.2.0-оос `pilot.ps1 upgrade` эдгээрийг өөрөө шалгадаг (бохир tree → эхлэхгүй).
+
+## 22. v0.2.1 — Хоолны тооцооны загвар (2026-10-11)
+
+### [FE-009] Нарийн самбарт шинэ контрол нэмэхэд товч харагдахгүй болов
+**Тохиолдсон:** Байрны жагсаалтын мөрөнд "байрны төрөл" select нэмэхэд "+ Олон өрөө" товч самбараас гарч далдлагдсан. Үүнийг e2e (FB-07) барьсан.
+**Шийдэл:** Үйлдлүүдийг тусдаа мөрөнд (`flex-wrap`) гаргасан.
+**Дүрэм:** Мөрөнд контрол нэмбэл тухайн хуудсын e2e-г заавал ажиллуулж, screenshot-ыг харна.
+
+### [TEST-020] Playwright `getByLabel` шошгын хэсгээр ч тааруулдаг
+**Тохиолдсон:** Шинэ "Өдрийн ирц: албан тушаал" шошго хуучин тест дэх `getByLabel('Албан тушаал')`-д давхар тааралдаж strict mode алдаа өгсөн.
+**Шийдэл:** Шошгыг өвөрмөц болгож, тестэд `{ exact: true }` нэмсэн.
+**Дүрэм:** Нэг хуудсанд ижил төстэй шошго нэмэхээс өмнө тэр хуудсын хуучин e2e-г ажиллуулна.
+
+### [DATA-001] Backfill-ийн каталогийн нэр санамсаргүй хэлбэрээр сонгогдов
+**Тохиолдсон:** Чөлөөт текстээс албан тушаал үүсгэхэд "хамгийн эрт бичигдсэн" хэлбэрийг сонгосон тул " жолооч" гарсан (A = B шалгалтын явцад илэрсэн).
+**Шийдэл:** Хамгийн олон давтагдсан хэлбэрийг, тэнцвэл том үсэгтэйг, дараа нь хамгийн эртийг сонгодог болгосон → "Жолооч".
+**Дүрэм:** Backfill-ийг бодит төстэй өгөгдлөөр (үсэг/зайн хувилбартай) A = B шалгаж, үүссэн нэрсийг нүдээр харна. Кирилл `lower()` нь DB-ийн locale-оос хамаарна (C.UTF-8/en_US.UTF-8 OK, "C" бол үгүй).
+
+### [PROC-015] Context хэмнэх
+**Тохиолдсон:** v0.2.1 frontend-ийн шатанд бүтэн e2e-г дахин дахин ажиллуулж, урт гаралт уншсанаар context хурдан дуусав.
+**Дүрэм:**
+- Файлын зөвхөн хэрэгтэй хэсгийг уншина.
+- Тестийн гаралтаас зөвхөн дүн болон эхний алдааг харна.
+- E2E-г эхлээд зөвхөн өөрчлөгдсөн spec-ээр, бүтнээр нь хамгийн сүүлд нэг удаа ажиллуулна.
+- Нэг session-д нэг блок ажил хийнэ. Блок дуусахад таны компьютерт хадгалж, дараагийн session-д шилжүүлэх тэмдэглэл бичнэ.
+
+### [SEC-007] 🔴 Caddy `X-Forwarded-For`-ийг хаядаг → Supabase Auth-ийн IP хязгаар бүх хэрэглэгчид нэг (эсвэл огт үйлчлэхгүй)
+**Илэрсэн (PIL-07, 2026-10-11):** Зам: Tailscale Funnel → Caddy (127.0.0.1) → Kong → GoTrue. Funnel хэрэглэгчийн бодит IP-г `X-Forwarded-For`-д тавьдаг ч Caddy (`trusted_proxies`-гүй) ирсэн XFF-д итгэхгүй, upstream руу `127.0.0.1` болгож илгээдэг (Caddy 2.8.4 + echo upstream-аар батлагдсан). Мөн GoTrue IP-ээр хязгаарлахдаа зөвхөн `GOTRUE_RATE_LIMIT_HEADER` тохируулсан үед header-ийг ашигладаг; хоосон бол `/token`-д IP хязгаар үйлчлэхгүй (эх код `middleware.go`), Supabase CLI үүнийг тохируулдаггүй.
+**Шийдэл (v0.2.1 #15):** Caddyfile global `servers { trusted_proxies static 127.0.0.1/32 ::1/128; client_ip_headers X-Forwarded-For }` (Caddy 127.0.0.1-д bind хийсэн тул гаднаас хуурамч XFF ирэхгүй) + GoTrue-д header-ийг дамжуулах арга. Staging дээр буруу нууц үгээр олон удаа нэвтрэхэд `429` гарч байгааг батлана.
+**Дүрэм:** Reverse proxy-г гинжээр (Funnel/Cloudflare → Caddy → Kong → апп) тавибал давхарга бүрийн XFF зан төлөвийг echo upstream-аар шалгана. Хязгаарлалт "тохиргоонд бичигдсэн" нь "ажиллаж байна" гэсэн үг биш — 429-ийг бодитоор гаргаж батална.
+
+### [TEST-021] Cloud-д `prisma generate` engine татах гэж унадаг (binaries.prisma.sh 403)
+**Тохиолдсон:** Шинэ cloud орчинд core-kernel unit тест ажиллуулахын тулд Prisma client generate хийхэд CLI schema-engine татах гэж 403.
+**Шийдэл:** Хоосон файл үүсгээд `PRISMA_SCHEMA_ENGINE_BINARY=<хоосон>` `PRISMA_QUERY_ENGINE_LIBRARY=<хоосон.so.node>` `npx prisma generate` — Prisma 5 DMMF-ийг wasm-аар гаргадаг тул client (төрөл, enum) үүснэ, татахгүй. Unit тест (DB-гүй) 583/583.
+**Дүрэм:** Зөвхөн unit тест/typecheck-д. Бодит DB-тэй integration-д TEST-010-ийн wasm + `@prisma/adapter-pg` harness хэрэглэнэ. Төсөлд (CI, пилот) хэзээ ч хэрэглэхгүй.
+
+
+### [TEST-022] Harness: schema өөрчлөөд client-ийг дахин generate хийхэд wasm loader-ийн засвар арилсан
+**Тохиолдсон (v0.2.2 Блок 1):** TEST-010-ийн harness-д `client/wasm.js`-ийн `#wasm-engine-loader`-ийг гараар `fs.readFileSync`-ээр сольсон. Prisma schema-д шинэ model нэмээд дахин generate хийхэд файл шинээр үүсэж засвар алга болов → `The loaded wasm module was unexpectedly undefined`.
+**Шийдэл:** Засварыг generate скрипт (`gen.sh`)-д нэгтгэв — generate бүрийн дараа автоматаар (idempotent).
+**Дүрэм:** Үүсгэгддэг (generated) файлд гараар засвар хийхгүй; хийх бол үүсгэх скриптийн нэг алхам болгоно.
+**Нэмэлт (GoTrue-гүй integration):** Service-ийг `app_user` (RLS) `PrismaClient`-ээр шууд үүсгэж, `core_users`-ийг санамсаргүй `authId`-тай оруулбал GoTrue хэрэггүй (`test/camp-v022-perms.integration.spec.ts`) → cloud harness-д ч, CI-д ч ажиллана.
+
+### [TEST-023] Зан төлөвийн өөрчлөлт → зөвхөн CI-д ажилладаг тест хуучин хүлээлттэй үлдэх эрсдэл
+**Илэрсэн (урьдчилан, v0.2.2 Блок 1):** ADR-003 §2.4: роль = загвар, засахад хэрэглэгчийн эрх автоматаар өөрчлөгдөхгүй. `camp-master.integration.spec.ts` (GoTrue шаарддаг → cloud-д ажиллахгүй) "роль засахад manager шууд 201" гэж хүлээж байв → таны CI-д унах байсан.
+**Шийдэл:** Тестийг шинэ урсгалд (засах → 403 хэвээр → `POST roles/:id/apply` → 201) шилжүүлэв.
+**Дүрэм:** API-ийн зан төлөв өөрчлөхөөс өмнө `grep -rn '<endpoint>' test/ apps/e2e` — ажиллуулж чадахгүй тестийн хүлээлтийг ч шинэчилнэ.
+
+### [PROC-016] Кирилл нэртэй файл `git ls-files | tar -T`-д алга болов
+**Тохиолдсон:** `git ls-files` нь ASCII бус нэрийг `"docs/S Project_ \320\242…"` хэлбэрээр (core.quotePath) гаргадаг → `tar: Cannot stat`.
+**Шийдэл:** `git ls-files -co --exclude-standard -z | … | tar czf x.tgz --null -T -`.
+
+### [AUTH-003] GoTrue унтарсан үед хэрэглэгч "нууц үг буруу" гэж харах байв
+**Илэрсэн (v0.2.2 Блок 2, бүтэн AppModule-ийг harness-д асааж):** `supabase.auth.signInWithPassword` сүлжээний алдаанд throw хийхгүй — `{ error: AuthRetryableFetchError, status: 0 }` буцаадаг. Код зөвхөн `status >= 500`-ийг 503 гэж үзэж байсан тул 401 `auth.invalid_credentials` гарсан.
+**Шийдэл:** `isAuthServiceDown(e)` = `name === 'AuthRetryableFetchError' || !status || status >= 500` → 503 `auth.service_unavailable` (sign-in, change-password).
+**Дүрэм:** Гадны client-ийн "алдаа буцаадаг (throw биш)" API-д сүлжээний алдааг тусад нь шалгана; unit mock-д ч энэ хэлбэрийг оруулна.
+
+### [SEC-008] Нэвтрэлтийн хязгаар — амжилттай оролдлогыг тоолбол бодит хэрэглээ 429 авна
+**Илэрсэн (урьдчилан, v0.2.2 Блок 2):** Эхний хувилбар нэвтрэх нэр 10 / 15 мин, IP 30 / 5 мин — БҮХ оролдлогыг тоолсон. e2e нь `beforeEach`-д нэг admin-аар олон удаа нэвтэрдэг; пилотод кемпийн нэг WiFi/NAT-аас өглөө олон ажилтан зэрэг нэвтэрнэ → 429.
+**Шийдэл:** зөвхөн амжилтгүйг тоолно (нэвтрэх нэр 10 / 15 мин, IP 50 / 5 мин), амжилт нэвтрэх нэрийн тоолуурыг тэглэнэ; IP-г зөвхөн Caddy-ийн `X-Real-IP` (loopback-аас) байгаа үед. Үндсэн хамгаалалт = GoTrue-ийн бүртгэлийн түгжээ (PIL-07).
+**Дүрэм:** Хязгаар тавихдаа "нэг IP-ийн ард олон хүн" (NAT, WiFi, proxy) ба тестийн давтамжийг тооцно.
+
+### [PROC-008] (давтагдсан, 2026-10-12) `pkill -f` cloud shell-ийг дахин зогсоов
+**Тохиолдсон:** `pkill -f "caddy run"`, `pkill -f "vite --port"` → exit 144, ажлын мөр тасарсан. **Дүрэм (чангатгав):** cloud-д `pkill -f` огт ашиглахгүй — арын процессыг `timeout N cmd &`-ээр эхлүүлж өөрөө дуусгана, эсвэл PID-ийг файлд бичиж `kill $(cat pid)`.
+
+### [PROC-004] (давтагдсан, 2026-10-12) CRLF файл Python-ий текст горимоор LF болов — 9 файл
+**Тохиолдсон:** Блок 2-т `auth/*.ts`, e2e helper, `ProtectedRoute.tsx` (CRLF) — `open(p).read()` / `write` → LF; sync-ийн hash `\r`-ийг хасдаг тул илрээгүй, git-д бүх мөр өөрчлөгдсөн мэт харагдах байв. Sync-ийн өмнөх шалгалтаар (base-д CR байсан эсэх) илэрч сэргээв.
+**Дүрэм (чангатгав):** засварын скрипт `open(p, newline='')` эсвэл bytes-ээр; sync-ийн өмнө `git diff --name-only`-ийн файл бүрт "base CRLF ↔ одоо" шалгана (G1 алхамд).
+
+### [TEST-024] Raw query-ийн `timestamptz` → JS `Date` хөрвүүлэлтэд найдах эрсдэл
+**Илэрсэн (v0.2.2 Блок 3, harness integration):** `core_user_invites.expires_at`-ийг `$queryRaw`-аар уншиж JS-д `now`-тэй харьцуулсан → DB-д хугацаа дууссан (1 цагийн өмнө) токен "хүчинтэй" гэж гарав. Harness-ийн `@prisma/adapter-pg` нь timestamptz-ийг цагийн бүсгүй уншсан (+8 цаг). Бодит Prisma engine-д зөв байж магадгүй ч ялгаа нь эрсдэл.
+**Шийдэл:** хугацаа/төлвийг SQL-д тооцно: `(expires_at <= now()) AS expired`, `(used_at IS NOT NULL) AS used`; "нэг удаа" = атом `UPDATE … WHERE used_at IS NULL AND expires_at > now() RETURNING`.
+**Дүрэм:** Аюулгүй байдлын шийдвэр (хугацаа, түгжээ) DB-ийн цаг (`now()`) дээр — app/driver-ийн Date хөрвүүлэлтэд найдахгүй.
+---
+
+## 24. v0.2.2 — Хэрэглэгч ба ажилтан (2026-10-12 → )
+
+### [MIG-002] Migration-ы дугаарыг төлөвлөгөөний блокийн дарааллаар урьдчилан эзэлж болохгүй
+- **Нөхцөл:** Tech plan-д Блок 5 (ажлаас гаргах)-д `…005`, Блок 3 (урилга)-д `…006` дугаар өгсөн байсан. Блок 3 түрүүлж хэрэгжсэн → `…006` нь `…005`-аас өмнө apply хийгдэх байсан.
+- **Шалтгаан:** Supabase CLI нь сүүлд apply хийсэн migration-аас **өмнөх** timestamp-тай шинэ файлыг (дараалал алдагдсан) хүлээж авдаггүй — staging / пилот дээр upgrade зогсоно.
+- **Шийдэл (2026-10-13):** Дугаарыг сольсон: урилга = `20261013005_core_user_invites.sql`, ажлаас гаргах = `…006` ([[07_v0.2.2_tech_plan]] §3.5).
+- **Дүрэм:** Migration файлын дугаарыг **хэрэгжүүлэх үед** (бодит дарааллаар) өгнө; tech plan-д зөвхөн «шинэ migration» гэж тэмдэглэнэ. Хэрэгжсэн, apply хийгдсэн migration-ы нэрийг хэзээ ч өөрчлөхгүй (MIG-001-тэй хамт — `db push` биш migration).

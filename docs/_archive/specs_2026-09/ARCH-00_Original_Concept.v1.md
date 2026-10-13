@@ -1,10 +1,13 @@
 ---
 title: "S Project: Техникийн Архитектурын Нарийвчилсан Тодорхойлолт (Technical Specification)"
 type: "Architecture"
-status: "Active"
-last_updated: 2026-10-08
+status: "Archived"
+last_updated: 2026-10-13
 tags: [core]
 ---
+
+> 🗄 **Архив (2026-10-13):** 2026-09-ийн анхны хувилбар — одоогийн бодит байдалтай зөрнө (Kubernetes/gRPC/PgBouncer/`SET LOCAL`/Express г.м.). **Одоогийн баримт: [[ARCH-00_System_Overview]].** Хөгжүүлэлтэд ашиглахгүй — зөвхөн түүх, санаа сэргээхэд.
+
 
 # S Project: Техникийн Архитектурын Нарийвчилсан Тодорхойлолт (Technical Specification)
 

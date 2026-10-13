@@ -4,9 +4,10 @@
  *
  * Кодоос каталог үүсгэнэ — хөгжүүлэлтийн үед кодыг дахин дахин уншихгүйн тулд:
  *   02_API_Catalog · 03_DB_Catalog · 05_Permissions_Catalog · 06_Config_Env · 07_Test_Map · 09_Frontend_Routes
+ *   + docs/lessons_learned.md (lessons/LL-*.md-ийн индекс) + vault шалгалт (frontmatter, [[линк]], orphan, lessons ID)
  *
  * Ашиглах:  pnpm docs:gen      — үүсгэх / шинэчлэх (агуулга өөрчлөгдөөгүй файлд хүрэхгүй)
- *           pnpm docs:check    — хоцорсон каталог байвал exit 1 (блок дуусгахын өмнө / CI)
+ *           pnpm docs:check    — хоцорсон баримт эсвэл vault алдаа байвал exit 1 (блок дуусгахын өмнө / CI)
  * Хамаарал: зөвхөн Node 18+ (fs, path) — нэмэлт багц шаардлагагүй.
  * Дүрэм:   RULE-21 (docs/08_Roadmap/00_rules_and_context.md). Гараар засахгүй — кодыг засаад дахин үүсгэнэ.
  */
@@ -44,18 +45,20 @@ const BANNER =
   'Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).\n';
 
 const results = [];
-function emit(file, title, type, tags, body) {
+function emit(file, title, type, tags, body, banner = BANNER) {
   const p = path.join(OUT, file);
   const stripDate = (s) => s.replace(/^last_updated: .*$/m, '');
-  const next = frontmatter(title, type, tags) + `# ${title}\n\n` + BANNER + '\n' + body.trimEnd() + '\n';
+  const next = frontmatter(title, type, tags) + `# ${title}\n\n` + banner + '\n' + body.trimEnd() + '\n';
   const prev = exists(p) ? read(p) : null;
   const changed = prev === null || stripDate(prev) !== stripDate(next);
-  results.push({ file, changed });
+  results.push({ file: rel(p), changed });
   if (changed && !CHECK) {
-    fs.mkdirSync(OUT, { recursive: true });
+    fs.mkdirSync(path.dirname(p), { recursive: true });
     fs.writeFileSync(p, next, 'utf8');
   }
 }
+/** Vault-ийн бүтцийн алдаа (docs:check-ийг унагана). */
+const problems = [];
 
 // ───────────────────────────── 1. API ─────────────────────────────
 const SRC = path.join(ROOT, 'apps/core-kernel/src');
@@ -566,10 +569,126 @@ for (const f of migs) {
   emit('09_Frontend_Routes.md', 'Frontend route-ууд (web-shell)', 'Architecture', ['codebase', 'frontend', 'generated'], body);
 }
 
+// ───────────────────────────── 7. Lessons индекс (docs/lessons/LL-*.md → docs/lessons_learned.md) ─────────────────────────────
+{
+  const LDIR = path.join(ROOT, 'docs', 'lessons');
+  const files = walk(LDIR, (p) => /LL-\d\d_[^/\\]*\.md$/.test(p) && !/LL-99_/.test(p));
+  const GROUPS = [
+    ['DB, Prisma, RLS, migration', ['PRISMA', 'RLS', 'MIGRATE', 'MIG', 'SQL', 'ENUM', 'SEED', 'DATA', 'CONC', 'CURSOR', 'ASYNC']],
+    ['Backend, API, event, гүйцэтгэл', ['DI', 'MODULE', 'DEP', 'RESOLVE', 'PATCH', 'CONFIG', 'VALID', 'API', 'HTTP', 'EVT', 'CACHE', 'PERF', 'RL', 'CLUSTER', 'LOG', 'BUILD', 'ARCH']],
+    ['Нэвтрэлт, аюулгүй байдал', ['AUTH', 'SEC']],
+    ['Тест, E2E, CI', ['TEST', 'VITEST', 'CI', 'S5', 'META']],
+    ['Frontend', ['FE']],
+    ['Орчин, ops, PowerShell, пилот', ['ENV', 'OPS', 'PS']],
+    ['Процесс, баримт', ['PROC', 'DOC']],
+  ];
+  const KEYS = ['Дүрэм', 'Зөв шийдэл', 'Шийдэл', 'Дүгнэлт', 'Урьдчилан сэргийлэх', 'Цаашид'];
+  const rows = new Map();
+  for (const f of files) {
+    const short = path.basename(f, '.md').split('_')[0];
+    const src = read(f);
+    const secs = [...src.matchAll(/^## (\d+)\./gm)];
+    const hs = [...src.matchAll(/^#{2,3} \[([A-Z0-9-]+)\]\s*(.*)$/gm)];
+    hs.forEach((h, i) => {
+      const body = src.slice(h.index + h[0].length, i + 1 < hs.length ? hs[i + 1].index : src.length);
+      const sec = secs.filter((x) => x.index < h.index).pop()?.[1] ?? '?';
+      let rule = '';
+      for (const k of KEYS) {
+        const m = body.match(new RegExp(`^(?:[-*] )?\\*\\*${k}[^*\\n]*?:?\\*\\*:?\\s*(.+)$`, 'm'));
+        if (m && m[1].trim()) { rule = m[1].trim(); break; }
+      }
+      if (!rule) {
+        const m = body.match(/^\*\*→\s*(RULE-\d+)[^*]*\*\*:?\s*(.*)$/m);
+        if (m) rule = `→ ${m[1]} ${m[2]}`;
+      }
+      let text = (rule || h[2]).replace(/\s+/g, ' ').replace(/\|/g, '/').trim();
+      if (text.length > 125) text = text.slice(0, 122).replace(/\s+\S*$/, '') + '…';
+      const repeat = /давтагдсан/i.test(h[2]);
+      const where = `${short} §${sec}`;
+      if (rows.has(h[1])) {
+        const r = rows.get(h[1]);
+        r.where.add(where);
+        if (repeat) r.rep = true;
+        else problems.push(`lessons: ID давхардсан (давтагдсан гэж тэмдэглээгүй) — ${h[1]} (${short})`);
+        return;
+      }
+      rows.set(h[1], { text, where: new Set([where]), rep: repeat });
+    });
+  }
+  const grp = (id) => {
+    const pre = id.split('-')[0];
+    const g = GROUPS.findIndex(([, ps]) => ps.includes(pre));
+    return g === -1 ? GROUPS.length : g;
+  };
+  const num = (id) => Number((id.split('-').pop() || '').replace(/\D/g, '')) || 0;
+  const banner =
+    '> 🤖 **AUTO-GENERATED** (`pnpm docs:gen`) — `docs/lessons/LL-*.md`-ийн `[ID]` гарчиг ба **Дүрэм / Шийдэл** мөрөөс. Энд бүү засаарай.\n' +
+    '> **Унших:** зөвхөн даалгаварт хамаарах бүлгээ. Шалтгаан / жишээ хэрэгтэй бол "Хаана" файлыг нээж `[ID]`-аар хай. 🔁 = давтагдсан алдаа.\n' +
+    '> **Шинэ алдаа:** тохирох `lessons/LL-*.md`-д `### [TAG-NNN] Гарчиг` + **Тохиолдсон / Шалтгаан / Дүрэм** → [[LL-99_Changelog]]-д мөр → `pnpm docs:gen`. ' +
+    'Давтагдвал шинэ ID биш — `### [ID] (давтагдсан, огноо) …`.\n' +
+    `> Файл: ${files.map((f) => `[[${path.basename(f, '.md')}]]`).join(' · ')} · Хуучин нэгтгэсэн файл (архив): [[lessons_learned_MVP]]\n`;
+  let body = `Нийт **${rows.size}** сургамж.\n`;
+  [...GROUPS.map((g) => g[0]), 'Бусад'].forEach((name, g) => {
+    const ids = [...rows.keys()].filter((id) => grp(id) === g).sort((a, b) => a.split('-')[0].localeCompare(b.split('-')[0]) || num(a) - num(b));
+    if (!ids.length) return;
+    body += `\n## ${name}\n\n| ID | Дүрэм | Хаана |\n|---|---|---|\n`;
+    for (const id of ids) {
+      const r = rows.get(id);
+      body += `| ${id}${r.rep ? ' 🔁' : ''} | ${r.text} | ${[...r.where].join(', ')} |\n`;
+    }
+  });
+  emit('../lessons_learned.md', 'Lessons Learned — индекс (ID → дүрэм)', 'Log', ['lessons', 'index', 'generated'], body, banner);
+}
+
+// ───────────────────────────── 8. Vault шалгалт (frontmatter, линк, orphan) ─────────────────────────────
+{
+  const DOCS = path.join(ROOT, 'docs');
+  const hasLearning = exists(path.join(DOCS, '_learning'));
+  const mdFiles = walk(DOCS, (p) => p.endsWith('.md'));
+  const key = (p) => path.relative(DOCS, p).split(path.sep).join('/').replace(/\.md$/, '');
+  const all = new Set(mdFiles.map(key));
+  const byName = new Map();
+  for (const k of all) {
+    const b = k.split('/').pop();
+    byName.set(b, [...(byName.get(b) ?? []), k]);
+  }
+  const TYPES = ['PRD', 'Architecture', 'Database', 'Roadmap', 'Guide', 'Log'];
+  const STATUS = ['Draft', 'Active', 'Deprecated', 'Archived'];
+  const inbound = new Map();
+  for (const f of mdFiles) {
+    const k = key(f);
+    const src = read(f);
+    const fm = src.startsWith('---\n') ? src.slice(4, src.indexOf('\n---', 4)) : '';
+    for (const field of ['title', 'type', 'status', 'last_updated', 'tags']) {
+      if (!new RegExp(`^${field}:`, 'm').test(fm)) problems.push(`frontmatter: ${k} — "${field}" алга`);
+    }
+    const ty = fm.match(/^type:\s*"?([^"\n]+)"?/m)?.[1];
+    const st = fm.match(/^status:\s*"?([^"\n]+)"?/m)?.[1];
+    if (ty && !TYPES.includes(ty)) problems.push(`frontmatter: ${k} — type "${ty}" буруу`);
+    if (st && !STATUS.includes(st)) problems.push(`frontmatter: ${k} — status "${st}" буруу`);
+    const text = src.replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]*`/g, '');
+    for (const m of text.matchAll(/\[\[([^\]|#\\]+)/g)) {
+      const t = m[1].trim();
+      let target = all.has(t) ? t : null;
+      if (!target) {
+        const c = byName.get(t.split('/').pop()) ?? [];
+        if (c.length === 1 && (!t.includes('/') || c[0].endsWith(t))) target = c[0];
+        else if (c.length > 1) problems.push(`линк: ${k} → [[${t}]] — нэр давхардсан (${c.join(', ')}), замтай бич`);
+      }
+      if (target) inbound.set(target, (inbound.get(target) ?? 0) + 1);
+      else if (!(byName.get(t.split('/').pop()) ?? []).length && !(t.startsWith('_learning/') && !hasLearning)) problems.push(`линк: ${k} → [[${t}]] — файл алга`);
+    }
+  }
+  for (const k of all) {
+    if (['INDEX', 'CONTEXT'].includes(k) || k.startsWith('_learning/')) continue;
+    if (!inbound.get(k)) problems.push(`orphan: ${k} — ямар ч баримтаас холбогдоогүй (INDEX-д нэм)`);
+  }
+}
+
 // ───────────────────────────── дүгнэлт ─────────────────────────────
 const changed = results.filter((r) => r.changed);
-for (const r of results) console.log(`${r.changed ? (CHECK ? '✗ хоцорсон' : '✎ шинэчилсэн') : '✓ ижил'}  docs/09_Codebase/${r.file}`);
-if (CHECK && changed.length) {
-  console.error(`\n${changed.length} каталог кодоос хоцорсон → \`pnpm docs:gen\` ажиллуулаад commit хий.`);
-  process.exit(1);
-}
+for (const r of results) console.log(`${r.changed ? (CHECK ? '✗ хоцорсон' : '✎ шинэчилсэн') : '✓ ижил'}  ${r.file}`);
+for (const p of problems) console.error(`⚠ ${p}`);
+if (CHECK && changed.length) console.error(`\n${changed.length} автомат баримт хоцорсон → \`pnpm docs:gen\` ажиллуулаад commit хий.`);
+if (problems.length) console.error(`\n${problems.length} vault алдаа (frontmatter / линк / orphan / lessons ID) — засна уу.`);
+if ((CHECK && changed.length) || problems.length) process.exit(1);
