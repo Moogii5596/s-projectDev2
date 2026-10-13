@@ -9,7 +9,7 @@ import { withCampErrors } from '../common/camp-errors';
 import { statusText } from '../common/camp-i18n';
 import { t } from '../../../common/i18n/translate';
 import { getCampOr404 } from '../common/camp-lookup';
-import { todayUb } from '../attendance/camp-date';
+import { todayUb } from '../common/camp-date';
 import { computeVat, sumVat, vatView } from '../costs/vat';
 import { writeMaintenancePartCosts } from '../costs/cost-entry-writer';
 import {

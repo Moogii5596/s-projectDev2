@@ -9,7 +9,8 @@ import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { BULK_ROOMS_MAX, roomNumbers } from './room-range';
 import { withCampErrors } from '../common/camp-errors';
 import { getCampOr404 } from '../common/camp-lookup';
-import { BulkRoomsDto, CreateBuildingDto, CreateRoomDto, QueryActiveOnlyDto, QueryRoomsDto, UpdateBuildingDto, UpdateRoomDto } from './camp-master.dto';
+import { BulkRoomsDto, CreateBuildingDto, CreateRoomDto, QueryRoomsDto, UpdateBuildingDto, UpdateRoomDto } from './camp-master.dto';
+import { QueryActiveOnlyDto } from '../common/common.dto';
 
 const P = CAMP_PERMISSIONS;
 /** Өрөөг кемпийн мастер эсвэл өрөөний эрхтэй хүн удирдана (ERD v4 §2.2: катеринг админ room.manage-тэй) */

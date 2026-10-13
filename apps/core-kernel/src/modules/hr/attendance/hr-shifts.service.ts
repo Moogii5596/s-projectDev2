@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { CampEmployeeStatus, CampShiftAdjustmentReason } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { fromDbDate, inTenantTx, toDbDate } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
-import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
-import { coversDay, eachDay } from './camp-date';
+import { CampAccessService } from '../../camp/common/camp-access.service';
+import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { fromDbDate, inTenantTx, toDbDate } from '../../camp/common/camp-tx';
+import { withCampErrors } from '../../camp/common/camp-errors';
+import { getCampOr404, getRosterSettings } from '../../camp/common/camp-lookup';
+import { coversDay, eachDay } from '../../camp/common/camp-date';
 import { resolveShift } from './shift-resolver';
 import { assertRange } from './range';
-import { CalendarQueryDto, CreateShiftAdjustmentsDto, RangeQueryDto } from './camp-attendance.dto';
+import { CalendarQueryDto, CreateShiftAdjustmentsDto, RangeQueryDto } from './hr-attendance.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
@@ -18,7 +18,7 @@ const MAX_CALENDAR_DAYS = 31;
 
 /** Ээлжийн зохицуулалт (бөөнөөр) + ээлжийн календарь (Шат 3.2) */
 @Injectable()
-export class CampShiftsService {
+export class HrShiftsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
     private readonly access: CampAccessService,
@@ -28,7 +28,7 @@ export class CampShiftsService {
     assertRange(q.from, q.to, MAX_ADJ_DAYS);
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
-      const rows = await tx.campShiftAdjustment.findMany({
+      const rows = await tx.hrShiftAdjustment.findMany({
         where: {
           tenantId, employee: { campId }, startDate: { lte: toDbDate(q.to) }, endDate: { gte: toDbDate(q.from) },
           ...(q.employeeId ? { employeeId: q.employeeId } : {}),
@@ -52,18 +52,18 @@ export class CampShiftsService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorId = await this.access.require(tx, tenantId, authId, campId, P.SHIFT_ADJUST);
         await getCampOr404(tx, tenantId, campId);
-        const emps = await tx.campEmployee.findMany({ where: { tenantId, campId, id: { in: dto.employeeIds } }, select: { id: true, employeeCode: true, status: true } });
+        const emps = await tx.hrEmployee.findMany({ where: { tenantId, campId, id: { in: dto.employeeIds } }, select: { id: true, employeeCode: true, status: true } });
         if (emps.length !== dto.employeeIds.length) throw badRequest('camp.err.shifts.2', { n: dto.employeeIds.length - emps.length });
         const inactive = emps.filter((e) => e.status !== CampEmployeeStatus.ACTIVE);
         if (inactive.length > 0) throw badRequest('camp.err.shifts.3', { codes: inactive.map((e) => e.employeeCode).join(', ') });
-        const clashes = await tx.campShiftAdjustment.findMany({
+        const clashes = await tx.hrShiftAdjustment.findMany({
           where: { tenantId, employeeId: { in: dto.employeeIds }, startDate: { lte: toDbDate(dto.endDate) }, endDate: { gte: toDbDate(dto.startDate) } },
           select: { startDate: true, endDate: true, employee: { select: { employeeCode: true } } },
         });
         if (clashes.length > 0) {
           throw conflict('camp.err.shifts.5', { list: clashes.map((c) => `${c.employee.employeeCode} (${fromDbDate(c.startDate)} – ${fromDbDate(c.endDate)})`).join(', ') });
         }
-        await tx.campShiftAdjustment.createMany({
+        await tx.hrShiftAdjustment.createMany({
           data: dto.employeeIds.map((employeeId) => ({
             tenantId, employeeId, startDate: toDbDate(dto.startDate), endDate: toDbDate(dto.endDate), shift: dto.shift,
             reasonType: dto.reasonType, reason: dto.reason ?? null, createdBy: actorId,
@@ -77,9 +77,9 @@ export class CampShiftsService {
   async deleteAdjustment(tenantId: string, authId: string, campId: string, id: string) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.require(tx, tenantId, authId, campId, P.SHIFT_ADJUST);
-      const row = await tx.campShiftAdjustment.findFirst({ where: { id, tenantId, employee: { campId } }, select: { id: true } });
+      const row = await tx.hrShiftAdjustment.findFirst({ where: { id, tenantId, employee: { campId } }, select: { id: true } });
       if (!row) throw notFound('camp.err.shifts.4');
-      await tx.campShiftAdjustment.delete({ where: { id } });
+      await tx.hrShiftAdjustment.delete({ where: { id } });
       return { deleted: true };
     });
   }
@@ -93,7 +93,7 @@ export class CampShiftsService {
       const settings = await getRosterSettings(tx, tenantId, campId);
       const from = toDbDate(q.from);
       const to = toDbDate(q.to);
-      const emps = await tx.campEmployee.findMany({
+      const emps = await tx.hrEmployee.findMany({
         where: {
           tenantId, campId, status: CampEmployeeStatus.ACTIVE,
           ...(q.departmentId ? { departmentId: q.departmentId } : {}),

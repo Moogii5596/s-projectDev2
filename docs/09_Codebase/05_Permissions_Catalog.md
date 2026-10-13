@@ -20,11 +20,11 @@ tags: [codebase, auth, camp, generated]
 |---|---|---|---|---|---|---|---|
 | `camp.settings.manage` | Кемпийн тохиргоо (НӨАТ, ростер, хоол идэх байршил) | V1 | ✅ |  |  |  | `camp-settings.service.ts` |
 | `camp.roles.manage` | Роль, эрхийн тохиргоо | V1 | ✅ |  |  |  | `camp-employee-login.service.ts` `camp-rbac.service.ts` `camp-user-access.service.ts` |
-| `camp.master.manage` | Мастер өгөгдөл (кемп, байр, өрөө, хэлтэс, баг, байгууллага) | V1 | ✅ |  |  |  | `camp-catalog.service.ts` `departments.handler.ts` `camp-crews.service.ts` `camp-departments.service.ts` `camp-facilities.service.ts` `camp-organizations.service.ts` `camps.service.ts` |
+| `camp.master.manage` | Мастер өгөгдөл (кемп, байр, өрөө, хэлтэс, баг, байгууллага) | V1 | ✅ |  |  |  | `camp-catalog.service.ts` `camp-facilities.service.ts` `camps.service.ts` `core-organizations.service.ts` `departments.handler.ts` `hr-crews.service.ts` `hr-departments.service.ts` `hr-positions.service.ts` |
 | `camp.contract.manage` | Гэрээ, ажил, үнэ | V2 | ✅ |  |  |  | — |
-| `camp.employee.manage` | Ажилтан бүртгэл | V1 | ✅ |  | ✅ |  | `employees.handler.ts` `camp-employees.service.ts` |
-| `camp.movement.import` | Ирц (xlsx) импорт | V1 | ✅ | ✅ |  |  | `camp-attendance.service.ts` |
-| `camp.shift.adjust` | Ээлжийн зохицуулалт | V1 | ✅ | ✅ |  |  | `camp-shifts.service.ts` |
+| `camp.employee.manage` | Ажилтан бүртгэл | V1 | ✅ |  | ✅ |  | `hr-employees.service.ts` `employees.handler.ts` |
+| `camp.movement.import` | Ирц (xlsx) импорт | V1 | ✅ | ✅ |  |  | `hr-attendance.service.ts` |
+| `camp.shift.adjust` | Ээлжийн зохицуулалт | V1 | ✅ | ✅ |  |  | `hr-shifts.service.ts` |
 | `camp.room.manage` | Өрөө хуваарилалт | V1 | ✅ |  | ✅ |  | `camp-rooms.service.ts` `camp-facilities.service.ts` |
 | `camp.asset.manage` | Үндсэн хөрөнгө | V1 | ✅ |  | ✅ |  | `camp-assets.service.ts` |
 | `camp.maintenance.create` | Засварын хүсэлт үүсгэх | V1 | ✅ | ✅ | ✅ | ✅ | `camp-maintenance.service.ts` |

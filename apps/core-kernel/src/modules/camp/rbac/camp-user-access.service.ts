@@ -34,7 +34,7 @@ export class CampUserAccessService {
   async createUserForEmployee(tenantId: string, tenantSlug: string, authId: string, campId: string, employeeId: string, email: string | null | undefined) {
     const prep = await inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
-      const e = await tx.campEmployee.findFirst({
+      const e = await tx.hrEmployee.findFirst({
         where: { id: employeeId, tenantId, campId },
         select: { id: true, fullName: true, email: true, status: true, userId: true },
       });

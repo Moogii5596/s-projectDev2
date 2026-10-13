@@ -4,8 +4,10 @@ import { BadRequestException, ConflictException, ForbiddenException, NotFoundExc
 import { CampEmployeeStatus, CampImportStatus, CampRoomStatus, CampShiftType, UserRole } from '@prisma/client';
 import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
-import { CampAttendanceService } from '../camp-attendance.service';
-import { CampShiftsService } from '../camp-shifts.service';
+import { HrAttendanceHooks } from '../../../hr/attendance/stay-store';
+import { CampStayStore, CampStaysService } from '../camp-stays.service';
+import { HrAttendanceService } from '../../../hr/attendance/hr-attendance.service';
+import { HrShiftsService } from '../../../hr/attendance/hr-shifts.service';
 import { CampRoomsService, firstOverCapacityNight } from '../camp-rooms.service';
 import { CampPresenceService } from '../camp-presence.service';
 
@@ -22,36 +24,40 @@ async function xlsx(rows: unknown[][]): Promise<Buffer> {
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
 
-describe('CampAttendanceService — импорт (Шат 3.3)', () => {
+describe('HrAttendanceService — импорт (Шат 3.3)', () => {
   let s: ReturnType<typeof setup>;
-  let svc: CampAttendanceService;
+  let svc: HrAttendanceService;
+  let stays: CampStaysService;
   const employees = [
     { id: 'e1', campId: 'c1', status: CampEmployeeStatus.ACTIVE, employeeCode: 'E1', crew: { rosterAnchorDate: d('2026-10-07') } },
     { id: 'e2', campId: 'c1', status: CampEmployeeStatus.ACTIVE, employeeCode: 'E2', crew: null },
   ];
   beforeEach(() => {
     s = setup();
-    svc = new CampAttendanceService(s.prisma as never, s.access);
+    const hooks = new HrAttendanceHooks();
+    hooks.registerStayStore(new CampStayStore());
+    svc = new HrAttendanceService(s.prisma as never, s.access, hooks);
+    stays = new CampStaysService(s.prisma as never, s.access);
     setActor(s.tx, { userId: 'cu1', roles: [{ campId: 'c1', perms: [P.MOVEMENT_IMPORT] }] });
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
-    s.tx.campEmployee.findMany.mockResolvedValue(employees);
+    s.tx.hrEmployee.findMany.mockResolvedValue(employees);
   });
 
   it('movement.import эрхгүй → 403 (файл задалсны дараа ч DB-д бичихгүй)', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MEAL_ORDER] }] });
     await expect(svc.preview('t1', 'a1', 'c1', 'x.xlsx', await xlsx([['E1', '2026-10-07', 'ARRIVAL']]))).rejects.toThrow(ForbiddenException);
-    expect(s.tx.campMovementImport.create).not.toHaveBeenCalled();
+    expect(s.tx.hrMovementImport.create).not.toHaveBeenCalled();
   });
 
   it('preview: PREVIEW бичлэг (мөрийн алдаа, parsed_rows) + мөр бүрийн төлөв; DB-д ирэлт бичихгүй', async () => {
-    s.tx.campMovementImport.create.mockImplementation(async (a: { data: Record<string, unknown> }) => ({ id: 'imp1', ...a.data }));
+    s.tx.hrMovementImport.create.mockImplementation(async (a: { data: Record<string, unknown> }) => ({ id: 'imp1', ...a.data }));
     const res = await svc.preview('t1', 'a1', 'c1', 'irts.xlsx', await xlsx([
       ['E1', '2026-10-07', 'ARRIVAL'],
       ['E2', '2026-10-07', 'ARRIVAL'],
       ['NOPE', '2026-10-07', 'ARRIVAL', 'NONE'],
     ]));
     expectTenantTx(s.tx, 't1');
-    const data = s.tx.campMovementImport.create.mock.calls[0][0].data;
+    const data = s.tx.hrMovementImport.create.mock.calls[0][0].data;
     expect(data).toMatchObject({ tenantId: 't1', campId: 'c1', fileName: 'irts.xlsx', status: 'PREVIEW', totalRows: 3, okRows: 1, errorRows: 2, uploadedBy: 'cu1' });
     expect(data.errors).toEqual([
       { row: 3, employeeCode: 'E2', messages: ['Ээлжийн бус ирэлт/явалтад хоол заавал (хоол идэхгүй бол NONE)'] },
@@ -60,65 +66,65 @@ describe('CampAttendanceService — импорт (Шат 3.3)', () => {
     expect(data.parsedRows).toHaveLength(3);
     expect(res.summary).toEqual({ arrivals: 1, departures: 0, offRoster: 0, shiftAdjustments: 0, errorRows: 2 });
     expect(res.rows[0]).toMatchObject({ employeeCode: 'E1', kind: 'ROSTER', meals: ['DINNER'], errors: [] });
-    expect(s.tx.campMovement.createManyAndReturn).not.toHaveBeenCalled();
+    expect(s.tx.hrMovement.createManyAndReturn).not.toHaveBeenCalled();
   });
 
   const pending = (rows: unknown[]) => ({ id: 'imp1', status: CampImportStatus.PREVIEW, fileName: 'irts.xlsx', parsedRows: rows });
   const okRow = { row: 2, employeeCode: 'E1', date: '2026-10-07', direction: 'ARRIVAL', meals: null, shift: null, errors: [] };
 
   it('confirm: advisory lock → DB төлвийг дахин уншиж төлөвлөнө → бичнэ → CONFIRMED', async () => {
-    s.tx.campMovementImport.findFirst.mockResolvedValueOnce(pending([okRow]));
-    s.tx.campMovement.createManyAndReturn.mockResolvedValueOnce([{ id: 'm1', employeeId: 'e1', movementDate: d('2026-10-07'), direction: 'ARRIVAL' }]);
+    s.tx.hrMovementImport.findFirst.mockResolvedValueOnce(pending([okRow]));
+    s.tx.hrMovement.createManyAndReturn.mockResolvedValueOnce([{ id: 'm1', employeeId: 'e1', movementDate: d('2026-10-07'), direction: 'ARRIVAL' }]);
     const res = await svc.confirm('t1', 'a1', 'c1', 'imp1');
     expect(res).toEqual({ status: 'CONFIRMED', movements: 1, newStays: 1, closedStays: 0, adjustments: 0 });
     const sqls = s.tx.$executeRaw.mock.calls.map((c: unknown[]) => (c[0] as string[]).join('?'));
     expect(sqls[1]).toContain('pg_advisory_xact_lock');
     expect(s.prisma.$transaction.mock.calls[0][1]).toEqual({ timeout: 120_000, maxWait: 10_000 });
-    expect(s.tx.campMovement.createManyAndReturn.mock.calls[0][0].data[0]).toMatchObject({
+    expect(s.tx.hrMovement.createManyAndReturn.mock.calls[0][0].data[0]).toMatchObject({
       tenantId: 't1', campId: 'c1', employeeId: 'e1', direction: 'ARRIVAL', kind: 'ROSTER', meals: ['DINNER'], importId: 'imp1', createdBy: 'cu1',
     });
     expect(s.tx.campStay.createMany.mock.calls[0][0].data[0]).toMatchObject({ employeeId: 'e1', arrivalMovementId: 'm1', departureMovementId: null, endDate: null });
-    expect(s.tx.campMovementImport.update.mock.calls[0][0].data).toMatchObject({ status: 'CONFIRMED', confirmedBy: 'cu1', errorRows: 0 });
+    expect(s.tx.hrMovementImport.update.mock.calls[0][0].data).toMatchObject({ status: 'CONFIRMED', confirmedBy: 'cu1', errorRows: 0 });
   });
 
   it('confirm: PREVIEW-ээс хойш төлөв өөрчлөгдөж алдаа гарвал → алдааг хадгалаад 409, юу ч бичихгүй (all-or-nothing)', async () => {
-    s.tx.campMovementImport.findFirst.mockResolvedValueOnce(pending([okRow]));
+    s.tx.hrMovementImport.findFirst.mockResolvedValueOnce(pending([okRow]));
     s.tx.campStay.findMany.mockResolvedValueOnce([{ id: 's0', employeeId: 'e1', startDate: d('2026-10-05'), endDate: null }]);
     await expect(svc.confirm('t1', 'a1', 'c1', 'imp1')).rejects.toThrow(/1 мөр алдаатай/);
-    expect(s.tx.campMovement.createManyAndReturn).not.toHaveBeenCalled();
-    expect(s.tx.campMovementImport.update.mock.calls[0][0].data).toMatchObject({ errorRows: 1, okRows: 0 });
+    expect(s.tx.hrMovement.createManyAndReturn).not.toHaveBeenCalled();
+    expect(s.tx.hrMovementImport.update.mock.calls[0][0].data).toMatchObject({ errorRows: 1, okRows: 0 });
   });
 
   it('confirm: CONFIRMED/CANCELLED → 409; байхгүй → 404', async () => {
-    s.tx.campMovementImport.findFirst.mockResolvedValueOnce({ ...pending([]), status: CampImportStatus.CONFIRMED });
+    s.tx.hrMovementImport.findFirst.mockResolvedValueOnce({ ...pending([]), status: CampImportStatus.CONFIRMED });
     await expect(svc.confirm('t1', 'a1', 'c1', 'imp1')).rejects.toThrow(/зөвхөн PREVIEW/);
     await expect(svc.confirm('t1', 'a1', 'c1', 'imp9')).rejects.toThrow(NotFoundException);
   });
 
   it('confirm: хаах stay зэрэгцээ өөрчлөгдсөн (updateMany 0) → 409', async () => {
-    s.tx.campMovementImport.findFirst.mockResolvedValueOnce(pending([{ ...okRow, date: '2026-10-22', direction: 'DEPARTURE' }]));
+    s.tx.hrMovementImport.findFirst.mockResolvedValueOnce(pending([{ ...okRow, date: '2026-10-22', direction: 'DEPARTURE' }]));
     s.tx.campStay.findMany.mockResolvedValueOnce([{ id: 's1', employeeId: 'e1', startDate: d('2026-10-07'), endDate: null }]);
-    s.tx.campMovement.createManyAndReturn.mockResolvedValueOnce([{ id: 'm2', employeeId: 'e1', movementDate: d('2026-10-22'), direction: 'DEPARTURE' }]);
+    s.tx.hrMovement.createManyAndReturn.mockResolvedValueOnce([{ id: 'm2', employeeId: 'e1', movementDate: d('2026-10-22'), direction: 'DEPARTURE' }]);
     s.tx.campStay.updateMany.mockResolvedValueOnce({ count: 0 });
     await expect(svc.confirm('t1', 'a1', 'c1', 'imp1')).rejects.toThrow(/зэрэгцээ/);
   });
 
   it('cancel: зөвхөн PREVIEW → CANCELLED; бусад → 409', async () => {
-    s.tx.campMovementImport.updateMany.mockResolvedValueOnce({ count: 1 });
+    s.tx.hrMovementImport.updateMany.mockResolvedValueOnce({ count: 1 });
     await expect(svc.cancel('t1', 'a1', 'c1', 'imp1')).resolves.toEqual({ status: 'CANCELLED' });
-    expect(s.tx.campMovementImport.updateMany).toHaveBeenCalledWith({ where: { id: 'imp1', tenantId: 't1', campId: 'c1', status: 'PREVIEW' }, data: { status: 'CANCELLED' } });
-    s.tx.campMovementImport.updateMany.mockResolvedValueOnce({ count: 0 });
+    expect(s.tx.hrMovementImport.updateMany).toHaveBeenCalledWith({ where: { id: 'imp1', tenantId: 't1', campId: 'c1', status: 'PREVIEW' }, data: { status: 'CANCELLED' } });
+    s.tx.hrMovementImport.updateMany.mockResolvedValueOnce({ count: 0 });
     await expect(svc.cancel('t1', 'a1', 'c1', 'imp1')).rejects.toThrow(ConflictException);
   });
 
   it('гараар: ээлжийн бус хоолгүй → 400 (импортын ижил дүрэм); ростерын → бичнэ', async () => {
-    s.tx.campEmployee.findFirst.mockResolvedValue({ employeeCode: 'E2' });
+    s.tx.hrEmployee.findFirst.mockResolvedValue({ employeeCode: 'E2' });
     await expect(svc.createMovement('t1', 'a1', 'c1', { employeeId: 'e2', date: '2026-10-08', direction: 'ARRIVAL' })).rejects.toThrow(/хоол заавал/);
-    s.tx.campEmployee.findFirst.mockResolvedValue({ employeeCode: 'E1' });
-    s.tx.campMovement.createManyAndReturn.mockResolvedValueOnce([{ id: 'm1', employeeId: 'e1', movementDate: d('2026-10-07'), direction: 'ARRIVAL' }]);
+    s.tx.hrEmployee.findFirst.mockResolvedValue({ employeeCode: 'E1' });
+    s.tx.hrMovement.createManyAndReturn.mockResolvedValueOnce([{ id: 'm1', employeeId: 'e1', movementDate: d('2026-10-07'), direction: 'ARRIVAL' }]);
     const res = await svc.createMovement('t1', 'a1', 'c1', { employeeId: 'e1', date: '2026-10-07', direction: 'ARRIVAL' });
     expect(res).toMatchObject({ kind: 'ROSTER', meals: ['DINNER'] });
-    expect(s.tx.campMovement.createManyAndReturn.mock.calls[0][0].data[0].importId).toBeNull();
+    expect(s.tx.hrMovement.createManyAndReturn.mock.calls[0][0].data[0].importId).toBeNull();
   });
 
   it('гараар: өөр кемпийн ажилтан → 400; буруу огноо → 400', async () => {
@@ -127,15 +133,15 @@ describe('CampAttendanceService — импорт (Шат 3.3)', () => {
   });
 
   it('deleteMovement: дараагийн бүртгэлтэй → 409; ирэлт → нээлттэй stay устгана; явалт → stay дахин нээнэ', async () => {
-    s.tx.campMovement.findFirst.mockResolvedValueOnce({ id: 'm1', employeeId: 'e1', movementDate: d('2026-10-07'), direction: 'ARRIVAL' }).mockResolvedValueOnce({ movementDate: d('2026-10-22') });
+    s.tx.hrMovement.findFirst.mockResolvedValueOnce({ id: 'm1', employeeId: 'e1', movementDate: d('2026-10-07'), direction: 'ARRIVAL' }).mockResolvedValueOnce({ movementDate: d('2026-10-22') });
     await expect(svc.deleteMovement('t1', 'a1', 'c1', 'm1')).rejects.toThrow(/2026-10-22/);
-    s.tx.campMovement.findFirst.mockResolvedValueOnce({ id: 'm1', employeeId: 'e1', movementDate: d('2026-10-07'), direction: 'ARRIVAL' }).mockResolvedValueOnce(null);
+    s.tx.hrMovement.findFirst.mockResolvedValueOnce({ id: 'm1', employeeId: 'e1', movementDate: d('2026-10-07'), direction: 'ARRIVAL' }).mockResolvedValueOnce(null);
     await svc.deleteMovement('t1', 'a1', 'c1', 'm1');
     expect(s.tx.campStay.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 't1', arrivalMovementId: 'm1', departureMovementId: null } });
-    s.tx.campMovement.findFirst.mockResolvedValueOnce({ id: 'm2', employeeId: 'e1', movementDate: d('2026-10-22'), direction: 'DEPARTURE' }).mockResolvedValueOnce(null);
+    s.tx.hrMovement.findFirst.mockResolvedValueOnce({ id: 'm2', employeeId: 'e1', movementDate: d('2026-10-22'), direction: 'DEPARTURE' }).mockResolvedValueOnce(null);
     await svc.deleteMovement('t1', 'a1', 'c1', 'm2');
     expect(s.tx.campStay.updateMany).toHaveBeenCalledWith({ where: { tenantId: 't1', departureMovementId: 'm2' }, data: { endDate: null, departureMovementId: null } });
-    expect(s.tx.campMovement.delete).toHaveBeenCalledTimes(2);
+    expect(s.tx.hrMovement.delete).toHaveBeenCalledTimes(2);
   });
 
   it('listMovements: 93 хоногоос их муж / урвуу муж → 400', async () => {
@@ -150,8 +156,8 @@ describe('CampAttendanceService — импорт (Шат 3.3)', () => {
       { id: 's2', startDate: d('2026-09-23'), endDate: d('2026-10-07'), employee: emp },
       { id: 's3', startDate: d('2026-10-01'), endDate: null, employee: emp },
     ]);
-    s.tx.campEmployee.findMany.mockResolvedValueOnce([]);
-    const rows = await svc.listStays('t1', 'a1', 'c1', '2026-10-07');
+    s.tx.hrEmployee.findMany.mockResolvedValueOnce([]);
+    const rows = await stays.listStays('t1', 'a1', 'c1', '2026-10-07');
     expect(rows.map((r) => r.dayType)).toEqual(['ARRIVAL', 'DEPARTURE', 'FULL_DAY']);
   });
 
@@ -175,45 +181,45 @@ describe('CampAttendanceService — импорт (Шат 3.3)', () => {
       crew: crew ? { rosterAnchorDate: d('2026-10-01') } : null, shiftAdjustments: [],
       stays: [{ startDate: d(id === 'a' ? '2026-10-07' : '2026-10-01'), endDate: null, arrivalMovement: { meals: [] }, departureMovement: null }],
     });
-    s.tx.campEmployee.findMany.mockResolvedValue([full('a', null, true), full('b', null, true), full('c', 'p-night', true), full('x', null, false)]);
-    const rows = await svc.listStays('t1', 'a1', 'c1', '2026-10-07');
+    s.tx.hrEmployee.findMany.mockResolvedValue([full('a', null, true), full('b', null, true), full('c', 'p-night', true), full('x', null, false)]);
+    const rows = await stays.listStays('t1', 'a1', 'c1', '2026-10-07');
     expect(rows.map((r) => [r.employee.employeeCode, r.shiftGroup, r.positionName, r.mealsIncluded])).toEqual([
       ['A', 'MOVEMENT', null, true],
       ['B', 'DAY', null, true],
       ['C', 'NIGHT', 'Шөнийн харуул', false],
       ['X', 'UNKNOWN', null, true],
     ]);
-    expect((await svc.listStays('t1', 'a1', 'c1', '2026-10-07', 'NIGHT')).map((r) => r.employee.employeeCode)).toEqual(['C']);
-    expect((await svc.listStays('t1', 'a1', 'c1', '2026-10-07', 'UNKNOWN')).map((r) => r.employee.employeeCode)).toEqual(['X']);
+    expect((await stays.listStays('t1', 'a1', 'c1', '2026-10-07', 'NIGHT')).map((r) => r.employee.employeeCode)).toEqual(['C']);
+    expect((await stays.listStays('t1', 'a1', 'c1', '2026-10-07', 'UNKNOWN')).map((r) => r.employee.employeeCode)).toEqual(['X']);
   });
 });
 
-describe('CampShiftsService (Шат 3.2)', () => {
+describe('HrShiftsService (Шат 3.2)', () => {
   let s: ReturnType<typeof setup>;
-  let svc: CampShiftsService;
+  let svc: HrShiftsService;
   const dto = { employeeIds: ['e1', 'e2'], startDate: '2026-10-10', endDate: '2026-10-12', shift: CampShiftType.NIGHT, reasonType: 'SHIFT_CHANGE' as const };
   beforeEach(() => {
     s = setup();
-    svc = new CampShiftsService(s.prisma as never, s.access);
+    svc = new HrShiftsService(s.prisma as never, s.access);
     setActor(s.tx, { userId: 'cu1', roles: [{ campId: 'c1', perms: [P.SHIFT_ADJUST] }] });
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
   });
 
   it('бөөнөөр: олдохгүй / идэвхгүй ажилтан → 400; нэг нь давхцвал бүгд 409 (кодыг нэрлэнэ)', async () => {
-    s.tx.campEmployee.findMany.mockResolvedValueOnce([{ id: 'e1', employeeCode: 'E1', status: 'ACTIVE' }]);
+    s.tx.hrEmployee.findMany.mockResolvedValueOnce([{ id: 'e1', employeeCode: 'E1', status: 'ACTIVE' }]);
     await expect(svc.createAdjustments('t1', 'a1', 'c1', dto)).rejects.toThrow(/1 ажилтан энэ кемпэд олдсонгүй/);
-    s.tx.campEmployee.findMany.mockResolvedValueOnce([{ id: 'e1', employeeCode: 'E1', status: 'ACTIVE' }, { id: 'e2', employeeCode: 'E2', status: 'INACTIVE' }]);
+    s.tx.hrEmployee.findMany.mockResolvedValueOnce([{ id: 'e1', employeeCode: 'E1', status: 'ACTIVE' }, { id: 'e2', employeeCode: 'E2', status: 'INACTIVE' }]);
     await expect(svc.createAdjustments('t1', 'a1', 'c1', dto)).rejects.toThrow(/Идэвхгүй ажилтан: E2/);
-    s.tx.campEmployee.findMany.mockResolvedValueOnce([{ id: 'e1', employeeCode: 'E1', status: 'ACTIVE' }, { id: 'e2', employeeCode: 'E2', status: 'ACTIVE' }]);
-    s.tx.campShiftAdjustment.findMany.mockResolvedValueOnce([{ startDate: d('2026-10-12'), endDate: d('2026-10-15'), employee: { employeeCode: 'E2' } }]);
+    s.tx.hrEmployee.findMany.mockResolvedValueOnce([{ id: 'e1', employeeCode: 'E1', status: 'ACTIVE' }, { id: 'e2', employeeCode: 'E2', status: 'ACTIVE' }]);
+    s.tx.hrShiftAdjustment.findMany.mockResolvedValueOnce([{ startDate: d('2026-10-12'), endDate: d('2026-10-15'), employee: { employeeCode: 'E2' } }]);
     await expect(svc.createAdjustments('t1', 'a1', 'c1', dto)).rejects.toThrow(/E2 \(2026-10-12 – 2026-10-15\)/);
-    expect(s.tx.campShiftAdjustment.createMany).not.toHaveBeenCalled();
+    expect(s.tx.hrShiftAdjustment.createMany).not.toHaveBeenCalled();
   });
 
   it('амжилттай → бүгдэд createMany (createdBy = core_users.id); OTHER шалтгаангүй → 400; урвуу муж → 400', async () => {
-    s.tx.campEmployee.findMany.mockResolvedValueOnce([{ id: 'e1', employeeCode: 'E1', status: 'ACTIVE' }, { id: 'e2', employeeCode: 'E2', status: 'ACTIVE' }]);
+    s.tx.hrEmployee.findMany.mockResolvedValueOnce([{ id: 'e1', employeeCode: 'E1', status: 'ACTIVE' }, { id: 'e2', employeeCode: 'E2', status: 'ACTIVE' }]);
     await expect(svc.createAdjustments('t1', 'a1', 'c1', dto)).resolves.toEqual({ created: 2 });
-    expect(s.tx.campShiftAdjustment.createMany.mock.calls[0][0].data[1]).toMatchObject({ tenantId: 't1', employeeId: 'e2', shift: 'NIGHT', reasonType: 'SHIFT_CHANGE', createdBy: 'cu1' });
+    expect(s.tx.hrShiftAdjustment.createMany.mock.calls[0][0].data[1]).toMatchObject({ tenantId: 't1', employeeId: 'e2', shift: 'NIGHT', reasonType: 'SHIFT_CHANGE', createdBy: 'cu1' });
     await expect(svc.createAdjustments('t1', 'a1', 'c1', { ...dto, reasonType: 'OTHER' })).rejects.toThrow(/reason заавал/);
     await expect(svc.createAdjustments('t1', 'a1', 'c1', { ...dto, endDate: '2026-10-01' })).rejects.toThrow(BadRequestException);
   });
@@ -223,12 +229,12 @@ describe('CampShiftsService (Шат 3.2)', () => {
     await expect(svc.createAdjustments('t1', 'a1', 'c1', dto)).rejects.toThrow(/camp\.shift\.adjust/);
     setActor(s.tx, { role: UserRole.OWNER });
     await expect(svc.deleteAdjustment('t1', 'a1', 'c1', 'x')).rejects.toThrow(NotFoundException);
-    expect(s.tx.campShiftAdjustment.findFirst).toHaveBeenCalledWith({ where: { id: 'x', tenantId: 't1', employee: { campId: 'c1' } }, select: { id: true } });
+    expect(s.tx.hrShiftAdjustment.findFirst).toHaveBeenCalledWith({ where: { id: 'x', tenantId: 't1', employee: { campId: 'c1' } }, select: { id: true } });
   });
 
   it('calendar: 31 хоногоос их → 400; ажилтан × өдөр (ээлж + эх сурвалж + байгаа эсэх)', async () => {
     await expect(svc.calendar('t1', 'a1', 'c1', { from: '2026-10-01', to: '2026-11-15' })).rejects.toThrow(/31 хоног/);
-    s.tx.campEmployee.findMany.mockResolvedValueOnce([{
+    s.tx.hrEmployee.findMany.mockResolvedValueOnce([{
       id: 'e1', employeeCode: 'E1', fullName: 'Бат',
       department: { code: 'MINE', shiftPatterns: [{ dayFrom: 1, dayTo: 7, shift: 'DAY' }, { dayFrom: 8, dayTo: 14, shift: 'NIGHT' }] },
       crew: { code: 'A', rosterAnchorDate: d('2026-10-07') },
@@ -280,7 +286,7 @@ describe('CampRoomsService (Шат 3.4)', () => {
     svc = new CampRoomsService(s.prisma as never, s.access);
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.ROOM_MANAGE] }] });
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
-    s.tx.campEmployee.findFirst.mockResolvedValue(emp);
+    s.tx.hrEmployee.findFirst.mockResolvedValue(emp);
     s.tx.campRoom.findFirst.mockResolvedValue(room);
   });
 
@@ -290,7 +296,7 @@ describe('CampRoomsService (Шат 3.4)', () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.ROOM_MANAGE] }] });
     s.tx.campRoom.findFirst.mockResolvedValueOnce({ ...room, status: CampRoomStatus.MAINTENANCE });
     await expect(svc.allocate('t1', 'a1', 'c1', dto)).rejects.toThrow(/MAINTENANCE/);
-    s.tx.campEmployee.findFirst.mockResolvedValueOnce({ ...emp, status: CampEmployeeStatus.INACTIVE });
+    s.tx.hrEmployee.findFirst.mockResolvedValueOnce({ ...emp, status: CampEmployeeStatus.INACTIVE });
     await expect(svc.allocate('t1', 'a1', 'c1', dto)).rejects.toThrow(/идэвхгүй/);
   });
 
@@ -373,7 +379,7 @@ describe('CampPresenceService (Шат 3.5) — DB → тооцоо', () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MEAL_ORDER] }] });
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
     s.tx.campSetting.findFirst.mockResolvedValueOnce({ ...S, defaultMealLocationId: 'loc-camp' });
-    s.tx.campEmployee.findMany.mockResolvedValueOnce([{
+    s.tx.hrEmployee.findMany.mockResolvedValueOnce([{
       id: 'e1', employeeCode: 'E1', fullName: 'Бат',
       // v0.2.1 (Q1): ажлын хоолны байршил ажилтан дээр (migration хэлтсийнхийг хуулсан); хэлтсийнх уншигдахгүй
       positionId: null, mealLocationId: 'loc-mine', mealsIncluded: null, positionRef: null,
@@ -383,7 +389,7 @@ describe('CampPresenceService (Шат 3.5) — DB → тооцоо', () => {
     }]);
     s.tx.campMealLocation.findMany.mockResolvedValueOnce([{ id: 'loc-camp', name: 'Кемп гал тогоо' }, { id: 'loc-mine', name: 'Уулын хэсэг' }]);
     const r = await svc.presence('t1', 'a1', 'c1', '2026-10-08');
-    expect(s.tx.campEmployee.findMany.mock.calls[0][0].where.stays.some).toEqual({ startDate: { lte: d('2026-10-08') }, OR: [{ endDate: null }, { endDate: { gte: d('2026-10-07') } }] });
+    expect(s.tx.hrEmployee.findMany.mock.calls[0][0].where.stays.some).toEqual({ startDate: { lte: d('2026-10-08') }, OR: [{ endDate: null }, { endDate: { gte: d('2026-10-07') } }] });
     expect(r.lines).toEqual([
       { mealType: 'BREAKFAST', mealLocationId: 'loc-camp', count: 1, mealLocationName: 'Кемп гал тогоо' },
       { mealType: 'LUNCH', mealLocationId: 'loc-mine', count: 1, mealLocationName: 'Уулын хэсэг' },

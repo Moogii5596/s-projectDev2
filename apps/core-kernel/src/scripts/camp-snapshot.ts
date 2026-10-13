@@ -13,7 +13,7 @@
  * Зөвхөн УНШИНА (READ ONLY transaction). Хуучин хувилбарын schema дээр ч ажиллана: v0.1.6-д байсан багана л уншина.
  */
 import { Prisma, PrismaClient } from '@prisma/client';
-import { addDays } from '../modules/camp/attendance/camp-date';
+import { addDays } from '../modules/camp/common/camp-date';
 import { loadPresence } from '../modules/camp/attendance/camp-presence.service';
 import { computeRoomBoard } from '../modules/camp/attendance/camp-rooms.service';
 import type { Tx } from '../modules/camp/common/camp-tx';
@@ -99,21 +99,21 @@ const byStatus = (name: string, rows: { status: string; _count: { _all: number }
 const COUNTS: CountFn = async (tx, tenantId, campId) => {
   const w = { tenantId, campId };
   const [employees, rooms, maintenance, mealOrders, haul, contracts, imports] = await Promise.all([
-    tx.campEmployee.groupBy({ by: ['status'], where: w, _count: { _all: true } }),
+    tx.hrEmployee.groupBy({ by: ['status'], where: w, _count: { _all: true } }),
     tx.campRoom.groupBy({ by: ['status'], where: w, _count: { _all: true } }),
     tx.campMaintenanceRequest.groupBy({ by: ['status'], where: w, _count: { _all: true } }),
     tx.campMealOrder.groupBy({ by: ['status'], where: w, _count: { _all: true } }),
     tx.campHaulRecord.groupBy({ by: ['status'], where: w, _count: { _all: true } }),
     tx.campContract.groupBy({ by: ['status'], where: w, _count: { _all: true } }),
-    tx.campMovementImport.groupBy({ by: ['status'], where: w, _count: { _all: true } }),
+    tx.hrMovementImport.groupBy({ by: ['status'], where: w, _count: { _all: true } }),
   ]);
   const [departments, crews, buildings, mealLocations, movements, stays, allocations, assets, assetMovements, costEntries, userRoles] =
     await Promise.all([
-      tx.campDepartment.count({ where: w }),
-      tx.campCrew.count({ where: w }),
+      tx.hrDepartment.count({ where: w }),
+      tx.hrCrew.count({ where: w }),
       tx.campBuilding.count({ where: w }),
       tx.campMealLocation.count({ where: w }),
-      tx.campMovement.count({ where: w }),
+      tx.hrMovement.count({ where: w }),
       tx.campStay.count({ where: w }),
       tx.campRoomAllocation.count({ where: w }),
       tx.campAsset.count({ where: w }),

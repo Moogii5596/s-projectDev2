@@ -187,7 +187,7 @@ for (const f of controllers) {
           const notes = decos
             .filter((x) => ['UseGuards', 'AllowPasswordChangeRequired', 'UseInterceptors'].includes(x.name))
             .map((x) => (x.name === 'UseGuards' ? `UseGuards(${x.arg})` : x.name));
-          apiRows.push({ verb: verb.name.toUpperCase(), full: route, ctrl, method: mm[1], svc, perms, access, via, pub, notes, file: rel(f), line: lineBase + i + 1 });
+          apiRows.push({ verb: verb.name.toUpperCase(), full: route, sub, ctrl, method: mm[1], svc, perms, access, via, pub, notes, file: rel(f), line: lineBase + i + 1 });
         }
         decos = [];
       } else if (/^ {2}[^ @/*]/.test(ln)) {
@@ -195,6 +195,18 @@ for (const f of controllers) {
       }
     }
   });
+}
+// v0.2.2 H1: өвлөсөн controller (`@Controller('x') … class A extends B {}`) — B-ийн route-уудыг A-ийн угтвараар (хуучин замууд, Deprecation)
+for (const f of controllers) {
+  const full = read(f);
+  for (const m of full.matchAll(/@Controller\(\s*'([^']*)'\s*\)\s*((?:@\w+\([^)]*\)\s*)*)export\s+class\s+(\w+)\s+extends\s+(\w+)\s*\{\s*\}/g)) {
+    const [, prefix, decoText, ctrl, parent] = m;
+    const extra = /DeprecatedRouteInterceptor/.test(decoText) ? ['Deprecated'] : [];
+    for (const r of apiRows.filter((x) => x.ctrl === parent)) {
+      const route = '/' + [globalPrefix, prefix, r.sub].filter(Boolean).join('/').replace(/\/+/g, '/');
+      apiRows.push({ ...r, full: route, ctrl: `${ctrl} (extends ${parent})`, notes: [...r.notes, ...extra], file: rel(f), line: lineOf(full, m.index) });
+    }
+  }
 }
 {
   const byArea = new Map();

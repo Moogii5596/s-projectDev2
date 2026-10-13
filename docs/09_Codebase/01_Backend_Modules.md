@@ -3,7 +3,7 @@ title: "Backend модулиуд (core-kernel)"
 type: "Architecture"
 status: "Active"
 last_updated: 2026-10-13
-tags: [codebase, backend, camp, auth]
+tags: [codebase, backend, camp, hr, auth]
 ---
 
 # Backend модулиуд (core-kernel)
@@ -14,6 +14,7 @@ tags: [codebase, backend, camp, auth]
 ## Агуулга
 - Суурь: [[#auth]] · [[#db]] · [[#common]] · [[#config, cache, gateway]] · [[#scripts]]
 - Бизнес: [[#MR + workflow]] · [[#budget, inventory, vendor, report (lite)]] · [[#event-bus]] · [[#tenant-admin, route-ingress, health]]
+- HR / Core (v0.2.2 H1, [[ADR-006_HR_Core_Module]]): [[#hr — нийтлэг]] · [[#hr/employees, hr/org, hr/positions]] · [[#hr/attendance]] · [[#hr/import]] · [[#core/organizations]]
 - Кемп: [[#camp — нийтлэг]] · [[#camp/rbac]] · [[#camp/master]] · [[#camp/catalog]] · [[#camp/settings]] · [[#camp/attendance]] · [[#camp/assets]] · [[#camp/maintenance]] · [[#camp/data]] · [[#camp/costs, camp/audit]] · [[#camp — V2 (кодгүй)]]
 
 ---
@@ -62,8 +63,31 @@ tags: [codebase, backend, camp, auth]
 
 ---
 
+## hr — нийтлэг
+- **Зорилго:** системийн суурь HR ([[ADR-006_HR_Core_Module]]) — ажилтан, хэлтэс, бригад, албан тушаал, ээлж, ирц, импорт. `hr.module.ts` (импорт: `CampCommonModule` л — **HR → Кемп хамааралгүй**).
+- **v0.2.2 H1 хязгаар:** зөвхөн кодын эзэмшил шилжсэн. Хүснэгт `camp_*`, эрхийн код `camp.*` хэвээр (v0.3); Prisma model HR нэртэй (`HrEmployee` …) + `@@map("camp_employees")`. Ажилтан нэг кемптэй хэвээр — API-д `:campId` = «үндсэн ажлын байр».
+- **API:** `/api/v1/hr/sites/:campId/...`, `/api/v1/hr/positions`. Хуучин `/api/v1/camp/...` замууд — `camp/legacy/hr-legacy.controller.ts` (HR controller-ийг өвлөсөн, `Deprecation: true`, **v0.2.3-т устгана**).
+- **Хэв маяг:** Кемпийн хэв маягтай ижил (`inTenantTx` + `CampAccessService.require` — `camp/common`). Хуваалцах DTO — `camp/common/common.dto.ts` (`QueryActiveOnlyDto`, нэрийн каталог, `CODE`).
+- **Тест:** `hr-routes` integration (шинэ = хуучин хариу, Deprecation, ирц → байрлалт, rooms экспорт, RLS).
+
+## hr/employees, hr/org, hr/positions
+- `employees/hr-employees.service.ts` (ажилтан, bulk; эффектив хоол/байршил — `camp/common/position-defaults.ts`) · `org/hr-departments.service.ts` + `shift-pattern.ts` (хэлтэс, ээлжийн загвар) · `org/hr-crews.service.ts` (бригад) · `positions/hr-positions.service.ts` (албан тушаалын каталог + `resolvePositionByName`, `assertPosition`, `normName`).
+- **Хүснэгт:** `camp_employees`, `camp_departments`, `camp_department_shift_patterns`, `camp_crews`, `camp_positions`. Кемп × албан тушаалын анхдагч (`camp_position_settings`, `camp_position_shift_patterns`) — Кемпийнх ([[#camp/catalog]]).
+- **Эрх:** `camp.employee.manage`, `camp.master.manage`. Нэвтрэх эрх / урилга (Блок 2–3) — [[#camp/rbac]]-д үлдсэн (`/camp/camps/:campId/employees/:id/{user,create-user}`).
+
+## hr/attendance
+- **Ирц:** `hr-attendance.service.ts` — xlsx импорт **PREVIEW → CONFIRM** (нэг tx), гараар бүртгэл, устгал · `hr-shifts.service.ts` (ээлжийн өөрчлөлт, календарь). Цэвэр функц: `import-parser`, `import-planner`, `attendance-state`, `roster`, `shift-resolver`, `meal-rules`, `range` (огноо — `camp/common/camp-date.ts`).
+- **Кемпийн байрлалт (порт):** `stay-store.ts` — `AttendanceStayStore` + `HrAttendanceHooks`. Ирцийн бичилт `camp_stays`-ыг **нэг transaction-д** порт-оор шинэчилнэ; хэрэгжүүлэлт `CampStayStore` (Кемп), бүртгэл `CampHrBridge.onModuleInit`. Бүртгэгдээгүй бол алдаа.
+- **Хүснэгт:** `camp_movements`, `camp_movement_imports`, `camp_shift_adjustments`. **Эрх:** `camp.movement.import`, `camp.shift.adjust`. Тест: `import.test`, `attendance-services.test` (Кемптэй хамт), `camp-attendance` integration + golden.
+
+## hr/import
+- `hr-data-import.service.ts` — хүснэгтээр оруулах/экспорт (`employees`, `departments` handler). Нэмэлт экспорт `registerExport(type, …)` — Кемп `rooms` бүртгэнэ. Хүснэгт: `camp_data_imports`. Тест: `camp-data-import` integration.
+
+## core/organizations
+- `core.module.ts` — `CoreOrganizationsService` (байгууллагууд — гэрээт г.м.), `/api/v1/core/organizations`. Хүснэгт `camp_organizations` (model `CoreOrganization`). Эрх: `camp.master.manage`.
+
 ## camp — нийтлэг
-- `camp.module.ts` — бүх дэд модулийг бүртгэнэ. Кемп = уурхайн кемпийн катеринг үйлчилгээ ([[01_plan_and_erd]]).
+- `camp.module.ts` — бүх дэд модулийг бүртгэнэ; `HrModule`, `CoreModule`-ийг import хийнэ (Кемп → HR, эсрэгээрээ үгүй). `camp-hr.bridge.ts` — HR-д байрлалтын порт, `rooms` экспорт бүртгэнэ. `common/camp-common.module.ts` — `CampAccessService`, `CampAuditService` (HR/Core хуваалцана). Кемп = уурхайн кемпийн катеринг үйлчилгээ ([[01_plan_and_erd]]).
 - `common/camp-access.service.ts` — эрх шалгах: `require(tx, tenantId, authId, campId, codes)` (эрх), `requireAccess(...)` (кемпийн гишүүнчлэл л), `requireInAnyCamp`. **Tenant OWNER/ADMIN = бүх кемпийн бүх эрх** (анхны тохиргоо). · `camp-permissions.ts` — `CAMP_PERMISSIONS` (DB-тэй ЯГ ижил, [[05_Permissions_Catalog]]) · `camp-tx.ts` — `inTenantTx` + огноо/цагийн хөрвүүлэлт (`toDbDate`, `fromDbDate`…) · `camp-errors.ts` (DB алдаа → HTTP, нөөц хамгаалалт) · `camp-audit.service.ts` (`camp_audit_log`) · `camp-lookup.ts` (кемп байгаа эсэх — эрх шалгасны ДАРАА) · `camp-request.ts` (`reqUser(req)`) · `camp-i18n.ts`.
 - **Хэв маяг:** service-ийн public метод бүр `(tenantId, authId, campId, …)` → `withCampErrors(() => inTenantTx(...))` → эхэнд `access.require/requireAccess`. Эрхийн alias: `const P = CAMP_PERMISSIONS`.
 - **Шилжилт:** ажилтан / хэлтэс / ээлж / ирц / гэрээт байгууллага → HR модуль руу ([[ADR-006_HR_Core_Module]], v0.2.2).
@@ -74,20 +98,20 @@ tags: [codebase, backend, camp, auth]
 - **Эрх:** `camp.roles.manage`. Загвар: [[ADR-003_Users_Login_Permissions]]. Тест: `camp-v022-perms`, `camp-master` integration.
 
 ## camp/master
-- `camps.service.ts` (кемп — жагсаалт = хэрэглэгчийн эрхтэй кемп) · `camp-facilities.service.ts` (байр, өрөө; `room-range.ts` олон өрөө) · `camp-organizations.service.ts` (гэрээт байгууллага) · `camp-departments.service.ts` + `shift-pattern.ts` (хэлтэс, ээлжийн загвар) · `camp-crews.service.ts` (баг) · `camp-employees.service.ts` (ажилтан).
-- **Хүснэгт:** `camps`, `camp_buildings`, `camp_rooms`, `camp_organizations`, `camp_departments`, `camp_department_shift_patterns`, `camp_crews`, `camp_employees`.
-- **Эрх:** `camp.master.manage`, `camp.employee.manage`, `camp.room.manage`. Тест: `camp-master` integration, e2e `camp`.
+- `camps.service.ts` (кемп — жагсаалт = хэрэглэгчийн эрхтэй кемп) · `camp-facilities.service.ts` (байр, өрөө; `room-range.ts` олон өрөө). Хэлтэс, бригад, ажилтан, байгууллага → [[#hr/employees, hr/org, hr/positions]], [[#core/organizations]] (v0.2.2 H1).
+- **Хүснэгт:** `camps`, `camp_buildings`, `camp_rooms`.
+- **Эрх:** `camp.master.manage`, `camp.room.manage`. Тест: `camp-master` integration, e2e `camp`.
 
 ## camp/catalog
-- Байгууллагын каталог: албан тушаал (`camp_positions`, `camp_position_settings` — хоол/ээлж, `camp_position_shift_patterns`; v0.2.1 C-01), байрны төрөл (`camp_building_types`). Тест: `camp-v021` integration.
+- Байрны төрөл (`camp_building_types`) + кемп × албан тушаалын анхдагч (`camp_position_settings` — хоол/байршил, `camp_position_shift_patterns`; v0.2.1 C-01). Албан тушаалын каталог → [[#hr/employees, hr/org, hr/positions]]. Тест: `camp-v021` integration.
 
 ## camp/settings
 - Кемпийн тохиргоо (НӨАТ, ростер, анхдагч хоолны байршил) — `camp_settings`, `camp_meal_locations`. Тохиргоогүй кемпэд DB DEFAULT-тай ижил анхдагч. Эрх: `camp.settings.manage`.
 
 ## camp/attendance
-- **Ирц ба байрлалт.** `camp-attendance.service.ts` — xlsx импорт **PREVIEW → CONFIRM** (нэг tx, бүх мөр зөв үед л), гараар бүртгэл, байх хугацаа. Цэвэр функцүүд: `import-parser.ts` (mn/en/zh багана), `import-planner.ts`, `attendance-state.ts`, `roster.ts`, `shift-resolver.ts`, `meal-rules.ts`, `presence.ts`, `range.ts`, `camp-date.ts` (огноо = `'YYYY-MM-DD'` UTC string). `camp-shifts.service.ts` (ээлжийн зохицуулалт, календарь) · `camp-rooms.service.ts` (өрөө хуваарилалт, багтаамж — 28 хоногийн цонх) · `camp-presence.service.ts` (өдрийн хоолны суурь тоо — V2 хоолны захиалгын суурь).
-- **Хүснэгт:** `camp_movements`, `camp_movement_imports`, `camp_stays`, `camp_room_allocations`, `camp_shift_adjustments`.
-- **Эрх:** `camp.movement.import`, `camp.shift.adjust`, `camp.room.manage`. Тест: `camp-attendance` integration + `tests/__golden__` (golden файл), e2e `camp-ops`.
+- **Байрлалт ба хоолны суурь тоо.** `camp-stays.service.ts` (`CampStayStore` — HR ирцийн порт, `CampStaysService` — `GET stays`) · `camp-rooms.service.ts` (өрөө хуваарилалт, багтаамж — 28 хоногийн цонх) · `camp-presence.service.ts` + `presence.ts` (өдрийн хоолны суурь тоо — V2 хоолны захиалгын суурь). Ирц/ээлж → [[#hr/attendance]] (v0.2.2 H1).
+- **Хүснэгт:** `camp_stays`, `camp_room_allocations`.
+- **Эрх:** `camp.room.manage`. Тест: `camp-attendance` integration + `tests/__golden__`, e2e `camp-ops`.
 - **HR руу шилжинэ** (ирц, ээлж — [[ADR-006_HR_Core_Module]]); өрөө/байрлалт кемпэд үлдэнэ.
 
 ## camp/assets
@@ -98,7 +122,7 @@ tags: [codebase, backend, camp, auth]
 - **Хүснэгт:** `camp_maintenance_requests`, `camp_maintenance_parts`. Эрх: `camp.maintenance.{create,parts,close}`.
 
 ## camp/data
-- Excel / хүснэгтээр бөөнөөр оруулах, экспорт (v0.2.0 FB-02/FB-08): `camp-data-import.service.ts` (URL-ийн төрөл → handler), `departments.handler.ts`, `employees.handler.ts`, `rooms.export.ts`. Хүснэгт: `camp_data_imports`. Тест: `camp-data-import` integration.
+- `rooms.export.ts` — өрөөний экспорт (HR-ийн экспортод `CampHrBridge`-ээр бүртгэгдэнэ). Импорт/экспортын үндсэн хэсэг → [[#hr/import]].
 
 ## camp/costs, camp/audit
 - `costs/cost-entry-writer.ts` — **нэгдсэн зардлын бичигч** (`camp_cost_entries` — тайлангийн ганц эх сурвалж, snapshot) · `vat.ts` (2 оронтой, ROUND_HALF_UP).

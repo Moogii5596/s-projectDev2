@@ -13,7 +13,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
-import { diffDays, todayUb, isRealIsoDate } from '../modules/camp/attendance/camp-date';
+import { diffDays, todayUb, isRealIsoDate } from '../modules/camp/common/camp-date';
 import { buildSnapshot, CampSnapshot, compareSnapshots, PermsExpectation, summarize } from './camp-snapshot';
 import { assertLocalUrl, parseDotenv } from './test-user';
 

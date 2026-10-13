@@ -1,19 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { CampImportStatus, CampMovementDirection, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { fromDbDate, inTenantTx, toDbDate } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
-import { getCampOr404 } from '../common/camp-lookup';
+import { CampAccessService } from '../../camp/common/camp-access.service';
+import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { fromDbDate, inTenantTx, toDbDate } from '../../camp/common/camp-tx';
+import { withCampErrors } from '../../camp/common/camp-errors';
+import { getCampOr404 } from '../../camp/common/camp-lookup';
 import { assertDate, assertRange } from './range';
 import { buildAttendanceTemplate, parseAttendanceXlsx, ParsedRow } from './import-parser';
 import { planImport, PlannedRow } from './import-planner';
 import { applyPlan, loadPlannerState, lockCampAttendance } from './attendance-state';
-import { CreateMovementDto, ManualMovementsDto, QueryImportsDto, RangeQueryDto, StayShiftGroup } from './camp-attendance.dto';
-import { loadPresenceEmployees } from './camp-presence.service';
-import { employeeDay } from './presence';
+import { CreateMovementDto, ManualMovementsDto, QueryImportsDto, RangeQueryDto } from './hr-attendance.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
+import { HrAttendanceHooks } from './stay-store';
 
 const P = CAMP_PERMISSIONS;
 const CONFIRM_TX = { timeout: 120_000, maxWait: 10_000 };
@@ -26,10 +25,11 @@ const rowErrors = (rows: PlannedRow[]) => rows.filter((r) => r.errors.length > 0
  * Дүрэм нэг газарт: planImport (цэвэр) — PREVIEW, CONFIRM (DB төлвийг дахин уншина), гараар бүртгэл гурвуулаа.
  */
 @Injectable()
-export class CampAttendanceService {
+export class HrAttendanceService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
     private readonly access: CampAccessService,
+    private readonly hooks: HrAttendanceHooks,
   ) {}
 
   template(): Promise<Buffer> {
@@ -48,7 +48,7 @@ export class CampAttendanceService {
   async previewManual(tenantId: string, authId: string, campId: string, dto: ManualMovementsDto) {
     const employees = await inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
-      return tx.campEmployee.findMany({ where: { tenantId, campId, id: { in: dto.employeeIds } }, select: { employeeCode: true }, orderBy: { employeeCode: 'asc' } });
+      return tx.hrEmployee.findMany({ where: { tenantId, campId, id: { in: dto.employeeIds } }, select: { employeeCode: true }, orderBy: { employeeCode: 'asc' } });
     });
     if (employees.length !== dto.employeeIds.length) throw badRequest('camp.err.attendance.1');
     const parsed: ParsedRow[] = employees.map((e, i) => ({
@@ -68,9 +68,9 @@ export class CampAttendanceService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorId = await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
         await getCampOr404(tx, tenantId, campId);
-        const state = await loadPlannerState(tx, tenantId, campId, parsed.map((r) => r.employeeCode), parsed.map((r) => r.date ?? ''));
+        const state = await loadPlannerState(tx, tenantId, campId, parsed.map((r) => r.employeeCode), parsed.map((r) => r.date ?? ''), this.hooks.stays);
         const plan = planImport(parsed, state);
-        const imp = await tx.campMovementImport.create({
+        const imp = await tx.hrMovementImport.create({
           data: {
             tenantId, campId, fileName: fileName.slice(0, 200) || 'import.xlsx', status: CampImportStatus.PREVIEW,
             totalRows: plan.rows.length, okRows: plan.rows.length - plan.errorRows, errorRows: plan.errorRows,
@@ -98,7 +98,7 @@ export class CampAttendanceService {
   async listImports(tenantId: string, authId: string, campId: string, q: QueryImportsDto) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
-      return tx.campMovementImport.findMany({
+      return tx.hrMovementImport.findMany({
         where: { tenantId, campId, ...(q.status ? { status: q.status } : {}) },
         select: { id: true, fileName: true, status: true, totalRows: true, okRows: true, errorRows: true, createdAt: true, confirmedAt: true },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -110,7 +110,7 @@ export class CampAttendanceService {
   async getImport(tenantId: string, authId: string, campId: string, id: string) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
-      const imp = await tx.campMovementImport.findFirst({
+      const imp = await tx.hrMovementImport.findFirst({
         where: { id, tenantId, campId },
         select: { id: true, fileName: true, status: true, totalRows: true, okRows: true, errorRows: true, errors: true, parsedRows: true, createdAt: true, confirmedAt: true },
       });
@@ -128,22 +128,22 @@ export class CampAttendanceService {
         async (tx) => {
           const actorId = await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
           await lockCampAttendance(tx, campId);
-          const imp = await tx.campMovementImport.findFirst({ where: { id, tenantId, campId }, select: { id: true, status: true, fileName: true, parsedRows: true } });
+          const imp = await tx.hrMovementImport.findFirst({ where: { id, tenantId, campId }, select: { id: true, status: true, fileName: true, parsedRows: true } });
           if (!imp) throw notFound('camp.err.attendance.2');
           if (imp.status !== CampImportStatus.PREVIEW) throw conflict('camp.err.attendance.3', { status: imp.status });
           const parsed = imp.parsedRows as unknown as ParsedRow[];
-          const state = await loadPlannerState(tx, tenantId, campId, parsed.map((r) => r.employeeCode), parsed.map((r) => r.date ?? ''));
+          const state = await loadPlannerState(tx, tenantId, campId, parsed.map((r) => r.employeeCode), parsed.map((r) => r.date ?? ''), this.hooks.stays);
           const plan = planImport(parsed, state);
           if (plan.errorRows > 0) {
             // алдааг хадгалж (commit) дараа нь 409 өгнө
-            await tx.campMovementImport.update({
+            await tx.hrMovementImport.update({
               where: { id },
               data: { okRows: plan.rows.length - plan.errorRows, errorRows: plan.errorRows, errors: rowErrors(plan.rows) as unknown as Prisma.InputJsonValue },
             });
             return { ok: false as const, errors: rowErrors(plan.rows) };
           }
-          const applied = await applyPlan(tx, { tenantId, campId, actorId, importId: id, reason: `Ирц импорт: ${imp.fileName}` }, plan);
-          await tx.campMovementImport.update({
+          const applied = await applyPlan(tx, { tenantId, campId, actorId, importId: id, reason: `Ирц импорт: ${imp.fileName}` }, plan, this.hooks.stays);
+          await tx.hrMovementImport.update({
             where: { id },
             data: { status: CampImportStatus.CONFIRMED, confirmedBy: actorId, confirmedAt: new Date(), okRows: plan.rows.length, errorRows: 0, errors: [] },
           });
@@ -161,7 +161,7 @@ export class CampAttendanceService {
   async cancel(tenantId: string, authId: string, campId: string, id: string) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
-      const res = await tx.campMovementImport.updateMany({ where: { id, tenantId, campId, status: CampImportStatus.PREVIEW }, data: { status: CampImportStatus.CANCELLED } });
+      const res = await tx.hrMovementImport.updateMany({ where: { id, tenantId, campId, status: CampImportStatus.PREVIEW }, data: { status: CampImportStatus.CANCELLED } });
       if (res.count !== 1) throw conflict('camp.err.attendance.4');
       return { status: CampImportStatus.CANCELLED };
     });
@@ -175,13 +175,13 @@ export class CampAttendanceService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorId = await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
         await lockCampAttendance(tx, campId);
-        const emp = await tx.campEmployee.findFirst({ where: { id: dto.employeeId, tenantId, campId }, select: { employeeCode: true } });
+        const emp = await tx.hrEmployee.findFirst({ where: { id: dto.employeeId, tenantId, campId }, select: { employeeCode: true } });
         if (!emp) throw badRequest('camp.err.attendance.5');
         const row: ParsedRow = { row: 1, employeeCode: emp.employeeCode, date: dto.date, direction: dto.direction, meals: dto.meals ?? null, shift: dto.shift ?? null, errors: [] };
-        const state = await loadPlannerState(tx, tenantId, campId, [emp.employeeCode], [dto.date]);
+        const state = await loadPlannerState(tx, tenantId, campId, [emp.employeeCode], [dto.date], this.hooks.stays);
         const plan = planImport([row], state);
         if (plan.errorRows > 0) return { ok: false as const, errors: plan.rows[0].errors };
-        await applyPlan(tx, { tenantId, campId, actorId, importId: null, reason: 'Гараар бүртгэсэн ирэлт' }, plan);
+        await applyPlan(tx, { tenantId, campId, actorId, importId: null, reason: 'Гараар бүртгэсэн ирэлт' }, plan, this.hooks.stays);
         return { ok: true as const, movement: plan.movements[0] };
       }),
     );
@@ -195,9 +195,9 @@ export class CampAttendanceService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
         await lockCampAttendance(tx, campId);
-        const m = await tx.campMovement.findFirst({ where: { id, tenantId, campId }, select: { id: true, employeeId: true, movementDate: true, direction: true } });
+        const m = await tx.hrMovement.findFirst({ where: { id, tenantId, campId }, select: { id: true, employeeId: true, movementDate: true, direction: true } });
         if (!m) throw notFound('camp.err.attendance.6');
-        const later = await tx.campMovement.findFirst({
+        const later = await tx.hrMovement.findFirst({
           where: {
             tenantId, employeeId: m.employeeId, NOT: { id },
             OR: [
@@ -209,11 +209,11 @@ export class CampAttendanceService {
         });
         if (later) throw conflict('camp.err.attendance.7', { date: fromDbDate(later.movementDate) });
         if (m.direction === CampMovementDirection.ARRIVAL) {
-          await tx.campStay.deleteMany({ where: { tenantId, arrivalMovementId: id, departureMovementId: null } });
+          await this.hooks.stays.undoArrival(tx, tenantId, id);
         } else {
-          await tx.campStay.updateMany({ where: { tenantId, departureMovementId: id }, data: { endDate: null, departureMovementId: null } });
+          await this.hooks.stays.undoDeparture(tx, tenantId, id);
         }
-        await tx.campMovement.delete({ where: { id } });
+        await tx.hrMovement.delete({ where: { id } });
         return { deleted: true };
       }),
     );
@@ -223,7 +223,7 @@ export class CampAttendanceService {
     assertRange(q.from, q.to, MAX_RANGE_DAYS);
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
-      const rows = await tx.campMovement.findMany({
+      const rows = await tx.hrMovement.findMany({
         where: {
           tenantId,
           campId,
@@ -250,50 +250,6 @@ export class CampAttendanceService {
         orderBy: [{ movementDate: 'asc' }, { direction: 'asc' }, { createdAt: 'asc' }],
       });
       return rows.map((r) => ({ ...r, movementDate: fromDbDate(r.movementDate) }));
-    });
-  }
-
-  /** D өдөр кемпэд байгаа (D-г хамарсан stay) ажилтнууд — ирсэн/явсан/бүтэн өдөр */
-  /**
-   * D өдрийн ирцийн жагсаалт. v0.2.1 (C-14): мөр бүрт тооцоолсон ээлж `shiftGroup` (DAY | NIGHT | UNKNOWN | MOVEMENT —
-   * хоолны тооцоотой ИЖИЛ `employeeDay`), албан тушаал, хоол авах эсэх (эффектив); `shift` өгвөл шүүнэ.
-   */
-  async listStays(tenantId: string, authId: string, campId: string, date: string, shift?: StayShiftGroup) {
-    assertDate(date);
-    return inTenantTx(this.prisma, tenantId, async (tx) => {
-      await this.access.requireAccess(tx, tenantId, authId, campId);
-      const d = toDbDate(date);
-      const rows = await tx.campStay.findMany({
-        where: { tenantId, campId, startDate: { lte: d }, OR: [{ endDate: null }, { endDate: { gte: d } }] },
-        select: {
-          id: true, startDate: true, endDate: true,
-          employee: { select: { id: true, employeeCode: true, fullName: true, department: { select: { code: true, name: true } }, crew: { select: { code: true } } } },
-        },
-        orderBy: { employee: { employeeCode: 'asc' } },
-      });
-      const { settings, employees } = await loadPresenceEmployees(tx, tenantId, campId, date);
-      const info = new Map(
-        employees.map((e) => {
-          const day = employeeDay(e, date, settings);
-          const shiftGroup: StayShiftGroup = !day ? 'UNKNOWN' : day.kind === 'MOVEMENT' ? 'MOVEMENT' : (day.shift ?? 'UNKNOWN');
-          return [e.id, { shiftGroup, positionName: e.positionName ?? null, mealsIncluded: e.mealsIncluded !== false }] as const;
-        }),
-      );
-      const out = rows.map((r) => {
-        const start = fromDbDate(r.startDate);
-        const end = r.endDate ? fromDbDate(r.endDate) : null;
-        const i = info.get(r.employee.id);
-        return {
-          ...r,
-          startDate: start,
-          endDate: end,
-          dayType: start === date ? 'ARRIVAL' : end === date ? 'DEPARTURE' : 'FULL_DAY',
-          shiftGroup: i?.shiftGroup ?? ('UNKNOWN' as StayShiftGroup),
-          positionName: i?.positionName ?? null,
-          mealsIncluded: i?.mealsIncluded ?? true,
-        };
-      });
-      return shift ? out.filter((r) => r.shiftGroup === shift) : out;
     });
   }
 }

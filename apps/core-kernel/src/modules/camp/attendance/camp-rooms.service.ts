@@ -6,9 +6,9 @@ import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { fromDbDate, inTenantTx, toDbDate, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
-import { addDays, coversDay } from './camp-date';
-import { expectedNight, RosterSettings } from './roster';
-import { assertDate } from './range';
+import { addDays, coversDay } from '../common/camp-date';
+import { expectedNight, RosterSettings } from '../../hr/attendance/roster';
+import { assertDate } from '../../hr/attendance/range';
 import { OPEN_STATUSES } from '../maintenance/maintenance-flow';
 import { CreateRoomAllocationDto, EndRoomAllocationDto, QueryAllocationsDto } from './camp-attendance.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
@@ -58,7 +58,7 @@ export class CampRoomsService {
         await this.access.require(tx, tenantId, authId, campId, P.ROOM_MANAGE);
         await getCampOr404(tx, tenantId, campId);
         const settings = await getRosterSettings(tx, tenantId, campId);
-        const emp = await tx.campEmployee.findFirst({
+        const emp = await tx.hrEmployee.findFirst({
           where: { id: dto.employeeId, tenantId, campId },
           select: { id: true, employeeCode: true, status: true, crew: { select: { rosterAnchorDate: true } } },
         });

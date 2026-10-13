@@ -1,32 +1,37 @@
 import { CampMovementDirection, CampShiftAdjustmentReason } from '@prisma/client';
-import { fromDbDate, toDbDate, Tx } from '../common/camp-tx';
-import { getRosterSettings } from '../common/camp-lookup';
-import { addDays } from './camp-date';
+import { fromDbDate, toDbDate, Tx } from '../../camp/common/camp-tx';
+import { getRosterSettings } from '../../camp/common/camp-lookup';
+import { addDays } from '../../camp/common/camp-date';
 import { ImportPlan, movementKey, PlannerState } from './import-planner';
 import { conflict } from '../../../common/i18n/app-error';
+import type { AttendanceStayStore } from './stay-store';
 
 /** Төлөвлөгчийн DB төлөв: тухайн ажилтнуудын (кодоор) байх хугацаа, бүртгэл, зохицуулалт — огнооны мужид хамаарах */
-export async function loadPlannerState(tx: Tx, tenantId: string, campId: string, codes: string[], dates: string[]): Promise<PlannerState> {
+export async function loadPlannerState(
+  tx: Tx,
+  tenantId: string,
+  campId: string,
+  codes: string[],
+  dates: string[],
+  stayStore: AttendanceStayStore,
+): Promise<PlannerState> {
   const settings = await getRosterSettings(tx, tenantId, campId);
   const uniqCodes = [...new Set(codes.filter(Boolean))];
   const valid = dates.filter(Boolean).sort();
   const minDate = valid[0] ?? '1970-01-01';
   const maxDate = valid[valid.length - 1] ?? '1970-01-01';
-  const employees = await tx.campEmployee.findMany({
+  const employees = await tx.hrEmployee.findMany({
     where: { tenantId, employeeCode: { in: uniqCodes } },
     select: { id: true, campId: true, status: true, employeeCode: true, crew: { select: { rosterAnchorDate: true } } },
   });
   const ids = employees.map((e) => e.id);
   const [stays, movements, adjustments] = await Promise.all([
-    tx.campStay.findMany({
-      where: { tenantId, employeeId: { in: ids }, OR: [{ endDate: null }, { endDate: { gte: toDbDate(minDate) } }] },
-      select: { id: true, employeeId: true, startDate: true, endDate: true },
-    }),
-    tx.campMovement.findMany({
+    stayStore.findForPlanner(tx, tenantId, ids, toDbDate(minDate)),
+    tx.hrMovement.findMany({
       where: { tenantId, employeeId: { in: ids }, movementDate: { gte: toDbDate(minDate), lte: toDbDate(maxDate) } },
       select: { employeeId: true, movementDate: true, direction: true },
     }),
-    tx.campShiftAdjustment.findMany({
+    tx.hrShiftAdjustment.findMany({
       where: { tenantId, employeeId: { in: ids }, endDate: { gte: toDbDate(minDate) }, startDate: { lte: toDbDate(addDays(maxDate, settings.rosterOnDays)) } },
       select: { employeeId: true, startDate: true, endDate: true },
     }),
@@ -54,10 +59,11 @@ export async function applyPlan(
   tx: Tx,
   ctx: { tenantId: string; campId: string; actorId: string; importId: string | null; reason: string },
   plan: ImportPlan,
+  stayStore: AttendanceStayStore,
 ): Promise<{ movements: number; newStays: number; closedStays: number; adjustments: number }> {
   const { tenantId, campId, actorId, importId, reason } = ctx;
   const created = plan.movements.length
-    ? await tx.campMovement.createManyAndReturn({
+    ? await tx.hrMovement.createManyAndReturn({
         data: plan.movements.map((m) => ({
           tenantId, campId, employeeId: m.employeeId, movementDate: toDbDate(m.date), direction: m.direction, kind: m.kind,
           meals: m.meals, importId, createdBy: actorId,
@@ -72,23 +78,21 @@ export async function applyPlan(
     return id;
   };
   if (plan.newStays.length) {
-    await tx.campStay.createMany({
-      data: plan.newStays.map((s) => ({
+    await stayStore.createMany(
+      tx,
+      plan.newStays.map((s) => ({
         tenantId, campId, employeeId: s.employeeId, arrivalMovementId: must(s.arrivalKey),
         departureMovementId: s.departureKey ? must(s.departureKey) : null,
         startDate: toDbDate(s.startDate), endDate: s.endDate ? toDbDate(s.endDate) : null,
       })),
-    });
+    );
   }
   for (const c of plan.closeStays) {
-    const res = await tx.campStay.updateMany({
-      where: { id: c.stayId, tenantId, endDate: null },
-      data: { endDate: toDbDate(c.endDate), departureMovementId: must(c.departureKey) },
-    });
-    if (res.count !== 1) throw conflict('camp.err.attendance_state.2');
+    const count = await stayStore.close(tx, tenantId, c.stayId, toDbDate(c.endDate), must(c.departureKey));
+    if (count !== 1) throw conflict('camp.err.attendance_state.2');
   }
   if (plan.adjustments.length) {
-    await tx.campShiftAdjustment.createMany({
+    await tx.hrShiftAdjustment.createMany({
       data: plan.adjustments.map((a) => ({
         tenantId, employeeId: a.employeeId, startDate: toDbDate(a.startDate), endDate: toDbDate(a.endDate), shift: a.shift,
         reasonType: CampShiftAdjustmentReason.OTHER, reason, createdBy: actorId,

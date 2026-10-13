@@ -21,13 +21,14 @@ tags: [status, v0.2.2]
 | Блок 2 — утас/username нэвтрэлт, server sign-in | ✅ `94a749d` |
 | Блок 2.5 — домэйн, Cloudflare Tunnel | ✅ `d116772` |
 | Блок 3 — урилга, хэрэглэгч үүсгэх, нууц үг сэргээх | ✅ `c88086d` |
-| **HR модуль** ([[ADR-006_HR_Core_Module]]) | 📋 дараалал шийдэгдээгүй |
-| Блок 4 — хэрэглэгч удирдах UI | 📋 |
+| Блок H1 — HR backend зөөлт (DB хөндөхгүй) ([[ADR-006_HR_Core_Module]] §5) | ✅ cloud (2026-10-14) — commit хүлээгдэж байна |
+| **Блок H2** — HR frontend («Хүний нөөц» цэс) | 📋 дараагийнх |
+| Блок 4 — хэрэглэгч удирдах UI (HR дээр) | 📋 |
 | Блок 5 — профайл, ажлаас гаргах · Блок 6 — release | 📋 |
 
 ## 2. Дараагийн алхам
-1. **Шийдвэр:** HR модулийг Блок 4-ийн өмнө үү, хойно уу ([[ADR-006_HR_Core_Module]] §5).
-2. Блок 4 (UI) → 5 → 6; release-ийн өмнө staging-д заавал шалгах зүйлс — [[08_v0.2.2_progress]] «Staging».
+1. H1-ийг таны машин дээр commit → CI; дараа нь **Блок H2** (frontend).
+2. Блок 4 (UI, HR дээр) → 5 → 6; release-ийн өмнө staging-д заавал шалгах зүйлс — [[08_v0.2.2_progress]] «Staging».
 3. Дараагийн хувилбар: `v0.2.3` (хөрөнгө ажилтанд, ээлжийн календарь, гэрээ + үнэ) — [[03_v0.2_full_plan]].
 
 ## 3. Нээлттэй асуудал / эрсдэл
@@ -37,6 +38,7 @@ tags: [status, v0.2.2]
 | 2 | Supabase-ийн SMTP / GoTrue-ийн бодит шалгалт зөвхөн staging-д боломжтой (Блок 3) | [[08_v0.2.2_progress]] |
 | 3 | `packages/prisma-rls-extension` ашиглагдаагүй хамаарал | [[01_PostgreSQL_MultiTenant_RLS_Spec]] §6 |
 | 4 | vault-д алга spec (Event bus гэрээ, FIX-01~04) | [[INDEX]] → Missing Specs |
+| 5 | `camp-master` (7), `route-probe` (1) integration — v0.2.2 Блок 1–3-ын дараа хуучин хүлээлттэй (H1-ээс өмнө ч унадаг) | [[08_v0.2.2_progress]] «Блок H1 — тест» |
 
 ## 4. Тест (сүүлийн бүтэн ажиллагаа — v0.2.2 Блок 3, cloud)
 core-kernel unit 634 · web-shell 74 · integration (бодит PG + RLS) `camp-v022-*` + RLS ногоон · tsc / eslint цэвэр. Файлын зураглал, команд: [[07_Test_Map]]; орчин: [[02_Local_Supabase_Docker_Windows]].

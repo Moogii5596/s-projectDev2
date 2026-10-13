@@ -88,7 +88,7 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
     expect(rows[1].errors[0]).toMatchObject({ column: 'department', code: 'row.ref_not_found', message: '"NOPE" was not found', columnLabel: 'Department code' });
     expect(rows[2].errors[0].code).toBe('row.bad_phone');
     expect(rows[3].errors[0]).toMatchObject({ code: 'row.code_other_camp' });
-    expect(await it_.prismaAdmin.campEmployee.count({ where: { tenantId: it_.tenantId, campId: it_.ids.c1 } })).toBe(0);
+    expect(await it_.prismaAdmin.hrEmployee.count({ where: { tenantId: it_.tenantId, campId: it_.ids.c1 } })).toBe(0);
     it_.ids.imp1 = res.body.import.id;
   });
 
@@ -97,12 +97,12 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
     expect(bad.status).toBe(409);
     expect(bad.body).toMatchObject({ code: 'import.has_errors', params: { n: 3 }, message: '3 мөр алдаатай — засаад дахин оруулна уу' });
     expect(bad.body.rows).toHaveLength(3);
-    expect(await it_.prismaAdmin.campEmployee.count({ where: { tenantId: it_.tenantId, campId: it_.ids.c1 } })).toBe(0);
+    expect(await it_.prismaAdmin.hrEmployee.count({ where: { tenantId: it_.tenantId, campId: it_.ids.c1 } })).toBe(0);
 
     const ok = await it_.api().post(DI(`/employees/${it_.ids.imp1}/confirm`)).set(it_.as('admin')).send({ skipErrors: true });
     expect(ok.status).toBe(200);
     expect(ok.body).toMatchObject({ status: 'CONFIRMED', created: 1, updated: 0, skipped: 3 });
-    const e = await it_.prismaAdmin.campEmployee.findFirstOrThrow({ where: { tenantId: it_.tenantId, employeeCode: 'E-1' } });
+    const e = await it_.prismaAdmin.hrEmployee.findFirstOrThrow({ where: { tenantId: it_.tenantId, employeeCode: 'E-1' } });
     expect(e).toMatchObject({ phone: '99112233', email: 'bat@mail.mn', crewId: it_.ids.crew, status: 'ACTIVE' });
     const audit = await it_.prismaAdmin.campAuditLog.findMany({ where: { tenantId: it_.tenantId, entityId: e.id } });
     expect(audit).toHaveLength(1);
@@ -125,7 +125,7 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
     expect(res.body.rows[0].changes).toEqual({ phone: { from: '99112233', to: '88001122' }, crew: { from: 'A', to: null } });
     const ok = await it_.api().post(DI(`/employees/${res.body.import.id}/confirm`)).set(it_.as('admin')).send({});
     expect(ok.body).toMatchObject({ created: 1, updated: 1 });
-    const e1 = await it_.prismaAdmin.campEmployee.findFirstOrThrow({ where: { tenantId: it_.tenantId, employeeCode: 'E-1' } });
+    const e1 = await it_.prismaAdmin.hrEmployee.findFirstOrThrow({ where: { tenantId: it_.tenantId, employeeCode: 'E-1' } });
     expect(e1).toMatchObject({ phone: '88001122', crewId: null, email: 'bat@mail.mn' }); // имэйл багана файлд алга → хэвээр
   });
 
@@ -152,12 +152,12 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
     expect(pre.status).toBe(201);
     expect(pre.body.rows.map((r: { op: string }) => r.op)).toEqual(['create', 'create', 'error']);
     expect(pre.body.rows[2].errors[0]).toMatchObject({ column: 'mealLocation', code: 'row.ref_not_found' });
-    expect(await it_.prismaAdmin.campPosition.count({ where: { tenantId: it_.tenantId, name: { equals: 'Харуул', mode: 'insensitive' } } })).toBe(0); // preview бичихгүй
+    expect(await it_.prismaAdmin.hrPosition.count({ where: { tenantId: it_.tenantId, name: { equals: 'Харуул', mode: 'insensitive' } } })).toBe(0); // preview бичихгүй
     const ok = await it_.api().post(DI(`/employees/${pre.body.import.id}/confirm`)).set(it_.as('admin')).send({ skipErrors: true });
     expect(ok.body).toMatchObject({ created: 2, skipped: 1 });
-    const pos = await it_.prismaAdmin.campPosition.findMany({ where: { tenantId: it_.tenantId, name: { equals: 'Харуул', mode: 'insensitive' } } });
+    const pos = await it_.prismaAdmin.hrPosition.findMany({ where: { tenantId: it_.tenantId, name: { equals: 'Харуул', mode: 'insensitive' } } });
     expect(pos).toHaveLength(1); // " харуул " → ижил албан тушаал
-    const rows = await it_.prismaAdmin.campEmployee.findMany({ where: { tenantId: it_.tenantId, employeeCode: { in: ['E-71', 'E-72'] } }, orderBy: { employeeCode: 'asc' } });
+    const rows = await it_.prismaAdmin.hrEmployee.findMany({ where: { tenantId: it_.tenantId, employeeCode: { in: ['E-71', 'E-72'] } }, orderBy: { employeeCode: 'asc' } });
     expect(rows.map((e) => [e.employeeCode, e.positionId, e.mealLocationId, e.mealsIncluded])).toEqual([
       ['E-71', pos[0].id, it_.ids.loc, false],
       ['E-72', pos[0].id, null, false],
@@ -192,7 +192,7 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
       it_.api().post(DI(`/employees/${id}/confirm`)).set(it_.as('admin')).send({}),
     ]);
     expect([a.status, b.status].sort()).toEqual([200, 409]);
-    expect(await it_.prismaAdmin.campEmployee.count({ where: { tenantId: it_.tenantId, employeeCode: 'E-6' } })).toBe(1);
+    expect(await it_.prismaAdmin.hrEmployee.count({ where: { tenantId: it_.tenantId, employeeCode: 'E-6' } })).toBe(1);
   });
 
   it('эрх: manager (employee.manage-гүй) импорт → 403, экспорт → 200; nobody экспорт → 403', async () => {
@@ -226,7 +226,7 @@ describe('🏢 Хэлтэс ба өрөөний экспорт', () => {
     expect(res.body.rows[2].errors[0]).toMatchObject({ code: 'row.dept_has_active' });
     const ok = await it_.api().post(DI(`/departments/${res.body.import.id}/confirm`)).set(it_.as('admin')).send({ skipErrors: true });
     expect(ok.body).toMatchObject({ created: 2, skipped: 1 });
-    const d = await it_.prismaAdmin.campDepartment.findFirstOrThrow({ where: { tenantId: it_.tenantId, campId: it_.ids.c1, code: 'KITCHEN' } });
+    const d = await it_.prismaAdmin.hrDepartment.findFirstOrThrow({ where: { tenantId: it_.tenantId, campId: it_.ids.c1, code: 'KITCHEN' } });
     expect(d.mealLocationId).toBeNull();
     expect(await it_.prismaAdmin.campAuditLog.count({ where: { tenantId: it_.tenantId, entityId: d.id, action: 'IMPORT' } })).toBe(1);
   });

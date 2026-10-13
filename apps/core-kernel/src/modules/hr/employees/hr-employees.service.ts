@@ -1,16 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
-import { CampAuditService } from '../common/camp-audit.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { inTenantTx, Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
-import { assertMealLocation, getCampOr404, getRosterSettings } from '../common/camp-lookup';
-import { assertPosition, resolvePositionByName } from '../catalog/camp-catalog.service';
-import { effectiveEmployee, loadPositionDefaults } from '../attendance/camp-presence.service';
+import { CampAccessService } from '../../camp/common/camp-access.service';
+import { CampAuditService } from '../../camp/common/camp-audit.service';
+import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { inTenantTx, Tx } from '../../camp/common/camp-tx';
+import { withCampErrors } from '../../camp/common/camp-errors';
+import { assertMealLocation, getCampOr404, getRosterSettings } from '../../camp/common/camp-lookup';
+import { assertPosition, resolvePositionByName } from '../positions/hr-positions.service';
+import { effectiveEmployee, loadPositionDefaults } from '../../camp/common/position-defaults';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
-import { BulkEmployeesDto, CreateEmployeeDto, QueryEmployeesDto, UpdateEmployeeDto } from './camp-master.dto';
+import { BulkEmployeesDto, CreateEmployeeDto, QueryEmployeesDto, UpdateEmployeeDto } from './hr-employees.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
@@ -46,7 +46,7 @@ const EMPLOYEE_AUDIT_SELECT = { id: true, ...Object.fromEntries(EMPLOYEE_AUDIT_F
  * Хэлтэс/баг тухайн кемпийнх + идэвхтэй, байгууллага идэвхтэй байх ёстой.
  */
 @Injectable()
-export class CampEmployeesService {
+export class HrEmployeesService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
     private readonly access: CampAccessService,
@@ -61,17 +61,17 @@ export class CampEmployeesService {
     current?: { mealLocationId?: string | null },
   ) {
     if (refs.organizationId !== undefined) {
-      const org = await tx.campOrganization.findFirst({ where: { id: refs.organizationId, tenantId }, select: { isActive: true } });
+      const org = await tx.coreOrganization.findFirst({ where: { id: refs.organizationId, tenantId }, select: { isActive: true } });
       if (!org) throw badRequest('camp.err.employees.1');
       if (!org.isActive) throw badRequest('camp.err.employees.2');
     }
     if (refs.departmentId !== undefined) {
-      const d = await tx.campDepartment.findFirst({ where: { id: refs.departmentId, tenantId, campId }, select: { isActive: true } });
+      const d = await tx.hrDepartment.findFirst({ where: { id: refs.departmentId, tenantId, campId }, select: { isActive: true } });
       if (!d) throw badRequest('camp.err.employees.3');
       if (!d.isActive) throw badRequest('camp.err.employees.4');
     }
     if (refs.crewId !== undefined && refs.crewId !== null) {
-      const c = await tx.campCrew.findFirst({ where: { id: refs.crewId, tenantId, campId }, select: { isActive: true } });
+      const c = await tx.hrCrew.findFirst({ where: { id: refs.crewId, tenantId, campId }, select: { isActive: true } });
       if (!c) throw badRequest('camp.err.employees.5');
       if (!c.isActive) throw badRequest('camp.err.employees.6');
     }
@@ -95,7 +95,7 @@ export class CampEmployeesService {
   }
 
   private async assertCodeUnique(tx: Tx, tenantId: string, code: string, exceptId?: string) {
-    const dup = await tx.campEmployee.findFirst({
+    const dup = await tx.hrEmployee.findFirst({
       where: { tenantId, employeeCode: code, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
       select: { fullName: true },
     });
@@ -115,7 +115,7 @@ export class CampEmployeesService {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       await getCampOr404(tx, tenantId, campId);
-      const where: Prisma.CampEmployeeWhereInput = {
+      const where: Prisma.HrEmployeeWhereInput = {
         tenantId,
         campId,
         ...(q.departmentId ? { departmentId: q.departmentId } : {}),
@@ -132,7 +132,7 @@ export class CampEmployeesService {
           ? { AND: [{ OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }] }] }
           : {}),
       };
-      const rows = await tx.campEmployee.findMany({
+      const rows = await tx.hrEmployee.findMany({
         where,
         select: EMPLOYEE_SELECT,
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -148,7 +148,7 @@ export class CampEmployeesService {
   async get(tenantId: string, authId: string, campId: string, id: string) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
-      const e = await tx.campEmployee.findFirst({ where: { id, tenantId, campId }, select: EMPLOYEE_SELECT });
+      const e = await tx.hrEmployee.findFirst({ where: { id, tenantId, campId }, select: EMPLOYEE_SELECT });
       if (!e) throw notFound('camp.err.employees.8');
       return (await this.withEffective(tx, tenantId, campId, [e]))[0];
     });
@@ -162,7 +162,7 @@ export class CampEmployeesService {
         await this.assertRefs(tx, tenantId, campId, { organizationId: dto.organizationId, departmentId: dto.departmentId, crewId: dto.crewId ?? null, mealLocationId: dto.mealLocationId });
         await this.assertCodeUnique(tx, tenantId, dto.employeeCode);
         const pos = await this.resolvePosition(tx, tenantId, dto);
-        const created = await tx.campEmployee.create({
+        const created = await tx.hrEmployee.create({
           data: {
             tenantId,
             campId,
@@ -194,7 +194,7 @@ export class CampEmployeesService {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_MANAGE);
-        const e = await tx.campEmployee.findFirst({ where: { id, tenantId, campId }, select: EMPLOYEE_AUDIT_SELECT });
+        const e = await tx.hrEmployee.findFirst({ where: { id, tenantId, campId }, select: EMPLOYEE_AUDIT_SELECT });
         if (!e) throw notFound('camp.err.employees.8');
         await this.assertRefs(tx, tenantId, campId, { organizationId: dto.organizationId, departmentId: dto.departmentId, crewId: dto.crewId, mealLocationId: dto.mealLocationId }, e as { mealLocationId?: string | null });
         if (dto.employeeCode !== undefined) await this.assertCodeUnique(tx, tenantId, dto.employeeCode, id);
@@ -203,7 +203,7 @@ export class CampEmployeesService {
           ...Object.fromEntries(fields.filter((f) => dto[f] !== undefined).map((f) => [f, f === 'email' && dto.email ? dto.email.toLowerCase() : dto[f]])),
           ...(await this.resolvePosition(tx, tenantId, dto, (e as { positionId?: string | null }).positionId)),
         };
-        const updated = await tx.campEmployee.update({ where: { id }, data: data as Prisma.CampEmployeeUncheckedUpdateInput, select: EMPLOYEE_SELECT });
+        const updated = await tx.hrEmployee.update({ where: { id }, data: data as Prisma.HrEmployeeUncheckedUpdateInput, select: EMPLOYEE_SELECT });
         await this.audit.record(tx, {
           tenantId, campId, entityType: 'employee', entityId: id, action: 'UPDATE', actorUserId,
           fields: EMPLOYEE_AUDIT_FIELDS, before: e, after: updated,
@@ -252,7 +252,7 @@ export class CampEmployeesService {
         async (tx) => {
           const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_MANAGE);
           if (dto.mealsIncluded === undefined && dto.mealLocationId === undefined && dto.positionId === undefined) throw badRequest('camp.err.employees.bulk_empty');
-          const before = await tx.campEmployee.findMany({ where: { tenantId, campId, id: { in: dto.ids } }, select: EMPLOYEE_AUDIT_SELECT });
+          const before = await tx.hrEmployee.findMany({ where: { tenantId, campId, id: { in: dto.ids } }, select: EMPLOYEE_AUDIT_SELECT });
           if (before.length !== dto.ids.length) throw badRequest('camp.err.employees.bulk_not_found', { n: dto.ids.length - before.length });
           if (dto.mealLocationId) await assertMealLocation(tx, tenantId, campId, dto.mealLocationId);
           const pos = dto.positionId !== undefined ? await this.resolvePosition(tx, tenantId, { positionId: dto.positionId }) : {};
@@ -261,8 +261,8 @@ export class CampEmployeesService {
             ...(dto.mealLocationId !== undefined ? { mealLocationId: dto.mealLocationId } : {}),
             ...pos,
           };
-          await tx.campEmployee.updateMany({ where: { tenantId, campId, id: { in: dto.ids } }, data });
-          const after = await tx.campEmployee.findMany({ where: { tenantId, campId, id: { in: dto.ids } }, select: EMPLOYEE_AUDIT_SELECT });
+          await tx.hrEmployee.updateMany({ where: { tenantId, campId, id: { in: dto.ids } }, data });
+          const after = await tx.hrEmployee.findMany({ where: { tenantId, campId, id: { in: dto.ids } }, select: EMPLOYEE_AUDIT_SELECT });
           const prev = new Map(before.map((b) => [b.id as unknown as string, b]));
           await this.audit.recordMany(
             tx,

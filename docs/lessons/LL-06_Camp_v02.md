@@ -236,3 +236,13 @@ tags: [lessons]
 - **Шалтгаан:** Supabase CLI нь сүүлд apply хийсэн migration-аас **өмнөх** timestamp-тай шинэ файлыг (дараалал алдагдсан) хүлээж авдаггүй — staging / пилот дээр upgrade зогсоно.
 - **Шийдэл (2026-10-13):** Дугаарыг сольсон: урилга = `20261013005_core_user_invites.sql`, ажлаас гаргах = `…006` ([[07_v0.2.2_tech_plan]] §3.5).
 - **Дүрэм:** Migration файлын дугаарыг **хэрэгжүүлэх үед** (бодит дарааллаар) өгнө; tech plan-д зөвхөн «шинэ migration» гэж тэмдэглэнэ. Хэрэгжсэн, apply хийгдсэн migration-ы нэрийг хэзээ ч өөрчлөхгүй (MIG-001-тэй хамт — `db push` биш migration).
+
+### [PROC-018] Prisma model-ийн нэрийг солиход (`@@map` хэвээр) DB өөрчлөгдөхгүйг cloud-д хэрхэн батлах (v0.2.2 H1)
+- **Нөхцөл:** `CampEmployee → HrEmployee` г.м. 10 model-ийн нэрийг сольсон. Cloud-д `prisma migrate diff` ажиллахгүй (schema-engine татагдахгүй — TEST-021).
+- **Шийдэл:** Хуучин/шинэ schema-ийн DMMF-ийг (`@prisma/internals` `getDMMF`, wasm) model нэрийг нормчилж **бүтцээр** харьцуулсан: `dbName`, талбарын `dbName`/төрөл, PK/unique/index нэр — 65 model, 0 зөрүү. `relationName` л өөрчлөгдөнө — implicit m-n (`_AToB` хүснэгт) байхгүй тул DB-д нөлөөгүй (шалгасан). Дараа нь migration-уудыг цэвэр PG16 дээр apply хийж бүх integration тест.
+- **Дүрэм:** Model rename = (1) `@@map` бүх model-д байгаа эсэх, (2) implicit m-n relation байхгүй эсэх (байвал join хүснэгтийн нэр өөрчлөгдөнө!), (3) DMMF бүтцийн харьцуулалт эсвэл таны машин дээр `prisma migrate diff --from-migrations … --to-schema-datamodel …` хоосон.
+
+### [DOC-004] Хуучин замыг controller өвлөлтөөр хийхэд API каталогид харагдаагүй (v0.2.2 H1)
+- **Нөхцөл:** Хуучин `/camp/...` замуудыг `class CampX extends HrX {}` (+ `@Controller('camp/…')`) болгосон. Файлыг `hr-legacy.controllers.ts` гэж нэрлэсэн → `docs:gen` зөвхөн `*.controller.ts`-ийг уншдаг, мөн өвлөсөн route-ийг танихгүй байсан → 39 endpoint каталогоос дутсан.
+- **Шийдэл:** Файлыг `hr-legacy.controller.ts` болгосон; `gen-codebase-docs.mjs`-д `extends` controller-ийн route-уудыг эцгийнхээс угтвар сольж нэмэх (+ `Deprecated` тэмдэглэл) алхам нэмсэн → 201 endpoint.
+- **Дүрэм:** Controller файл үргэлж `*.controller.ts`. Өвлөсөн controller-ийн route param нэр эцгийнхтэй ИЖИЛ байна (`:campId`) — method-ийн `@Param('campId')` хуваалцана.

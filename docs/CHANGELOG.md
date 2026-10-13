@@ -17,6 +17,14 @@ tags: [release]
 
 ## [Unreleased]
 
+### v0.2.2 Блок H1 — HR / Core модуль, backend (2026-10-14) — [[ADR-006_HR_Core_Module]]
+- **DB өөрчлөгдөхгүй** (migration алга): Prisma model нэр `CampEmployee → HrEmployee`, `CampDepartment → HrDepartment`, `CampCrew → HrCrew`, `CampPosition → HrPosition`, `CampMovement(Import) → HrMovement(Import)`, `CampShiftAdjustment → HrShiftAdjustment`, `CampOrganization → CoreOrganization` (`@@map` хэвээр).
+- Шинэ `modules/hr` (ажилтан, хэлтэс, бригад, албан тушаал, ирц, ээлж, импорт), `modules/core` (байгууллага).
+- Шинэ API: `/api/v1/hr/sites/:campId/…`, `/api/v1/hr/positions`, `/api/v1/core/organizations`.
+- ⚠️ **Хуучин `/api/v1/camp/…` ажилтан/хэлтэс/бригад/албан тушаал/байгууллага/ирц/импортын замууд** хэвээр ажиллана, хариунд `Deprecation: true` — **v0.2.3-т устгана**.
+- Ирц ↔ Кемпийн байрлалт: порт (`AttendanceStayStore`) — нэг transaction, зан төлөв өөрчлөгдөөгүй.
+- `docs:gen`: өвлөсөн controller-ийн route-ыг каталогид оруулдаг болсон (DOC-004). Сургамж: PROC-018, DOC-004.
+
 ### Баримт бичиг — бүрэн шинжилгээ, context хэмнэлт (2026-10-13)
 - **[[CONTEXT]]** — Claude-ийн ганц эхлэх цэг (ажлын төрөл → файл, дүрэм, мэдээллийн ганц эх сурвалж)
 - 2026-09-ийн spec-үүдийг **бүрэн шинэчилсэн**: [[PRD-01_Core_Vision]], [[PRD-02_Tenant_Tiers]], [[PRD-03_Functional_Specs]], [[PRD-04_UI_UX_Architecture_Spec]], [[ARCH-05_UI_UX_Architecture_Spec]], [[01_Core_API_Gateway_ReverseProxy_Spec]], [[01_PostgreSQL_MultiTenant_RLS_Spec]], [[01_Tech_Stack_Decision]]; шинэ [[ARCH-00_System_Overview]]; хуучныг `_archive/specs_2026-09/` (`.v1`)

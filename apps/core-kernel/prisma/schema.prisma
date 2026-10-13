@@ -53,16 +53,16 @@ model Tenant {
   camps                       Camp[]
   campMealLocations           CampMealLocation[]
   campSettings                CampSetting[]
-  campDepartments             CampDepartment[]
-  campDepartmentShiftPatterns CampDepartmentShiftPattern[]
+  campDepartments             HrDepartment[]
+  campDepartmentShiftPatterns HrDepartmentShiftPattern[]
   campBuildings               CampBuilding[]
   campRooms                   CampRoom[]
-  campOrganizations           CampOrganization[]
-  campCrews                   CampCrew[]
-  campEmployees               CampEmployee[]
-  campShiftAdjustments        CampShiftAdjustment[]
-  campMovementImports         CampMovementImport[]
-  campMovements               CampMovement[]
+  campOrganizations           CoreOrganization[]
+  campCrews                   HrCrew[]
+  campEmployees               HrEmployee[]
+  campShiftAdjustments        HrShiftAdjustment[]
+  campMovementImports         HrMovementImport[]
+  campMovements               HrMovement[]
   campStays                   CampStay[]
   campRoomAllocations         CampRoomAllocation[]
   campAssetCategories         CampAssetCategory[]
@@ -117,12 +117,12 @@ model CoreUser {
   // Camp Module — (tenant_id, id) composite FK-ууд (D2)
   campUserRoles             CampUserRole[]           @relation("CampUserRoleUser")
   campUserPermissions       CampUserPermission[]     @relation("CampUserPermissionUser")
-  campEmployees             CampEmployee[]           @relation("CampEmployeeUser")
+  campEmployees             HrEmployee[]           @relation("CampEmployeeUser")
   invites                   CoreUserInvite[]
-  campShiftAdjustments      CampShiftAdjustment[]    @relation("CampShiftAdjustmentCreatedBy")
-  campImportsUploaded       CampMovementImport[]     @relation("CampMovementImportUploadedBy")
-  campImportsConfirmed      CampMovementImport[]     @relation("CampMovementImportConfirmedBy")
-  campMovementsCreated      CampMovement[]           @relation("CampMovementCreatedBy")
+  campShiftAdjustments      HrShiftAdjustment[]    @relation("CampShiftAdjustmentCreatedBy")
+  campImportsUploaded       HrMovementImport[]     @relation("CampMovementImportUploadedBy")
+  campImportsConfirmed      HrMovementImport[]     @relation("CampMovementImportConfirmedBy")
+  campMovementsCreated      HrMovement[]           @relation("CampMovementCreatedBy")
   campAssetMovements        CampAssetMovement[]      @relation("CampAssetMovementMovedBy")
   campMaintenanceReported   CampMaintenanceRequest[] @relation("CampMaintenanceReportedBy")
   campMaintenanceClosed     CampMaintenanceRequest[] @relation("CampMaintenanceClosedBy")
@@ -801,7 +801,7 @@ model CampUserRole {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  sourcePosition CampPosition? @relation("CampUserRoleSourcePosition", fields: [tenantId, sourcePositionId], references: [tenantId, id], onDelete: SetNull, onUpdate: NoAction, map: "fk_camp_user_roles_source_position")
+  sourcePosition HrPosition? @relation("CampUserRoleSourcePosition", fields: [tenantId, sourcePositionId], references: [tenantId, id], onDelete: SetNull, onUpdate: NoAction, map: "fk_camp_user_roles_source_position")
   tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   user   CoreUser @relation("CampUserRoleUser", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_roles_user")
   role   CampRole @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_roles_role")
@@ -848,7 +848,7 @@ model CampPositionRoleTemplate {
   createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz
   updatedAt  DateTime          @updatedAt @map("updated_at") @db.Timestamptz
 
-  position CampPosition @relation(fields: [tenantId, positionId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_position_role_templates_position")
+  position HrPosition @relation(fields: [tenantId, positionId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_position_role_templates_position")
   role     CampRole     @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_position_role_templates_role")
 
   @@id([positionId, roleId], map: "pk_camp_position_role_templates")
@@ -873,11 +873,11 @@ model Camp {
   userRoles       CampUserRole[]
   userPermissions CampUserPermission[]
   mealLocations   CampMealLocation[]
-  departments     CampDepartment[]
+  departments     HrDepartment[]
   buildings       CampBuilding[]
-  crews           CampCrew[]
-  employees       CampEmployee[]
-  movementImports CampMovementImport[]
+  crews           HrCrew[]
+  employees       HrEmployee[]
+  movementImports HrMovementImport[]
   assets          CampAsset[]
   maintenance     CampMaintenanceRequest[]
   contracts       CampContract[]
@@ -902,8 +902,8 @@ model CampMealLocation {
   tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   camp            Camp                 @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_meal_locations_camp")
   defaultForCamps CampSetting[]
-  departments     CampDepartment[]
-  employees       CampEmployee[]        @relation("CampEmployeeWorkMealLocation")
+  departments     HrDepartment[]
+  employees       HrEmployee[]        @relation("CampEmployeeWorkMealLocation")
   positionSettings CampPositionSetting[]
   mealOrderLines  CampMealOrderLine[]
 
@@ -932,13 +932,13 @@ model CampSetting {
   tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   camp                Camp              @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_settings_camp")
   defaultMealLocation CampMealLocation? @relation(fields: [tenantId, campId, defaultMealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_settings_default_location")
-  cateringOrganization CampOrganization? @relation(fields: [tenantId, cateringOrganizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_settings_catering_org")
+  cateringOrganization CoreOrganization? @relation(fields: [tenantId, cateringOrganizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_settings_catering_org")
 
   @@unique([tenantId, campId], map: "uq_camp_settings_camp")
   @@map("camp_settings")
 }
 
-model CampDepartment {
+model HrDepartment {
   id             String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId       String   @map("tenant_id") @db.Uuid
   campId         String   @map("camp_id") @db.Uuid
@@ -953,8 +953,8 @@ model CampDepartment {
   tenant        Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   camp          Camp                         @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_departments_camp")
   mealLocation  CampMealLocation?            @relation(fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_departments_location")
-  shiftPatterns CampDepartmentShiftPattern[]
-  employees     CampEmployee[]
+  shiftPatterns HrDepartmentShiftPattern[]
+  employees     HrEmployee[]
 
   @@unique([tenantId, id], map: "uq_camp_departments_tenant_id")
   @@unique([tenantId, campId, id], map: "uq_camp_departments_camp_id")
@@ -964,7 +964,7 @@ model CampDepartment {
 }
 
 /// Ээлжийн өдрийн дугаар 1..roster_on_days. Давхцал → EXCLUDE (migration); цоорхойгүй бүрхэлт → app
-model CampDepartmentShiftPattern {
+model HrDepartmentShiftPattern {
   id           String        @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId     String        @map("tenant_id") @db.Uuid
   departmentId String        @map("department_id") @db.Uuid
@@ -975,7 +975,7 @@ model CampDepartmentShiftPattern {
   updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
   tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  department CampDepartment @relation(fields: [tenantId, departmentId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_shift_patterns_department")
+  department HrDepartment @relation(fields: [tenantId, departmentId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_shift_patterns_department")
 
   @@index([tenantId, departmentId, dayFrom], map: "idx_camp_shift_patterns_department")
   @@map("camp_department_shift_patterns")
@@ -1036,7 +1036,7 @@ model CampRoom {
 }
 
 /// reg_number давхардал → partial unique index (migration: uq_camp_organizations_reg)
-model CampOrganization {
+model CoreOrganization {
   id              String      @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId        String      @map("tenant_id") @db.Uuid
   name            String
@@ -1052,7 +1052,7 @@ model CampOrganization {
   updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz
 
   tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  employees       CampEmployee[]
+  employees       HrEmployee[]
   contracts       CampContract[]
   costEntries     CampCostEntry[]
   cateringForCamps CampSetting[]
@@ -1063,7 +1063,7 @@ model CampOrganization {
   @@map("camp_organizations")
 }
 
-model CampCrew {
+model HrCrew {
   id               String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId         String   @map("tenant_id") @db.Uuid
   campId           String   @map("camp_id") @db.Uuid
@@ -1077,7 +1077,7 @@ model CampCrew {
 
   tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   camp      Camp           @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_crews_camp")
-  employees CampEmployee[]
+  employees HrEmployee[]
 
   @@unique([tenantId, id], map: "uq_camp_crews_tenant_id")
   @@unique([tenantId, campId, id], map: "uq_camp_crews_camp_id")
@@ -1085,7 +1085,7 @@ model CampCrew {
   @@map("camp_crews")
 }
 
-model CampEmployee {
+model HrEmployee {
   id             String             @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId       String             @map("tenant_id") @db.Uuid
   campId         String             @map("camp_id") @db.Uuid
@@ -1105,11 +1105,11 @@ model CampEmployee {
 
   tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   camp             Camp                  @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_camp")
-  organization     CampOrganization      @relation(fields: [tenantId, organizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_org")
-  department       CampDepartment        @relation(fields: [tenantId, campId, departmentId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_department")
-  crew             CampCrew?             @relation(fields: [tenantId, campId, crewId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_crew")
-  shiftAdjustments CampShiftAdjustment[]
-  movements        CampMovement[]
+  organization     CoreOrganization      @relation(fields: [tenantId, organizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_org")
+  department       HrDepartment        @relation(fields: [tenantId, campId, departmentId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_department")
+  crew             HrCrew?             @relation(fields: [tenantId, campId, crewId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_crew")
+  shiftAdjustments HrShiftAdjustment[]
+  movements        HrMovement[]
   stays            CampStay[]
   roomAllocations  CampRoomAllocation[]
   /// v0.2.1 (C-01): каталог; `position` текст v0.2.2 хүртэл зэрэгцээ
@@ -1121,7 +1121,7 @@ model CampEmployee {
   /// v0.2.2 (20261013004) — нэвтрэх эрх (1:1; uq_camp_employees_user — зөвхөн migration-д)
   userId           String?               @map("user_id") @db.Uuid
   user             CoreUser?             @relation("CampEmployeeUser", fields: [tenantId, userId], references: [tenantId, id], onDelete: SetNull, onUpdate: NoAction, map: "fk_camp_employees_user")
-  positionRef      CampPosition?         @relation(fields: [tenantId, positionId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_position")
+  positionRef      HrPosition?         @relation(fields: [tenantId, positionId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_position")
   workMealLocation CampMealLocation?     @relation("CampEmployeeWorkMealLocation", fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_meal_location")
 
   @@unique([tenantId, id], map: "uq_camp_employees_tenant_id")
@@ -1136,7 +1136,7 @@ model CampEmployee {
 // ── 1.3 Цагийн бүртгэл, ирц, өрөө ────────────────────────────
 
 /// Давхцал → EXCLUDE (employee, daterange) — migration
-model CampShiftAdjustment {
+model HrShiftAdjustment {
   id         String                    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId   String                    @map("tenant_id") @db.Uuid
   employeeId String                    @map("employee_id") @db.Uuid
@@ -1150,14 +1150,14 @@ model CampShiftAdjustment {
   updatedAt  DateTime                  @updatedAt @map("updated_at") @db.Timestamptz
 
   tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  employee      CampEmployee @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_shift_adj_employee")
+  employee      HrEmployee @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_shift_adj_employee")
   createdByUser CoreUser     @relation("CampShiftAdjustmentCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_shift_adj_created_by")
 
   @@index([tenantId, startDate, endDate], map: "idx_camp_shift_adj_dates")
   @@map("camp_shift_adjustments")
 }
 
-model CampMovementImport {
+model HrMovementImport {
   id          String           @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId    String           @map("tenant_id") @db.Uuid
   campId      String           @map("camp_id") @db.Uuid
@@ -1180,7 +1180,7 @@ model CampMovementImport {
   camp            Camp           @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movement_imports_camp")
   uploadedByUser  CoreUser       @relation("CampMovementImportUploadedBy", fields: [tenantId, uploadedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movement_imports_uploaded_by")
   confirmedByUser CoreUser?      @relation("CampMovementImportConfirmedBy", fields: [tenantId, confirmedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movement_imports_confirmed_by")
-  movements       CampMovement[]
+  movements       HrMovement[]
 
   @@unique([tenantId, campId, id], map: "uq_camp_movement_imports_camp_id")
   @@index([tenantId, campId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_movement_imports_cursor")
@@ -1188,7 +1188,7 @@ model CampMovementImport {
 }
 
 /// ROSTER ирэлт → [DINNER], ROSTER явалт → [BREAKFAST], OFF_ROSTER → сонгосон хоол
-model CampMovement {
+model HrMovement {
   id           String                @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId     String                @map("tenant_id") @db.Uuid
   campId       String                @map("camp_id") @db.Uuid
@@ -1203,8 +1203,8 @@ model CampMovement {
   updatedAt    DateTime              @updatedAt @map("updated_at") @db.Timestamptz
 
   tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  employee        CampEmployee        @relation(fields: [tenantId, campId, employeeId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movements_employee")
-  import          CampMovementImport? @relation(fields: [tenantId, campId, importId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movements_import")
+  employee        HrEmployee        @relation(fields: [tenantId, campId, employeeId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movements_employee")
+  import          HrMovementImport? @relation(fields: [tenantId, campId, importId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movements_import")
   createdByUser   CoreUser?           @relation("CampMovementCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movements_created_by")
   arrivalStays    CampStay[]          @relation("CampStayArrival")
   departureStays  CampStay[]          @relation("CampStayDeparture")
@@ -1229,9 +1229,9 @@ model CampStay {
   updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  employee          CampEmployee  @relation(fields: [tenantId, campId, employeeId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_stays_employee")
-  arrivalMovement   CampMovement  @relation("CampStayArrival", fields: [tenantId, arrivalMovementId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_stays_arrival")
-  departureMovement CampMovement? @relation("CampStayDeparture", fields: [tenantId, departureMovementId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_stays_departure")
+  employee          HrEmployee  @relation(fields: [tenantId, campId, employeeId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_stays_employee")
+  arrivalMovement   HrMovement  @relation("CampStayArrival", fields: [tenantId, arrivalMovementId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_stays_arrival")
+  departureMovement HrMovement? @relation("CampStayDeparture", fields: [tenantId, departureMovementId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_stays_departure")
 
   @@index([tenantId, campId, startDate, endDate], map: "idx_camp_stays_presence")
   @@map("camp_stays")
@@ -1251,7 +1251,7 @@ model CampRoomAllocation {
 
   tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   room     CampRoom     @relation(fields: [tenantId, campId, roomId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_room_alloc_room")
-  employee CampEmployee @relation(fields: [tenantId, campId, employeeId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_room_alloc_employee")
+  employee HrEmployee @relation(fields: [tenantId, campId, employeeId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_room_alloc_employee")
 
   @@index([tenantId, roomId, startDate, endDate], map: "idx_camp_room_alloc_room")
   @@map("camp_room_allocations")
@@ -1422,7 +1422,7 @@ model CampContract {
 
   tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   camp         Camp               @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contracts_camp")
-  organization CampOrganization   @relation(fields: [tenantId, organizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contracts_org")
+  organization CoreOrganization   @relation(fields: [tenantId, organizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contracts_org")
   items        CampContractItem[]
 
   @@unique([tenantId, id], map: "uq_camp_contracts_tenant_id")
@@ -1612,7 +1612,7 @@ model CampCostEntry {
   mealOrder       CampMealOrder?       @relation(fields: [tenantId, campId, mealOrderId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_meal")
   maintenancePart CampMaintenancePart? @relation(fields: [tenantId, maintenancePartId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_part")
   contractItem    CampContractItem?    @relation(fields: [tenantId, campId, contractItemId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_contract_item")
-  organization    CampOrganization?    @relation(fields: [tenantId, organizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_org")
+  organization    CoreOrganization?    @relation(fields: [tenantId, organizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_org")
   createdByUser   CoreUser             @relation("CampCostEntryCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_cost_created_by")
 
   @@index([tenantId, campId, costDate], map: "idx_camp_cost_report")
@@ -1704,7 +1704,7 @@ model I18nOverrideHistory {
 // ── v0.2.1 (C-01, C-04, C-12) ────────────────────────────────
 
 /// Албан тушаалын каталог — байгууллагын нийтийн (Q2)
-model CampPosition {
+model HrPosition {
   id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
   name      String
@@ -1712,7 +1712,7 @@ model CampPosition {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  employees CampEmployee[]
+  employees HrEmployee[]
   settings  CampPositionSetting[]
   roleTemplates CampPositionRoleTemplate[]
   autoUserRoles CampUserRole[] @relation("CampUserRoleSourcePosition")
@@ -1734,7 +1734,7 @@ model CampPositionSetting {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  position      CampPosition               @relation(fields: [tenantId, positionId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_position_settings_position")
+  position      HrPosition               @relation(fields: [tenantId, positionId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_position_settings_position")
   mealLocation  CampMealLocation?          @relation(fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_position_settings_location")
   shiftPatterns CampPositionShiftPattern[]
 

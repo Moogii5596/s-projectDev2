@@ -1,5 +1,5 @@
 import { CampMovementDirection, CampMovementKind } from '@prisma/client';
-import { diffDays } from './camp-date';
+import { diffDays } from '../../camp/common/camp-date';
 
 /**
  * Ростер (хэрэглэгчийн тодруулга 2026-10-09): `onDays` ажлын өдөр; ирэх/явах замын хоног АМРАЛТАД орно.

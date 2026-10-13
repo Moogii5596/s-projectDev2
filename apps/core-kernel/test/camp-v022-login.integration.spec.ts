@@ -58,14 +58,14 @@ describe('v0.2.2 Блок 2 — нэвтрэх нэр, ажилтан ↔ хэр
     for (const k of ['bat', 'wang', 'dup', 'num']) await mkUser(t, k);
     await mkUser(tB, 'other');
     for (const r of await admin.campRole.findMany({ where: { tenantId: t }, select: { id: true, systemCode: true } })) if (r.systemCode) role[r.systemCode] = r.id;
-    posCook = (await admin.campPosition.create({ data: { tenantId: t, name: `Тогооч ${sfx}` } })).id;
-    posMgr = (await admin.campPosition.create({ data: { tenantId: t, name: `Менежер ${sfx}` } })).id;
+    posCook = (await admin.hrPosition.create({ data: { tenantId: t, name: `Тогооч ${sfx}` } })).id;
+    posMgr = (await admin.hrPosition.create({ data: { tenantId: t, name: `Менежер ${sfx}` } })).id;
     await rbac.setPositionTemplates(t, ownerAuth, posCook, { templates: [{ roleId: role.EMPLOYEE, scope: 'EMPLOYEE_CAMP' }] });
     await rbac.setPositionTemplates(t, ownerAuth, posMgr, { templates: [{ roleId: role.CAMP_MANAGER, scope: 'EMPLOYEE_CAMP' }, { roleId: role.EMPLOYEE, scope: 'ALL_CAMPS' }] });
-    const org = await admin.campOrganization.create({ data: { tenantId: t, name: `Org ${sfx}`, orgType: 'CONTRACTOR' } });
-    const dept = await admin.campDepartment.create({ data: { tenantId: t, campId: camp, code: 'D1', name: `Dept ${sfx}` } });
+    const org = await admin.coreOrganization.create({ data: { tenantId: t, name: `Org ${sfx}`, orgType: 'CONTRACTOR' } });
+    const dept = await admin.hrDepartment.create({ data: { tenantId: t, campId: camp, code: 'D1', name: `Dept ${sfx}` } });
     const mk = async (k: string, code: string, phone: string | null, positionId: string | null) => {
-      emp[k] = (await admin.campEmployee.create({
+      emp[k] = (await admin.hrEmployee.create({
         data: { tenantId: t, campId: camp, organizationId: org.id, departmentId: dept.id, employeeCode: code, fullName: k, phone, positionId },
       })).id;
     };
@@ -110,7 +110,7 @@ describe('v0.2.2 Блок 2 — нэвтрэх нэр, ажилтан ↔ хэр
     await rbac.grantDirectPermission(t, ownerAuth, u.bat, { permissionCode: P.REPORT_VIEW, campId: null });
     const preview = await login.positionPreview(t, ownerAuth, camp, emp.bat, posMgr);
     const before = await effective('bat');
-    await admin.campEmployee.update({ where: { id: emp.bat }, data: { positionId: posMgr } }); // ажилтан засах / импорт ч мөн trigger
+    await admin.hrEmployee.update({ where: { id: emp.bat }, data: { positionId: posMgr } }); // ажилтан засах / импорт ч мөн trigger
     expect(await roleRows('bat')).toEqual(['CAMP_MANAGER@C1 (auto)', 'CATERING_ADMIN@C2', 'EMPLOYEE@* (auto)']);
     const after = await effective('bat');
     const fmt = (x: { permissionCode: string; campId: string | null }) => `${x.permissionCode}@${x.campId === camp ? 'C1' : x.campId === camp2 ? 'C2' : '*'}`;
@@ -119,7 +119,7 @@ describe('v0.2.2 Блок 2 — нэвтрэх нэр, ажилтан ↔ хэр
     expect(after).toContain(`${P.REPORT_VIEW}@*`);
     expect(after).toContain(`${P.MEAL_ACCEPT}@C2`);
     // албан тушаалгүй → автомат бүгд хасагдана
-    await admin.campEmployee.update({ where: { id: emp.bat }, data: { positionId: null } });
+    await admin.hrEmployee.update({ where: { id: emp.bat }, data: { positionId: null } });
     expect(await roleRows('bat')).toEqual(['CATERING_ADMIN@C2']);
   });
 

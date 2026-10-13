@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 24 файл, ~227 тест
+## Integration (бодит PG + RLS) — 25 файл, ~234 тест
 
 Команд: `pnpm test:integration`
 
@@ -32,6 +32,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/camp-v022-login.integration.spec.ts` | 7 | v0.2.2 Блок 2 — нэвтрэх нэр, ажилтан ↔ хэрэглэгч (integration) |
 | `core-kernel/test/camp-v022-perms.integration.spec.ts` | 7 | v0.2.2 Блок 1 — camp_user_permissions (integration) |
 | `core-kernel/test/event-bus.integration.spec.ts` | 5 | 🔗 5.2 Гинж: MR → Workflow → Budget → Outbox → Redis · 🔒 5.0 Зэрэгцээ poller — event бүр яг нэг удаа [EVT-001] · ♻️ 5.3 Retry + DLQ |
+| `core-kernel/test/hr-routes.integration.spec.ts` | 7 | 👥 HR ажилтан, бүтэц — шинэ ба хуучин зам ижил · 🗓 HR ирц → Кемпийн байрлалт (H-Q2) · 📥 HR импорт / экспорт · 🔒 RLS (app_user) — HR model нэр солигдсон ч DB хүснэгт хэвээр |
 | `core-kernel/test/i18n-overrides.integration.spec.ts` | 7 | 🌐 Орчуулгын Excel · 🗣 Хэрэглэгчийн хэл · 🌐 Кемпийн алдаа 3 хэлээр (code + params + message) |
 | `core-kernel/test/modules-lite.integration.spec.ts` | 9 | 📦 Inventory-lite · 🏢 Vendor-lite · 📊 Report-lite · 🔒 RLS leakage (app_user) |
 | `core-kernel/test/mr-approval.integration.spec.ts` | 16 | POST /requisitions/:id/submit · POST /requisitions/:id/approve · POST /requisitions/:id/reject · Full approval flow · Outbox events |
@@ -43,7 +44,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 72 файл, ~556 тест
+## Unit — core-kernel — 73 файл, ~556 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -80,18 +81,15 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/budget/tests/budget.service.test.ts` | 18 | BudgetService — ledger (MR transaction дотор) · BudgetService — CRUD / эрх · budgetDate() |
 | `core-kernel/src/modules/camp/assets/tests/camp-assets.service.test.ts` | 21 | CampAssetsService — ангилал (Шат 4.3) · CampAssetsService — хөрөнгө (Шат 4.3) |
 | `core-kernel/src/modules/camp/attendance/tests/attendance-rules.test.ts` | 18 | camp-date · roster — 14 ажил, замын хоног амралтад (Лхагва ирж, Пүрэв явна) · ShiftResolver · Хоолны дүрэм · Presence — D өдрийн суурь тоо (ERD v4 жишээнүүд) |
-| `core-kernel/src/modules/camp/attendance/tests/attendance-services.test.ts` | 26 | CampAttendanceService — импорт (Шат 3.3) · CampShiftsService (Шат 3.2) · Өрөөний багтаамж — хоногоор (Шат 3.4) · CampRoomsService (Шат 3.4) · CampPresenceService (Шат 3.5) — DB → тооцоо |
-| `core-kernel/src/modules/camp/attendance/tests/import.test.ts` | 15 | import-parser · import-planner |
+| `core-kernel/src/modules/camp/attendance/tests/attendance-services.test.ts` | 26 | HrAttendanceService — импорт (Шат 3.3) · HrShiftsService (Шат 3.2) · Өрөөний багтаамж — хоногоор (Шат 3.4) · CampRoomsService (Шат 3.4) · CampPresenceService (Шат 3.5) — DB → тооцоо |
 | `core-kernel/src/modules/camp/attendance/tests/presence-golden.test.ts` | 3 | Хоолны тооцоо — golden (§0.6) |
 | `core-kernel/src/modules/camp/attendance/tests/presence-v021.test.ts` | 5 | effectiveEmployee · computePresence — v0.2.1 |
-| `core-kernel/src/modules/camp/catalog/tests/camp-catalog.service.test.ts` | 8 | v0.2.1 каталог — normName / resolvePositionByName · v0.2.1 CampCatalogService — албан тушаал / байрны төрөл |
+| `core-kernel/src/modules/camp/catalog/tests/camp-catalog.service.test.ts` | 4 | v0.2.1 CampCatalogService — байрны төрөл, кемп × албан тушаал |
 | `core-kernel/src/modules/camp/common/tests/camp-audit.test.ts` | 6 | auditValue · computeAuditDiff · resolveAuditAction / buildAuditRow · CampAuditService.record/recordMany |
 | `core-kernel/src/modules/camp/common/tests/camp-common.test.ts` | 19 | Camp permission каталог (Шат 2.1) · CampAccessService (Шат 2.1) · camp-errors (Шат 2.1) · camp-tx (Шат 2.1) |
 | `core-kernel/src/modules/camp/costs/tests/vat.test.ts` | 2 | VatCalculator (Шат 4.2) |
 | `core-kernel/src/modules/camp/maintenance/tests/camp-maintenance.service.test.ts` | 28 | maintenance-flow (Шат 4.4) · CampMaintenanceService — үүсгэх (Шат 4.4) · CampMaintenanceService — төлөв шилжилт (Шат 4.4) · CampMaintenanceService — сэлбэг (Шат 4.4) |
-| `core-kernel/src/modules/camp/master/tests/camp-employees-v021.test.ts` | 5 | v0.2.1 CampEmployeesService — албан тушаал, хоолны байршил, хоол авах |
-| `core-kernel/src/modules/camp/master/tests/camp-master.services.test.ts` | 28 | CampsService (Шат 2.4) · CampFacilitiesService (Шат 2.4) · CampOrganizationsService (Шат 2.4) · CampDepartmentsService (Шат 2.4) · CampCrewsService (Шат 2.4) · CampEmployeesService (Шат 2.4) |
-| `core-kernel/src/modules/camp/master/tests/shift-pattern.test.ts` | 7 | normalizeShiftPattern (Шат 2.4) |
+| `core-kernel/src/modules/camp/master/tests/camp-master.services.test.ts` | 28 | CampsService (Шат 2.4) · CampFacilitiesService (Шат 2.4) · CoreOrganizationsService (Шат 2.4) · HrDepartmentsService (Шат 2.4) · HrCrewsService (Шат 2.4) · HrEmployeesService (Шат 2.4) |
 | `core-kernel/src/modules/camp/rbac/tests/camp-rbac.service.test.ts` | 23 | CampRbacService (Шат 2.2) · Эрхийн V1/V2 хүрээ (D8, 2026-10-09) · CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүлэх, шууд эрх) |
 | `core-kernel/src/modules/camp/rbac/tests/template-diff.test.ts` | 2 | template-diff (v0.2.2 D-09) |
 | `core-kernel/src/modules/camp/settings/tests/camp-settings.service.test.ts` | 12 | CampSettingsService (Шат 2.3) |
@@ -99,6 +97,10 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/event-bus/dlq.service.spec.ts` | 3 | DlqService |
 | `core-kernel/src/modules/event-bus/event-bus.service.spec.ts` | 2 | EventBusService.emit (Phase 5.1 [EVT-003]) |
 | `core-kernel/src/modules/event-bus/outbox-poller.service.spec.ts` | 10 | OutboxPollerService |
+| `core-kernel/src/modules/hr/attendance/tests/import.test.ts` | 15 | import-parser · import-planner |
+| `core-kernel/src/modules/hr/employees/tests/hr-employees-v021.test.ts` | 5 | v0.2.1 HrEmployeesService — албан тушаал, хоолны байршил, хоол авах |
+| `core-kernel/src/modules/hr/org/tests/shift-pattern.test.ts` | 7 | normalizeShiftPattern (Шат 2.4) |
+| `core-kernel/src/modules/hr/positions/tests/hr-positions.service.test.ts` | 4 | v0.2.1 каталог — normName / resolvePositionByName · HrPositionsService — албан тушаалын каталог (v0.2.1 C-01 → v0.2.2 H1) |
 | `core-kernel/src/modules/inventory/tests/inventory.service.test.ts` | 9 | InventoryService |
 | `core-kernel/src/modules/material-requisition/tests/material-requisition.find-all.test.ts` | 3 | MaterialRequisitionService.findAll (cursor) |
 | `core-kernel/src/modules/material-requisition/tests/mr-approval.test.ts` | 8 | normalizeSteps · approvalDenial [SEC-004] · quorumReached · summarizeWorkflow |

@@ -175,7 +175,7 @@ describe('📥 Ирцийн xlsx импорт', () => {
     const c = await api().post(camp(`/movement-imports/${r.body.import.id}/confirm`)).set(auth());
     expect(c.status).toBe(409);
     expect(c.body.errors).toHaveLength(2);
-    expect(await prismaAdmin.campMovement.count({ where: { tenantId } })).toBe(0);
+    expect(await prismaAdmin.hrMovement.count({ where: { tenantId } })).toBe(0);
     expect((await api().post(camp(`/movement-imports/${r.body.import.id}/cancel`)).set(auth())).status).toBe(200);
   });
 
@@ -299,7 +299,7 @@ describe('🔒 Validation ба RLS', () => {
     const countAs = (ctx: string) =>
       prismaRls.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT set_config('app.tenant_id', ${ctx}, true)`;
-        return [await tx.campMovement.count({ where: { tenantId } }), await tx.campStay.count({ where: { tenantId } }), await tx.campMovementImport.count({ where: { tenantId } })];
+        return [await tx.hrMovement.count({ where: { tenantId } }), await tx.campStay.count({ where: { tenantId } }), await tx.hrMovementImport.count({ where: { tenantId } })];
       });
     expect(await countAs(OTHER_TENANT_ID)).toEqual([0, 0, 0]);
     const own = await countAs(tenantId);

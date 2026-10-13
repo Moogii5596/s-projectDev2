@@ -7,7 +7,7 @@ import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx, toDbDate, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import { getCampOr404 } from '../common/camp-lookup';
-import { isRealIsoDate, todayUb } from '../attendance/camp-date';
+import { isRealIsoDate, todayUb } from '../common/camp-date';
 import { OPEN_STATUSES } from '../maintenance/maintenance-flow';
 import {
   CreateAssetCategoryDto,

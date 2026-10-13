@@ -5,7 +5,8 @@ import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import { getCampOr404 } from '../common/camp-lookup';
-import { CreateCampDto, QueryActiveOnlyDto, UpdateCampDto } from './camp-master.dto';
+import { CreateCampDto, UpdateCampDto } from './camp-master.dto';
+import { QueryActiveOnlyDto } from '../common/common.dto';
 import { conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;

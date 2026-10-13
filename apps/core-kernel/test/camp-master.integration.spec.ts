@@ -196,8 +196,8 @@ describe('🏢 Хэлтэс + ээлжийн загвар, баг, байр/өр
     // v0.2.1 (Д-4): хэлтсийн хоолны байршлыг үл тооно — хуучин клиент (өөр кемпийн байршилтай ч) эвдрэхгүй, DB-д бичигдэхгүй
     const legacy = await api().post(camp('/departments')).set(as('admin')).send({ code: 'X', name: 'x', mealLocationId: ids.locC2 });
     expect(legacy.status).toBe(201);
-    expect((await prismaAdmin.campDepartment.findUniqueOrThrow({ where: { id: legacy.body.id } })).mealLocationId).toBeNull();
-    expect((await prismaAdmin.campDepartment.findUniqueOrThrow({ where: { id: ids.deptMine } })).mealLocationId).toBeNull();
+    expect((await prismaAdmin.hrDepartment.findUniqueOrThrow({ where: { id: legacy.body.id } })).mealLocationId).toBeNull();
+    expect((await prismaAdmin.hrDepartment.findUniqueOrThrow({ where: { id: ids.deptMine } })).mealLocationId).toBeNull();
   });
 
   it('загвартай хэлтэс байхад ростерын урт өөрчлөх → 409', async () => {
@@ -340,7 +340,7 @@ describe('🧯 camp-errors — БОДИТ Prisma алдаан дээр', () => {
   });
 
   it('EXCLUDE (ээлжийн загвар давхцал) → 409', async () => {
-    const e = await mapped(prismaAdmin.campDepartmentShiftPattern.create({ data: { tenantId, departmentId: ids.deptMine, dayFrom: 7, dayTo: 9, shift: CampShiftType.DAY } }));
+    const e = await mapped(prismaAdmin.hrDepartmentShiftPattern.create({ data: { tenantId, departmentId: ids.deptMine, dayFrom: 7, dayTo: 9, shift: CampShiftType.DAY } }));
     expect(e, String((e as Error).message)).toBeInstanceOf(ConflictException);
     expect((e as Error).message).toBe('Хугацаа/муж давхцаж байна (ex_camp_shift_patterns_overlap)');
   });
@@ -352,7 +352,7 @@ describe('🧯 camp-errors — БОДИТ Prisma алдаан дээр', () => {
   });
 
   it('composite FK (өөр кемпийн хэлтэс) → 400', async () => {
-    const e = await mapped(prismaAdmin.campEmployee.create({
+    const e = await mapped(prismaAdmin.hrEmployee.create({
       data: { tenantId, campId: ids.c2, organizationId: ids.org, departmentId: ids.deptMine, employeeCode: 'FK1', fullName: 'x' },
     }));
     expect(e).toBeInstanceOf(BadRequestException);
@@ -365,7 +365,7 @@ describe('🔒 RLS leakage (app_user)', () => {
       await tx.$executeRaw`SELECT set_config('app.tenant_id', ${ctx}, true)`;
       return [
         await tx.camp.count({ where: { tenantId } }),
-        await tx.campEmployee.count({ where: { tenantId } }),
+        await tx.hrEmployee.count({ where: { tenantId } }),
         await tx.campRole.count({ where: { tenantId } }),
       ];
     });

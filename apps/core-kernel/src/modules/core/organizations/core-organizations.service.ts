@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { CampOrgServiceType } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { inTenantTx, Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
-import { CreateOrganizationDto, QueryOrganizationsDto, UpdateOrganizationDto } from './camp-master.dto';
+import { CampAccessService } from '../../camp/common/camp-access.service';
+import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { inTenantTx, Tx } from '../../camp/common/camp-tx';
+import { withCampErrors } from '../../camp/common/camp-errors';
+import { CreateOrganizationDto, QueryOrganizationsDto, UpdateOrganizationDto } from './core-organizations.dto';
 import { conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
@@ -28,7 +28,7 @@ const ORG_SELECT = {
  * бичих: бүх кемпийн `camp.master.manage`.
  */
 @Injectable()
-export class CampOrganizationsService {
+export class CoreOrganizationsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
     private readonly access: CampAccessService,
@@ -36,7 +36,7 @@ export class CampOrganizationsService {
 
   private async assertRegUnique(tx: Tx, tenantId: string, regNumber: string | null | undefined, exceptId?: string) {
     if (!regNumber) return;
-    const dup = await tx.campOrganization.findFirst({
+    const dup = await tx.coreOrganization.findFirst({
       where: { tenantId, regNumber, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
       select: { name: true },
     });
@@ -46,7 +46,7 @@ export class CampOrganizationsService {
   async list(tenantId: string, authId: string, q: QueryOrganizationsDto) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, null);
-      return tx.campOrganization.findMany({
+      return tx.coreOrganization.findMany({
         where: {
           tenantId,
           ...(q.activeOnly ? { isActive: true } : {}),
@@ -64,7 +64,7 @@ export class CampOrganizationsService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
         await this.assertRegUnique(tx, tenantId, dto.regNumber);
-        return tx.campOrganization.create({
+        return tx.coreOrganization.create({
           data: {
             tenantId,
             name: dto.name,
@@ -85,7 +85,7 @@ export class CampOrganizationsService {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
-        const org = await tx.campOrganization.findFirst({ where: { id, tenantId }, select: { id: true } });
+        const org = await tx.coreOrganization.findFirst({ where: { id, tenantId }, select: { id: true } });
         if (!org) throw notFound('camp.err.employees.1');
         await this.assertRegUnique(tx, tenantId, dto.regNumber, id);
         // Кемпийн катеринг байгууллага бол CATERING-ийг хасах / идэвхгүй болгох → 409
@@ -96,7 +96,7 @@ export class CampOrganizationsService {
           }
         }
         if (dto.isActive === false) {
-          const employees = await tx.campEmployee.count({ where: { tenantId, organizationId: id, status: 'ACTIVE' } });
+          const employees = await tx.hrEmployee.count({ where: { tenantId, organizationId: id, status: 'ACTIVE' } });
           const contracts = await tx.campContract.count({ where: { tenantId, organizationId: id, status: 'ACTIVE' } });
           if (employees + contracts > 0) {
             throw conflict('camp.err.organizations.3', { employees, contracts });
@@ -104,7 +104,7 @@ export class CampOrganizationsService {
         }
         const fields = ['name', 'regNumber', 'orgType', 'serviceTypes', 'contactName', 'phone', 'email', 'isActive'] as const;
         const data = Object.fromEntries(fields.filter((f) => dto[f] !== undefined).map((f) => [f, dto[f]]));
-        return tx.campOrganization.update({ where: { id }, data, select: ORG_SELECT });
+        return tx.coreOrganization.update({ where: { id }, data, select: ORG_SELECT });
       }),
     );
   }

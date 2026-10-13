@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
-import { CampAuditService } from '../common/camp-audit.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { fromDbDate, inTenantTx, toDbDate, Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
-import { weekdayText } from '../common/camp-i18n';
-import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
-import { CreateCrewDto, QueryActiveOnlyDto, UpdateCrewDto } from './camp-master.dto';
+import { CampAccessService } from '../../camp/common/camp-access.service';
+import { CampAuditService } from '../../camp/common/camp-audit.service';
+import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../camp/common/camp-tx';
+import { withCampErrors } from '../../camp/common/camp-errors';
+import { weekdayText } from '../../camp/common/camp-i18n';
+import { getCampOr404, getRosterSettings } from '../../camp/common/camp-lookup';
+import { CreateCrewDto, UpdateCrewDto } from './hr-org.dto';
+import { QueryActiveOnlyDto } from '../../camp/common/common.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
@@ -22,7 +23,7 @@ const isRealDate = (iso: string) => fromDbDate(toDbDate(iso)) === iso;
 
 /** Баг (ростер) — Шат 2.4. Багийн ирэх өдөр нь кемпийн солигдох гарагтай таарна. */
 @Injectable()
-export class CampCrewsService {
+export class HrCrewsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
     private readonly access: CampAccessService,
@@ -42,7 +43,7 @@ export class CampCrewsService {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       await getCampOr404(tx, tenantId, campId);
-      const rows = await tx.campCrew.findMany({
+      const rows = await tx.hrCrew.findMany({
         where: { tenantId, campId, ...(q.activeOnly ? { isActive: true } : {}) },
         select: { ...CREW_SELECT, _count: { select: { employees: true } } },
         orderBy: { code: 'asc' },
@@ -57,9 +58,9 @@ export class CampCrewsService {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         await getCampOr404(tx, tenantId, campId);
         await this.assertAnchor(tx, tenantId, campId, dto.rosterAnchorDate);
-        const dup = await tx.campCrew.findFirst({ where: { tenantId, campId, code: dto.code }, select: { id: true } });
+        const dup = await tx.hrCrew.findFirst({ where: { tenantId, campId, code: dto.code }, select: { id: true } });
         if (dup) throw conflict('camp.err.crews.2', { code: dto.code });
-        const c = await tx.campCrew.create({
+        const c = await tx.hrCrew.create({
           data: { tenantId, campId, code: dto.code, name: dto.name ?? null, rosterAnchorDate: toDbDate(dto.rosterAnchorDate) },
           select: CREW_SELECT,
         });
@@ -76,14 +77,14 @@ export class CampCrewsService {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
-        const crew = await tx.campCrew.findFirst({ where: { id, tenantId, campId }, select: CREW_SELECT });
+        const crew = await tx.hrCrew.findFirst({ where: { id, tenantId, campId }, select: CREW_SELECT });
         if (!crew) throw notFound('camp.err.crews.3');
         if (dto.rosterAnchorDate !== undefined) await this.assertAnchor(tx, tenantId, campId, dto.rosterAnchorDate);
         if (dto.isActive === false) {
-          const active = await tx.campEmployee.count({ where: { tenantId, crewId: id, status: 'ACTIVE' } });
+          const active = await tx.hrEmployee.count({ where: { tenantId, crewId: id, status: 'ACTIVE' } });
           if (active > 0) throw conflict('camp.err.crews.4', { active });
         }
-        const c = await tx.campCrew.update({
+        const c = await tx.hrCrew.update({
           where: { id },
           data: {
             ...(dto.name !== undefined ? { name: dto.name } : {}),

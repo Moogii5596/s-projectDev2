@@ -32,7 +32,7 @@ export class CampEmployeeLoginService {
   ) {}
 
   private async findEmployee(tx: Tx, tenantId: string, campId: string, id: string) {
-    const e = await tx.campEmployee.findFirst({
+    const e = await tx.hrEmployee.findFirst({
       where: { id, tenantId, campId },
       select: { id: true, campId: true, employeeCode: true, fullName: true, phone: true, status: true, positionId: true, userId: true },
     });
@@ -70,7 +70,7 @@ export class CampEmployeeLoginService {
         const e = await this.findEmployee(tx, tenantId, campId, employeeId);
         if (userId === null) {
           if (!e.userId) return { employeeId, userId: null, phone: null, username: null };
-          await tx.campEmployee.update({ where: { id: e.id }, data: { userId: null } });
+          await tx.hrEmployee.update({ where: { id: e.id }, data: { userId: null } });
           await this.audit.record(tx, {
             tenantId, campId, entityType: 'employee', entityId: e.id, action: 'UPDATE', actorUserId,
             fields: ['userId'], before: { userId: e.userId }, after: { userId: null }, summaryParams: { code: e.employeeCode, name: e.fullName },
@@ -85,12 +85,12 @@ export class CampEmployeeLoginService {
         });
         if (!user) throw badRequest('camp.err.rbac.5');
         if (!user.isActive) throw badRequest('camp.err.rbac.6');
-        const other = await tx.campEmployee.findFirst({ where: { tenantId, userId, NOT: { id: e.id } }, select: { id: true } });
+        const other = await tx.hrEmployee.findFirst({ where: { tenantId, userId, NOT: { id: e.id } }, select: { id: true } });
         if (other) throw conflict('camp.err.login.4');
 
         const ids = await this.assignIdentifiers(tx, tenantId, user, e);
         if (e.userId !== userId) {
-          await tx.campEmployee.update({ where: { id: e.id }, data: { userId } }); // trigger → албан тушаалын загвар
+          await tx.hrEmployee.update({ where: { id: e.id }, data: { userId } }); // trigger → албан тушаалын загвар
           await this.audit.record(tx, {
             tenantId, campId, entityType: 'employee', entityId: e.id, action: 'UPDATE', actorUserId,
             fields: ['userId'], before: { userId: e.userId }, after: { userId }, summaryParams: { code: e.employeeCode, name: e.fullName },
@@ -149,9 +149,9 @@ export class CampEmployeeLoginService {
     const res = await withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
-        const pos = await tx.campPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true } });
+        const pos = await tx.hrPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true } });
         if (!pos) throw notFound('camp.err.rbac.12');
-        const emps = await tx.campEmployee.findMany({
+        const emps = await tx.hrEmployee.findMany({
           where: { tenantId, positionId, userId: { not: null } },
           select: { userId: true, campId: true },
         });

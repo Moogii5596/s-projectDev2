@@ -3,8 +3,8 @@ import ExcelJS from 'exceljs';
 import { HttpException } from '@nestjs/common';
 import { i18nStorage } from '../../i18n/i18n-context';
 import { buildExport, buildTemplate, coerceCell, parseTableRows, parseTableXlsx, TableSpec } from '../table-spec';
-import { EMPLOYEES_SPEC } from '../../../modules/camp/data/employees.handler';
-import { DEPARTMENTS_SPEC } from '../../../modules/camp/data/departments.handler';
+import { EMPLOYEES_SPEC } from '../../../modules/hr/import/employees.handler';
+import { DEPARTMENTS_SPEC } from '../../../modules/hr/import/departments.handler';
 
 async function xlsx(rows: unknown[][]): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();

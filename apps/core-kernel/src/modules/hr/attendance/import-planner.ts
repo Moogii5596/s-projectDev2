@@ -1,6 +1,6 @@
 import { CampEmployeeStatus, CampMealType, CampMovementDirection, CampMovementKind, CampShiftType } from '@prisma/client';
 import { t } from '../../../common/i18n/translate';
-import { addDays } from './camp-date';
+import { addDays } from '../../camp/common/camp-date';
 import { ROSTER_ARRIVAL_MEALS, ROSTER_DEPARTURE_MEALS } from './meal-rules';
 import { classifyMovement, RosterSettings } from './roster';
 import type { ParsedRow } from './import-parser';

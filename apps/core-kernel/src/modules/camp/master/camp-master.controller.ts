@@ -1,35 +1,10 @@
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { reqUser } from '../common/camp-request';
 import { CampsService } from './camps.service';
 import { CampFacilitiesService } from './camp-facilities.service';
-import { CampOrganizationsService } from './camp-organizations.service';
-import { CampDepartmentsService } from './camp-departments.service';
-import { CampCrewsService } from './camp-crews.service';
-import { CampEmployeesService } from './camp-employees.service';
-import {
-  BulkEmployeesDto,
-  BulkRoomsDto,
-  CreateBuildingDto,
-  CreateCampDto,
-  CreateCrewDto,
-  CreateDepartmentDto,
-  CreateEmployeeDto,
-  CreateOrganizationDto,
-  CreateRoomDto,
-  QueryActiveOnlyDto,
-  QueryEmployeesDto,
-  QueryOrganizationsDto,
-  QueryRoomsDto,
-  SetShiftPatternDto,
-  UpdateBuildingDto,
-  UpdateCampDto,
-  UpdateCrewDto,
-  UpdateDepartmentDto,
-  UpdateEmployeeDto,
-  UpdateOrganizationDto,
-  UpdateRoomDto,
-} from './camp-master.dto';
+import { BulkRoomsDto, CreateBuildingDto, CreateCampDto, CreateRoomDto, QueryRoomsDto, UpdateBuildingDto, UpdateCampDto, UpdateRoomDto } from './camp-master.dto';
+import { QueryActiveOnlyDto } from '../common/common.dto';
 
 const uuid = () => new ParseUUIDPipe();
 
@@ -64,40 +39,11 @@ export class CampsController {
   }
 }
 
-/** Шат 2.4 — /api/v1/camp/organizations (tenant түвшин) */
-@Controller('camp/organizations')
-export class CampOrganizationsController {
-  constructor(private readonly orgs: CampOrganizationsService) {}
-
-  @Get()
-  list(@Req() req: FastifyRequest, @Query() q: QueryOrganizationsDto) {
-    const u = reqUser(req);
-    return this.orgs.list(u.tenantId, u.id, q);
-  }
-
-  @Post()
-  @HttpCode(201)
-  create(@Req() req: FastifyRequest, @Body() dto: CreateOrganizationDto) {
-    const u = reqUser(req);
-    return this.orgs.create(u.tenantId, u.id, dto);
-  }
-
-  @Patch(':id')
-  update(@Req() req: FastifyRequest, @Param('id', uuid()) id: string, @Body() dto: UpdateOrganizationDto) {
-    const u = reqUser(req);
-    return this.orgs.update(u.tenantId, u.id, id, dto);
-  }
-}
 
 /** Шат 2.4 — /api/v1/camp/camps/:campId/{buildings,rooms,departments,crews,employees} */
 @Controller('camp/camps/:campId')
 export class CampMasterController {
-  constructor(
-    private readonly facilities: CampFacilitiesService,
-    private readonly departments: CampDepartmentsService,
-    private readonly crews: CampCrewsService,
-    private readonly employees: CampEmployeesService,
-  ) {}
+  constructor(private readonly facilities: CampFacilitiesService) {}
 
   // ── Байр ──
   @Get('buildings')
@@ -145,85 +91,5 @@ export class CampMasterController {
   updateRoom(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Param('id', uuid()) id: string, @Body() dto: UpdateRoomDto) {
     const u = reqUser(req);
     return this.facilities.updateRoom(u.tenantId, u.id, campId, id, dto);
-  }
-
-  // ── Хэлтэс ──
-  @Get('departments')
-  listDepartments(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Query() q: QueryActiveOnlyDto) {
-    const u = reqUser(req);
-    return this.departments.list(u.tenantId, u.id, campId, q);
-  }
-
-  @Post('departments')
-  @HttpCode(201)
-  createDepartment(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Body() dto: CreateDepartmentDto) {
-    const u = reqUser(req);
-    return this.departments.create(u.tenantId, u.id, campId, dto);
-  }
-
-  @Patch('departments/:id')
-  updateDepartment(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Param('id', uuid()) id: string, @Body() dto: UpdateDepartmentDto) {
-    const u = reqUser(req);
-    return this.departments.update(u.tenantId, u.id, campId, id, dto);
-  }
-
-  @Put('departments/:id/shift-pattern')
-  setShiftPattern(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Param('id', uuid()) id: string, @Body() dto: SetShiftPatternDto) {
-    const u = reqUser(req);
-    return this.departments.setShiftPattern(u.tenantId, u.id, campId, id, dto);
-  }
-
-  // ── Баг ──
-  @Get('crews')
-  listCrews(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Query() q: QueryActiveOnlyDto) {
-    const u = reqUser(req);
-    return this.crews.list(u.tenantId, u.id, campId, q);
-  }
-
-  @Post('crews')
-  @HttpCode(201)
-  createCrew(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Body() dto: CreateCrewDto) {
-    const u = reqUser(req);
-    return this.crews.create(u.tenantId, u.id, campId, dto);
-  }
-
-  @Patch('crews/:id')
-  updateCrew(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Param('id', uuid()) id: string, @Body() dto: UpdateCrewDto) {
-    const u = reqUser(req);
-    return this.crews.update(u.tenantId, u.id, campId, id, dto);
-  }
-
-  // ── Ажилтан ──
-  @Get('employees')
-  listEmployees(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Query() q: QueryEmployeesDto) {
-    const u = reqUser(req);
-    return this.employees.list(u.tenantId, u.id, campId, q);
-  }
-
-  @Get('employees/:id')
-  getEmployee(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Param('id', uuid()) id: string) {
-    const u = reqUser(req);
-    return this.employees.get(u.tenantId, u.id, campId, id);
-  }
-
-  /** v0.2.1 (Д-2) — олон ажилтанд нэг дор (хоол авах / хоолны байршил / албан тушаал). ':id'-аас ӨМНӨ */
-  @Post('employees/bulk')
-  @HttpCode(200)
-  bulkEmployees(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Body() dto: BulkEmployeesDto) {
-    const u = reqUser(req);
-    return this.employees.bulkUpdate(u.tenantId, u.id, campId, dto);
-  }
-
-  @Post('employees')
-  @HttpCode(201)
-  createEmployee(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Body() dto: CreateEmployeeDto) {
-    const u = reqUser(req);
-    return this.employees.create(u.tenantId, u.id, campId, dto);
-  }
-
-  @Patch('employees/:id')
-  updateEmployee(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Param('id', uuid()) id: string, @Body() dto: UpdateEmployeeDto) {
-    const u = reqUser(req);
-    return this.employees.update(u.tenantId, u.id, campId, id, dto);
   }
 }

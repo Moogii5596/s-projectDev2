@@ -1,8 +1,8 @@
 import { CampDataImportType } from '@prisma/client';
 import { CellValue, ParsedTableRow, TableSpec } from '../../../common/xlsx/table-spec';
-import { CampPermission } from '../common/camp-permissions';
-import { CampAuditService } from '../common/camp-audit.service';
-import { Tx } from '../common/camp-tx';
+import { CampPermission } from '../../camp/common/camp-permissions';
+import { CampAuditService } from '../../camp/common/camp-audit.service';
+import { Tx } from '../../camp/common/camp-tx';
 
 export type RowOp = 'create' | 'update' | 'unchanged' | 'error';
 

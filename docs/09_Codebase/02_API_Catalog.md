@@ -10,7 +10,7 @@ tags: [codebase, api, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Нийт **162** endpoint, 23 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
+Нийт **201** endpoint, 29 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
 
 **Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].
 
@@ -21,15 +21,20 @@ tags: [codebase, api, generated]
 - [[#common/i18n]] — 7
 - [[#modules/budget]] — 6
 - [[#modules/camp/assets]] — 10
-- [[#modules/camp/attendance]] — 20
+- [[#modules/camp/attendance]] — 6
 - [[#modules/camp/audit]] — 1
-- [[#modules/camp/catalog]] — 8
-- [[#modules/camp/data]] — 7
+- [[#modules/camp/catalog]] — 5
 - [[#modules/camp/maintenance]] — 12
-- [[#modules/camp/master]] — 26
+- [[#modules/camp/master]] — 11
 - [[#modules/camp/rbac]] — 24
 - [[#modules/camp/settings]] — 5
+- [[#modules/core/organizations]] — 3
 - [[#modules/health]] — 1
+- [[#modules/hr/attendance]] — 14
+- [[#modules/hr/employees]] — 5
+- [[#modules/hr/import]] — 7
+- [[#modules/hr/org]] — 7
+- [[#modules/hr/positions]] — 3
 - [[#modules/inventory]] — 3
 - [[#modules/material-requisition/controllers]] — 8
 - [[#modules/report]] — 2
@@ -37,6 +42,7 @@ tags: [codebase, api, generated]
 - [[#modules/tenant-admin]] — 1
 - [[#modules/vendor]] — 3
 - [[#modules/workflow]] — 7
+- [[#modules/camp/legacy]] — 39
 
 ## app
 
@@ -99,26 +105,12 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| GET | `/api/v1/camp/camps/:campId/movement-imports/template` | `CampAttendanceController.template` → `CampAttendanceService.template` | — | `camp-attendance.controller.ts:55` |
-| POST | `/api/v1/camp/camps/:campId/movement-imports` | `CampAttendanceController.upload` → `CampAttendanceService.preview` | `camp.movement.import` | `camp-attendance.controller.ts:65` |
-| POST | `/api/v1/camp/camps/:campId/movement-imports/manual` | `CampAttendanceController.manual` → `CampAttendanceService.previewManual` | `camp.movement.import` | `camp-attendance.controller.ts:74` |
-| GET | `/api/v1/camp/camps/:campId/movement-imports` | `CampAttendanceController.listImports` → `CampAttendanceService.listImports` | `camp.movement.import` | `camp-attendance.controller.ts:80` |
-| GET | `/api/v1/camp/camps/:campId/movement-imports/:id` | `CampAttendanceController.getImport` → `CampAttendanceService.getImport` | `camp.movement.import` | `camp-attendance.controller.ts:86` |
-| POST | `/api/v1/camp/camps/:campId/movement-imports/:id/confirm` | `CampAttendanceController.confirm` → `CampAttendanceService.confirm` | `camp.movement.import` | `camp-attendance.controller.ts:93` |
-| POST | `/api/v1/camp/camps/:campId/movement-imports/:id/cancel` | `CampAttendanceController.cancel` → `CampAttendanceService.cancel` | `camp.movement.import` | `camp-attendance.controller.ts:100` |
-| GET | `/api/v1/camp/camps/:campId/movements` | `CampAttendanceController.listMovements` → `CampAttendanceService.listMovements` | гишүүн | `camp-attendance.controller.ts:107` |
-| POST | `/api/v1/camp/camps/:campId/movements` | `CampAttendanceController.createMovement` → `CampAttendanceService.createMovement` | `camp.movement.import` | `camp-attendance.controller.ts:114` |
-| DELETE | `/api/v1/camp/camps/:campId/movements/:id` | `CampAttendanceController.deleteMovement` → `CampAttendanceService.deleteMovement` | `camp.movement.import` | `camp-attendance.controller.ts:120` |
-| GET | `/api/v1/camp/camps/:campId/stays` | `CampAttendanceController.stays` → `CampAttendanceService.listStays` | гишүүн | `camp-attendance.controller.ts:126` |
-| GET | `/api/v1/camp/camps/:campId/shift-adjustments` | `CampAttendanceController.listAdjustments` → `CampShiftsService.listAdjustments` | гишүүн | `camp-attendance.controller.ts:133` |
-| POST | `/api/v1/camp/camps/:campId/shift-adjustments` | `CampAttendanceController.createAdjustments` → `CampShiftsService.createAdjustments` | `camp.shift.adjust` | `camp-attendance.controller.ts:140` |
-| DELETE | `/api/v1/camp/camps/:campId/shift-adjustments/:id` | `CampAttendanceController.deleteAdjustment` → `CampShiftsService.deleteAdjustment` | `camp.shift.adjust` | `camp-attendance.controller.ts:146` |
-| GET | `/api/v1/camp/camps/:campId/shift-calendar` | `CampAttendanceController.calendar` → `CampShiftsService.calendar` | гишүүн | `camp-attendance.controller.ts:152` |
-| GET | `/api/v1/camp/camps/:campId/room-allocations` | `CampAttendanceController.listAllocations` → `CampRoomsService.list` | гишүүн | `camp-attendance.controller.ts:159` |
-| POST | `/api/v1/camp/camps/:campId/room-allocations` | `CampAttendanceController.allocate` → `CampRoomsService.allocate` | `camp.room.manage` | `camp-attendance.controller.ts:166` |
-| POST | `/api/v1/camp/camps/:campId/room-allocations/:id/end` | `CampAttendanceController.endAllocation` → `CampRoomsService.end` | `camp.room.manage` | `camp-attendance.controller.ts:173` |
-| GET | `/api/v1/camp/camps/:campId/room-board` | `CampAttendanceController.roomBoard` → `CampRoomsService.board` | гишүүн | `camp-attendance.controller.ts:179` |
-| GET | `/api/v1/camp/camps/:campId/presence` | `CampAttendanceController.presenceOf` → `CampPresenceService.presence` | гишүүн | `camp-attendance.controller.ts:186` |
+| GET | `/api/v1/camp/camps/:campId/stays` | `CampAttendanceController.stays` → `CampStaysService.listStays` | гишүүн | `camp-attendance.controller.ts:21` |
+| GET | `/api/v1/camp/camps/:campId/room-allocations` | `CampAttendanceController.listAllocations` → `CampRoomsService.list` | гишүүн | `camp-attendance.controller.ts:28` |
+| POST | `/api/v1/camp/camps/:campId/room-allocations` | `CampAttendanceController.allocate` → `CampRoomsService.allocate` | `camp.room.manage` | `camp-attendance.controller.ts:35` |
+| POST | `/api/v1/camp/camps/:campId/room-allocations/:id/end` | `CampAttendanceController.endAllocation` → `CampRoomsService.end` | `camp.room.manage` | `camp-attendance.controller.ts:42` |
+| GET | `/api/v1/camp/camps/:campId/room-board` | `CampAttendanceController.roomBoard` → `CampRoomsService.board` | гишүүн | `camp-attendance.controller.ts:48` |
+| GET | `/api/v1/camp/camps/:campId/presence` | `CampAttendanceController.presenceOf` → `CampPresenceService.presence` | гишүүн | `camp-attendance.controller.ts:55` |
 
 ## modules/camp/audit
 
@@ -130,26 +122,11 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| GET | `/api/v1/camp/positions` | `CampPositionsController.list` → `CampCatalogService.list` | гишүүн | `camp-catalog.controller.ts:15` |
-| POST | `/api/v1/camp/positions` | `CampPositionsController.create` → `CampCatalogService.create` | `camp.master.manage` | `camp-catalog.controller.ts:22` |
-| PATCH | `/api/v1/camp/positions/:id` | `CampPositionsController.update` → `CampCatalogService.update` | `camp.master.manage` | `camp-catalog.controller.ts:28` |
-| GET | `/api/v1/camp/building-types` | `CampBuildingTypesController.list` → `CampCatalogService.list` | гишүүн | `camp-catalog.controller.ts:40` |
-| POST | `/api/v1/camp/building-types` | `CampBuildingTypesController.create` → `CampCatalogService.create` | `camp.master.manage` | `camp-catalog.controller.ts:47` |
-| PATCH | `/api/v1/camp/building-types/:id` | `CampBuildingTypesController.update` → `CampCatalogService.update` | `camp.master.manage` | `camp-catalog.controller.ts:53` |
-| GET | `/api/v1/camp/camps/:campId/position-settings` | `CampPositionSettingsController.list` → `CampCatalogService.listSettings` | гишүүн | `camp-catalog.controller.ts:65` |
-| PUT | `/api/v1/camp/camps/:campId/position-settings/:positionId` | `CampPositionSettingsController.upsert` → `CampCatalogService.upsertSetting` | `camp.master.manage` | `camp-catalog.controller.ts:71` |
-
-## modules/camp/data
-
-| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
-|---|---|---|---|---|
-| GET | `/api/v1/camp/camps/:campId/data-imports/:type/template` | `CampDataController.template` → `CampDataImportService.template` | — | `camp-data.controller.ts:44` |
-| GET | `/api/v1/camp/camps/:campId/data-imports` | `CampDataController.list` → `CampDataImportService.list` | гишүүн | `camp-data.controller.ts:51` |
-| POST | `/api/v1/camp/camps/:campId/data-imports/:type` | `CampDataController.upload` → `CampDataImportService.preview` | гишүүн | `camp-data.controller.ts:58` |
-| GET | `/api/v1/camp/camps/:campId/data-imports/:type/:id` | `CampDataController.get` → `CampDataImportService.get` | гишүүн | `camp-data.controller.ts:76` |
-| POST | `/api/v1/camp/camps/:campId/data-imports/:type/:id/confirm` | `CampDataController.confirm` → `CampDataImportService.confirm` | гишүүн | `camp-data.controller.ts:83` |
-| POST | `/api/v1/camp/camps/:campId/data-imports/:type/:id/cancel` | `CampDataController.cancel` → `CampDataImportService.cancel` | гишүүн | `camp-data.controller.ts:90` |
-| GET | `/api/v1/camp/camps/:campId/export/:type` | `CampDataController.export` → `CampDataImportService.export` | гишүүн | `camp-data.controller.ts:96` |
+| GET | `/api/v1/camp/building-types` | `CampBuildingTypesController.list` → `CampCatalogService.list` | гишүүн | `camp-catalog.controller.ts:17` |
+| POST | `/api/v1/camp/building-types` | `CampBuildingTypesController.create` → `CampCatalogService.create` | `camp.master.manage` | `camp-catalog.controller.ts:24` |
+| PATCH | `/api/v1/camp/building-types/:id` | `CampBuildingTypesController.update` → `CampCatalogService.update` | `camp.master.manage` | `camp-catalog.controller.ts:30` |
+| GET | `/api/v1/camp/camps/:campId/position-settings` | `CampPositionSettingsController.list` → `CampCatalogService.listSettings` | гишүүн | `camp-catalog.controller.ts:42` |
+| PUT | `/api/v1/camp/camps/:campId/position-settings/:positionId` | `CampPositionSettingsController.upsert` → `CampCatalogService.upsertSetting` | `camp.master.manage` | `camp-catalog.controller.ts:48` |
 
 ## modules/camp/maintenance
 
@@ -172,32 +149,17 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| GET | `/api/v1/camp/camps` | `CampsController.list` → `CampsService.list` | гишүүн | `camp-master.controller.ts:42` |
-| POST | `/api/v1/camp/camps` | `CampsController.create` → `CampsService.create` | `camp.master.manage` | `camp-master.controller.ts:49` |
-| GET | `/api/v1/camp/camps/:campId` | `CampsController.get` → `CampsService.get` | гишүүн | `camp-master.controller.ts:55` |
-| PATCH | `/api/v1/camp/camps/:campId` | `CampsController.update` → `CampsService.update` | `camp.master.manage` | `camp-master.controller.ts:61` |
-| GET | `/api/v1/camp/organizations` | `CampOrganizationsController.list` → `CampOrganizationsService.list` | гишүүн | `camp-master.controller.ts:73` |
-| POST | `/api/v1/camp/organizations` | `CampOrganizationsController.create` → `CampOrganizationsService.create` | `camp.master.manage` | `camp-master.controller.ts:80` |
-| PATCH | `/api/v1/camp/organizations/:id` | `CampOrganizationsController.update` → `CampOrganizationsService.update` | `camp.master.manage` | `camp-master.controller.ts:86` |
-| GET | `/api/v1/camp/camps/:campId/buildings` | `CampMasterController.listBuildings` → `CampFacilitiesService.listBuildings` | гишүүн | `camp-master.controller.ts:104` |
-| POST | `/api/v1/camp/camps/:campId/buildings` | `CampMasterController.createBuilding` → `CampFacilitiesService.createBuilding` | `camp.master.manage` | `camp-master.controller.ts:111` |
-| POST | `/api/v1/camp/camps/:campId/buildings/:id/rooms/bulk` | `CampMasterController.bulkRooms` → `CampFacilitiesService.bulkRooms` | гишүүн | `camp-master.controller.ts:119` |
-| PATCH | `/api/v1/camp/camps/:campId/buildings/:id` | `CampMasterController.updateBuilding` → `CampFacilitiesService.updateBuilding` | `camp.master.manage` | `camp-master.controller.ts:125` |
-| GET | `/api/v1/camp/camps/:campId/rooms` | `CampMasterController.listRooms` → `CampFacilitiesService.listRooms` | гишүүн | `camp-master.controller.ts:132` |
-| POST | `/api/v1/camp/camps/:campId/rooms` | `CampMasterController.createRoom` → `CampFacilitiesService.createRoom` | гишүүн | `camp-master.controller.ts:139` |
-| PATCH | `/api/v1/camp/camps/:campId/rooms/:id` | `CampMasterController.updateRoom` → `CampFacilitiesService.updateRoom` | гишүүн | `camp-master.controller.ts:145` |
-| GET | `/api/v1/camp/camps/:campId/departments` | `CampMasterController.listDepartments` → `CampDepartmentsService.list` | гишүүн | `camp-master.controller.ts:152` |
-| POST | `/api/v1/camp/camps/:campId/departments` | `CampMasterController.createDepartment` → `CampDepartmentsService.create` | `camp.master.manage` | `camp-master.controller.ts:159` |
-| PATCH | `/api/v1/camp/camps/:campId/departments/:id` | `CampMasterController.updateDepartment` → `CampDepartmentsService.update` | `camp.master.manage` | `camp-master.controller.ts:165` |
-| PUT | `/api/v1/camp/camps/:campId/departments/:id/shift-pattern` | `CampMasterController.setShiftPattern` → `CampDepartmentsService.setShiftPattern` | `camp.master.manage` | `camp-master.controller.ts:171` |
-| GET | `/api/v1/camp/camps/:campId/crews` | `CampMasterController.listCrews` → `CampCrewsService.list` | гишүүн | `camp-master.controller.ts:178` |
-| POST | `/api/v1/camp/camps/:campId/crews` | `CampMasterController.createCrew` → `CampCrewsService.create` | `camp.master.manage` | `camp-master.controller.ts:185` |
-| PATCH | `/api/v1/camp/camps/:campId/crews/:id` | `CampMasterController.updateCrew` → `CampCrewsService.update` | `camp.master.manage` | `camp-master.controller.ts:191` |
-| GET | `/api/v1/camp/camps/:campId/employees` | `CampMasterController.listEmployees` → `CampEmployeesService.list` | гишүүн | `camp-master.controller.ts:198` |
-| GET | `/api/v1/camp/camps/:campId/employees/:id` | `CampMasterController.getEmployee` → `CampEmployeesService.get` | гишүүн | `camp-master.controller.ts:204` |
-| POST | `/api/v1/camp/camps/:campId/employees/bulk` | `CampMasterController.bulkEmployees` → `CampEmployeesService.bulkUpdate` | `camp.employee.manage` | `camp-master.controller.ts:212` |
-| POST | `/api/v1/camp/camps/:campId/employees` | `CampMasterController.createEmployee` → `CampEmployeesService.create` | `camp.employee.manage` | `camp-master.controller.ts:219` |
-| PATCH | `/api/v1/camp/camps/:campId/employees/:id` | `CampMasterController.updateEmployee` → `CampEmployeesService.update` | `camp.employee.manage` | `camp-master.controller.ts:225` |
+| GET | `/api/v1/camp/camps` | `CampsController.list` → `CampsService.list` | гишүүн | `camp-master.controller.ts:17` |
+| POST | `/api/v1/camp/camps` | `CampsController.create` → `CampsService.create` | `camp.master.manage` | `camp-master.controller.ts:24` |
+| GET | `/api/v1/camp/camps/:campId` | `CampsController.get` → `CampsService.get` | гишүүн | `camp-master.controller.ts:30` |
+| PATCH | `/api/v1/camp/camps/:campId` | `CampsController.update` → `CampsService.update` | `camp.master.manage` | `camp-master.controller.ts:36` |
+| GET | `/api/v1/camp/camps/:campId/buildings` | `CampMasterController.listBuildings` → `CampFacilitiesService.listBuildings` | гишүүн | `camp-master.controller.ts:50` |
+| POST | `/api/v1/camp/camps/:campId/buildings` | `CampMasterController.createBuilding` → `CampFacilitiesService.createBuilding` | `camp.master.manage` | `camp-master.controller.ts:57` |
+| POST | `/api/v1/camp/camps/:campId/buildings/:id/rooms/bulk` | `CampMasterController.bulkRooms` → `CampFacilitiesService.bulkRooms` | гишүүн | `camp-master.controller.ts:65` |
+| PATCH | `/api/v1/camp/camps/:campId/buildings/:id` | `CampMasterController.updateBuilding` → `CampFacilitiesService.updateBuilding` | `camp.master.manage` | `camp-master.controller.ts:71` |
+| GET | `/api/v1/camp/camps/:campId/rooms` | `CampMasterController.listRooms` → `CampFacilitiesService.listRooms` | гишүүн | `camp-master.controller.ts:78` |
+| POST | `/api/v1/camp/camps/:campId/rooms` | `CampMasterController.createRoom` → `CampFacilitiesService.createRoom` | гишүүн | `camp-master.controller.ts:85` |
+| PATCH | `/api/v1/camp/camps/:campId/rooms/:id` | `CampMasterController.updateRoom` → `CampFacilitiesService.updateRoom` | гишүүн | `camp-master.controller.ts:91` |
 
 ## modules/camp/rbac
 
@@ -238,11 +200,80 @@ tags: [codebase, api, generated]
 | POST | `/api/v1/camp/camps/:campId/meal-locations` | `CampSettingsController.createLocation` → `CampSettingsService.createMealLocation` | `camp.settings.manage` | `camp-settings.controller.ts:32` |
 | PATCH | `/api/v1/camp/camps/:campId/meal-locations/:id` | `CampSettingsController.updateLocation` → `CampSettingsService.updateMealLocation` | `camp.settings.manage` | `camp-settings.controller.ts:38` |
 
+## modules/core/organizations
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/core/organizations` | `CoreOrganizationsController.list` → `CoreOrganizationsService.list` | гишүүн | `core-organizations.controller.ts:15` |
+| POST | `/api/v1/core/organizations` | `CoreOrganizationsController.create` → `CoreOrganizationsService.create` | `camp.master.manage` | `core-organizations.controller.ts:22` |
+| PATCH | `/api/v1/core/organizations/:id` | `CoreOrganizationsController.update` → `CoreOrganizationsService.update` | `camp.master.manage` | `core-organizations.controller.ts:28` |
+
 ## modules/health
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
 | GET | `/api/v1/health` | `HealthController.check` → `—` | — | 🌐 `health.controller.ts:9` |
+
+## modules/hr/attendance
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/hr/sites/:campId/movement-imports/template` | `HrAttendanceController.template` → `HrAttendanceService.template` | — | `hr-attendance.controller.ts:43` |
+| POST | `/api/v1/hr/sites/:campId/movement-imports` | `HrAttendanceController.upload` → `HrAttendanceService.preview` | `camp.movement.import` | `hr-attendance.controller.ts:53` |
+| POST | `/api/v1/hr/sites/:campId/movement-imports/manual` | `HrAttendanceController.manual` → `HrAttendanceService.previewManual` | `camp.movement.import` | `hr-attendance.controller.ts:62` |
+| GET | `/api/v1/hr/sites/:campId/movement-imports` | `HrAttendanceController.listImports` → `HrAttendanceService.listImports` | `camp.movement.import` | `hr-attendance.controller.ts:68` |
+| GET | `/api/v1/hr/sites/:campId/movement-imports/:id` | `HrAttendanceController.getImport` → `HrAttendanceService.getImport` | `camp.movement.import` | `hr-attendance.controller.ts:74` |
+| POST | `/api/v1/hr/sites/:campId/movement-imports/:id/confirm` | `HrAttendanceController.confirm` → `HrAttendanceService.confirm` | `camp.movement.import` | `hr-attendance.controller.ts:81` |
+| POST | `/api/v1/hr/sites/:campId/movement-imports/:id/cancel` | `HrAttendanceController.cancel` → `HrAttendanceService.cancel` | `camp.movement.import` | `hr-attendance.controller.ts:88` |
+| GET | `/api/v1/hr/sites/:campId/movements` | `HrAttendanceController.listMovements` → `HrAttendanceService.listMovements` | гишүүн | `hr-attendance.controller.ts:95` |
+| POST | `/api/v1/hr/sites/:campId/movements` | `HrAttendanceController.createMovement` → `HrAttendanceService.createMovement` | `camp.movement.import` | `hr-attendance.controller.ts:102` |
+| DELETE | `/api/v1/hr/sites/:campId/movements/:id` | `HrAttendanceController.deleteMovement` → `HrAttendanceService.deleteMovement` | `camp.movement.import` | `hr-attendance.controller.ts:108` |
+| GET | `/api/v1/hr/sites/:campId/shift-adjustments` | `HrAttendanceController.listAdjustments` → `HrShiftsService.listAdjustments` | гишүүн | `hr-attendance.controller.ts:115` |
+| POST | `/api/v1/hr/sites/:campId/shift-adjustments` | `HrAttendanceController.createAdjustments` → `HrShiftsService.createAdjustments` | `camp.shift.adjust` | `hr-attendance.controller.ts:122` |
+| DELETE | `/api/v1/hr/sites/:campId/shift-adjustments/:id` | `HrAttendanceController.deleteAdjustment` → `HrShiftsService.deleteAdjustment` | `camp.shift.adjust` | `hr-attendance.controller.ts:128` |
+| GET | `/api/v1/hr/sites/:campId/shift-calendar` | `HrAttendanceController.calendar` → `HrShiftsService.calendar` | гишүүн | `hr-attendance.controller.ts:134` |
+
+## modules/hr/employees
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/hr/sites/:campId/employees` | `HrEmployeesController.listEmployees` → `HrEmployeesService.list` | гишүүн | `hr-employees.controller.ts:15` |
+| GET | `/api/v1/hr/sites/:campId/employees/:id` | `HrEmployeesController.getEmployee` → `HrEmployeesService.get` | гишүүн | `hr-employees.controller.ts:21` |
+| POST | `/api/v1/hr/sites/:campId/employees/bulk` | `HrEmployeesController.bulkEmployees` → `HrEmployeesService.bulkUpdate` | `camp.employee.manage` | `hr-employees.controller.ts:29` |
+| POST | `/api/v1/hr/sites/:campId/employees` | `HrEmployeesController.createEmployee` → `HrEmployeesService.create` | `camp.employee.manage` | `hr-employees.controller.ts:36` |
+| PATCH | `/api/v1/hr/sites/:campId/employees/:id` | `HrEmployeesController.updateEmployee` → `HrEmployeesService.update` | `camp.employee.manage` | `hr-employees.controller.ts:42` |
+
+## modules/hr/import
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/hr/sites/:campId/data-imports/:type/template` | `HrDataController.template` → `HrDataImportService.template` | — | `hr-data.controller.ts:45` |
+| GET | `/api/v1/hr/sites/:campId/data-imports` | `HrDataController.list` → `HrDataImportService.list` | гишүүн | `hr-data.controller.ts:52` |
+| POST | `/api/v1/hr/sites/:campId/data-imports/:type` | `HrDataController.upload` → `HrDataImportService.preview` | гишүүн | `hr-data.controller.ts:59` |
+| GET | `/api/v1/hr/sites/:campId/data-imports/:type/:id` | `HrDataController.get` → `HrDataImportService.get` | гишүүн | `hr-data.controller.ts:77` |
+| POST | `/api/v1/hr/sites/:campId/data-imports/:type/:id/confirm` | `HrDataController.confirm` → `HrDataImportService.confirm` | гишүүн | `hr-data.controller.ts:84` |
+| POST | `/api/v1/hr/sites/:campId/data-imports/:type/:id/cancel` | `HrDataController.cancel` → `HrDataImportService.cancel` | гишүүн | `hr-data.controller.ts:91` |
+| GET | `/api/v1/hr/sites/:campId/export/:type` | `HrDataController.export` → `HrDataImportService.export` | гишүүн | `hr-data.controller.ts:97` |
+
+## modules/hr/org
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/hr/sites/:campId/departments` | `HrOrgController.listDepartments` → `HrDepartmentsService.list` | гишүүн | `hr-org.controller.ts:20` |
+| POST | `/api/v1/hr/sites/:campId/departments` | `HrOrgController.createDepartment` → `HrDepartmentsService.create` | `camp.master.manage` | `hr-org.controller.ts:27` |
+| PATCH | `/api/v1/hr/sites/:campId/departments/:id` | `HrOrgController.updateDepartment` → `HrDepartmentsService.update` | `camp.master.manage` | `hr-org.controller.ts:33` |
+| PUT | `/api/v1/hr/sites/:campId/departments/:id/shift-pattern` | `HrOrgController.setShiftPattern` → `HrDepartmentsService.setShiftPattern` | `camp.master.manage` | `hr-org.controller.ts:39` |
+| GET | `/api/v1/hr/sites/:campId/crews` | `HrOrgController.listCrews` → `HrCrewsService.list` | гишүүн | `hr-org.controller.ts:45` |
+| POST | `/api/v1/hr/sites/:campId/crews` | `HrOrgController.createCrew` → `HrCrewsService.create` | `camp.master.manage` | `hr-org.controller.ts:52` |
+| PATCH | `/api/v1/hr/sites/:campId/crews/:id` | `HrOrgController.updateCrew` → `HrCrewsService.update` | `camp.master.manage` | `hr-org.controller.ts:58` |
+
+## modules/hr/positions
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/hr/positions` | `HrPositionsController.list` → `HrPositionsService.list` | гишүүн | `hr-positions.controller.ts:15` |
+| POST | `/api/v1/hr/positions` | `HrPositionsController.create` → `HrPositionsService.create` | `camp.master.manage` | `hr-positions.controller.ts:22` |
+| PATCH | `/api/v1/hr/positions/:id` | `HrPositionsController.update` → `HrPositionsService.update` | `camp.master.manage` | `hr-positions.controller.ts:28` |
 
 ## modules/inventory
 
@@ -304,3 +335,47 @@ tags: [codebase, api, generated]
 | GET | `/api/v1/workflow/definitions` | `WorkflowDefinitionController.list` → `WorkflowDefinitionService.list` | — | `workflow-definition.controller.ts:16` |
 | POST | `/api/v1/workflow/definitions` | `WorkflowDefinitionController.create` → `WorkflowDefinitionService.create` | — | `workflow-definition.controller.ts:21` |
 | PUT | `/api/v1/workflow/definitions/:id` | `WorkflowDefinitionController.update` → `WorkflowDefinitionService.update` | — | `workflow-definition.controller.ts:27` |
+
+## modules/camp/legacy
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/camp/organizations` | `CampOrganizationsController (extends CoreOrganizationsController).list` → `CoreOrganizationsService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:15` |
+| POST | `/api/v1/camp/organizations` | `CampOrganizationsController (extends CoreOrganizationsController).create` → `CoreOrganizationsService.create` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:15` |
+| PATCH | `/api/v1/camp/organizations/:id` | `CampOrganizationsController (extends CoreOrganizationsController).update` → `CoreOrganizationsService.update` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:15` |
+| GET | `/api/v1/camp/positions` | `CampPositionsController (extends HrPositionsController).list` → `HrPositionsService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:19` |
+| POST | `/api/v1/camp/positions` | `CampPositionsController (extends HrPositionsController).create` → `HrPositionsService.create` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:19` |
+| PATCH | `/api/v1/camp/positions/:id` | `CampPositionsController (extends HrPositionsController).update` → `HrPositionsService.update` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:19` |
+| GET | `/api/v1/camp/camps/:campId/departments` | `CampHrOrgLegacyController (extends HrOrgController).listDepartments` → `HrDepartmentsService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:23` |
+| POST | `/api/v1/camp/camps/:campId/departments` | `CampHrOrgLegacyController (extends HrOrgController).createDepartment` → `HrDepartmentsService.create` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:23` |
+| PATCH | `/api/v1/camp/camps/:campId/departments/:id` | `CampHrOrgLegacyController (extends HrOrgController).updateDepartment` → `HrDepartmentsService.update` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:23` |
+| PUT | `/api/v1/camp/camps/:campId/departments/:id/shift-pattern` | `CampHrOrgLegacyController (extends HrOrgController).setShiftPattern` → `HrDepartmentsService.setShiftPattern` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:23` |
+| GET | `/api/v1/camp/camps/:campId/crews` | `CampHrOrgLegacyController (extends HrOrgController).listCrews` → `HrCrewsService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:23` |
+| POST | `/api/v1/camp/camps/:campId/crews` | `CampHrOrgLegacyController (extends HrOrgController).createCrew` → `HrCrewsService.create` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:23` |
+| PATCH | `/api/v1/camp/camps/:campId/crews/:id` | `CampHrOrgLegacyController (extends HrOrgController).updateCrew` → `HrCrewsService.update` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:23` |
+| GET | `/api/v1/camp/camps/:campId/employees` | `CampHrEmployeesLegacyController (extends HrEmployeesController).listEmployees` → `HrEmployeesService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:27` |
+| GET | `/api/v1/camp/camps/:campId/employees/:id` | `CampHrEmployeesLegacyController (extends HrEmployeesController).getEmployee` → `HrEmployeesService.get` | гишүүн | Deprecated `hr-legacy.controller.ts:27` |
+| POST | `/api/v1/camp/camps/:campId/employees/bulk` | `CampHrEmployeesLegacyController (extends HrEmployeesController).bulkEmployees` → `HrEmployeesService.bulkUpdate` | `camp.employee.manage` | Deprecated `hr-legacy.controller.ts:27` |
+| POST | `/api/v1/camp/camps/:campId/employees` | `CampHrEmployeesLegacyController (extends HrEmployeesController).createEmployee` → `HrEmployeesService.create` | `camp.employee.manage` | Deprecated `hr-legacy.controller.ts:27` |
+| PATCH | `/api/v1/camp/camps/:campId/employees/:id` | `CampHrEmployeesLegacyController (extends HrEmployeesController).updateEmployee` → `HrEmployeesService.update` | `camp.employee.manage` | Deprecated `hr-legacy.controller.ts:27` |
+| GET | `/api/v1/camp/camps/:campId/movement-imports/template` | `CampHrAttendanceLegacyController (extends HrAttendanceController).template` → `HrAttendanceService.template` | — | Deprecated `hr-legacy.controller.ts:31` |
+| POST | `/api/v1/camp/camps/:campId/movement-imports` | `CampHrAttendanceLegacyController (extends HrAttendanceController).upload` → `HrAttendanceService.preview` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
+| POST | `/api/v1/camp/camps/:campId/movement-imports/manual` | `CampHrAttendanceLegacyController (extends HrAttendanceController).manual` → `HrAttendanceService.previewManual` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
+| GET | `/api/v1/camp/camps/:campId/movement-imports` | `CampHrAttendanceLegacyController (extends HrAttendanceController).listImports` → `HrAttendanceService.listImports` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
+| GET | `/api/v1/camp/camps/:campId/movement-imports/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).getImport` → `HrAttendanceService.getImport` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
+| POST | `/api/v1/camp/camps/:campId/movement-imports/:id/confirm` | `CampHrAttendanceLegacyController (extends HrAttendanceController).confirm` → `HrAttendanceService.confirm` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
+| POST | `/api/v1/camp/camps/:campId/movement-imports/:id/cancel` | `CampHrAttendanceLegacyController (extends HrAttendanceController).cancel` → `HrAttendanceService.cancel` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
+| GET | `/api/v1/camp/camps/:campId/movements` | `CampHrAttendanceLegacyController (extends HrAttendanceController).listMovements` → `HrAttendanceService.listMovements` | гишүүн | Deprecated `hr-legacy.controller.ts:31` |
+| POST | `/api/v1/camp/camps/:campId/movements` | `CampHrAttendanceLegacyController (extends HrAttendanceController).createMovement` → `HrAttendanceService.createMovement` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
+| DELETE | `/api/v1/camp/camps/:campId/movements/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).deleteMovement` → `HrAttendanceService.deleteMovement` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
+| GET | `/api/v1/camp/camps/:campId/shift-adjustments` | `CampHrAttendanceLegacyController (extends HrAttendanceController).listAdjustments` → `HrShiftsService.listAdjustments` | гишүүн | Deprecated `hr-legacy.controller.ts:31` |
+| POST | `/api/v1/camp/camps/:campId/shift-adjustments` | `CampHrAttendanceLegacyController (extends HrAttendanceController).createAdjustments` → `HrShiftsService.createAdjustments` | `camp.shift.adjust` | Deprecated `hr-legacy.controller.ts:31` |
+| DELETE | `/api/v1/camp/camps/:campId/shift-adjustments/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).deleteAdjustment` → `HrShiftsService.deleteAdjustment` | `camp.shift.adjust` | Deprecated `hr-legacy.controller.ts:31` |
+| GET | `/api/v1/camp/camps/:campId/shift-calendar` | `CampHrAttendanceLegacyController (extends HrAttendanceController).calendar` → `HrShiftsService.calendar` | гишүүн | Deprecated `hr-legacy.controller.ts:31` |
+| GET | `/api/v1/camp/camps/:campId/data-imports/:type/template` | `CampDataController (extends HrDataController).template` → `HrDataImportService.template` | — | Deprecated `hr-legacy.controller.ts:35` |
+| GET | `/api/v1/camp/camps/:campId/data-imports` | `CampDataController (extends HrDataController).list` → `HrDataImportService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
+| POST | `/api/v1/camp/camps/:campId/data-imports/:type` | `CampDataController (extends HrDataController).upload` → `HrDataImportService.preview` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
+| GET | `/api/v1/camp/camps/:campId/data-imports/:type/:id` | `CampDataController (extends HrDataController).get` → `HrDataImportService.get` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
+| POST | `/api/v1/camp/camps/:campId/data-imports/:type/:id/confirm` | `CampDataController (extends HrDataController).confirm` → `HrDataImportService.confirm` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
+| POST | `/api/v1/camp/camps/:campId/data-imports/:type/:id/cancel` | `CampDataController (extends HrDataController).cancel` → `HrDataImportService.cancel` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
+| GET | `/api/v1/camp/camps/:campId/export/:type` | `CampDataController (extends HrDataController).export` → `HrDataImportService.export` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |

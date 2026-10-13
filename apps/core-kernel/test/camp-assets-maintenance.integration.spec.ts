@@ -23,7 +23,7 @@ import { createRedisMock } from './helpers/redis-mock';
 import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { configureApp } from '../src/common/http/configure-app';
-import { todayUb } from '../src/modules/camp/attendance/camp-date';
+import { todayUb } from '../src/modules/camp/common/camp-date';
 import { ADMIN_DB_URL } from './helpers/db-urls';
 
 const STAMP = Date.now();

@@ -1,8 +1,8 @@
 import { CampMealType, CampShiftType } from '@prisma/client';
-import { addDays } from './camp-date';
-import { fullDayMeals, MealSlot, movementMealSlots } from './meal-rules';
-import { RosterSettings } from './roster';
-import { AdjustmentRange, PatternSegment, resolveShift, ShiftSource } from './shift-resolver';
+import { addDays } from '../common/camp-date';
+import { fullDayMeals, MealSlot, movementMealSlots } from '../../hr/attendance/meal-rules';
+import { RosterSettings } from '../../hr/attendance/roster';
+import { AdjustmentRange, PatternSegment, resolveShift, ShiftSource } from '../../hr/attendance/shift-resolver';
 
 export interface PresenceStay {
   startDate: string;

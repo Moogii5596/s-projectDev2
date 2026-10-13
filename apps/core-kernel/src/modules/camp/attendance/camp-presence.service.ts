@@ -3,10 +3,9 @@ import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.serv
 import { CampAccessService } from '../common/camp-access.service';
 import { fromDbDate, inTenantTx, toDbDate, Tx } from '../common/camp-tx';
 import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
-import { addDays } from './camp-date';
+import { addDays } from '../common/camp-date';
 import { computePresence, PresenceEmployee, PresenceResult } from './presence';
-import type { PatternSegment } from './shift-resolver';
-import { assertDate } from './range';
+import { assertDate } from '../../hr/attendance/range';
 
 /** D өдрийн хоолны суурь тоо (Шат 3.5) — V2-ийн хоолны захиалга (Шат 6, D8) үүнийг ашиглана */
 @Injectable()
@@ -37,33 +36,9 @@ export class CampPresenceService {
   }
 }
 
-/** Кемп × албан тушаалын анхдагч (v0.2.1) — positionId → {байршил, хоол, ээлжийн загвар} */
-export type PositionDefaults = Map<string, { mealLocationId: string | null; mealsIncluded: boolean | null; pattern: PatternSegment[] }>;
-
-export async function loadPositionDefaults(tx: Tx, tenantId: string, campId: string): Promise<PositionDefaults> {
-  const rows = await tx.campPositionSetting.findMany({
-    where: { tenantId, campId },
-    select: { positionId: true, mealLocationId: true, mealsIncluded: true, shiftPatterns: { select: { dayFrom: true, dayTo: true, shift: true }, orderBy: { dayFrom: 'asc' } } },
-  });
-  return new Map(rows.map((r) => [r.positionId, { mealLocationId: r.mealLocationId, mealsIncluded: r.mealsIncluded, pattern: r.shiftPatterns }]));
-}
-
-/**
- * Ажилтны ЭФФЕКТИВ утга (Q1, Д-1, Д-2): ажилтан ?? албан тушаал(кемп) ?? анхдагч.
- *   хоолны байршил → null (= кемпийн анхдагч) · хоол авах → тийм · ээлжийн загвар → хэлтсийнх
- */
-export function effectiveEmployee(
-  e: { positionId: string | null; mealLocationId: string | null; mealsIncluded: boolean | null },
-  defaults: PositionDefaults,
-  departmentPattern: PatternSegment[],
-): { workMealLocationId: string | null; mealsIncluded: boolean; pattern: PatternSegment[] } {
-  const p = e.positionId ? defaults.get(e.positionId) : undefined;
-  return {
-    workMealLocationId: e.mealLocationId ?? p?.mealLocationId ?? null,
-    mealsIncluded: e.mealsIncluded ?? p?.mealsIncluded ?? true,
-    pattern: p && p.pattern.length > 0 ? p.pattern : departmentPattern,
-  };
-}
+export { effectiveEmployee, loadPositionDefaults } from '../common/position-defaults';
+export type { PositionDefaults } from '../common/position-defaults';
+import { effectiveEmployee, loadPositionDefaults, type PositionDefaults } from '../common/position-defaults';
 
 /**
  * D өдрийн хоолны суурь тоо — DB-ээс ачаалж тооцно (API + `camp:snapshot` CLI, v0.2.0 §0.2).
@@ -97,10 +72,10 @@ export async function loadPresenceEmployees(
     },
   } as const;
   const emps = opts.legacy
-    ? (await tx.campEmployee.findMany({ where: { tenantId, campId, stays: { some: stayWhere } }, select: base })).map((e) => ({
+    ? (await tx.hrEmployee.findMany({ where: { tenantId, campId, stays: { some: stayWhere } }, select: base })).map((e) => ({
         ...e, positionId: null, mealLocationId: e.department.mealLocationId, mealsIncluded: null, positionRef: null,
       }))
-    : await tx.campEmployee.findMany({
+    : await tx.hrEmployee.findMany({
         where: { tenantId, campId, stays: { some: stayWhere } },
         select: { ...base, positionId: true, mealLocationId: true, mealsIncluded: true, positionRef: { select: { name: true } } },
       });

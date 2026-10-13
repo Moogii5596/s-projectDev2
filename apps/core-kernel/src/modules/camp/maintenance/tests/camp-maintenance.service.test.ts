@@ -3,7 +3,7 @@ import { BadRequestException, ConflictException, ForbiddenException, NotFoundExc
 import { CampAssetCondition, CampMaintenanceStatus as S, CampPartSource, CampRoomStatus, Prisma, UserRole } from '@prisma/client';
 import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
-import { todayUb } from '../../attendance/camp-date';
+import { todayUb } from '../../common/camp-date';
 import { CampMaintenanceService, costPreview } from '../camp-maintenance.service';
 import { formatRequestNo, requestNoPrefix, TRANSITIONS } from '../maintenance-flow';
 

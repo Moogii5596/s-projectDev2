@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CampAuditService } from '../common/camp-audit.service';
@@ -7,19 +6,18 @@ import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import { assertMealLocation, getCampOr404, getRosterSettings } from '../common/camp-lookup';
-import { normalizeShiftPattern } from '../master/shift-pattern';
-import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
-import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto, UpsertPositionSettingDto } from './camp-catalog.dto';
+import { normalizeShiftPattern } from '../../hr/org/shift-pattern';
+import { conflict, notFound } from '../../../common/i18n/app-error';
+import { normName } from '../../hr/positions/hr-positions.service';
+import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../common/common.dto';
+import { UpsertPositionSettingDto } from './camp-catalog.dto';
 
 const P = CAMP_PERMISSIONS;
 const ITEM = { id: true, name: true, isActive: true, createdAt: true, updatedAt: true } as const;
-export type CatalogKind = 'position' | 'buildingType';
 
-/** Нэрийг харьцуулах хэлбэр: илүү зай, том/жижиг үсэг үл хамаарна (DB-ийн uq_*_name индекстэй ижил) */
-export const normName = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
 
 /**
- * v0.2.1 — байгууллагын каталог: албан тушаал (C-01, Q2), байрны төрөл (C-12, Q4).
+ * v0.2.1 — байгууллагын каталог: байрны төрөл (C-12, Q4). Албан тушаал → HR (`HrPositionsService`, v0.2.2 H1).
  * Унших: аль нэг кемпэд эрхтэй; бичих: бүх кемпийн `camp.master.manage` (байгууллагатай ижил).
  * + Кемп × албан тушаалын анхдагч (хоолны байршил, хоол авах, ээлжийн загвар).
  */
@@ -31,27 +29,15 @@ export class CampCatalogService {
     private readonly audit: CampAuditService,
   ) {}
 
-  private model(tx: Tx, kind: CatalogKind) {
-    return (kind === 'position' ? tx.campPosition : tx.campBuildingType) as unknown as Prisma.CampPositionDelegate;
-  }
-
-  private async assertUniqueName(tx: Tx, tenantId: string, kind: CatalogKind, name: string, exceptId?: string) {
-    const all = await this.model(tx, kind).findMany({ where: { tenantId }, select: { id: true, name: true } });
+  private async assertUniqueName(tx: Tx, tenantId: string, name: string, exceptId?: string) {
+    const all = await tx.campBuildingType.findMany({ where: { tenantId }, select: { id: true, name: true } });
     const dup = all.find((r) => normName(r.name) === normName(name) && r.id !== exceptId);
-    if (dup) throw conflict(kind === 'position' ? 'camp.err.catalog.position_exists' : 'camp.err.catalog.building_type_exists', { name: dup.name });
+    if (dup) throw conflict('camp.err.catalog.building_type_exists', { name: dup.name });
   }
 
-  async list(tenantId: string, authId: string, kind: CatalogKind, q: QueryCatalogDto) {
+  async list(tenantId: string, authId: string, q: QueryCatalogDto) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, null);
-      if (kind === 'position') {
-        const [rows, counts] = await Promise.all([
-          tx.campPosition.findMany({ where: { tenantId, ...(q.activeOnly ? { isActive: true } : {}) }, select: ITEM, orderBy: { name: 'asc' } }),
-          tx.campEmployee.groupBy({ by: ['positionId'], where: { tenantId, status: 'ACTIVE', positionId: { not: null } }, _count: { _all: true } }),
-        ]);
-        const n = new Map(counts.map((c) => [c.positionId, c._count._all]));
-        return rows.map((r) => ({ ...r, activeEmployees: n.get(r.id) ?? 0 }));
-      }
       const [rows, counts] = await Promise.all([
         tx.campBuildingType.findMany({ where: { tenantId, ...(q.activeOnly ? { isActive: true } : {}) }, select: ITEM, orderBy: { name: 'asc' } }),
         tx.campBuilding.groupBy({ by: ['typeId'], where: { tenantId, typeId: { not: null } }, _count: { _all: true } }),
@@ -61,26 +47,26 @@ export class CampCatalogService {
     });
   }
 
-  async create(tenantId: string, authId: string, kind: CatalogKind, dto: CreateCatalogItemDto) {
+  async create(tenantId: string, authId: string, dto: CreateCatalogItemDto) {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
         const name = dto.name.replace(/\s+/g, ' ');
-        await this.assertUniqueName(tx, tenantId, kind, name);
-        return this.model(tx, kind).create({ data: { tenantId, name }, select: ITEM });
+        await this.assertUniqueName(tx, tenantId, name);
+        return tx.campBuildingType.create({ data: { tenantId, name }, select: ITEM });
       }),
     );
   }
 
-  async update(tenantId: string, authId: string, kind: CatalogKind, id: string, dto: UpdateCatalogItemDto) {
+  async update(tenantId: string, authId: string, id: string, dto: UpdateCatalogItemDto) {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
-        const cur = await this.model(tx, kind).findFirst({ where: { id, tenantId }, select: { id: true } });
-        if (!cur) throw notFound(kind === 'position' ? 'camp.err.catalog.position_not_found' : 'camp.err.catalog.building_type_not_found');
+        const cur = await tx.campBuildingType.findFirst({ where: { id, tenantId }, select: { id: true } });
+        if (!cur) throw notFound('camp.err.catalog.building_type_not_found');
         const name = dto.name?.replace(/\s+/g, ' ');
-        if (name) await this.assertUniqueName(tx, tenantId, kind, name, id);
-        return this.model(tx, kind).update({
+        if (name) await this.assertUniqueName(tx, tenantId, name, id);
+        return tx.campBuildingType.update({
           where: { id },
           data: { ...(name ? { name } : {}), ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}) },
           select: ITEM,
@@ -97,7 +83,7 @@ export class CampCatalogService {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       await getCampOr404(tx, tenantId, campId);
       const [positions, settings, counts] = await Promise.all([
-        tx.campPosition.findMany({ where: { tenantId }, select: { id: true, name: true, isActive: true }, orderBy: { name: 'asc' } }),
+        tx.hrPosition.findMany({ where: { tenantId }, select: { id: true, name: true, isActive: true }, orderBy: { name: 'asc' } }),
         tx.campPositionSetting.findMany({
           where: { tenantId, campId },
           select: {
@@ -106,7 +92,7 @@ export class CampCatalogService {
             shiftPatterns: { select: { dayFrom: true, dayTo: true, shift: true }, orderBy: { dayFrom: 'asc' } },
           },
         }),
-        tx.campEmployee.groupBy({ by: ['positionId'], where: { tenantId, campId, status: 'ACTIVE', positionId: { not: null } }, _count: { _all: true } }),
+        tx.hrEmployee.groupBy({ by: ['positionId'], where: { tenantId, campId, status: 'ACTIVE', positionId: { not: null } }, _count: { _all: true } }),
       ]);
       const byPos = new Map(settings.map((s) => [s.positionId, s]));
       const n = new Map(counts.map((c) => [c.positionId, c._count._all]));
@@ -133,7 +119,7 @@ export class CampCatalogService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         await getCampOr404(tx, tenantId, campId);
-        const pos = await tx.campPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true, name: true } });
+        const pos = await tx.hrPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true, name: true } });
         if (!pos) throw notFound('camp.err.catalog.position_not_found');
         if (dto.mealLocationId) await assertMealLocation(tx, tenantId, campId, dto.mealLocationId);
         // Загварыг бичихээс ӨМНӨ шалгана (ростерын урт)
@@ -177,28 +163,4 @@ export class CampCatalogService {
     });
     return s ? { mealLocationId: s.mealLocationId, mealsIncluded: s.mealsIncluded, shiftPatterns: s.shiftPatterns } : null;
   }
-}
-
-/**
- * Албан тушаалын нэрийг каталогоос олно (нэрийн нормчлолоор), байхгүй бол ҮҮСГЭНЭ (хуучин клиент / импортын чөлөөт текст).
- * Идэвхгүй албан тушаалыг сонгосон бол алдаа (одоогийнх хэвээр бол зөвшөөрнө — `currentId`).
- */
-export async function resolvePositionByName(tx: Tx, tenantId: string, name: string, currentId?: string | null): Promise<{ id: string; name: string; created: boolean }> {
-  const clean = name.trim().replace(/\s+/g, ' ').slice(0, 100);
-  const all = await tx.campPosition.findMany({ where: { tenantId }, select: { id: true, name: true, isActive: true } });
-  const hit = all.find((p) => normName(p.name) === normName(clean));
-  if (hit) {
-    if (!hit.isActive && hit.id !== currentId) throw badRequest('camp.err.catalog.position_inactive', { name: hit.name });
-    return { id: hit.id, name: hit.name, created: false };
-  }
-  const p = await tx.campPosition.create({ data: { tenantId, name: clean }, select: { id: true, name: true } });
-  return { ...p, created: true };
-}
-
-/** positionId → каталогийн мөр (идэвхтэй эсвэл одоогийнх) */
-export async function assertPosition(tx: Tx, tenantId: string, positionId: string, currentId?: string | null): Promise<{ id: string; name: string }> {
-  const p = await tx.campPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true, name: true, isActive: true } });
-  if (!p) throw badRequest('camp.err.catalog.position_not_found');
-  if (!p.isActive && p.id !== currentId) throw badRequest('camp.err.catalog.position_inactive', { name: p.name });
-  return { id: p.id, name: p.name };
 }

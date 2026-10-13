@@ -109,7 +109,7 @@ export class CampSettingsService {
 
   /** Катеринг байгууллага: tenant-д байгаа, идэвхтэй, CATERING үйлчилгээтэй (400) */
   private async assertCateringOrg(tx: Tx, tenantId: string, id: string) {
-    const org = await tx.campOrganization.findFirst({ where: { id, tenantId }, select: { name: true, isActive: true, serviceTypes: true } });
+    const org = await tx.coreOrganization.findFirst({ where: { id, tenantId }, select: { name: true, isActive: true, serviceTypes: true } });
     if (!org) throw badRequest('camp.err.settings.1');
     if (!org.isActive) throw badRequest('camp.err.settings.2', { name: org.name });
     if (!org.serviceTypes.includes(CampOrgServiceType.CATERING)) {
@@ -125,7 +125,7 @@ export class CampSettingsService {
     const current = await tx.campSetting.findFirst({ where: { tenantId, campId }, select: { rosterOnDays: true } });
     const currentDays = current?.rosterOnDays ?? 14;
     if (currentDays === rosterOnDays) return;
-    const depts = await tx.campDepartment.findMany({
+    const depts = await tx.hrDepartment.findMany({
       where: { tenantId, campId, shiftPatterns: { some: {} } },
       select: { code: true },
       orderBy: { code: 'asc' },
@@ -187,7 +187,7 @@ export class CampSettingsService {
           if (isDefault) throw conflict('camp.err.settings.6');
           // v0.2.1 (Q1): байршлыг ажилтан / албан тушаалын тохиргоо ашигладаг (хэлтэс биш)
           const [employees, positions] = await Promise.all([
-            tx.campEmployee.count({ where: { tenantId, campId, mealLocationId: id, status: 'ACTIVE' } }),
+            tx.hrEmployee.count({ where: { tenantId, campId, mealLocationId: id, status: 'ACTIVE' } }),
             tx.campPositionSetting.count({ where: { tenantId, campId, mealLocationId: id } }),
           ]);
           if (employees + positions > 0) throw conflict('camp.err.settings.9', { employees, positions });

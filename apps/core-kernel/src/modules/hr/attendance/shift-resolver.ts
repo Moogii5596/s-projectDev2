@@ -1,5 +1,5 @@
 import { CampShiftType } from '@prisma/client';
-import { coversDay } from './camp-date';
+import { coversDay } from '../../camp/common/camp-date';
 import { rosterDayNo, RosterSettings } from './roster';
 
 export interface PatternSegment {

@@ -5,10 +5,10 @@ import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
 import { CampsService } from '../camps.service';
 import { CampFacilitiesService } from '../camp-facilities.service';
-import { CampOrganizationsService } from '../camp-organizations.service';
-import { CampDepartmentsService } from '../camp-departments.service';
-import { CampCrewsService } from '../camp-crews.service';
-import { CampEmployeesService } from '../camp-employees.service';
+import { CoreOrganizationsService } from '../../../core/organizations/core-organizations.service';
+import { HrDepartmentsService } from '../../../hr/org/hr-departments.service';
+import { HrCrewsService } from '../../../hr/org/hr-crews.service';
+import { HrEmployeesService } from '../../../hr/employees/hr-employees.service';
 import { encodeCursor } from '../../../../common/utils/cursor';
 
 const P = CAMP_PERMISSIONS;
@@ -126,40 +126,40 @@ describe('CampFacilitiesService (Шат 2.4)', () => {
   });
 });
 
-describe('CampOrganizationsService (Шат 2.4)', () => {
+describe('CoreOrganizationsService (Шат 2.4)', () => {
   let s: ReturnType<typeof setup>;
-  let svc: CampOrganizationsService;
+  let svc: CoreOrganizationsService;
   beforeEach(() => {
     s = setup();
-    svc = new CampOrganizationsService(s.prisma as never, s.access);
+    svc = new CoreOrganizationsService(s.prisma as never, s.access);
   });
 
   it('list: аль нэг кемпэд эрхтэй бол уншина; шүүлт', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.HAUL_CREATE] }] });
     await svc.list('t1', 'a1', { serviceType: CampOrgServiceType.SEWAGE_DISPOSAL, orgType: CampOrgType.CONTRACTOR });
-    expect(s.tx.campOrganization.findMany.mock.calls[0][0].where).toEqual({ tenantId: 't1', serviceTypes: { has: 'SEWAGE_DISPOSAL' }, orgType: 'CONTRACTOR' });
+    expect(s.tx.coreOrganization.findMany.mock.calls[0][0].where).toEqual({ tenantId: 't1', serviceTypes: { has: 'SEWAGE_DISPOSAL' }, orgType: 'CONTRACTOR' });
   });
 
   it('create: кемпийн master.manage хангалтгүй → 403; давхар регистр → 409', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MASTER_MANAGE] }] });
     await expect(svc.create('t1', 'a1', { name: 'X', orgType: CampOrgType.MAIN })).rejects.toThrow(ForbiddenException);
     setActor(s.tx, { roles: [{ campId: null, perms: [P.MASTER_MANAGE] }] });
-    s.tx.campOrganization.findFirst.mockResolvedValueOnce({ name: 'Уурхай ХХК' });
+    s.tx.coreOrganization.findFirst.mockResolvedValueOnce({ name: 'Уурхай ХХК' });
     await expect(svc.create('t1', 'a1', { name: 'X', regNumber: '111', orgType: CampOrgType.MAIN })).rejects.toThrow(/Регистр 111 "Уурхай ХХК"/);
   });
 
   it('регистргүй байгууллага давхардал шалгахгүй; null талбарууд', async () => {
     setActor(s.tx, { role: UserRole.ADMIN });
     await svc.create('t1', 'a1', { name: 'X', orgType: CampOrgType.CONTRACTOR, serviceTypes: [CampOrgServiceType.CATERING] });
-    expect(s.tx.campOrganization.findFirst).not.toHaveBeenCalled();
-    expect(s.tx.campOrganization.create.mock.calls[0][0].data).toEqual({
+    expect(s.tx.coreOrganization.findFirst).not.toHaveBeenCalled();
+    expect(s.tx.coreOrganization.create.mock.calls[0][0].data).toEqual({
       tenantId: 't1', name: 'X', regNumber: null, orgType: 'CONTRACTOR', serviceTypes: ['CATERING'], contactName: null, phone: null, email: null,
     });
   });
 
   it('кемпийн катеринг байгууллагаас CATERING хасах / идэвхгүй болгох → 409 (кемпийн кодыг нэрлэнэ); бусад төрөл өөрчлөхөд шалгахгүй', async () => {
     setActor(s.tx, { role: UserRole.ADMIN });
-    s.tx.campOrganization.findFirst.mockResolvedValue({ id: 'o1' });
+    s.tx.coreOrganization.findFirst.mockResolvedValue({ id: 'o1' });
     s.tx.campSetting.findMany.mockResolvedValue([{ camp: { code: 'C1' } }]);
     await expect(svc.update('t1', 'a1', 'o1', { serviceTypes: [CampOrgServiceType.OTHER] })).rejects.toThrow(/катеринг байгууллага \(C1\)/);
     await expect(svc.update('t1', 'a1', 'o1', { isActive: false })).rejects.toThrow(/C1/);
@@ -171,35 +171,35 @@ describe('CampOrganizationsService (Шат 2.4)', () => {
 
   it('идэвхгүй болгох: идэвхтэй ажилтан / гэрээ → 409; зөвхөн ирсэн талбарыг шинэчилнэ', async () => {
     setActor(s.tx, { role: UserRole.ADMIN });
-    s.tx.campOrganization.findFirst.mockResolvedValue({ id: 'o1' });
-    s.tx.campEmployee.count.mockResolvedValueOnce(0);
+    s.tx.coreOrganization.findFirst.mockResolvedValue({ id: 'o1' });
+    s.tx.hrEmployee.count.mockResolvedValueOnce(0);
     s.tx.campContract.count.mockResolvedValueOnce(1);
     await expect(svc.update('t1', 'a1', 'o1', { isActive: false })).rejects.toThrow(/0 ажилтан, 1 гэрээ/);
-    s.tx.campOrganization.findFirst.mockResolvedValueOnce({ id: 'o1' }).mockResolvedValueOnce(null);
+    s.tx.coreOrganization.findFirst.mockResolvedValueOnce({ id: 'o1' }).mockResolvedValueOnce(null);
     await svc.update('t1', 'a1', 'o1', { phone: null, regNumber: '222' });
-    expect(s.tx.campOrganization.update.mock.calls[0][0].data).toEqual({ phone: null, regNumber: '222' });
+    expect(s.tx.coreOrganization.update.mock.calls[0][0].data).toEqual({ phone: null, regNumber: '222' });
   });
 });
 
-describe('CampDepartmentsService (Шат 2.4)', () => {
+describe('HrDepartmentsService (Шат 2.4)', () => {
   let s: ReturnType<typeof setup>;
-  let svc: CampDepartmentsService;
+  let svc: HrDepartmentsService;
   beforeEach(() => {
     s = setup();
-    svc = new CampDepartmentsService(s.prisma as never, s.access, s.audit);
+    svc = new HrDepartmentsService(s.prisma as never, s.access, s.audit);
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MASTER_MANAGE] }] });
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
   });
 
   it('create: байршил өөр кемпийнх → 400; загвартай үүсгэхэд ростерын урттай шалгаж нэгтгэн бичнэ', async () => {
-    s.tx.campDepartment.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'new-id' });
+    s.tx.hrDepartment.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'new-id' });
     s.tx.campSetting.findFirst.mockResolvedValueOnce({ rosterOnDays: 14, changeoverWeekday: 3 });
     await svc.create('t1', 'a1', 'c1', {
       code: 'MINE', name: 'Уул', mealLocationId: 'l1',
       shiftPattern: [{ dayFrom: 8, dayTo: 14, shift: CampShiftType.NIGHT }, { dayFrom: 1, dayTo: 7, shift: CampShiftType.DAY }],
     });
-    expect(s.tx.campDepartmentShiftPattern.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 't1', departmentId: 'new-id' } });
-    expect(s.tx.campDepartmentShiftPattern.createMany).toHaveBeenCalledWith({
+    expect(s.tx.hrDepartmentShiftPattern.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 't1', departmentId: 'new-id' } });
+    expect(s.tx.hrDepartmentShiftPattern.createMany).toHaveBeenCalledWith({
       data: [
         { tenantId: 't1', departmentId: 'new-id', dayFrom: 1, dayTo: 7, shift: 'DAY' },
         { tenantId: 't1', departmentId: 'new-id', dayFrom: 8, dayTo: 14, shift: 'NIGHT' },
@@ -207,53 +207,53 @@ describe('CampDepartmentsService (Шат 2.4)', () => {
     });
     // v0.2.1 (Д-4): хэлтсийн хоолны байршлыг үл тооно (хуучин клиент илгээсэн ч бичихгүй, шалгахгүй)
     expect(s.tx.campMealLocation.findFirst).not.toHaveBeenCalled();
-    expect(s.tx.campDepartment.create.mock.calls[0][0].data).not.toHaveProperty('mealLocationId');
+    expect(s.tx.hrDepartment.create.mock.calls[0][0].data).not.toHaveProperty('mealLocationId');
   });
 
   it('setShiftPattern: цоорхойтой → 400 (юу ч устгахгүй); хоосон → устгаад бичихгүй', async () => {
-    s.tx.campDepartment.findFirst.mockResolvedValue({ id: 'd1' });
+    s.tx.hrDepartment.findFirst.mockResolvedValue({ id: 'd1' });
     await expect(svc.setShiftPattern('t1', 'a1', 'c1', 'd1', { segments: [{ dayFrom: 1, dayTo: 7, shift: CampShiftType.DAY }] })).rejects.toThrow(/Дутуу: 8–14/);
-    expect(s.tx.campDepartmentShiftPattern.deleteMany).not.toHaveBeenCalled();
+    expect(s.tx.hrDepartmentShiftPattern.deleteMany).not.toHaveBeenCalled();
     await svc.setShiftPattern('t1', 'a1', 'c1', 'd1', { segments: [] });
-    expect(s.tx.campDepartmentShiftPattern.deleteMany).toHaveBeenCalledTimes(1);
-    expect(s.tx.campDepartmentShiftPattern.createMany).not.toHaveBeenCalled();
+    expect(s.tx.hrDepartmentShiftPattern.deleteMany).toHaveBeenCalledTimes(1);
+    expect(s.tx.hrDepartmentShiftPattern.createMany).not.toHaveBeenCalled();
   });
 
   it('setShiftPattern: кемпийн ростер 10 хоног бол 1–10 шаардана; хэлтэс өөр кемпийнх → 404', async () => {
     s.tx.campSetting.findFirst.mockResolvedValue({ rosterOnDays: 10, changeoverWeekday: 3 });
     await expect(svc.setShiftPattern('t1', 'a1', 'c1', 'd9', { segments: [] })).rejects.toThrow(NotFoundException);
-    s.tx.campDepartment.findFirst.mockResolvedValue({ id: 'd1' });
+    s.tx.hrDepartment.findFirst.mockResolvedValue({ id: 'd1' });
     await expect(svc.setShiftPattern('t1', 'a1', 'c1', 'd1', { segments: [{ dayFrom: 1, dayTo: 14, shift: CampShiftType.DAY }] })).rejects.toThrow(/≤ 10/);
     await svc.setShiftPattern('t1', 'a1', 'c1', 'd1', { segments: [{ dayFrom: 1, dayTo: 10, shift: CampShiftType.DAY }] });
-    expect(s.tx.campDepartmentShiftPattern.createMany).toHaveBeenCalledTimes(1);
+    expect(s.tx.hrDepartmentShiftPattern.createMany).toHaveBeenCalledTimes(1);
   });
 
   it('update: идэвхтэй ажилтантай хэлтэс идэвхгүй → 409; v0.2.1: mealLocationId-г үл тооно', async () => {
-    s.tx.campDepartment.findFirst.mockResolvedValue({ id: 'd1' });
-    s.tx.campEmployee.count.mockResolvedValueOnce(4);
+    s.tx.hrDepartment.findFirst.mockResolvedValue({ id: 'd1' });
+    s.tx.hrEmployee.count.mockResolvedValueOnce(4);
     await expect(svc.update('t1', 'a1', 'c1', 'd1', { isActive: false })).rejects.toThrow(/идэвхтэй 4 ажилтан/);
-    expect(s.tx.campDepartment.update).not.toHaveBeenCalled();
+    expect(s.tx.hrDepartment.update).not.toHaveBeenCalled();
     await svc.update('t1', 'a1', 'c1', 'd1', { mealLocationId: 'l9' });
     expect(s.tx.campMealLocation.findFirst).not.toHaveBeenCalled();
-    expect(s.tx.campDepartment.update.mock.calls[0][0].data).not.toHaveProperty('mealLocationId');
+    expect(s.tx.hrDepartment.update.mock.calls[0][0].data).not.toHaveProperty('mealLocationId');
   });
 });
 
-describe('CampCrewsService (Шат 2.4)', () => {
+describe('HrCrewsService (Шат 2.4)', () => {
   let s: ReturnType<typeof setup>;
-  let svc: CampCrewsService;
+  let svc: HrCrewsService;
   beforeEach(() => {
     s = setup();
-    svc = new CampCrewsService(s.prisma as never, s.access, s.audit);
+    svc = new HrCrewsService(s.prisma as never, s.access, s.audit);
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MASTER_MANAGE] }] });
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
   });
 
   it('ирэх өдөр солигдох гарагтай таарахгүй → 400 (гарагийг нэрлэнэ); таарвал Date-ээр хадгалж YYYY-MM-DD буцаана', async () => {
     await expect(svc.create('t1', 'a1', 'c1', { code: 'A', rosterAnchorDate: '2026-10-08' })).rejects.toThrow(/Пүрэв.*Лхагва/);
-    s.tx.campCrew.create.mockResolvedValueOnce({ id: 'cr1', code: 'A', name: null, rosterAnchorDate: new Date('2026-10-07T00:00:00Z'), isActive: true, createdAt: new Date(), updatedAt: new Date() });
+    s.tx.hrCrew.create.mockResolvedValueOnce({ id: 'cr1', code: 'A', name: null, rosterAnchorDate: new Date('2026-10-07T00:00:00Z'), isActive: true, createdAt: new Date(), updatedAt: new Date() });
     const res = await svc.create('t1', 'a1', 'c1', { code: 'A', rosterAnchorDate: '2026-10-07' });
-    expect(s.tx.campCrew.create.mock.calls[0][0].data.rosterAnchorDate.toISOString()).toBe('2026-10-07T00:00:00.000Z');
+    expect(s.tx.hrCrew.create.mock.calls[0][0].data.rosterAnchorDate.toISOString()).toBe('2026-10-07T00:00:00.000Z');
     expect(res.rosterAnchorDate).toBe('2026-10-07');
   });
 
@@ -264,24 +264,24 @@ describe('CampCrewsService (Шат 2.4)', () => {
   });
 
   it('идэвхтэй ажилтантай баг идэвхгүй → 409', async () => {
-    s.tx.campCrew.findFirst.mockResolvedValue({ id: 'cr1' });
-    s.tx.campEmployee.count.mockResolvedValueOnce(12);
+    s.tx.hrCrew.findFirst.mockResolvedValue({ id: 'cr1' });
+    s.tx.hrEmployee.count.mockResolvedValueOnce(12);
     await expect(svc.update('t1', 'a1', 'c1', 'cr1', { isActive: false })).rejects.toThrow(/идэвхтэй 12 ажилтан/);
   });
 });
 
-describe('CampEmployeesService (Шат 2.4)', () => {
+describe('HrEmployeesService (Шат 2.4)', () => {
   let s: ReturnType<typeof setup>;
-  let svc: CampEmployeesService;
+  let svc: HrEmployeesService;
   const dto = { organizationId: 'o1', departmentId: 'd1', crewId: 'cr1', employeeCode: 'E001', fullName: 'Бат' };
   const okRefs = () => {
-    s.tx.campOrganization.findFirst.mockResolvedValue({ isActive: true });
-    s.tx.campDepartment.findFirst.mockResolvedValue({ isActive: true });
-    s.tx.campCrew.findFirst.mockResolvedValue({ isActive: true });
+    s.tx.coreOrganization.findFirst.mockResolvedValue({ isActive: true });
+    s.tx.hrDepartment.findFirst.mockResolvedValue({ isActive: true });
+    s.tx.hrCrew.findFirst.mockResolvedValue({ isActive: true });
   };
   beforeEach(() => {
     s = setup();
-    svc = new CampEmployeesService(s.prisma as never, s.access, s.audit);
+    svc = new HrEmployeesService(s.prisma as never, s.access, s.audit);
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.EMPLOYEE_MANAGE] }] });
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
   });
@@ -293,42 +293,42 @@ describe('CampEmployeesService (Шат 2.4)', () => {
 
   it('create: байгууллага/хэлтэс/баг байхгүй эсвэл идэвхгүй → 400; хэлтэс/багийг тухайн кемпээр хайна', async () => {
     await expect(svc.create('t1', 'a1', 'c1', dto)).rejects.toThrow(/Байгууллага олдсонгүй/);
-    s.tx.campOrganization.findFirst.mockResolvedValue({ isActive: true });
+    s.tx.coreOrganization.findFirst.mockResolvedValue({ isActive: true });
     await expect(svc.create('t1', 'a1', 'c1', dto)).rejects.toThrow(/Хэлтэс энэ кемпэд олдсонгүй/);
-    expect(s.tx.campDepartment.findFirst).toHaveBeenCalledWith({ where: { id: 'd1', tenantId: 't1', campId: 'c1' }, select: { isActive: true } });
-    s.tx.campDepartment.findFirst.mockResolvedValue({ isActive: false });
+    expect(s.tx.hrDepartment.findFirst).toHaveBeenCalledWith({ where: { id: 'd1', tenantId: 't1', campId: 'c1' }, select: { isActive: true } });
+    s.tx.hrDepartment.findFirst.mockResolvedValue({ isActive: false });
     await expect(svc.create('t1', 'a1', 'c1', dto)).rejects.toThrow(/Хэлтэс идэвхгүй/);
-    s.tx.campDepartment.findFirst.mockResolvedValue({ isActive: true });
-    s.tx.campCrew.findFirst.mockResolvedValue({ isActive: false });
+    s.tx.hrDepartment.findFirst.mockResolvedValue({ isActive: true });
+    s.tx.hrCrew.findFirst.mockResolvedValue({ isActive: false });
     await expect(svc.create('t1', 'a1', 'c1', dto)).rejects.toThrow(/Ростер идэвхгүй/);
-    expect(s.tx.campEmployee.create).not.toHaveBeenCalled();
+    expect(s.tx.hrEmployee.create).not.toHaveBeenCalled();
   });
 
   it('create: давхар код → 409 (нэрийг хэлнэ); багагүй (crewId null) зөвшөөрнө', async () => {
     okRefs();
-    s.tx.campEmployee.findFirst.mockResolvedValueOnce({ fullName: 'Дорж' });
+    s.tx.hrEmployee.findFirst.mockResolvedValueOnce({ fullName: 'Дорж' });
     await expect(svc.create('t1', 'a1', 'c1', dto)).rejects.toThrow(/"E001" \(Дорж\)/);
-    s.tx.campCrew.findFirst.mockClear();
+    s.tx.hrCrew.findFirst.mockClear();
     await svc.create('t1', 'a1', 'c1', { ...dto, crewId: null });
-    expect(s.tx.campCrew.findFirst).not.toHaveBeenCalled();
-    expect(s.tx.campEmployee.create.mock.calls[0][0].data).toMatchObject({ tenantId: 't1', campId: 'c1', crewId: null, employeeCode: 'E001', position: null });
+    expect(s.tx.hrCrew.findFirst).not.toHaveBeenCalled();
+    expect(s.tx.hrEmployee.create.mock.calls[0][0].data).toMatchObject({ tenantId: 't1', campId: 'c1', crewId: null, employeeCode: 'E001', position: null });
   });
 
   it('update: crewId null → багаас хасна (шалгахгүй); зөвхөн ирсэн талбар; код давхардал өөрийгөө хасна', async () => {
-    s.tx.campEmployee.findFirst.mockResolvedValueOnce({ id: 'e1' }).mockResolvedValueOnce(null);
+    s.tx.hrEmployee.findFirst.mockResolvedValueOnce({ id: 'e1' }).mockResolvedValueOnce(null);
     await svc.update('t1', 'a1', 'c1', 'e1', { crewId: null, status: CampEmployeeStatus.INACTIVE, employeeCode: 'E002' });
-    expect(s.tx.campCrew.findFirst).not.toHaveBeenCalled();
-    expect(s.tx.campEmployee.findFirst).toHaveBeenLastCalledWith({ where: { tenantId: 't1', employeeCode: 'E002', NOT: { id: 'e1' } }, select: { fullName: true } });
-    expect(s.tx.campEmployee.update.mock.calls[0][0].data).toEqual({ crewId: null, employeeCode: 'E002', status: 'INACTIVE' });
+    expect(s.tx.hrCrew.findFirst).not.toHaveBeenCalled();
+    expect(s.tx.hrEmployee.findFirst).toHaveBeenLastCalledWith({ where: { tenantId: 't1', employeeCode: 'E002', NOT: { id: 'e1' } }, select: { fullName: true } });
+    expect(s.tx.hrEmployee.update.mock.calls[0][0].data).toEqual({ crewId: null, employeeCode: 'E002', status: 'INACTIVE' });
   });
 
   it('list: буруу cursor → 400 (DB-д хүрэхгүй); limit+1 авч hasMore/nextCursor; шүүлт + хайлт', async () => {
     await expect(svc.list('t1', 'a1', 'c1', { cursor: 'garbage' })).rejects.toThrow(BadRequestException);
     expect(s.prisma.$transaction).not.toHaveBeenCalled();
     const mk = (i: number) => ({ id: `e${i}`, createdAt: new Date(Date.UTC(2026, 9, 9, 0, 0, 10 - i)) });
-    s.tx.campEmployee.findMany.mockResolvedValueOnce([mk(1), mk(2), mk(3)]);
+    s.tx.hrEmployee.findMany.mockResolvedValueOnce([mk(1), mk(2), mk(3)]);
     const page = await svc.list('t1', 'a1', 'c1', { limit: 2, departmentId: 'd1', q: 'бат' });
-    const args = s.tx.campEmployee.findMany.mock.calls[0][0];
+    const args = s.tx.hrEmployee.findMany.mock.calls[0][0];
     expect(args.take).toBe(3);
     expect(args.orderBy).toEqual([{ createdAt: 'desc' }, { id: 'desc' }]);
     expect(args.where).toMatchObject({ tenantId: 't1', campId: 'c1', departmentId: 'd1' });
@@ -340,10 +340,10 @@ describe('CampEmployeesService (Шат 2.4)', () => {
 
   it('list: cursor → (createdAt < c) OR (createdAt = c AND id < cid); сүүлийн хуудас → nextCursor null', async () => {
     const c = new Date('2026-10-09T00:00:05.000Z');
-    s.tx.campEmployee.findMany.mockResolvedValueOnce([{ id: 'e9', createdAt: c }]);
+    s.tx.hrEmployee.findMany.mockResolvedValueOnce([{ id: 'e9', createdAt: c }]);
     const e5 = '00000000-0000-0000-0000-0000000000e5'; // [3.6.3] cursor id нь UUID байх ёстой
     const page = await svc.list('t1', 'a1', 'c1', { cursor: encodeCursor(e5, c) });
-    expect(s.tx.campEmployee.findMany.mock.calls[0][0].where.AND).toEqual([
+    expect(s.tx.hrEmployee.findMany.mock.calls[0][0].where.AND).toEqual([
       { OR: [{ createdAt: { lt: c } }, { createdAt: c, id: { lt: e5 } }] },
     ]);
     expect(page).toMatchObject({ hasMore: false, nextCursor: null });
@@ -352,6 +352,6 @@ describe('CampEmployeesService (Шат 2.4)', () => {
   it('list/get: эрхгүй кемп → 403; өөр кемпийн ажилтан → 404', async () => {
     await expect(svc.list('t1', 'a1', 'c2', {})).rejects.toThrow(ForbiddenException);
     await expect(svc.get('t1', 'a1', 'c1', 'e1')).rejects.toThrow(NotFoundException);
-    expect(s.tx.campEmployee.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'e1', tenantId: 't1', campId: 'c1' } }));
+    expect(s.tx.hrEmployee.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'e1', tenantId: 't1', campId: 'c1' } }));
   });
 });

@@ -1,9 +1,9 @@
 import { CampDataImportType, CampEmployeeStatus } from '@prisma/client';
 import { CellValue, ParsedTableRow, TableSpec } from '../../../common/xlsx/table-spec';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { Tx } from '../common/camp-tx';
-import { EMPLOYEE_AUDIT_FIELDS } from '../master/camp-employees.service';
-import { normName, resolvePositionByName } from '../catalog/camp-catalog.service';
+import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { Tx } from '../../camp/common/camp-tx';
+import { EMPLOYEE_AUDIT_FIELDS } from '../employees/hr-employees.service';
+import { normName, resolvePositionByName } from '../positions/hr-positions.service';
 import { ApplyCtx, DataImportHandler, has, ImportCtx, PlannedRow, upper } from './import-types';
 
 /**
@@ -54,13 +54,13 @@ const EMP_SELECT = {
 async function loadRefs(tx: Tx, ctx: ImportCtx, codes: string[]) {
   const [existing, depts, crews, orgs, camps, positions, locs] = await Promise.all([
     codes.length
-      ? tx.campEmployee.findMany({ where: { tenantId: ctx.tenantId, employeeCode: { in: codes, mode: 'insensitive' } }, select: EMP_SELECT })
+      ? tx.hrEmployee.findMany({ where: { tenantId: ctx.tenantId, employeeCode: { in: codes, mode: 'insensitive' } }, select: EMP_SELECT })
       : Promise.resolve([] as Current[]),
-    tx.campDepartment.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, code: true, isActive: true } }),
-    tx.campCrew.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, code: true, isActive: true } }),
-    tx.campOrganization.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true, regNumber: true, isActive: true } }),
+    tx.hrDepartment.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, code: true, isActive: true } }),
+    tx.hrCrew.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, code: true, isActive: true } }),
+    tx.coreOrganization.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true, regNumber: true, isActive: true } }),
     tx.camp.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, code: true } }),
-    tx.campPosition.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true, isActive: true } }),
+    tx.hrPosition.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true, isActive: true } }),
     tx.campMealLocation.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, name: true, isActive: true } }),
   ]);
   return {
@@ -172,7 +172,7 @@ export const employeesHandler: DataImportHandler = {
       // Албан тушаал: каталогоос (байхгүй бол үүсгэнэ — resolvePositionByName); хоосон = хасах
       const pos = res.position === undefined ? undefined : res.position ? await resolvePositionByName(tx, ctx.tenantId, res.position) : null;
       if (row.op === 'create') {
-        const e = await tx.campEmployee.create({
+        const e = await tx.hrEmployee.create({
           data: {
             tenantId: ctx.tenantId, campId: ctx.campId,
             organizationId: res.organizationId!, departmentId: res.departmentId!, crewId: res.crewId ?? null,
@@ -187,7 +187,7 @@ export const employeesHandler: DataImportHandler = {
         created++;
         audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'employee', entityId: e.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before: null, after: e, summaryParams: { code: e.employeeCode, name: e.fullName } });
       } else if (row.op === 'update' && row.targetId) {
-        const before = await tx.campEmployee.findFirst({ where: { id: row.targetId, tenantId: ctx.tenantId, campId: ctx.campId }, select: EMP_SELECT });
+        const before = await tx.hrEmployee.findFirst({ where: { id: row.targetId, tenantId: ctx.tenantId, campId: ctx.campId }, select: EMP_SELECT });
         if (!before) continue;
         const data: Record<string, unknown> = {};
         for (const k of ['employeeCode', 'fullName', 'phone', 'email'] as const) if (has(row, k)) data[k] = v[k] ?? null;
@@ -198,7 +198,7 @@ export const employeesHandler: DataImportHandler = {
         if (res.organizationId) data.organizationId = res.organizationId;
         if (res.departmentId) data.departmentId = res.departmentId;
         if (res.crewId !== undefined) data.crewId = res.crewId;
-        const after = await tx.campEmployee.update({ where: { id: row.targetId }, data, select: EMP_SELECT });
+        const after = await tx.hrEmployee.update({ where: { id: row.targetId }, data, select: EMP_SELECT });
         updated++;
         audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'employee', entityId: after.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before, after, summaryParams: { code: after.employeeCode, name: after.fullName } });
       }
@@ -208,7 +208,7 @@ export const employeesHandler: DataImportHandler = {
   },
 
   async exportRows(tx, ctx) {
-    const rows = await tx.campEmployee.findMany({
+    const rows = await tx.hrEmployee.findMany({
       where: { tenantId: ctx.tenantId, campId: ctx.campId },
       select: {
         employeeCode: true, fullName: true, position: true, phone: true, email: true, status: true, mealsIncluded: true,

@@ -13,7 +13,7 @@ tags: [lessons, index, generated]
 > **Шинэ алдаа:** тохирох `lessons/LL-*.md`-д `### [TAG-NNN] Гарчиг` + **Тохиолдсон / Шалтгаан / Дүрэм** → [[LL-99_Changelog]]-д мөр → `pnpm docs:gen`. Давтагдвал шинэ ID биш — `### [ID] (давтагдсан, огноо) …`.
 > Файл: [[LL-01_Backend_DB]] · [[LL-02_Test_CI]] · [[LL-03_Env_Ops_Pilot]] · [[LL-04_Architecture_RLS]] · [[LL-05_Frontend]] · [[LL-06_Camp_v02]] · [[LL-07_Docs]] · Хуучин нэгтгэсэн файл (архив): [[lessons_learned_MVP]]
 
-Нийт **154** сургамж.
+Нийт **156** сургамж.
 
 ## DB, Prisma, RLS, migration
 
@@ -186,6 +186,7 @@ tags: [lessons, index, generated]
 | DOC-001 | Зан төлөв/команд/env өөрчилсөн phase бүрийн checklist-д "баримт: README, runbook, `.env.example`, CHANGELOG" мөр заавал… | LL-05 §19 |
 | DOC-002 | Vault-д нэр давхардвал `[[хавтас/нэр/харагдах нэр]]` замтай линк ашиглана. Vault-ийн гадна файл (repo root, `apps/`,… | LL-07 §23 |
 | DOC-003 | мэдээллийн төрөл бүр **ганц эх сурвалжтай** ([[CONTEXT]] §5) — бусад газар зөвхөн линк. Кодоос / дэлгэрэнгүйгээс гаргаж… | LL-07 §23 |
+| DOC-004 | Controller файл үргэлж `*.controller.ts`. Өвлөсөн controller-ийн route param нэр эцгийнхтэй ИЖИЛ байна (`:campId`) —… | LL-06 §24 |
 | PROC-001 | `if new in s: continue` — эхлээд үр дүн байгаа эсэхийг шалгана. Скриптийг 2 удаа ажиллуулж idempotent эсэхийг шалгана;… | LL-04 §13 |
 | PROC-002 | PID файл ашиглах; эсвэл `grep "[d]ist/src/main.js"` (bracket trick) — өөрийн командын мөрт тохирохгүй. | LL-04 §13 |
 | PROC-003 | Багц/шат эхлэхийн өмнө `git status --short`-ийг ЗААВАЛ шалгаж, untracked/modified файл бүрийн гарал үүслийг тодруулна.… | LL-06 §15 |
@@ -203,3 +204,4 @@ tags: [lessons, index, generated]
 | PROC-015 | - Файлын зөвхөн хэрэгтэй хэсгийг уншина. | LL-06 §22 |
 | PROC-016 | `git ls-files -co --exclude-standard -z / … / tar czf x.tgz --null -T -`. | LL-06 §22 |
 | PROC-017 | байгаа файлыг дарж бичихдээ түр хавтсанд задлаад `cp -f` (агуулгыг шууд дарна, устгахгүй); бичихээс өмнө `md5sum -c`… | LL-07 §23 |
+| PROC-018 | Model rename = (1) `@@map` бүх model-д байгаа эсэх, (2) implicit m-n relation байхгүй эсэх (байвал join хүснэгтийн нэр… | LL-06 §24 |

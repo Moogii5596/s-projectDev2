@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { CampShiftType } from '@prisma/client';
 import { badRequest } from '../../../common/i18n/app-error';
 

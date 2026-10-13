@@ -2,34 +2,11 @@ import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put
 import type { FastifyRequest } from 'fastify';
 import { reqUser } from '../common/camp-request';
 import { CampCatalogService } from './camp-catalog.service';
-import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto, UpsertPositionSettingDto } from './camp-catalog.dto';
+import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../common/common.dto';
+import { UpsertPositionSettingDto } from './camp-catalog.dto';
 
 const uuid = () => new ParseUUIDPipe();
 
-/** v0.2.1 (C-01) — /api/v1/camp/positions (байгууллагын каталог) */
-@Controller('camp/positions')
-export class CampPositionsController {
-  constructor(private readonly catalog: CampCatalogService) {}
-
-  @Get()
-  list(@Req() req: FastifyRequest, @Query() q: QueryCatalogDto) {
-    const u = reqUser(req);
-    return this.catalog.list(u.tenantId, u.id, 'position', q);
-  }
-
-  @Post()
-  @HttpCode(201)
-  create(@Req() req: FastifyRequest, @Body() dto: CreateCatalogItemDto) {
-    const u = reqUser(req);
-    return this.catalog.create(u.tenantId, u.id, 'position', dto);
-  }
-
-  @Patch(':id')
-  update(@Req() req: FastifyRequest, @Param('id', uuid()) id: string, @Body() dto: UpdateCatalogItemDto) {
-    const u = reqUser(req);
-    return this.catalog.update(u.tenantId, u.id, 'position', id, dto);
-  }
-}
 
 /** v0.2.1 (C-12) — /api/v1/camp/building-types (байгууллагын каталог) */
 @Controller('camp/building-types')
@@ -39,20 +16,20 @@ export class CampBuildingTypesController {
   @Get()
   list(@Req() req: FastifyRequest, @Query() q: QueryCatalogDto) {
     const u = reqUser(req);
-    return this.catalog.list(u.tenantId, u.id, 'buildingType', q);
+    return this.catalog.list(u.tenantId, u.id, q);
   }
 
   @Post()
   @HttpCode(201)
   create(@Req() req: FastifyRequest, @Body() dto: CreateCatalogItemDto) {
     const u = reqUser(req);
-    return this.catalog.create(u.tenantId, u.id, 'buildingType', dto);
+    return this.catalog.create(u.tenantId, u.id, dto);
   }
 
   @Patch(':id')
   update(@Req() req: FastifyRequest, @Param('id', uuid()) id: string, @Body() dto: UpdateCatalogItemDto) {
     const u = reqUser(req);
-    return this.catalog.update(u.tenantId, u.id, 'buildingType', id, dto);
+    return this.catalog.update(u.tenantId, u.id, id, dto);
   }
 }
 

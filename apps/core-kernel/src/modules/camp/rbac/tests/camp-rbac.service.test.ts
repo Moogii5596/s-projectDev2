@@ -300,7 +300,7 @@ describe('CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүл
   });
 
   it('setPositionTemplates: давхардсан роль → 400, өөр tenant-ийн роль → 400', async () => {
-    s.tx.campPosition.findFirst.mockResolvedValue({ id: 'pos1', name: 'Тогооч' });
+    s.tx.hrPosition.findFirst.mockResolvedValue({ id: 'pos1', name: 'Тогооч' });
     await expect(svc.setPositionTemplates('t1', 'a1', 'pos1', { templates: [
       { roleId: 'r1', scope: 'ALL_CAMPS' }, { roleId: 'r1', scope: 'EMPLOYEE_CAMP' },
     ] })).rejects.toThrow(BadRequestException);

@@ -4,7 +4,7 @@ import { CampAssetCondition, CampRoomStatus, Prisma, UserRole } from '@prisma/cl
 import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
 import { CampAssetsService } from '../camp-assets.service';
-import { todayUb, addDays } from '../../attendance/camp-date';
+import { todayUb, addDays } from '../../common/camp-date';
 
 const P = CAMP_PERMISSIONS;
 const CAMP = { id: 'c1', code: 'C1', name: 'Кемп 1', isActive: true };

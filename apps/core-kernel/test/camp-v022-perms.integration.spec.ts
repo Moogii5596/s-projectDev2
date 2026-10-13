@@ -155,7 +155,7 @@ describe('v0.2.2 Блок 1 — camp_user_permissions (integration)', () => {
   });
 
   it('албан тушаалын загвар: тавих/унших, өөр байгууллагын роль → 400', async () => {
-    const pos = await admin.campPosition.create({ data: { tenantId: tA, name: `Тогооч ${sfx}` } });
+    const pos = await admin.hrPosition.create({ data: { tenantId: tA, name: `Тогооч ${sfx}` } });
     const res = await svc.setPositionTemplates(tA, auth.owner, pos.id, { templates: [{ roleId: role.EMPLOYEE, scope: 'EMPLOYEE_CAMP' }] });
     expect(res.templates).toEqual([expect.objectContaining({ roleId: role.EMPLOYEE, scope: 'EMPLOYEE_CAMP' })]);
     expect((await svc.getPositionTemplates(tA, auth.owner, pos.id)).templates).toHaveLength(1);

@@ -59,13 +59,13 @@ describe('v0.2.2 Блок 3 — урилга, хэрэглэгч үүсгэх (i
     [t, tB] = tenantIds;
     camp = (await admin.camp.create({ data: { tenantId: t, code: 'C1', name: 'C1' } })).id;
     await admin.coreUser.create({ data: { tenantId: t, authId: ownerAuth, email: `owner-${sfx}@it.test`, role: UserRole.OWNER } });
-    const org = await admin.campOrganization.create({ data: { tenantId: t, name: `Org ${sfx}`, orgType: 'MAIN' } });
-    const dept = await admin.campDepartment.create({ data: { tenantId: t, campId: camp, code: 'D1', name: 'D1' } });
-    const pos = await admin.campPosition.create({ data: { tenantId: t, name: `Ажилтан ${sfx}` } });
+    const org = await admin.coreOrganization.create({ data: { tenantId: t, name: `Org ${sfx}`, orgType: 'MAIN' } });
+    const dept = await admin.hrDepartment.create({ data: { tenantId: t, campId: camp, code: 'D1', name: 'D1' } });
+    const pos = await admin.hrPosition.create({ data: { tenantId: t, name: `Ажилтан ${sfx}` } });
     const empRole = await admin.campRole.findFirstOrThrow({ where: { tenantId: t, systemCode: 'EMPLOYEE' } });
     await rbac.setPositionTemplates(t, ownerAuth, pos.id, { templates: [{ roleId: empRole.id, scope: 'EMPLOYEE_CAMP' }] });
     const mk = async (k: string, phone: string | null, email: string | null) => {
-      emp[k] = (await admin.campEmployee.create({ data: { tenantId: t, campId: camp, organizationId: org.id, departmentId: dept.id, employeeCode: `${k.toUpperCase()}${sfx}`, fullName: k, phone, email, positionId: pos.id } })).id;
+      emp[k] = (await admin.hrEmployee.create({ data: { tenantId: t, campId: camp, organizationId: org.id, departmentId: dept.id, employeeCode: `${k.toUpperCase()}${sfx}`, fullName: k, phone, email, positionId: pos.id } })).id;
     };
     await mk('bat', '99112233', null);
     await mk('li', '+86 138 0013 8000', `li-${sfx}@sino.cn`);

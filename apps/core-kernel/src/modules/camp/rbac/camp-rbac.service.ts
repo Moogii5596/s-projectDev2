@@ -470,7 +470,7 @@ export class CampRbacService {
   async getPositionTemplates(tenantId: string, authId: string, positionId: string) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
-      const pos = await tx.campPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true, name: true } });
+      const pos = await tx.hrPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true, name: true } });
       if (!pos) throw notFound('camp.err.rbac.12');
       const rows = await tx.campPositionRoleTemplate.findMany({
         where: { tenantId, positionId },
@@ -487,7 +487,7 @@ export class CampRbacService {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
-        const pos = await tx.campPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true, name: true } });
+        const pos = await tx.hrPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true, name: true } });
         if (!pos) throw notFound('camp.err.rbac.12');
         if (roleIds.length > 0) {
           const found = await tx.campRole.count({ where: { tenantId, id: { in: roleIds } } });

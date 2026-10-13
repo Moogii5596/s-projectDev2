@@ -94,7 +94,7 @@ describe('🗓 FB-14 ирц', () => {
     expect(pre.body.summary).toMatchObject({ arrivals: 2, offRoster: 0 });
     const ok = await it_.api().post(it_.camp(`/movement-imports/${pre.body.import.id}/confirm`)).set(it_.as('admin'));
     expect(ok.status).toBe(200);
-    const mv = await it_.prismaAdmin.campMovement.findMany({ where: { tenantId: it_.tenantId, employeeId: { in: [a, b] } } });
+    const mv = await it_.prismaAdmin.hrMovement.findMany({ where: { tenantId: it_.tenantId, employeeId: { in: [a, b] } } });
     expect(mv.map((m) => m.meals)).toEqual([['DINNER'], ['DINNER']]);
   });
 

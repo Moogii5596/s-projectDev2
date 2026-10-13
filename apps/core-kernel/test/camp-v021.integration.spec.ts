@@ -179,12 +179,12 @@ describe('🔒 RLS — шинэ хүснэгтүүд (app_user)', () => {
     const OTHER = '00000000-0000-0000-0000-000000000002';
     const where = { tenantId: it_.tenantId };
     const mine = await asTenant(it_.prismaRls, it_.tenantId, async (tx) => [
-      await tx.campPosition.count({ where }), await tx.campPositionSetting.count({ where }),
+      await tx.hrPosition.count({ where }), await tx.campPositionSetting.count({ where }),
       await tx.campPositionShiftPattern.count({ where }), await tx.campBuildingType.count({ where }),
     ]);
     expect(mine.every((n) => n > 0)).toBe(true);
     const other = await asTenant(it_.prismaRls, OTHER, async (tx) => [
-      await tx.campPosition.count({ where }), await tx.campPositionSetting.count({ where }),
+      await tx.hrPosition.count({ where }), await tx.campPositionSetting.count({ where }),
       await tx.campPositionShiftPattern.count({ where }), await tx.campBuildingType.count({ where }),
     ]);
     expect(other).toEqual([0, 0, 0, 0]);

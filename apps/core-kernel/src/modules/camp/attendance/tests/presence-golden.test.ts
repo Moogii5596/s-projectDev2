@@ -11,7 +11,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CampMealType, CampShiftType } from '@prisma/client';
-import { addDays } from '../camp-date';
+import { addDays } from '../../common/camp-date';
 import { computePresence, employeeDay, PresenceEmployee, PresenceResult } from '../presence';
 
 const { DAY, NIGHT } = CampShiftType;
