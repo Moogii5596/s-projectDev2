@@ -1,3 +1,11 @@
+---
+title: "Дэлгэцийн загвар зураг (v0.2–v0.3)"
+type: "Guide"
+status: "Active"
+last_updated: 2026-10-11
+tags: [ui, roadmap]
+---
+
 # Дэлгэцийн загвар зураг (v0.2–v0.3)
 
 Эх: Design artifact https://claude.ai/artifact/2p7qUS2zMnTuwfPYBu5oTK (хувилбар 1791693389-a582, 2026-10-11).

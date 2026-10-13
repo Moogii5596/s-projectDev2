@@ -1,3 +1,11 @@
+---
+title: "ADR-001: Tenant Isolation стратеги (v0.1.5 Tier 2)"
+type: "Architecture"
+status: "Active"
+last_updated: 2026-10-10
+tags: [tenant]
+---
+
 # ADR-001: Tenant Isolation стратеги (v0.1.5 Tier 2)
 
 | | |
@@ -5,7 +13,7 @@
 | **Төлөв** | ✅ Батлагдсан |
 | **Огноо** | 2026-10-08 |
 | **Шийдвэр гаргагч** | Төслийн эзэн (Сайна) · Lead Developer (Claude) |
-| **Орлох** | Sprint 6 "Schema-per-Tenant DB Isolation" (`V.0.1.5/sprint_6_schema_isolation.md`) |
+| **Орлох** | Sprint 6 "Schema-per-Tenant DB Isolation" ([[sprint_6_schema_isolation]]) |
 
 ---
 
@@ -54,7 +62,7 @@ request бүрт `SET search_path` хийх замаар тусгаарлаха�
 | Startup validation | `EnvConfig` — dedicated + slug байхгүй/буруу → app эхлэхгүй |
 | Guard | `TenantAuthGuard` — dedicated үед tenant = `DEDICATED_TENANT_SLUG` |
 | VPC stack | `docker/docker-compose.vpc.yml`, `docker/.env.vpc.example`, `docker/vpc/bootstrap_dedicated_tenant.sql` |
-| Runbook | `docs/07_Tech_Stack_and_Environment/03_Enterprise_VPC_Deployment.md` |
+| Runbook | [[03_Enterprise_VPC_Deployment]] |
 
 **Устгагдсан API:** `POST /api/v1/admin/tenants/:id/upgrade-enterprise`,
 `DELETE /api/v1/admin/tenants/:id/enterprise-schema`, `GET /api/v1/admin/tenants/:id/schema-health`
@@ -70,11 +78,11 @@ v0.1.0–4.7 хүртэл policy-нууд зөвхөн тестэд ажилла
 | `DATABASE_URL` | `app_user` (NOBYPASSRLS) | `PrismaTenantClientService` | Tenant-ийн бүх хүсэлт — `inTenantTx` (`set_config('app.tenant_id')` + query нэг transaction) |
 | `SYSTEM_DATABASE_URL` | `postgres` (BYPASSRLS) | `SystemPrismaService` | Tenant-ээс өмнөх / бүх tenant-ийн ажил: tenant lookup, membership, login, super-admin, onboarding, outbox, DLQ, escalation |
 
-- Policy загвар: `ENABLE` + `FORCE` + `AS PERMISSIVE FOR ALL TO app_user USING/WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)` + `GRANT` (`20261010004_rls_app_user.sql`, `03_Module_Template.md`).
+- Policy загвар: `ENABLE` + `FORCE` + `AS PERMISSIVE FOR ALL TO app_user USING/WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)` + `GRANT` (`20261010004_rls_app_user.sql`, [[03_Module_Template]]).
 - Код түвшинд ч `where: { id, tenantId }` (defense in depth — [SEC-002]).
 - Шалгалт: `supabase/dev/rls_audit.sql`, `test/rls-app-user.integration.spec.ts` (49 хүснэгт × 3 context), integration бүхэлдээ `app_user` ба `postgres` хоёр горимд.
 - `SYSTEM_DATABASE_URL` тохируулаагүй бол хоёулаа `DATABASE_URL` (буцаах боломжтой). Апп асахдаа role-ийг логлоно.
-- Dedicated (VPC) deploy-д ижил: `docs/07_Tech_Stack_and_Environment/03_Enterprise_VPC_Deployment.md` §5.5.
+- Dedicated (VPC) deploy-д ижил: [[03_Enterprise_VPC_Deployment]] §5.5.
 
 ## 5. Эрсдэл ба дараагийн алхам
 

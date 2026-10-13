@@ -1,6 +1,14 @@
+---
+title: "Runbook: Enterprise VPC (Tier 2) байршуулалт — `DEPLOYMENT_MODE=dedicated`"
+type: "Guide"
+status: "Active"
+last_updated: 2026-10-10
+tags: [deploy, stack]
+---
+
 # Runbook: Enterprise VPC (Tier 2) байршуулалт — `DEPLOYMENT_MODE=dedicated`
 
-> Шийдвэр: [ADR-001](../02_System_Architecture/ADR-001_Tenant_Isolation.md) · Үүсгэсэн: 2026-10-08
+> Шийдвэр: [[ADR-001_Tenant_Isolation]] · Үүсгэсэн: 2026-10-08
 > Нэг харилцагч = нэг тусдаа Supabase (Postgres + Auth) + нэг тусдаа app stack.
 
 ## 0. Ерөнхий бүтэц

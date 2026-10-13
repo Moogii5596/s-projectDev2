@@ -1,3 +1,11 @@
+---
+title: "07_Tech_Stack_and_Environment: Технологийн Сонголтын Баримт Бичиг"
+type: "Architecture"
+status: "Active"
+last_updated: 2026-10-08
+tags: [stack]
+---
+
 # 07_Tech_Stack_and_Environment: Технологийн Сонголтын Баримт Бичиг
 
 **Хувилбар:** v1.1.0  

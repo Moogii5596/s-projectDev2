@@ -1,15 +1,23 @@
+---
+title: "v0.2 — Үлдсэн ажил ба техникийн өрийн нэгдсэн бүртгэл"
+type: "Roadmap"
+status: "Active"
+last_updated: 2026-10-11
+tags: [roadmap, v0.2]
+---
+
 # v0.2 — Үлдсэн ажил ба техникийн өрийн нэгдсэн бүртгэл
 
-> Үүсгэсэн: 2026-10-11 (v0.1 хаагдах үед) · Эх сурвалж: `V.0.1.5/01_analysis_and_plan_2026-10-08.md` (Backlog), `camp_module/01_plan_and_erd.md` (V2, D8),
-> `docs/lessons_learned.md` §19–20, `docs/project-status.md`, v0.1.6 пилотын суулгалт · Төлөвлөгөө: `01_plan_draft.md`
-> Пилотын санал: `docs/pilot-feedback.md` (FB-xx) → энд ID-тай мөр болж орно.
+> Үүсгэсэн: 2026-10-11 (v0.1 хаагдах үед) · Эх сурвалж: [[01_analysis_and_plan_2026-10-08]] (Backlog), [[01_plan_and_erd]] (V2, D8),
+> [[lessons_learned]] §19–20, [[project-status]], v0.1.6 пилотын суулгалт · Төлөвлөгөө: [[01_plan_draft]]
+> Пилотын санал: [[pilot-feedback]] (FB-xx) → энд ID-тай мөр болж орно.
 
 **Ач холбогдол** (pilot-feedback.md-ийн дүрэмтэй ижил): **P0** — систем/өгөгдөл/аюулгүй байдал → v0.1.x hotfix (`release/v0.1`) · **P1** — ажлыг саатуулж байгаа → v0.2 · **P2** — сайжруулалт → v0.2 эсвэл дараа.
 **Хэмжээ:** S ≤ 1 өдөр · M 2–4 өдөр · L 1 долоо хоног+. Ач холбогдлыг пилотын дараа эцэслэнэ (одоо — урьдчилсан).
 
 ---
 
-## 0. Кемпийн пилотын санал (2026-10-11, Мөнхбат — `docs/pilot-feedback.md`)
+## 0. Кемпийн пилотын санал (2026-10-11, Мөнхбат — [[pilot-feedback]])
 
 | ID | FB | Ажил | P | Хувилбар |
 |---|---|---|---|---|
@@ -30,7 +38,7 @@
 
 **Бизнесийн асуулт (тухайн хувилбарын өмнө):** C-01 албан тушаал ↔ хэлтэс аль нь давамгайлах · C-04 хоолгүй хэлтсийн ажилтан хоолонд огт тоологдохгүй юу · C-09 ажлаас гарах огноо/шалтгаан, дахин ажилд орох, өрөө автоматаар чөлөөлөх · C-13 "сүүлийнх" = сүүлд бүртгэсэн үү, эхлэх огноо нь хожуу нь уу · C-12 байрны төрлүүд
 
-## 0б. Суурь ба олон хэл (v0.2.0, `02_v0.2.0_tech_plan.md` §0)
+## 0б. Суурь ба олон хэл (v0.2.0, [[02_v0.2.0_tech_plan]] §0)
 
 | ID | Ажил | Хувилбар |
 |---|---|---|
@@ -92,20 +100,20 @@
 | QA-07 | `pilot.ps1`-ийн автомат тест (pwsh + shim, PS-001) CI-д — v0.2.0: cloud harness-д 10 кейс (staging/upgrade/restore), repo/CI-д хараахан биш; Task Scheduler/Firewall хэсгийг гараар шалгах жагсаалт | lessons PS-001/002 | P2 | M |
 | QA-08 | `mfe-requisitions` (15 мөр stub) + Module Federation-ийг хадгалах уу, хасах уу | v0.1.5 | P2 | S |
 | QA-09 | CONC-002 тест (30 зэрэгцээ MR) postgres горимд 4-өөс 1 удаа унав — алдааг барьж шалтгааныг батлах (таамаг: Prisma tx `maxWait`/`timeout`) | lessons TEST-019 | P2 | S |
-| I18N-02 | Олон хэлний үлдэгдэл: DTO (class-validator) мессеж, DB trigger-ийн тайлбар, ирцийн хуучин xlsx загвар (zh толгой/утга) | `docs/i18n-review.md` §4 | P2 | M |
+| I18N-02 | Олон хэлний үлдэгдэл: DTO (class-validator) мессеж, DB trigger-ийн тайлбар, ирцийн хуучин xlsx загвар (zh толгой/утга) | [[i18n-review]] §4 | P2 | M |
 
 ## 5. Баримт
 
 | ID | Ажил | Урьдч. |
 |---|---|---|
 | DOC-01 | ADR-002 Хостинг (PIL-06-ийн шийдвэр) | P1 |
-| DOC-02 | Хэрэглэгчийн гарын авлага (Кемп) — `docs/pilot-test-guide.md`-ээс үүсгэх | P2 |
+| DOC-02 | Хэрэглэгчийн гарын авлага (Кемп) — [[pilot-test-guide]]-ээс үүсгэх | P2 |
 
 ## 6. v0.3 руу шилжүүлсэн (2026-10-11 шийдвэр)
 
 | ID | Ажил |
 |---|---|
-| T3-01 | Tier 3 Air-Gapped / Offline-First (edge node, cryptographic sync, 3-way diff, PROVISIONALLY_APPROVED) — `01_Development_Roadmap.md` «v0.3.0» |
+| T3-01 | Tier 3 Air-Gapped / Offline-First (edge node, cryptographic sync, 3-way diff, PROVISIONALLY_APPROVED) — [[01_Development_Roadmap]] «v0.3.0» |
 
 ---
 

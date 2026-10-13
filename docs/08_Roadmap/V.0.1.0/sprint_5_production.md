@@ -1,3 +1,11 @@
+---
+title: "Sprint 5 — E2E & CI/CD Hardening (v1.0.5)"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [roadmap, v0.1.0]
+---
+
 # Sprint 5 — E2E & CI/CD Hardening (v1.0.5)
 
 > **Зорилго:** Playwright E2E, GitHub Actions, Docker

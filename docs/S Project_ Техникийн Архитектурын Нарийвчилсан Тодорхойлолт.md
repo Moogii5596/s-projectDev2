@@ -1,3 +1,11 @@
+---
+title: "S Project: Техникийн Архитектурын Нарийвчилсан Тодорхойлолт (Technical Specification)"
+type: "Architecture"
+status: "Active"
+last_updated: 2026-10-08
+tags: [core]
+---
+
 # S Project: Техникийн Архитектурын Нарийвчилсан Тодорхойлолт (Technical Specification)
 
 ## 1. Системийн Ерөнхий Загвар ба Бизнесийн Философи

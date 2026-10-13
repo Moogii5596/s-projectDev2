@@ -1,3 +1,11 @@
+---
+title: "PRD-01_Core_Vision"
+type: "PRD"
+status: "Active"
+last_updated: 2026-10-08
+tags: [core]
+---
+
  PRD-01: Core Vision & Architecture Philosophy
 Document ID: PRD-01
 Project: S Project

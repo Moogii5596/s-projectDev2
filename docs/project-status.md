@@ -1,7 +1,16 @@
+---
+title: "S Project — Төслийн Явцын Тэмдэглэл"
+type: "Log"
+status: "Active"
+last_updated: 2026-10-13
+tags: [core]
+---
+
 # S Project — Төслийн Явцын Тэмдэглэл
 
-> Шинэчлэгдсэн: 2026-10-10 | **Одоогийн хувилбар: `v0.1.6.1`** (Кемп пилот — бодит туршилт явагдаж байна) | **v0.1 хаагдсан (2026-10-11)** | **Дараагийн: `v0.2.0`** (пилот + Кемп V2 + өр)
-> SemVer бодлого: `docs/VERSIONING.md` | Changelog: `docs/CHANGELOG.md`
+> Шинэчлэгдсэн: 2026-10-13 | **Сүүлийн release: `v0.2.1`** (пилот энэ хувилбар дээр) | **Хөгжүүлэлт: `v0.2.2`** ([[08_v0.2.2_progress]]) | v0.1 хаагдсан (2026-10-11)
+> Баримт бичиг: `docs/` = Obsidian vault — эхлэх цэг [[INDEX]] (frontmatter + `[[wiki-link]]`, 2026-10-13)
+> SemVer бодлого: [[VERSIONING]] | Changelog: [[CHANGELOG]]
 
 ---
 
@@ -54,7 +63,7 @@ Redis:     redis://localhost:6379
 | `v1.0.0` | Public Production Launch | 🎯 ЗОРИЛГО | — |
 
 > **Хуучин дугаарлалт:** v0.1.0~v0.4.0 (Backend, Integration Tests, Frontend MVP, E2E+CI/CD) бүгд нэгдэж **v0.1.0** болсон.  
-> Дэлгэрэнгүй: [CHANGELOG.md](./CHANGELOG.md) | [VERSIONING.md](./VERSIONING.md)
+> Дэлгэрэнгүй: [[CHANGELOG]] | [[VERSIONING]]
 
 ---
 
@@ -72,8 +81,8 @@ Redis:     redis://localhost:6379
 - RLS leakage tests (dual PrismaClient pattern)
 - Auth guard integration tests
 - MR CRUD + approval flow tests
-- **20 хатуу дүрэм** тогтоосон (RULE-01~20, `docs/08_Roadmap/00_rules_and_context.md`)
-- `docs/lessons_learned.md` — нэгтгэсэн баримт бичиг
+- **20 хатуу дүрэм** тогтоосон (RULE-01~20, [[00_rules_and_context]])
+- [[lessons_learned]] — нэгтгэсэн баримт бичиг
 
 ### 📦 Frontend MVP (v0.1.0-н нэг хэсэг)
 - Login UI → /requisitions redirect
@@ -127,7 +136,7 @@ Delegation-ийг MR батлалттай холбох · `WorkflowService.appro
 
 ## Кемп модуль — V1 ✅ ДУУССАН (2026-10-10) · V2 хүлээгдэж буй
 
-> Төлөвлөгөө/ERD v4: `docs/08_Roadmap/camp_module/01_plan_and_erd.md` · Changelog: `[Unreleased]` → «Кемп модуль V1»
+> Төлөвлөгөө/ERD v4: [[01_plan_and_erd]] · Changelog: `[Unreleased]` → «Кемп модуль V1»
 
 | Хэсэг | Төлөв |
 |---|---|
@@ -177,7 +186,7 @@ authId (Supabase UUID) → core_users.findFirst({ authId, tenantId })
 await inTenantTx(prisma, tenantId, async (tx) => tx.model.findFirst({ where: { id, tenantId } }));
 // = prisma.$transaction(tx => { set_config('app.tenant_id', tenantId, true); ... })
 ```
-> `app_user`-ээр холбогдоход context-гүй query 0 мөр буцаана (алдаа биш!) — шинэ модуль: `docs/03_Data_Models_and_Security/03_Module_Template.md`.
+> `app_user`-ээр холбогдоход context-гүй query 0 мөр буцаана (алдаа биш!) — шинэ модуль: [[03_Module_Template]].
 
 ### Vite proxy (CORS-гүй) (RULE-19)
 ```
@@ -195,7 +204,7 @@ esbuild (default) → decorator metadata дэмждэггүй → БҮХИЙ Л 
 ## Дараагийн алхам — v0.1.5 (Tier 2: Enterprise VPC)
 
 > Одоогийн зорилтот хувилбар: **v0.1.5**  
-> Дэлгэрэнгүй: `docs/08_Roadmap/01_Development_Roadmap.md` → "v0.1.5" хэсэг
+> Дэлгэрэнгүй: [[01_Development_Roadmap]] → "v0.1.5" хэсэг
 
 - [x] **v0.1.5.1:** Tenant isolation — **ADR-001 (B, 2026-10-08):** shared = RLS, Enterprise VPC = тусдаа DB/deploy (`DEPLOYMENT_MODE=dedicated`)
 - [x] **v0.1.5.2:** Advanced approval workflow (мөнгөний хэмжээ, delegation, escalation)
@@ -203,12 +212,12 @@ esbuild (default) → decorator metadata дэмждэггүй → БҮХИЙ Л 
 - [x] **v0.1.5.4:** Inventory, Budget, Vendor, Report модулиуд (хөнгөн + frontend)
 - [x] **v0.1.5.5:** Event Bus integration тест (cross-module chain) + outbox засвар
 - [x] **v0.1.5.6:** E2E (fixture, multi-tenant, олон алхамт батлалт, модулиуд) · баримт, цэвэрлэгээ, CI · ✅ **`v0.1.5` (2026-10-10)**
-- [x] **Кемп модуль V1** (2026-10-10) · [ ] **Кемп модуль V2** — Шат 5–7 (`camp_module/01_plan_and_erd.md` → «V2»)
+- [x] **Кемп модуль V1** (2026-10-10) · [ ] **Кемп модуль V2** — Шат 5–7 ([[01_plan_and_erd]] → «V2»)
 
-> Дэлгэрэнгүй төлөвлөгөө: `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md`
+> Дэлгэрэнгүй төлөвлөгөө: [[01_analysis_and_plan_2026-10-08]]
 
 ### Ирээдүйн хувилбарууд
-- [ ] **v0.2.0:** Пилотын үр дүн + Кемп V2 + техникийн өр — `08_Roadmap/V.0.2/01_plan_draft.md` (пилотын шалгуур: `docs/pilot-test-guide.md` §7)
-- [ ] **v0.3.0:** Байгууллагын дотоод Feed — `08_Roadmap/V.0.3/00_plan_draft.md`
+- [ ] **v0.2.0:** Пилотын үр дүн + Кемп V2 + техникийн өр — [[01_plan_draft]] (пилотын шалгуур: [[pilot-test-guide]] §7)
+- [ ] **v0.3.0:** Байгууллагын дотоод Feed — [[00_plan_draft]]
 - [ ] **v0.4.0+:** Чат · Air-Gapped (хэрэгтэй эсэх шийдэгдээгүй)
 - [ ] **v1.0.0:** Production Launch — Load test, Security audit, SLA 99.9%

@@ -1,6 +1,14 @@
+---
+title: "Төслийн Шинжилгээ ба Хөгжүүлэлтийн Төлөвлөгөө — 2026-10-08"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-11
+tags: [roadmap, v0.1.5]
+---
+
 # Төслийн Шинжилгээ ба Хөгжүүлэлтийн Төлөвлөгөө — 2026-10-08
 
-> 🔒 **v0.1 ХААГДСАН (2026-10-11, `v0.1.6.1`).** Энэ файл түүхэн бичлэг. Үлдсэн ажил («Backlog», V2) → `../V.0.2/00_backlog_and_tech_debt.md`, төлөвлөгөө → `../V.0.2/01_plan_draft.md`.
+> 🔒 **v0.1 ХААГДСАН (2026-10-11, `v0.1.6.1`).** Энэ файл түүхэн бичлэг. Үлдсэн ажил («Backlog», V2) → [[00_backlog_and_tech_debt]], төлөвлөгөө → [[01_plan_draft]].
 
 > Хувилбар: v0.1.0 ✅ → v0.1.5 (Tier 2 Enterprise VPC) 🔄
 > Төлөв: **БАТЛАГДСАН 2026-10-08** · Phase 0–1 ✅ · Phase 2 ✅ · Phase 2.8 ✅ · Phase 2.9 ✅ (integration 47/47) · Phase 3 ✅ (Sprint 8 DoD 4/4) · Phase 3.7 ✅ · Phase 3.6 ✅ (код) · Phase 4 ✅
@@ -29,8 +37,8 @@
 5. **Локал хавтсанд `.git` олдсонгүй** — version control-гүй бол CI trigger болохгүй, буцаах боломжгүй.
 
 ### 🟡 Medium
-6. Баримт бичгийн зөрүү: `00_index.md` (Sprint 7 "хүлээгдэж байна"), Sprint 6 файл замууд (`src/tenant/` ↔ бодит `src/modules/tenant-admin/`).
-7. `lessons_learned.md` хоёр газар (root + `docs/`) — нэг эх сурвалж болгох.
+6. Баримт бичгийн зөрүү: [[00_index]] (Sprint 7 "хүлээгдэж байна"), Sprint 6 файл замууд (`src/tenant/` ↔ бодит `src/modules/tenant-admin/`).
+7. [[lessons_learned]] хоёр газар (root + `docs/`) — нэг эх сурвалж болгох.
 8. Frontend component тест огт байхгүй; `mfe-requisitions` нь 15 мөр stub.
 9. Root-д 17 хоосон `_tmp_*` файл, `docs/test_write.tmp`, `supabase/snippets/Untitled query 611.sql`.
 
@@ -39,8 +47,8 @@
 ### Phase 0 — Цэвэрлэгээ ба суурь ✅
 - [x] 0.1 Git: repo + `origin` (GitHub) хэрэглэгч үүсгэсэн (2026-10-08 13:46). Commit / `v0.1.0` tag — хэрэглэгч хийнэ
 - [x] 0.2 17 `_tmp_*`, `docs/test_write.tmp` устгав; `.gitignore`-д `_tmp_*`, `*.tmp` нэмэв (`supabase/snippets/` дахь seed snippet-ийг хадгалав)
-- [x] 0.3 lessons_learned нэгтгэв → **үндсэн: `docs/lessons_learned.md`** (бүх docs аль хэдийн тийш заадаг); root файл = заагч
-- [x] 0.4 `00_index.md`, `project-status.md` бодит төлөвтэй тааруулав
+- [x] 0.3 lessons_learned нэгтгэв → **үндсэн: [[lessons_learned]]** (бүх docs аль хэдийн тийш заадаг); root файл = заагч
+- [x] 0.4 [[00_index]], [[project-status]] бодит төлөвтэй тааруулав
 
 ### Phase 1 — CI засвар ✅ (Linux орчинд бодитоор ажиллуулж шалгасан)
 - [x] 1.1 `core-kernel`-д `test:unit` script → turbo одоо бодитоор ажиллуулна [CI-001]
@@ -51,13 +59,13 @@
 - **Үр дүн:** unit 111/111 ✅ (env-гүй) · tsc core-kernel + web-shell ✅ · lint 0 error (78 warning) · `turbo lint test:unit` 3/3 ✅
 
 ### Phase 2 — Tenant Isolation (ADR-001) ✅ (2026-10-08)
-- [x] 2.1 ADR: `docs/02_System_Architecture/ADR-001_Tenant_Isolation.md`
+- [x] 2.1 ADR: [[ADR-001_Tenant_Isolation]]
 - [x] 2.2 Sprint 6 код хасав: `SchemaRouterService`, `TenantProvisioning{Service,Controller}` (3 endpoint), `schema-isolation.spec.ts`
 - [x] 2.3 Migration `20261008001_revert_schema_per_tenant.sql` (функц/index/багана DROP, `tenant_*` schema-г УСТГАХГҮЙ — NOTICE) + Prisma `schemaName` хасав
 - [x] 2.4 `src/config/deployment-mode.ts` (ганц эх сурвалж) → `EnvConfig` startup validation + `TenantAuthGuard` (dedicated → tenant = `DEDICATED_TENANT_SLUG`)
 - [x] 2.5 `docker/docker-compose.vpc.yml`, `docker/.env.vpc.example`, `docker/vpc/bootstrap_dedicated_tenant.sql`; `.gitignore`-д `.env.vpc`
 - [x] 2.6 Тест: `deployment-mode.spec.ts` (17), `env.config.spec.ts` (4), guard dedicated/shared (+8)
-- [x] 2.7 Runbook `docs/07_Tech_Stack_and_Environment/03_Enterprise_VPC_Deployment.md`; sprint_6 (орлогдсон), sprint_11, index, INDEX, `.env.example`, lessons (ARCH-001, PROC-001)
+- [x] 2.7 Runbook [[03_Enterprise_VPC_Deployment]]; sprint_6 (орлогдсон), sprint_11, index, INDEX, `.env.example`, lessons (ARCH-001, PROC-001)
 - **Шалгалт:** unit 121/121 ✅ (env-гүй) · mutation шалгалт (dedicated логик унтраахад 4 тест унав) · tsc ✅ · lint 0 error ·
   PostgreSQL 16 дээр 16 migration цэвэр DB-д ✅, provision хийсэн DB-д ✅, давтан ажиллуулахад ✅ · bootstrap SQL 2 удаа ✅ · `docker compose config` ✅
 - **Шалгаагүй:** бодит Supabase + Docker image build (сүлжээ хаалттай) → таны компьютер дээр `supabase db reset` + `pnpm test`
@@ -134,7 +142,7 @@ pnpm --filter e2e exec tsx tests/cluster-check.ts
 - [x] **4.3 Vendor-lite ✅** — `vendors` · `GET/POST /vendors`, `PATCH /vendors/:id` (загвар модуль)
 - [x] **4.4 Report-lite ✅** — `GET /reports/summary` (MR, төсөв, бараа, нийлүүлэгч) + `GET /reports/summary.csv` (BOM, injection хамгаалалт, dependency-гүй)
 - [x] **4.5 Integration** — `test/modules-lite.integration.spec.ts` (эрх, cursor, adjust, CSV, RLS app_user)
-- [x] **4.7 Загвар** — `docs/03_Data_Models_and_Security/03_Module_Template.md`
+- [x] **4.7 Загвар** — [[03_Module_Template]]
   - Шалгалт: unit **230/230** (бохир env-ээр ч) · mutation 6/6 · PostgreSQL 16 (app_user, RLS): migration 18/18, RLS 5, SQL 10 сценари (cursor 25→3 хуудас давхардалгүй, **зэрэгцээ 10 хасалт → яг 5**) · бүтэн AppModule-ийн route 11/11 · tsc/lint ✅
   - [x] Таны компьютер (2026-10-10): integration **10 файл / 123 тест ✅** (modules-lite 9/9, budget 12/12)
 - [~] **4.6 Frontend** — энэ удаа алгассан (шийдвэр 17:50)
@@ -197,7 +205,7 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
   - [x] 4 API нийцтэй: зам хэвээр, хариунд `workflow` (GET/approve/reject); давтан батлалт → 200
   - [x] 5 MRDetailPage: "Алхам 1/2", алхмын төлөв, товч зөвхөн эрхтэй хүнд, backend-ийн алдааны мессеж
   - [x] 6–7 Шалгалт: core unit **506/506** (+8) · web-shell **45/45** (+8) · tsc ✅ · lint 0 алдаа · integration **15 файл / 154** (`app_user`, `postgres`) — шинэ `mr-workflow-approval` 11 тест (хуучин код дээр 11/11 унасан) · cloud UI (2 алхам, 3 хэрэглэгч) ✅
-  - [x] 8 `lessons_learned.md` SEC-004
+  - [x] 8 [[lessons_learned]] SEC-004
   - [x] Таны компьютер (20:05): unit 506/506 · web-shell 45/45 ✅; e2e 26 ✅ / 3 ❌ (яг хүлээгдсэн: admin@test.mn өөрийн MR-г батлах → товч алга) / 2 skip
   - [ ] Таны компьютер: `test:integration` (15 файл / 154)
   - ⚠️ Одоогийн `apps/e2e` requisition-flow / workflow-multistep нь admin@test.mn өөрийн MR-г батладаг → 6.1-д 2 хэрэглэгчтэй болгож засна
@@ -217,13 +225,13 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
   - [x] Нэмэлт: `supabase/config.toml` `[auth.rate_limit] sign_in_sign_ups = 500` (нэг ажиллалтад ~50 нэвтрэлт, анхдагч 30/5мин)
   - [x] Таны компьютер (20:28): `pnpm test` unit л — 510 + 45, **6 сек** (өмнө 4м51с) · `pnpm test:e2e` **47/47** (1.2 мин), fixture үүсгэж/цэвэрлэв ✅
 - [x] 6.2 Баримт (батлагдсан 20:29; 6.2.8 = A) — зөвхөн баримт/тохиргооны жишээ, код өөрчлөхгүй [DOC-001]
-  - [x] 6.2.1 `docs/CHANGELOG.md`: хуучин "Нэмэгдэх зүйлс" (schema-per-tenant гэх мэт хэрэгжээгүй төлөвлөгөө) → бодит v0.1.5: Added / Changed (⚠️ MR батлалт workflow-оор [SEC-004], RLS runtime `app_user` + `SYSTEM_DATABASE_URL`, `pnpm test` ↔ `test:e2e`) / Security & Fixed (SEC-001~004, API-001, HTTP-001, CACHE-001, EVT-001~003, CURSOR-001) / Тест (тоо). Огноо 6.4-д
-  - [x] 6.2.2 `docs/project-status.md`: одоогийн хувилбар, модулиуд, тестийн тоо, тест ажиллуулах заавар (unit / integration / e2e + fixture), мэдэгдэж буй backlog
-  - [x] 6.2.3 `V.0.1.5/00_index.md`: Sprint 9–11 төлөв, хуучирсан "Техникийн суурь" мод (бодит зам, `@@schema()` мөр хасах); `sprint_11_release.md`: хийгдсэн/орлогдсон алхмыг тэмдэглэх (бодит e2e файл, dedicated-mode smoke → 6.4)
+  - [x] 6.2.1 [[CHANGELOG]]: хуучин "Нэмэгдэх зүйлс" (schema-per-tenant гэх мэт хэрэгжээгүй төлөвлөгөө) → бодит v0.1.5: Added / Changed (⚠️ MR батлалт workflow-оор [SEC-004], RLS runtime `app_user` + `SYSTEM_DATABASE_URL`, `pnpm test` ↔ `test:e2e`) / Security & Fixed (SEC-001~004, API-001, HTTP-001, CACHE-001, EVT-001~003, CURSOR-001) / Тест (тоо). Огноо 6.4-д
+  - [x] 6.2.2 [[project-status]]: одоогийн хувилбар, модулиуд, тестийн тоо, тест ажиллуулах заавар (unit / integration / e2e + fixture), мэдэгдэж буй backlog
+  - [x] 6.2.3 [[00_index]]: Sprint 9–11 төлөв, хуучирсан "Техникийн суурь" мод (бодит зам, `@@schema()` мөр хасах); [[sprint_11_release]]: хийгдсэн/орлогдсон алхмыг тэмдэглэх (бодит e2e файл, dedicated-mode smoke → 6.4)
   - [x] 6.2.4 `ADR-001`: RLS runtime (апп `app_user` NOBYPASSRLS, системийн ажил `SYSTEM_DATABASE_URL`) хэсэг нэмэх
-  - [x] 6.2.5 `03_Enterprise_VPC_Deployment.md`: `app_user` нууц үг солих SQL, `DATABASE_URL`=app_user / `SYSTEM_DATABASE_URL`=postgres, `supabase/dev/rls_audit.sql`-ээр шалгах, "DB role app_user — RLS идэвхтэй" лог
-  - [x] 6.2.6 `02_Local_Supabase_Docker_Windows.md` + `README.md`: `pnpm test` / `test:integration` / `test:e2e` (fixture, auth rate limit, `pnpm supabase:*` [PROC-007]), хуучин "9 passed / 2 skipped" → 47; `.env.example` тайлбар шинэчлэх
-  - [x] 6.2.7 `docs/INDEX.md`: шинэ баримтын холбоос (ADR, Module_Template, lessons §16–19)
+  - [x] 6.2.5 [[03_Enterprise_VPC_Deployment]]: `app_user` нууц үг солих SQL, `DATABASE_URL`=app_user / `SYSTEM_DATABASE_URL`=postgres, `supabase/dev/rls_audit.sql`-ээр шалгах, "DB role app_user — RLS идэвхтэй" лог
+  - [x] 6.2.6 [[02_Local_Supabase_Docker_Windows]] + `README.md`: `pnpm test` / `test:integration` / `test:e2e` (fixture, auth rate limit, `pnpm supabase:*` [PROC-007]), хуучин "9 passed / 2 skipped" → 47; `.env.example` тайлбар шинэчлэх
+  - [x] 6.2.7 [[INDEX]]: шинэ баримтын холбоос (ADR, Module_Template, lessons §16–19)
   - [x] 6.2.8 A: local `.env` + `apps/core-kernel/.env` → `DATABASE_URL`=app_user, `SYSTEM_DATABASE_URL`=postgres (хуучин утга); `.env.example`, `docker/.env.vpc.example` анхдагч ижил
   - [x] Нэмэлт (11.5): root `docker-compose.yml`-д `SYSTEM_DATABASE_URL`, `CLUSTER_RESTART_*`; `.env.example`-д `CLUSTER_RESTART_*`, `PRISMA_LOG_LEVELS`
   - [x] Таны компьютер (20:38): `pnpm dev` → `DB role "app_user" — RLS идэвхтэй` ✅ · `pnpm test:e2e` **47/47** (app_user, 23с) ✅
@@ -231,7 +239,7 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
 - [x] 6.3 Цэвэрлэгээ (батлагдсан 20:49). Device аудит: git цэвэр (`p6.2`), `_tmp_*` алга
   - [x] 6.3.1 Root script [MIG-001]: `db:push` хасах; `db:migrate` = `supabase migration up` (Prisma `migrate deploy` биш — migration-ууд `supabase/migrations/`-д); local runbook/README-д тусгах
   - [x] 6.3.2 Устгах (git-д бүртгэлтэй, ашиглагдахгүй): `supabase/snippets/Untitled query 611.sql` (→ `pnpm dev:test-user` орлосон), root `package-lock.json` (npm-ийн lock, pnpm төсөл — CI/Docker ашигладаггүй), root `rls_audit.txt` (4.8.1-ийн нэг удаагийн гаралт, 61KB); `.gitignore`-д `rls_audit*.txt`
-  - [x] 6.3.3 Root `lessons_learned.md` — аль хэдийн заагч (`docs/lessons_learned.md`) → хэвээр үлдээнэ (INDEX, sprint файлууд заадаг)
+  - [x] 6.3.3 Root `lessons_learned.md` — аль хэдийн заагч ([[lessons_learned]]) → хэвээр үлдээнэ (INDEX, sprint файлууд заадаг)
   - [x] 6.3.4 Хуучирсан тайлбар: `$use` middleware → `inTenantTx` (`tenant-auth-guard`, `mr-crud` integration spec)
   - [x] 6.3.5 `lessons_learned` TEST-015: integration-ийг `pnpm dev`-тэй зэрэг ажиллуулахад ачааллын flaky 500; backlog-д "MR дугаар олголт (max+1, 3 retry) → tenant-ийн advisory lock / sequence"
   - [x] 6.3.6 Cloud: tsc ✅ · lint 0 алдаа · өөрчлөгдсөн 2 integration spec 18/18 (зөвхөн тайлбар) · нэмэлт: runbook §2-ийн "`pnpm db:push`-г дахин ажиллуулна" мөр (6.2-д үлдсэн) засав
@@ -261,7 +269,7 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
 ### v0.1.6 — Кемп пилот (таны компьютер, интернэтэд нээлттэй) — ✅ ПИЛОТ АЖИЛЛАЖ БАЙНА (2026-10-10 23:58, `v0.1.6.1`) · https://desktop-13n3elv.tail7fe33e.ts.net
 > Хүрээ: зөвхөн Кемп модуль, нэг байгууллага (бодит өгөгдөл). Байршил: таны Windows компьютер. Эхлэх: өнөөдөр.
 > **Шийдвэр (21:31):** домэйн алга → интернэт = **Tailscale Funnel** (үнэгүй, тогтмол `https://<компьютер>.<tailnet>.ts.net`, HTTPS автомат, router port нээхгүй; нөөц: Cloudflare quick tunnel — хаяг дахин асах бүрт солигдоно) · байгууллага **Sino Hydro**, slug `sinohydro` · **хувийн мэдээлэл орно** → backup шифрлэлт (7-Zip AES-256), BitLocker зөвлөмж, хэрэглэгчийн эрх хамгийн бага
-> Runbook: `docs/07_Tech_Stack_and_Environment/04_Pilot_Camp_Windows.md` · Скрипт/тохиргоо: `deploy/pilot/` · Сургамж: lessons §20
+> Runbook: [[04_Pilot_Camp_Windows]] · Скрипт/тохиргоо: `deploy/pilot/` · Сургамж: lessons §20
 **A. Пилотыг dev/тестээс тусгаарлах**
 - [x] A1 Тусдаа Supabase project `s-project-pilot` (553xx, `deploy/pilot/supabase/config.toml`, `--workdir`), тусдаа Redis (127.0.0.1:56379), backend :3100 — dev-тэй зэрэг ажиллана
 - [x] A1b `E:\MoogiiDev\Pilot\s-project` = tag clone (одоо `v0.1.6.1`)
@@ -284,12 +292,12 @@ PROC-005 (18:29): төхөөрөмж ↔ v6 манифест 424/424 тохир�
 - [x] E2 `pilot.ps1 install-tasks`: нэвтрэхэд `run` (watchdog), өдөр бүр 02:00 backup; тэжээлийн тохиргоо runbook-д
 - [x] E2b `install-tasks`, `powercfg`; дахин асаалтын тест — автоматаар асав
 - [x] E1b Бодит Supabase дээр `backup` → `restore` дадлага (2026-10-11)
-- [x] E4 Хувийн мэдээлэл: BitLocker, нууц үгийн менежер (2026-10-11); хэрэглэгчдэд мэдэгдэх → `docs/pilot-test-guide.md` §6
-- [x] E3 Runbook `docs/07_Tech_Stack_and_Environment/04_Pilot_Camp_Windows.md`
+- [x] E4 Хувийн мэдээлэл: BitLocker, нууц үгийн менежер (2026-10-11); хэрэглэгчдэд мэдэгдэх → [[pilot-test-guide]] §6
+- [x] E3 Runbook [[04_Pilot_Camp_Windows]]
 **F. Шалгалт**
 - [x] F1a Cloud: unit core-kernel 528 · web-shell 51 · integration 159/159 (`app_user` + `postgres`) · e2e 47/47 · build · Caddy-гаар UI (OWNER, VIEWER+CAMP_MANAGER: 12 кемп хуудас, CSP алдаагүй, зөвхөн same-origin) · `pilot.ps1` бүх команд (docker/supabase shim + бодит PG/Caddy/7-Zip/pwsh 7.4)
 - [x] F1b `v0.1.6` → суулгах явцад олдсон 4 алдааг засаж `v0.1.6.1`: PROC-009 (`init` → `pnpm install`), PROC-010 (`.ps1` орчин цонхонд үлдсэн), OPS-003 (`[auth.email] enable_signup` → нэвтрэлт хаагдсан), FE-007 (401 → `/login` ↔ `/camp` давталт) — lessons §20
-### Backlog (товлоогүй) → 🔒 2026-10-11: бүгд `../V.0.2/00_backlog_and_tech_debt.md`-д ID-тай шилжсэн (WF-01…05, QA-01…08)
+### Backlog (товлоогүй) → 🔒 2026-10-11: бүгд [[00_backlog_and_tech_debt]]-д ID-тай шилжсэн (WF-01…05, QA-01…08)
 - [x] ~~4.6 Frontend~~ → Phase 6.0 руу шилжсэн
 - [ ] Frontend component тест, `mfe-requisitions` stub
 - [ ] Integration Redis mock-ийг санах ойн (бичсэнээ уншдаг) болгох — cache алдааг тест барих [CACHE-001]

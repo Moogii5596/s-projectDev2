@@ -1,3 +1,11 @@
+---
+title: "Байгууллага холбох — Cloudflare Tunnel (`<байгууллага>.gobiverse.website`)"
+type: "Guide"
+status: "Active"
+last_updated: 2026-10-12
+tags: [deploy, stack]
+---
+
 # Байгууллага холбох — Cloudflare Tunnel (`<байгууллага>.gobiverse.website`)
 
 > v0.2.2 Блок 2.5 · ADR-005 · 2026-10-12. Эхний жишээ: **Sino Hydro** — `sino.gobiverse.website` → таны Windows компьютер (`desktop-13n3elv`).

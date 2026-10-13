@@ -1,3 +1,11 @@
+---
+title: "Sprint 3 — Event Bus: CloudEvents + Redis + DLQ (v1.0.3)"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [roadmap, v0.1.0]
+---
+
 # Sprint 3 — Event Bus: CloudEvents + Redis + DLQ (v1.0.3)
 
 > **Зорилго:** CloudEvents v1.0, Redis Pub/Sub, DLQ retry

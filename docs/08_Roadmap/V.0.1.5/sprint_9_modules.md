@@ -1,3 +1,11 @@
+---
+title: "Sprint 9 — Нэмэлт Модулиуд (v0.1.5.4)"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [roadmap, v0.1.5]
+---
+
 # Sprint 9 — Нэмэлт Модулиуд (v0.1.5.4)
 
 > 🔧 **Хэрэгжүүлэлтийн засвар (2026-10-08, Phase 4):**
@@ -7,8 +15,8 @@
 > - Budget: tenant-д идэвхтэй хугацаа байвал MR-д хэлтэс + төсөв заавал; давхцвал хамгийн богино хугацаа.
 > - Inventory: үлдэгдэл хүрэлцэхгүй бол боломжтойг нөөцөлж, дутууг тэмдэглэнэ (батлалт зогсохгүй).
 > - `GENERATED` багана ашиглахгүй (Prisma дэмжихгүй) — service-д тооцоолно. `prisma db push` хориотой [MIG-001].
-> - Төлөвлөгөө/явц: `01_analysis_and_plan_2026-10-08.md` → Phase 4.
-> - **Хамрах хүрээ (2026-10-08 17:47):** Inventory/Vendor/Report нь платформ батлах **ХӨНГӨН** модуль (`inventory_items`, `vendors`, `/reports/summary(.csv)`). Доорх 9.A, 9.C, 9.D-ийн дэлгэрэнгүй (агуулах, нөөцлөлт, үнийн санал, Excel, dashboard) **хэрэгжүүлэхгүй** — түүхэн лавлагаа. Шинэ модулийн загвар: `docs/03_Data_Models_and_Security/03_Module_Template.md`.
+> - Төлөвлөгөө/явц: [[01_analysis_and_plan_2026-10-08]] → Phase 4.
+> - **Хамрах хүрээ (2026-10-08 17:47):** Inventory/Vendor/Report нь платформ батлах **ХӨНГӨН** модуль (`inventory_items`, `vendors`, `/reports/summary(.csv)`). Доорх 9.A, 9.C, 9.D-ийн дэлгэрэнгүй (агуулах, нөөцлөлт, үнийн санал, Excel, dashboard) **хэрэгжүүлэхгүй** — түүхэн лавлагаа. Шинэ модулийн загвар: [[03_Module_Template]].
 
 > **Зорилго:** Inventory, Budget, Vendor, Report 4 модуль — schema, CRUD, модуль хоорондын холболт, frontend
 > **Working dir:** `apps/core-kernel/src/modules/` + `apps/web-shell/src/pages/`

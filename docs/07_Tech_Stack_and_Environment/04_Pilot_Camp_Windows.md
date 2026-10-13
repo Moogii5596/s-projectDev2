@@ -1,8 +1,16 @@
+---
+title: "04 — Кемп пилот: нэг Windows машин дээр интернэтэд нээх (v0.1.6, шинэчлэл/staging — v0.2.0)"
+type: "Guide"
+status: "Active"
+last_updated: 2026-10-12
+tags: [camp, pilot, stack]
+---
+
 # 04 — Кемп пилот: нэг Windows машин дээр интернэтэд нээх (v0.1.6, шинэчлэл/staging — v0.2.0)
 
 > Үүсгэсэн: 2026-10-10 (v0.1.6) | Байгууллага: **Sino Hydro** (`sinohydro`) | Модуль: **Кемп**
-> Холбоотой: `deploy/pilot/` (скрипт, тохиргоо), `02_Local_Supabase_Docker_Windows.md` (dev орчин),
-> `03_Enterprise_VPC_Deployment.md` (бүрэн VPC), `docs/lessons_learned.md` §20
+> Холбоотой: `deploy/pilot/` (скрипт, тохиргоо), [[02_Local_Supabase_Docker_Windows]] (dev орчин),
+> [[03_Enterprise_VPC_Deployment]] (бүрэн VPC), [[lessons_learned]] §20
 
 Пилот нь **хувийн мэдээлэлтэй** бодит өгөгдөлтэй ажиллана. Доорх аюулгүй байдлын алхмуудыг алгасахгүй.
 
@@ -121,7 +129,7 @@ cd E:\MoogiiDev\Pilot\s-project
 
 ## 7. Интернэтэд нээх — Tailscale Funnel
 
-> **Холболт (2026-10-12):** `https://desktop-13n3elv.tail7fe33e.ts.net` ✅ ажиллаж байна. Домэйн `sino.gobiverse.website` (Spaceship DNS) нь CNAME → энэ хаяг, гэхдээ **Funnel өөрийн домэйныг дэмждэггүй** (зөвхөн `*.ts.net` сертификат) → домэйнээр нээхэд TLS алдаа. Шийдэл (2026-10-12): **Cloudflare Tunnel** — ADR-005, заавар `05_Cloudflare_Tunnel.md`. Funnel нь шилжилтийн үед нөөц хаяг, дараа нь хаана.
+> **Холболт (2026-10-12):** `https://desktop-13n3elv.tail7fe33e.ts.net` ✅ ажиллаж байна. Домэйн `sino.gobiverse.website` (Spaceship DNS) нь CNAME → энэ хаяг, гэхдээ **Funnel өөрийн домэйныг дэмждэггүй** (зөвхөн `*.ts.net` сертификат) → домэйнээр нээхэд TLS алдаа. Шийдэл (2026-10-12): **Cloudflare Tunnel** — ADR-005, заавар [[05_Cloudflare_Tunnel]]. Funnel нь шилжилтийн үед нөөц хаяг, дараа нь хаана.
 
 1. Tailscale-ийг нээж нэвтэрнэ (Google/Microsoft/GitHub бүртгэлээр, үнэгүй).
 2. https://login.tailscale.com/admin/dns → **MagicDNS** ба **HTTPS Certificates** → Enable.

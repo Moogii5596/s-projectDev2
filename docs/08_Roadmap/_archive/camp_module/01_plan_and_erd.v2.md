@@ -1,7 +1,15 @@
+---
+title: "Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD · v2"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-11
+tags: [camp, roadmap]
+---
+
 # Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD · v2
 
-> 2026-10-09 · Төлөв: **ERD v2 батлуулах шатанд** · Хувилбар: БҮРЭН (production) · Өмнөх: `01_plan_and_erd.v1.md`
-> Мөрдөх: `docs/08_Roadmap/00_rules_and_context.md` (RULE-01~20), `docs/03_Data_Models_and_Security/03_Module_Template.md`,
+> 2026-10-09 · Төлөв: **ERD v2 батлуулах шатанд** · Хувилбар: БҮРЭН (production) · Өмнөх: [[01_plan_and_erd.v1]]
+> Мөрдөх: [[00_rules_and_context]] (RULE-01~20), [[03_Module_Template]],
 > lessons_learned [RLS-004] (PERMISSIVE TO app_user + FORCE + GRANT), [MIG-001] (`prisma db push` ХОРИОТОЙ — зөвхөн supabase migration)
 
 ## 1. Бизнесийн шаардлага (батлагдсан)
@@ -199,8 +207,8 @@ erDiagram
 - [ ] 8.8 `tsc --noEmit` + eslint + e2e гол урсгал
 
 ### Шат 9 — Баримт
-- [ ] 9.1 `CHANGELOG.md`, `00_rules_and_context.md` (RULE-12-ийг [RLS-004]-тэй нийцүүлэх)
-- [ ] 9.2 Алдааг `docs/lessons_learned.md`-д
+- [ ] 9.1 [[CHANGELOG]], [[00_rules_and_context]] (RULE-12-ийг [RLS-004]-тэй нийцүүлэх)
+- [ ] 9.2 Алдааг [[lessons_learned]]-д
 
 ## 4. Нээлттэй асуултууд
 1. **Бүтэн өдөр байгаа ажилтны хоол:** 4 хоолоос аль 3-ыг иднэ? Ажилтан өдрийн/шөнийн ээлжтэй (өдөр: өглөө-өдөр-орой; шөнө: орой-шөнө-өглөө гэх мэт) гэж тохируулах уу, эсвэл ажилтан бүрийг 3 хоол гэж тоолоод аль хоолонд хэдэн хүн гэдгийг менежер засах уу? Төлбөр 4 хоолтой үед ч **нийт ÷ 3** хэвээр үү?

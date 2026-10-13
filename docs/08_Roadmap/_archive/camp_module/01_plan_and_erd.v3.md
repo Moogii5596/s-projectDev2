@@ -1,7 +1,15 @@
+---
+title: "Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD · v3"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-11
+tags: [camp, roadmap]
+---
+
 # Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD · v3
 
-> 2026-10-09 · Төлөв: **ERD v3 батлуулах шатанд** · Хувилбар: БҮРЭН (production) · Өмнөх: `.v1.md`, `.v2.md`
-> Мөрдөх: `docs/08_Roadmap/00_rules_and_context.md` (RULE-01~20), `docs/03_Data_Models_and_Security/03_Module_Template.md`,
+> 2026-10-09 · Төлөв: **ERD v3 батлуулах шатанд** · Хувилбар: БҮРЭН (production) · Өмнөх: [[01_plan_and_erd.v1]], [[01_plan_and_erd.v2]]
+> Мөрдөх: [[00_rules_and_context]] (RULE-01~20), [[03_Module_Template]],
 > lessons_learned [RLS-004] (PERMISSIVE TO app_user + FORCE + GRANT), [MIG-001] (`prisma db push` ХОРИОТОЙ — зөвхөн supabase migration)
 
 ## 1. Бизнесийн шаардлага (батлагдсан)
@@ -182,8 +190,8 @@ erDiagram
 - [ ] 8.9 `tsc --noEmit` + eslint + e2e
 
 ### Шат 9 — Баримт
-- [ ] 9.1 `CHANGELOG.md`, `00_rules_and_context.md` (RULE-12-ийг [RLS-004]-тэй нийцүүлэх)
-- [ ] 9.2 Алдааг `docs/lessons_learned.md`-д
+- [ ] 9.1 [[CHANGELOG]], [[00_rules_and_context]] (RULE-12-ийг [RLS-004]-тэй нийцүүлэх)
+- [ ] 9.2 Алдааг [[lessons_learned]]-д
 
 ## 4. Нээлттэй асуултууд
 1. Өглөө, оройн хоолыг **бүгд кемп дээр** иднэ, зөвхөн ажлын цагийн хоол (өдрийн ээлжинд өдрийн хоол, шөнийн ээлжинд шөнийн хоол) хэлтсийн байршилд гэж ойлгосон нь зөв үү?

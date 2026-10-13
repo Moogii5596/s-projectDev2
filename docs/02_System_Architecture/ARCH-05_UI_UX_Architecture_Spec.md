@@ -1,3 +1,11 @@
+---
+title: "ARCH-05_UI_UX_Architecture_Spec"
+type: "Architecture"
+status: "Active"
+last_updated: 2026-10-08
+tags: [ui]
+---
+
 S Project: UI/UX Архитектур & Frontend Спецификаци (v1.1.0)
 Баримт бичгийн төрөл: Frontend Technical & UX Architecture Specification
 Хамаарах архитектур: Microkernel (OS-like), Hybrid Multi-Tenant (Tier 1, 2, 3), API Gateway Architecture

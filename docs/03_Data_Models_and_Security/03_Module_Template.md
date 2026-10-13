@@ -1,3 +1,11 @@
+---
+title: "Шинэ модуль нэмэх загвар (Module Template)"
+type: "Database"
+status: "Active"
+last_updated: 2026-10-10
+tags: [module]
+---
+
 # Шинэ модуль нэмэх загвар (Module Template)
 
 > Phase 4.7 · 2026-10-08 · Жишээ: `vendor/` (хамгийн энгийн), `inventory/` (cursor + cache + атомик), `budget/` (MR hook + lock)
@@ -80,5 +88,5 @@ private inTenantTx<T>(tenantId: string, fn: (tx: Prisma.TransactionClient) => Pr
 
 ## 5. Баримт
 
-- `docs/lessons_learned.md` — засагдсан алдаа бүр
-- `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md` — явц
+- [[lessons_learned]] — засагдсан алдаа бүр
+- [[01_analysis_and_plan_2026-10-08]] — явц

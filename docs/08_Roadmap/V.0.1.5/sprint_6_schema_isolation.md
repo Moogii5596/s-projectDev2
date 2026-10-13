@@ -1,8 +1,16 @@
+---
+title: "Sprint 6 — Schema-per-Tenant DB Isolation (v0.1.5.1)"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [database, roadmap, v0.1.5]
+---
+
 # Sprint 6 — Schema-per-Tenant DB Isolation (v0.1.5.1)
 
 > ⛔ **ОРЛОГДСОН (2026-10-08) — ADR-001, шийдвэр B.** Schema-per-tenant цуцлагдаж, хэрэгжүүлсэн код хасагдсан.
 > Shared = RLS, Enterprise VPC = тусдаа DB + `DEPLOYMENT_MODE=dedicated`.
-> Үз: `docs/02_System_Architecture/ADR-001_Tenant_Isolation.md`, `docs/07_Tech_Stack_and_Environment/03_Enterprise_VPC_Deployment.md`.
+> Үз: [[ADR-001_Tenant_Isolation]], [[03_Enterprise_VPC_Deployment]].
 > Доорх агуулга зөвхөн түүхэн лавлагаа.
 
 > **Зорилго:** Enterprise tenant бүрт тусдаа PostgreSQL schema үүсгэж, RLS-оос өндөр түвшний тусгаарлалт хангах

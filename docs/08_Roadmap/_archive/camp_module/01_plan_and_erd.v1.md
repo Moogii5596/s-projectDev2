@@ -1,7 +1,15 @@
+---
+title: "Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-11
+tags: [camp, roadmap]
+---
+
 # Кемп удирдлагын модуль (Camp Module) — Төлөвлөгөө ба ERD
 
 > 2026-10-09 · Төлөв: **ERD батлуулах шатанд** · Хувилбар: БҮРЭН (production)
-> Мөрдөх: `docs/08_Roadmap/00_rules_and_context.md` (RULE-01~20), `docs/03_Data_Models_and_Security/03_Module_Template.md`,
+> Мөрдөх: [[00_rules_and_context]] (RULE-01~20), [[03_Module_Template]],
 > lessons_learned [RLS-004] (PERMISSIVE TO app_user + FORCE + GRANT), [MIG-001] (`prisma db push` ХОРИОТОЙ — зөвхөн supabase migration)
 
 ## 1. Бизнесийн шаардлага (батлагдсан)
@@ -162,8 +170,8 @@ erDiagram
 - [ ] 6.8 `tsc --noEmit` + eslint + e2e гол урсгал
 
 ### Шат 7 — Баримт
-- [ ] 7.1 `docs/CHANGELOG.md`, `00_rules_and_context.md` codebase хэсэг
-- [ ] 7.2 Гарсан алдааг `docs/lessons_learned.md`-д
+- [ ] 7.1 [[CHANGELOG]], [[00_rules_and_context]] codebase хэсэг
+- [ ] 7.2 Гарсан алдааг [[lessons_learned]]-д
 
 ## 4. Нээлттэй асуултууд
 - **A.** Хоолны захиалгыг кемп менежер батлах уу, эсвэл катеринг илгээмэгц зардалд орох уу?

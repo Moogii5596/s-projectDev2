@@ -1,3 +1,11 @@
+---
+title: "Sprint 7 — Advanced Approval Workflow (v0.1.5.2)"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [roadmap, v0.1.5]
+---
+
 # Sprint 7 — Advanced Approval Workflow (v0.1.5.2)
 
 > **Зорилго:** Мөнгөний хэмжээнд суурилсан routing, delegation, deadline+escalation, SLA tracking

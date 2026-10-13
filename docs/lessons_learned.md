@@ -1,8 +1,16 @@
+---
+title: "S Project — Lessons Learned (Нэгтгэсэн)"
+type: "Log"
+status: "Active"
+last_updated: 2026-10-13
+tags: [lessons]
+---
+
 # S Project — Lessons Learned (Нэгтгэсэн)
 
 > **Энэ файл бол ҮНДСЭН нэгтгэсэн баримт.** MVP болон V1 Sprint явцад гарсан бүх алдаа, сургамж.
 > Шинэ алдаа гарвал `## Ангилал > ### [TAG-NNN]` форматаар нэмнэ.
-> `lessons_learned_MVP.md` — өмнөх нарийвчилсан файл (архив болгон хадгалагдсан).
+> [[lessons_learned_MVP]] — өмнөх нарийвчилсан файл (архив болгон хадгалагдсан).
 > Шинэчлэгдсэн: 2026-09-21 | v0.4.0
 
 ---
@@ -773,7 +781,7 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 
 ## 12. Local орчин / Шинэ машин тохиргоо (2026-10-08)
 
-> Төслийг GitHub-аас шинэ Windows машин дээр clone хийж Supabase-г Docker дээр асаах явцад гарсан. Бүрэн заавар: `docs/07_Tech_Stack_and_Environment/02_Local_Supabase_Docker_Windows.md`
+> Төслийг GitHub-аас шинэ Windows машин дээр clone хийж Supabase-г Docker дээр асаах явцад гарсан. Бүрэн заавар: [[02_Local_Supabase_Docker_Windows]]
 
 ### [SEED-001] Enum migration-ий дараа `seed.sql` хуучин утгатай үлдсэн → `supabase start` унав
 **Алдаа:** `failed to send batch: ERROR: invalid input value for enum "TierType": "starter" (SQLSTATE 22P02)` — 15 migration амжилттай, seed дээр унаж контейнерүүд зогссон.
@@ -994,7 +1002,7 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Дүрэм:** UI багц бүрийг хэрэглэгчид өгөхөөс өмнө 1400px + 390px-д `scrollWidth ≤ innerWidth` шалгаж, screenshot-оор нүдээр харна; native dialog/validation ашиглахгүй.
 
 ### [PROC-004] Баримт засахад Python `open()` текст горим CRLF файлыг бүхэлд нь LF болгосон
-**Тохиолдсон:** Шат 9 — `CHANGELOG.md`, `project-status.md`, `00_rules_and_context.md` (CRLF) дээр хэдхэн мөр нэмэхэд `git diff --stat` 387/328/168 мөр өөрчлөгдсөн гэж харуулсан (universal newlines уншихдаа `\r\n` → `\n`, бичихдээ `\n`). Төхөөрөмж рүү хадгалахаас ӨМНӨ илэрсэн.
+**Тохиолдсон:** Шат 9 — [[CHANGELOG]], [[project-status]], [[00_rules_and_context]] (CRLF) дээр хэдхэн мөр нэмэхэд `git diff --stat` 387/328/168 мөр өөрчлөгдсөн гэж харуулсан (universal newlines уншихдаа `\r\n` → `\n`, бичихдээ `\n`). Төхөөрөмж рүү хадгалахаас ӨМНӨ илэрсэн.
 **Шийдэл:** Мөрийн төгсгөлийг сэргээсэн (`sed 's/$/\r/'`) → diff зөвхөн нэмсэн мөрүүд.
 **Дүрэм:** Засварлах скриптэд `open(p, newline='')`; засварын дараа `git diff --stat`-ийн мөрийн тоо нь бодит өөрчлөлттэй таарч байгааг заавал шалгана (CRLF: `App.tsx`, `Layout.tsx`, `web-shell/package.json`, эдгээр 3 баримт).
 
@@ -1121,10 +1129,10 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 ### [PROC-007] Танд өгөх зааварт глобал `supabase` команд бичсэн → PowerShell "not recognized"
 **Тохиолдсон:** 6.1-ийн заавар `supabase stop` / `supabase start` гэж бичигдсэн; CLI нь root devDependency тул глобал PATH-д алга (ENV-00x).
 **Шийдэл:** `pnpm supabase:stop` → `pnpm supabase:start` (root script).
-**Дүрэм:** Танд өгөх команд бүрийг төслийн `package.json` script-ээс (эсвэл `pnpm <bin>`) авна — глобал суулгалт гэж үзэхгүй; заавар бичихээс өмнө `docs/07_.../02_Local_Supabase_Docker_Windows.md`-ийн командтай тулгана.
+**Дүрэм:** Танд өгөх команд бүрийг төслийн `package.json` script-ээс (эсвэл `pnpm <bin>`) авна — глобал суулгалт гэж үзэхгүй; заавар бичихээс өмнө [[02_Local_Supabase_Docker_Windows]]-ийн командтай тулгана.
 
 ### [DOC-001] Баримт кодоос хоцорсон: runbook `pnpm db:push` зөвлөдөг (MIG-001-тэй зөрчилдөнө), INDEX `v0.4.0`, CHANGELOG-д хэрэгжээгүй төлөвлөгөө
-**Тохиолдсон (Phase 6.2 аудит):** `02_Local_Supabase_Docker_Windows.md` §1.6 + README "Migration ажиллуулах: `pnpm db:push`"; `docs/INDEX.md` хуучин дугаарлалт (`v0.4.0`) ба байхгүй `docs/tasks/*`; CHANGELOG `[Unreleased]` = schema-per-tenant (цуцлагдсан); `00_index.md` Sprint 9–11 "хүлээгдэж байна"; `.env.example`/VPC жишээ `postgres` (RLS алгасна); `CLUSTER_RESTART_*`, `SYSTEM_DATABASE_URL` root compose-д алга.
+**Тохиолдсон (Phase 6.2 аудит):** [[02_Local_Supabase_Docker_Windows]] §1.6 + README "Migration ажиллуулах: `pnpm db:push`"; [[INDEX]] хуучин дугаарлалт (`v0.4.0`) ба байхгүй `docs/tasks/*`; CHANGELOG `[Unreleased]` = schema-per-tenant (цуцлагдсан); [[00_index]] Sprint 9–11 "хүлээгдэж байна"; `.env.example`/VPC жишээ `postgres` (RLS алгасна); `CLUSTER_RESTART_*`, `SYSTEM_DATABASE_URL` root compose-д алга.
 **Шийдэл:** 6.2-оор бүгдийг бодит төлөвтэй тааруулав; `.env.example` анхдагч = `app_user` + `SYSTEM_DATABASE_URL`.
 **Дүрэм:** Зан төлөв/команд/env өөрчилсөн phase бүрийн checklist-д "баримт: README, runbook, `.env.example`, CHANGELOG" мөр заавал байна; release-ийн өмнө `grep`-ээр хуучирсан команд (db:push г.м.) хайна.
 
@@ -1208,8 +1216,8 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Шийдэл:** `lib/unauthorized.ts` — 401 → `supabase.auth.signOut({ scope: 'local' })` → `/login` (аль хэдийн тэнд бол шилжихгүй); "Гарах" товч `scope: 'local'` (бусад төхөөрөмжийг гаргахгүй). Unit 3 + браузерын давталтын тест (шинэ код: 4 шилжилт, `/login`, localStorage цэвэр).
 **Дүрэм:** Auth-ийн урсгалд "серверт session хүчингүй, клиентэд хүчинтэй" кейсийг заавал шалгана; redirect хийхээс өмнө тухайн шалтгааныг (локал төлөв) цэвэрлэнэ, redirect бүрт "аль хэдийн тэнд бол" хамгаалалт.
 
-### [PROC-011] 🔴 Таны commit хийгээгүй `pilot-feedback.md`-ийг дарж бичсэн
-**Тохиолдсон (2026-10-11 11:16):** Баримт хуулах скрипт эхэндээ `git status` ба одоогийн hash-ийг **хэвлэсэн** ч шалгаагүй — `docs/pilot-feedback.md` нь таны засвартай (M, hash `35134bab…`, HEAD = миний өмнөх `42bf98a1…`) байсан ч tar-аар дарж бичив. Дарагдсан агуулга нь таны надад илгээсэн 14 саналын текст байсан гэж үзэж, түүнийг файлын хавсралтад үгчлэн сэргээв.
+### [PROC-011] 🔴 Таны commit хийгээгүй [[pilot-feedback]]-ийг дарж бичсэн
+**Тохиолдсон (2026-10-11 11:16):** Баримт хуулах скрипт эхэндээ `git status` ба одоогийн hash-ийг **хэвлэсэн** ч шалгаагүй — [[pilot-feedback]] нь таны засвартай (M, hash `35134bab…`, HEAD = миний өмнөх `42bf98a1…`) байсан ч tar-аар дарж бичив. Дарагдсан агуулга нь таны надад илгээсэн 14 саналын текст байсан гэж үзэж, түүнийг файлын хавсралтад үгчлэн сэргээв.
 **Шалтгаан:** PROC-005/006-ийн pre-hash шалгалтыг "харах" алхам болгосон (нөхцөлгүй үргэлжилсэн); өмнөх v0.1.6 bundle-д л automated (`bad=1 → зогсох`) байсан.
 **Шийдэл/Дүрэм:** Төхөөрөмж рүү хуулах **бүрт** check файлд `өмнөх hash` заавал, скрипт тулгаад таарахгүй бол **юу ч бичихгүй зогсоно** (NEW файл аль хэдийн байвал ч зогсоно). Хэвлэх ≠ шалгах. Хэрэглэгчийн засаж байж болох файл (feedback, .env, тэмдэглэл) → дарж бичихээс өмнө заавал татаж нэгтгэнэ.
 
@@ -1353,10 +1361,19 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 **Дүрэм:** Аюулгүй байдлын шийдвэр (хугацаа, түгжээ) DB-ийн цаг (`now()`) дээр — app/driver-ийн Date хөрвүүлэлтэд найдахгүй.
 ---
 
+## 23. Баримт бичиг — Obsidian vault (2026-10-13)
+
+### [DOC-002] Файлын нэрээр (basename) линк хөрвүүлэхэд vault-ийн гадна файл андуурч холбогдох
+- **Алдаа:** `` `README.md` `` (repo root-ийн README, vault-ийн гадна) лавлагааг script `[[README]]` болгож, vault доторх өөр `08_Roadmap/_design_mockups/README.md` руу буруу холбосон (2 газар). Мөн `Root lessons_learned.md` (root заагч файл) → `[[lessons_learned]]` (docs файл) болж утга нь өөрчлөгдсөн.
+- **Шалтгаан:** Хөрвүүлэлт зөвхөн файлын нэрийг тулгасан; лавлагааны замыг (root / `apps/…` / vault дотор) шалгаагүй. `_learning/` нүүсний дараа `README` нэр давхардсан.
+- **Шийдэл:** Буцааж `` `README.md` `` болгосон. Шалгах script-д (1) замын тулгалт (лавлагааны зам ↔ олдсон файлын зам), (2) давхардсан нэрийн жагсаалт, (3) dangling / orphan шалгалт нэмсэн.
+- **Дүрэм:** Vault-д нэр давхардвал `[[хавтас/нэр|харагдах нэр]]` замтай линк ашиглана. Vault-ийн гадна файл (repo root, `apps/`, `supabase/`) → backtick-ээр үлдэнэ, хэзээ ч `[[...]]` болгохгүй. Бөөнөөр хөрвүүлэхийн өмнө `docs/`-ийг нөөцлөөд dry-run тайлан гаргана.
+
 ## Changelog
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-13 | DOC-002 нэмэв (Obsidian vault хөрвүүлэлт) |
 | 2026-10-13 | §22 (v0.2.2 Блок 3): TEST-024 (timestamptz ↔ JS Date — хугацааг SQL-д) |
 | 2026-10-12 | §22 (v0.2.2 Блок 2): AUTH-003 (GoTrue fetch алдаа ≠ буруу нууц үг), SEC-008 (хязгаар ↔ NAT), PROC-008 давтагдсан |
 | 2026-10-12 | §22 (v0.2.2 Блок 1): TEST-022 (harness generate), TEST-023 (зан төлөв ↔ CI-only тест), PROC-016 (git ls-files -z) |
@@ -1404,7 +1421,7 @@ Sprint 5 E2E debugging явцад 9 алдаа давтагдсаны ихэнх
 | 2026-10-08 | ENV-006 нэмэв (Windows Prisma DLL lock) |
 | 2026-10-08 | ARCH-001, PROC-001 нэмэв (Phase 2, ADR-001) |
 | 2026-10-08 | CI-001~003, TEST-001 нэмэв (Phase 1 CI засвар) |
-| 2026-10-08 | Root `lessons_learned.md` (S5-E1~E16, META чеклист)-г 10-р хэсэг болгон нэгтгэв. Үндсэн файл = `docs/lessons_learned.md` |
+| 2026-10-08 | Root `lessons_learned.md` (S5-E1~E16, META чеклист)-г 10-р хэсэг болгон нэгтгэв. Үндсэн файл = [[lessons_learned]] |
 | 2026-09-21 | Бүх MVP + Sprint 5 алдааг нэгтгэж бүтэцтэй болгосон. RULE хөндлөн лавлагаа нэмсэн. |
 | 2026-09-20 | MVP 4 аудит: ENUM-001/002, DI-001~003, SQL-001, CONFIG-001 нэмсэн |
 | 2026-09-20 | RLS-001, PATCH-001, DI-008, DI-009, RESOLVE-001 нэмсэн |

@@ -1,3 +1,11 @@
+---
+title: "CHANGELOG"
+type: "Log"
+status: "Active"
+last_updated: 2026-10-13
+tags: [release]
+---
+
 # CHANGELOG
 
 Бүх мэдэгдэхүйц өөрчлөлтүүд энэ файлд бүртгэгдэнэ.
@@ -8,6 +16,13 @@
 ---
 
 ## [Unreleased]
+
+### Баримт бичиг — Obsidian vault (2026-10-13)
+- `docs/` = Obsidian vault: бүх `.md` (68) файлд YAML frontmatter (`title`, `type`, `status`, `last_updated`, `tags`)
+- `type`-д `Log`, `status`-д `Archived` утга нэмсэн (стандарт: [[INDEX]] → "Frontmatter стандарт")
+- Файл хоорондын лавлагаа (`` `…/X.md` ``, `[..](X.md)`) → `[[X]]` wiki-link (~320), dangling 0, orphan 0
+- [[INDEX]]-ийг MOC болгон дахин бүтэцлэв; байхгүй spec-үүд (04 SDK, 06 FIX-01~04) → "Missing Specs" жагсаалт
+- `_learning/` → `docs/_learning/` (git-ээс нуусан хэвээр: `.gitignore` `/docs/_learning/`); `build_pdf.py` frontmatter алгасдаг болсон
 
 ### Нэмэгдсэн (v0.2.2 Блок 3 — урилга, нууц үг сэргээх)
 - Ажилтны картаас нэвтрэх эрх үүсгэх (имэйлгүй ажилтанд дотоод хаяг) — `POST /camp/camps/:campId/employees/:id/create-user`
@@ -21,7 +36,7 @@
 - `20261013005_core_user_invites.sql` — урилга / reset токен (SHA-256 hash л)
 
 ### Нэмэгдсэн (v0.2.2 Блок 2.5 — домэйн)
-- ADR-005: байгууллага бүр `<байгууллага>.gobiverse.website` (Cloudflare Tunnel; 5 төрөл); заавар `05_Cloudflare_Tunnel.md`
+- ADR-005: байгууллага бүр `<байгууллага>.gobiverse.website` (Cloudflare Tunnel; 5 төрөл); заавар [[05_Cloudflare_Tunnel]]
 - Caddyfile (пилот): бодит IP-г `CF-Connecting-IP`-ээс (Cloudflare), үгүй бол `X-Forwarded-For` (Funnel)
 - `pilot.ps1 status`: Cloudflare Tunnel (cloudflared service), `PUBLIC_APP_URL`
 
@@ -55,14 +70,14 @@
 
 ### Баримт
 - `deploy/pilot/tests/pilot.shim.ps1`: Windows PowerShell 5.1-ээр ажиллуулах команд — `powershell -NoProfile -ExecutionPolicy Bypass -File deploy/pilot/tests/pilot.shim.ps1` (pwsh 7 суугаагүй машинд)
-- v0.2.2 техникийн төлөвлөгөө: `docs/08_Roadmap/V.0.2/07_v0.2.2_tech_plan.md` (✅ батлагдсан 2026-10-12)
+- v0.2.2 техникийн төлөвлөгөө: [[07_v0.2.2_tech_plan]] (✅ батлагдсан 2026-10-12)
 
 ---
 
 ## [v0.2.1] — 2026-10-12 — Хоолны тооцоо албан тушаалаар, хоолгүй ажилтан, байрны төрөл, мониторинг, нэвтрэлтийн хамгаалалт
 
-> Төлөвлөгөө: `docs/08_Roadmap/V.0.2/04_v0.2.1_tech_plan.md` · Явц: `05_v0.2.1_progress.md` · Санал: `docs/pilot-feedback.md` FB-01, 04, 12 (үлдсэн), 14 (ээлжээр)
-> Суулгах: **эхлээд staging (runbook §13в) — A = B + `pilot.ps1 auth-test`**, дараа нь `pilot.ps1 upgrade -Tag v0.2.1` · Туршилт: `docs/pilot-test-guide.md` §5в · Сургамж: lessons §22
+> Төлөвлөгөө: [[04_v0.2.1_tech_plan]] · Явц: [[05_v0.2.1_progress]] · Санал: [[pilot-feedback]] FB-01, 04, 12 (үлдсэн), 14 (ээлжээр)
+> Суулгах: **эхлээд staging (runbook §13в) — A = B + `pilot.ps1 auth-test`**, дараа нь `pilot.ps1 upgrade -Tag v0.2.1` · Туршилт: [[pilot-test-guide]] §5в · Сургамж: lessons §22
 
 ### ⚠️ Зан төлөвийн өөрчлөлт
 - **Хоолны байршил:** хэлтсийн оронд **ажилтан ?? албан тушаал (кемп) ?? кемпийн анхдагч**. Хэлтсийн маягтаас хоолны байршил хасагдсан (API хуучин клиентэд optional). Одоогийн өгөгдөлд хоолны тоо өөрчлөгдөхгүй (backfill, staging A = B).
@@ -82,7 +97,7 @@
 - **`pilot.ps1 auth-test <имэйл>`** (зөвхөн staging): нэвтрэлтийн түгжээг Caddy-ээр дамжуулж шалгана.
 
 ### Аюулгүй байдал
-- **SEC-007 (PIL-07):** Caddy `trusted_proxies 127.0.0.1` (XFF); GoTrue-ийн IP хязгаар Supabase CLI-д үйлчилдэггүй тул бүртгэлийн түгжээ — `password_verification_attempt` hook (`auth_guard` schema, `supabase_auth_admin`-аас бусдад эрхгүй). Тайлан: `06_v0.2.1_PIL-07_report.md`.
+- **SEC-007 (PIL-07):** Caddy `trusted_proxies 127.0.0.1` (XFF); GoTrue-ийн IP хязгаар Supabase CLI-д үйлчилдэггүй тул бүртгэлийн түгжээ — `password_verification_attempt` hook (`auth_guard` schema, `supabase_auth_admin`-аас бусдад эрхгүй). Тайлан: [[06_v0.2.1_PIL-07_report]].
 
 ### Migration (зөвхөн нэмэлт)
 `20261012001_camp_positions` · `20261012002_camp_position_settings` · `20261012003_camp_employees_position_meals` · `20261012004_camp_departments_meal_location_optional` · `20261012005_camp_building_types_asset_building` · `20261012006_auth_password_guard`
@@ -100,8 +115,8 @@
 
 ## [v0.2.0] — 2026-10-11 — Пилотын санал (бөөнөөр оруулах, тохиргоо), олон хэл, шинэчлэлийн хэрэгсэл ✅ (пилот 2026-10-11)
 
-> Төлөвлөгөө: `docs/08_Roadmap/V.0.2/02_v0.2.0_tech_plan.md` · Санал: `docs/pilot-feedback.md` FB-02, 03, 05, 06, 07, 08, 11, 12 (1-р хэсэг), 14
-> Суулгах: runbook §13 (v0.1.6.x → v0.2.0 нэг удаа гараар), **эхлээд staging дадлага §13в** · Туршилт: `docs/pilot-test-guide.md` §5б · Сургамж: lessons §21
+> Төлөвлөгөө: [[02_v0.2.0_tech_plan]] · Санал: [[pilot-feedback]] FB-02, 03, 05, 06, 07, 08, 11, 12 (1-р хэсэг), 14
+> Суулгах: runbook §13 (v0.1.6.x → v0.2.0 нэг удаа гараар), **эхлээд staging дадлага §13в** · Туршилт: [[pilot-test-guide]] §5б · Сургамж: lessons §21
 
 ### ⚠️ Зан төлөвийн өөрчлөлт
 - **Алдааны хариу** (Кемп): `{ statusCode, code, params, message, error }` — `code` тогтвортой (жнь `camp.err.departments.2`), `message` нь `Accept-Language`-ийн хэлээр. Хуучин клиент `message`-ийг харуулсаар ажиллана. Эрхгүй үед жагсаалтыг `" / "`-ээр (өмнө нь "эсвэл").
@@ -110,7 +125,7 @@
 - **JSON body хязгаар 4 MB** (хүснэгтээр оруулах); файлын хязгаар 2 MB хэвээр.
 
 ### Нэмэгдсэн
-- **Олон хэл — Монгол · English · 中文** (суурь + Кемп + нэвтрэх/цэс): хэл сонгох (баруун дээд, нэвтрэх хуудас), профайлд хадгална (`core_users.locale`); огноо/гараг/төлөв/enum хэлээр. en/zh — **ноорог** (`docs/i18n-review.md`).
+- **Олон хэл — Монгол · English · 中文** (суурь + Кемп + нэвтрэх/цэс): хэл сонгох (баруун дээд, нэвтрэх хуудас), профайлд хадгална (`core_users.locale`); огноо/гараг/төлөв/enum хэлээр. en/zh — **ноорог** ([[i18n-review]]).
 - **Орчуулгыг Excel/CSV-ээр засах** (Системийн тохиргоо → Орчуулга, OWNER/ADMIN): татах → засах → урьдчилсан харагдац (хувьсагч, урт шалгана) → ≤ 60 сек-д шууд; түүх, анхдагч руу буцаах; байгууллага тус бүрт (`i18n_overrides`, RLS).
 - **Бөөнөөр оруулах:** ажилтан (Excel / "хүснэгтээр" paste; байгаа код = шинэчлэх; имэйл багана), хэлтэс (Excel); экспорт (ажилтан, хэлтэс, өрөө) = импортын загвар; урьдчилсан харагдац (шинэ / шинэчлэх / өөрчлөлтгүй / алдаа), алдаатай мөрийг алгасах сонголт (FB-02, FB-08, PIL-08).
 - **Байр + олон өрөө нэг дор** (дугаарын муж, угтвар, тэгээр дүүргэх, ≤ 500; байгааг алгасна), байрны өрөөний тоо/багтаамж (FB-07).
@@ -155,8 +170,8 @@
 
 ## [v0.1.6] — 2026-10-10 — Кемп пилот (нэг Windows машин, интернэтэд нээлттэй) ✅
 
-> Runbook: `docs/07_Tech_Stack_and_Environment/04_Pilot_Camp_Windows.md` · Төлөвлөгөө: `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md` (v0.1.6)
-> Сургамж: `docs/lessons_learned.md` §20
+> Runbook: [[04_Pilot_Camp_Windows]] · Төлөвлөгөө: [[01_analysis_and_plan_2026-10-08]] (v0.1.6)
+> Сургамж: [[lessons_learned]] §20
 
 ### ⚠️ Зан төлөвийн өөрчлөлт
 - **`POST /api/v1/auth/register` [SEC-005]:** зөвхөн OWNER/ADMIN; tenant = нэвтэрсэн хэрэглэгчийнх (Host header-ээс биш). UI ашигладаггүй.
@@ -183,8 +198,8 @@
 
 ## [v0.1.5] — 2026-10-10 — Tier 2: Enterprise VPC ✅
 
-> Дэлгэрэнгүй: `docs/08_Roadmap/V.0.1.5/01_analysis_and_plan_2026-10-08.md`,
-> алдааны шалтгаан/шийдэл: `docs/lessons_learned.md` §11–19.
+> Дэлгэрэнгүй: [[01_analysis_and_plan_2026-10-08]],
+> алдааны шалтгаан/шийдэл: [[lessons_learned]] §11–19.
 
 ### ⚠️ Зан төлөвийн өөрчлөлт (шинэчлэхээс өмнө унших)
 - **MR батлалт workflow-оор [SEC-004]:** `POST /requisitions/:id/approve|reject` нь одоо идэвхтэй алхмын role (эсвэл OWNER/ADMIN)-ийг шаардана; **MR үүсгэгч өөрөө батлах/татгалзахгүй**; amount_rules-ийн олон алхам, quorum дагагдана (завсрын алхамд MR `PENDING_APPROVAL` хэвээр). Нэг хэрэглэгчээр "үүсгээд батлах" урсгал ажиллахаа больсон — дор хаяж 2 хэрэглэгч (REQUESTER + APPROVER) хэрэгтэй.
@@ -222,8 +237,8 @@
 - `/api/v1/health`, `/healthz` → `version: "0.1.5"` (`APP_VERSION` = package.json)
 
 ### Нэмэгдсэн — Кемп модуль V1 (2026-10-10) ✅
-> Төлөвлөгөө/ERD v4: `docs/08_Roadmap/camp_module/01_plan_and_erd.md`. V1 = Шат 1–4 + Шат 8 (frontend) + Шат 9 (баримт).
-> Дараагийн хувилбарт (`v0.1.5`) багтана — `VERSIONING.md`-ийн дагуу `v0.2.0` нь Air-Gapped-д зориулагдсан тул тусдаа дугаар нээгээгүй.
+> Төлөвлөгөө/ERD v4: [[01_plan_and_erd]]. V1 = Шат 1–4 + Шат 8 (frontend) + Шат 9 (баримт).
+> Дараагийн хувилбарт (`v0.1.5`) багтана — [[VERSIONING]]-ийн дагуу `v0.2.0` нь Air-Gapped-д зориулагдсан тул тусдаа дугаар нээгээгүй.
 
 - **DB (Supabase migration 8):** `20261009001_camp_rbac` … `20261009006_camp_operations`, `20261010001_camp_attendance_import`, `20261010002_camp_org_services_maintenance`.
   RLS = `camp_apply_tenant_rls()` (PERMISSIVE TO app_user + FORCE + GRANT, [RLS-004]); давхцал EXCLUDE, CLOSED засвар/сэлбэг trigger-ээр түгжигдэнэ, НӨАТ `net + vat = gross` CHECK.
@@ -243,7 +258,7 @@
 
 ### Засагдсан / баримтжуулсан
 - RULE-12 (RLS загвар) [RLS-004]-тэй нийцүүлсэн: `AS PERMISSIVE TO app_user` + GRANT (өмнө нь байхгүй `s_project_app_user` + RESTRICTIVE гэж буруу заасан)
-- `lessons_learned.md` §15: ENV-009/010, TEST-007/008/009, PRISMA-003, VALID-001, CONC-001, PROC-003/004, FE-004
+- [[lessons_learned]] §15: ENV-009/010, TEST-007/008/009, PRISMA-003, VALID-001, CONC-001, PROC-003/004, FE-004
 
 ---
 

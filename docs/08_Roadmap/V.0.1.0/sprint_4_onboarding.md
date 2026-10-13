@@ -1,3 +1,11 @@
+---
+title: "Sprint 4 — Module Federation + Tenant Onboarding (v1.0.4)"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [roadmap, v0.1.0]
+---
+
 # Sprint 4 — Module Federation + Tenant Onboarding (v1.0.4)
 
 > **Зорилго:** Web Shell + Remote MFE, Tenant Admin API

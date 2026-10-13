@@ -79,4 +79,4 @@ _tmp_*
 .env.vpc
 
 # Сургалтын материал — тусдаа private repo (s-project-learning)
-/_learning/
+/docs/_learning/

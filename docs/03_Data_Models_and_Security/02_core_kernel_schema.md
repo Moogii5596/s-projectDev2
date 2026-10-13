@@ -1,8 +1,16 @@
+---
+title: "Core Kernel Platform DB Schema Spec"
+type: "Database"
+status: "Active"
+last_updated: 2026-10-08
+tags: [database]
+---
+
 # Core Kernel Platform DB Schema Spec
 
 **Document ID:** SEC-02  
 **Project:** S Project  
-**Location:** `03_Data_Models_and_Security/02_core_kernel_schema.md`  
+**Location:** [[02_core_kernel_schema]]  
 **Status:** Approved Technical Architecture  
 
 ---

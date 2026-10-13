@@ -1,3 +1,11 @@
+---
+title: "Sprint 1 — Dynamic Route Ingress (v1.0.1)"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [roadmap, v0.1.0]
+---
+
 # Sprint 1 — Dynamic Route Ingress (v1.0.1)
 
 > **Зорилго:** Manifest-д суурилсан dynamic routing — module бүртгэл, route ingress, DRAINING

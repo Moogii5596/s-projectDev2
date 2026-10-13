@@ -1,3 +1,11 @@
+---
+title: "PRD-02_Tenant_Tiers"
+type: "PRD"
+status: "Active"
+last_updated: 2026-10-08
+tags: [tenant]
+---
+
 PRD-02: Tenant Tiers & Access Matrix
 Document ID: PRD-02
 Project: S Project

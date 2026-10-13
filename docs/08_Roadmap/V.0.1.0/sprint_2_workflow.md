@@ -1,3 +1,11 @@
+---
+title: "Sprint 2 — Workflow Engine Module (v1.0.2)"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [roadmap, v0.1.0]
+---
+
 # Sprint 2 — Workflow Engine Module (v1.0.2)
 
 > **Зорилго:** Multi-level approval, pessimistic lock, idempotency

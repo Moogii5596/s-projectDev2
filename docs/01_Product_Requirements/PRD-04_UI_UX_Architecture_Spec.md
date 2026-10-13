@@ -1,3 +1,11 @@
+---
+title: "PRD-04_UI_UX_Architecture_Spec"
+type: "PRD"
+status: "Active"
+last_updated: 2026-10-08
+tags: [ui]
+---
+
 PRD-04: UI/UX Architecture & Interaction Specification
 Баримт бичгийн ID: PRD-04 / UI-SPEC-01
 Төсөл: S Project

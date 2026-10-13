@@ -1,6 +1,14 @@
+---
+title: "02 — Local орчин: Supabase + Redis on Docker (Windows)"
+type: "Guide"
+status: "Active"
+last_updated: 2026-10-10
+tags: [supabase, stack]
+---
+
 # 02 — Local орчин: Supabase + Redis on Docker (Windows)
 
-> Шинэчлэгдсэн: 2026-10-10 (v0.1.5: `app_user` холболт, тест командууд) · 2026-10-08 (шинэ машин дээр бүрэн туршсан) | Холбоотой: `README.md` → Quick Start, `supabase/config.toml`, `docker-compose.dev.yml`, `docs/lessons_learned.md` §12
+> Шинэчлэгдсэн: 2026-10-10 (v0.1.5: `app_user` холболт, тест командууд) · 2026-10-08 (шинэ машин дээр бүрэн туршсан) | Холбоотой: `README.md` → Quick Start, `supabase/config.toml`, `docker-compose.dev.yml`, [[lessons_learned]] §12
 
 S Project-ийн local хөгжүүлэлтэд **хоёр бүлэг контейнер** Docker Desktop дээр ажиллана:
 
@@ -13,7 +21,7 @@ NestJS (`core-kernel`) болон frontend (`web-shell`) нь контейнер
 
 > Supabase-д зориулж тусдаа `docker-compose` бичихгүй — CLI өөрөө контейнерүүдийг удирдана.
 
-> **v0.1.6 Кемп пилот** нь ЭНЭ машин дээр тусдаа хавтсанд (`E:\MoogiiDev\Pilot\s-project`), тусдаа Supabase (`s-project-pilot`, 553xx), Redis (56379), backend (3100)-аар зэрэг ажиллана → `04_Pilot_Camp_Windows.md`. Dev-ийн `pnpm supabase:stop` пилотыг зогсоохгүй; **`supabase stop --all` хэрэглэхгүй** (пилотыг ч зогсооно).
+> **v0.1.6 Кемп пилот** нь ЭНЭ машин дээр тусдаа хавтсанд (`E:\MoogiiDev\Pilot\s-project`), тусдаа Supabase (`s-project-pilot`, 553xx), Redis (56379), backend (3100)-аар зэрэг ажиллана → [[04_Pilot_Camp_Windows]]. Dev-ийн `pnpm supabase:stop` пилотыг зогсоохгүй; **`supabase stop --all` хэрэглэхгүй** (пилотыг ч зогсооно).
 
 ---
 

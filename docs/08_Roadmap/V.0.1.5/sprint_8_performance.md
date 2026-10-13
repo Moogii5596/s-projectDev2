@@ -1,3 +1,11 @@
+---
+title: "Sprint 8 — Performance & Scaling (v0.1.5.3)"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [roadmap, v0.1.5]
+---
+
 # Sprint 8 — Performance & Scaling (v0.1.5.3)
 
 > **Зорилго:** 1000+ хэрэглэгчийн ачаалал тэвчих — Redis caching, cursor pagination, rate limiting, cluster

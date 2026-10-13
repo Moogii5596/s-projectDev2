@@ -1,3 +1,11 @@
+---
+title: "v1.0 Sprint Implementation Plan — Index"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [roadmap, v0.1.0]
+---
+
 # v1.0 Sprint Implementation Plan — Index
 
 > Үүсгэсэн: 2026-09-21 | Шинэчлэгдсэн: 2026-09-21  
@@ -10,20 +18,20 @@
 
 | Файл | Агуулга | Хэмжээ |
 |------|---------|--------|
-| `00_rules_and_context.md` | RULE-01~13 + Codebase state + MVP | ~7KB |
-| `sprint_0_foundation.md` | Sprint 0: Pre-flight fix (app.module, migration 0006) | ~7KB |
-| `sprint_1_ingress.md` | Sprint 1: Dynamic Route Ingress (DynamicIngressRouter, DrainingInterceptor) | ~12KB |
-| `sprint_2_workflow.md` | Sprint 2: Workflow Engine (resolveUserId, PessimisticLock, Idempotency) | ~17KB |
-| `sprint_3_eventbus.md` | Sprint 3: Event Bus + DLQ (CloudEvents, OutboxPoller, Redis) | ~11KB |
-| `sprint_4_onboarding.md` | Sprint 4: MFE + Tenant Onboarding | ~6KB |
-| `sprint_5_production.md` | Sprint 5: E2E & CI/CD hardening | ~4KB |
+| [[00_rules_and_context]] | RULE-01~13 + Codebase state + MVP | ~7KB |
+| [[sprint_0_foundation]] | Sprint 0: Pre-flight fix (app.module, migration 0006) | ~7KB |
+| [[sprint_1_ingress]] | Sprint 1: Dynamic Route Ingress (DynamicIngressRouter, DrainingInterceptor) | ~12KB |
+| [[sprint_2_workflow]] | Sprint 2: Workflow Engine (resolveUserId, PessimisticLock, Idempotency) | ~17KB |
+| [[sprint_3_eventbus]] | Sprint 3: Event Bus + DLQ (CloudEvents, OutboxPoller, Redis) | ~11KB |
+| [[sprint_4_onboarding]] | Sprint 4: MFE + Tenant Onboarding | ~6KB |
+| [[sprint_5_production]] | Sprint 5: E2E & CI/CD hardening | ~4KB |
 
 ---
 
 ## Claude-д зориулсан зааварчилгаа
 
 **Sprint эхлэхдээ:**
-1. `00_rules_and_context.md` уншина (RULE-01~13)
+1. [[00_rules_and_context]] уншина (RULE-01~13)
 2. Тухайн sprint-ийн файлыг уншина
 3. Бусад файл унших шаардлагагүй
 

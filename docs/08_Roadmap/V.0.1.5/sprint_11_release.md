@@ -1,10 +1,18 @@
+---
+title: "Sprint 11 — v0.1.5 Release Hardening"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-10
+tags: [roadmap, v0.1.5]
+---
+
 # Sprint 11 — v0.1.5 Release Hardening
 
 > **Зорилго:** v0.1.5 release-д бэлэн болгох — E2E тест, changelog, git tag, Docker update
 > **Working dir:** `apps/e2e/` + `docs/` + root
 > **Хамаарал:** Sprint 6–10 бүгд дууссан байх
 
-> **Төлөв (2026-10-10) — бодит хэрэгжилт `01_analysis_and_plan_2026-10-08.md` → Phase 6.** Доорх алхмууд анхны төлөвлөгөө (түүхэн):
+> **Төлөв (2026-10-10) — бодит хэрэгжилт [[01_analysis_and_plan_2026-10-08]] → Phase 6.** Доорх алхмууд анхны төлөвлөгөө (түүхэн):
 >
 > | Алхам | Бодит |
 > |---|---|
@@ -24,7 +32,7 @@
 
 Шинэ Sprint 6–10-н feature-уудыг E2E coverage-д нэмэх.
 
-> ⚠️ **АНХААР:** E2E тест бичихийн ӨМНӨ `META чеклист` (`lessons_learned.md`-ийн сүүлийн хэсэг) дандаа дагах!
+> ⚠️ **АНХААР:** E2E тест бичихийн ӨМНӨ `META чеклист` ([[lessons_learned]]-ийн сүүлийн хэсэг) дандаа дагах!
 
 ### Алхам 11.1.1 — dedicated-mode (ADR-001 — schema-isolation spec-ийг орлосон)
 
@@ -101,7 +109,7 @@ test.describe('Module Integration E2E', () => {
 
 ## Алхам 11.2 — CHANGELOG.md Шинэчлэх
 
-- [ ] `docs/CHANGELOG.md`-д v0.1.5 хэсэг нэмэх:
+- [ ] [[CHANGELOG]]-д v0.1.5 хэсэг нэмэх:
 
 ```markdown
 ## [v0.1.5] — YYYY-MM-DD — Tier 2: Enterprise VPC ✅
@@ -146,7 +154,7 @@ test.describe('Module Integration E2E', () => {
 
 ## Алхам 11.3 — project-status.md Шинэчлэх
 
-- [ ] `docs/project-status.md`-д v0.1.5 ДУУССАН гэж тэмдэглэх:
+- [ ] [[project-status]]-д v0.1.5 ДУУССАН гэж тэмдэглэх:
 
 ```markdown
 | `v0.1.5` | Tier 2 Enterprise VPC | ✅ ДУУССАН | YYYY-MM-DD |
@@ -209,7 +217,7 @@ CACHE_TTL_WORKFLOW_DEF=600
 
 ## Алхам 11.6 — V.0.1.5 Index Шинэчлэх
 
-- [ ] `docs/08_Roadmap/V.0.1.5/00_index.md` явцын хуваарийг шинэчлэх:
+- [ ] [[00_index]] явцын хуваарийг шинэчлэх:
 
 ```markdown
 Sprint 6  │ Schema/DB Isolation        │ [x] ✅ Дууссан — YYYY-MM-DD

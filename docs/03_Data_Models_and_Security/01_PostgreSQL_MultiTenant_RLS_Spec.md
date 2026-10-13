@@ -1,3 +1,11 @@
+---
+title: "03_Data_Models_and_Security: PostgreSQL Multi-Tenant RLS & Data Isolation Spec"
+type: "Database"
+status: "Active"
+last_updated: 2026-10-08
+tags: [rls, tenant]
+---
+
 # 03_Data_Models_and_Security: PostgreSQL Multi-Tenant RLS & Data Isolation Spec
 
 **Хувилбар:** v1.3.0  

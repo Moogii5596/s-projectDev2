@@ -1,3 +1,11 @@
+---
+title: "02_System_Architecture: Core API Gateway & Reverse Proxy Spec"
+type: "Architecture"
+status: "Active"
+last_updated: 2026-10-08
+tags: [api]
+---
+
 # 02_System_Architecture: Core API Gateway & Reverse Proxy Spec
 
 **Хувилбар:** v2.0.0  
@@ -357,7 +365,7 @@ const channel = supabase
   .subscribe();
 ```
 
-> **Тэмдэглэл:** `01_Core_Vision.md`-н Section 4 (WebSocket Gateway)-д заасан `Dual-Protocol Proxy` нь Supabase Realtime-аар бүрэн орлогдоно. Тусдаа WebSocket сервер хийх шаардлагагүй.
+> **Тэмдэглэл:** [[PRD-01_Core_Vision]]-н Section 4 (WebSocket Gateway)-д заасан `Dual-Protocol Proxy` нь Supabase Realtime-аар бүрэн орлогдоно. Тусдаа WebSocket сервер хийх шаардлагагүй.
 
 ---
 

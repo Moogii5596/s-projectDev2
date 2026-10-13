@@ -1,6 +1,14 @@
+---
+title: "Sprint 0 — Pre-flight Fix (v0.9 → v1.0 baseline)"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [roadmap, v0.1.0]
+---
+
 # Sprint 0 — Pre-flight Fix (v0.9 → v1.0 baseline)
 
-> **Энэ файлыг уншихаас өмнө `00_rules_and_context.md`-г уншина.**
+> **Энэ файлыг уншихаас өмнө [[00_rules_and_context]]-г уншина.**
 > **Зорилго:** Бодит codebase-г spec-тэй нийцүүлэх — аюулгүй байдлын цоорхой хаах, нэрийн зөрчил засах
 > **👤 ХЭРЭГЛЭГЧ хийх:** `supabase db push`, `pnpm test`, браузер шалгах
 > **🤖 CLAUDE хийх:** Доорх бүх код бичих

@@ -1,9 +1,17 @@
+---
+title: "S Project — Claude Гарын Авлага: Дүрмүүд ба Codebase Байдал"
+type: "Guide"
+status: "Active"
+last_updated: 2026-10-10
+tags: [rules, roadmap]
+---
+
 # S Project — Claude Гарын Авлага: Дүрмүүд ба Codebase Байдал
 
 > **Энэ файлыг Claude Sprint ажил эхлэхэд ЗААВАЛ уншина.**
 > RULE-01~20 + Codebase одоогийн байдал + MVP дууссан зүйлс бүгд энд байна.
 > Бусад structural docs унших шаардлагагүй.
-> **Одоогийн хувилбар: v0.4.0** | `docs/CHANGELOG.md` | `docs/VERSIONING.md`
+> **Одоогийн хувилбар: v0.4.0** | [[CHANGELOG]] | [[VERSIONING]]
 
 ---
 
@@ -45,7 +53,7 @@
   - ❌ `AS RESTRICTIVE` ГАНЦААРАА → PostgreSQL permissive policy шаарддаг тул **0 мөр** буцаана.
   - ❌ `s_project_app_user` role **байхгүй** — зөв role нь `app_user`. GRANT-гүй бол `permission denied`.
   - `current_tenant_id()` функц **байхгүй** — ХЭЗЭЭ Ч ашиглаж болохгүй.
-  - Дэлгэрэнгүй загвар: `docs/03_Data_Models_and_Security/03_Module_Template.md` §1. Жишээ: кемпийн migration-ууд (`camp_apply_tenant_rls()` helper, `20261009001_camp_rbac.sql`).
+  - Дэлгэрэнгүй загвар: [[03_Module_Template]] §1. Жишээ: кемпийн migration-ууд (`camp_apply_tenant_rls()` helper, `20261009001_camp_rbac.sql`).
   - Хэрэгжсэн хуучин migration-ыг (RESTRICTIVE) checksum-аас болж засахгүй — шинэ migration-оор нэмж засна.
 - **RULE-15** Enum/type өөрчлөх migration ДАРААЛАЛ — ЯАГААД ЧΗΩ ЭНЭ ДАРААЛАЛ:
   ```sql
@@ -183,14 +191,14 @@
 **Файлуудын байршил:**
 | Файл | Агуулга |
 |------|---------|
-| `00_rules_and_context.md` | Энэ файл — RULE-01~20, Codebase state, MVP |
-| `sprint_0_foundation.md` | Sprint 0 — Pre-flight fix |
-| `sprint_1_ingress.md` | Sprint 1 — Dynamic Route Ingress |
-| `sprint_2_workflow.md` | Sprint 2 — Workflow Engine |
-| `sprint_3_eventbus.md` | Sprint 3 — Event Bus + DLQ |
-| `sprint_4_onboarding.md` | Sprint 4 — MFE + Tenant Onboarding |
-| `sprint_5_production.md` | Sprint 5 — E2E & CI/CD ✅ |
-| `../VERSIONING.md` | SemVer бодлого |
-| `../CHANGELOG.md` | Хувилбарын өөрчлөлтийн жагсаалт |
+| [[00_rules_and_context]] | Энэ файл — RULE-01~20, Codebase state, MVP |
+| [[sprint_0_foundation]] | Sprint 0 — Pre-flight fix |
+| [[sprint_1_ingress]] | Sprint 1 — Dynamic Route Ingress |
+| [[sprint_2_workflow]] | Sprint 2 — Workflow Engine |
+| [[sprint_3_eventbus]] | Sprint 3 — Event Bus + DLQ |
+| [[sprint_4_onboarding]] | Sprint 4 — MFE + Tenant Onboarding |
+| [[sprint_5_production]] | Sprint 5 — E2E & CI/CD ✅ |
+| [[VERSIONING]] | SemVer бодлого |
+| [[CHANGELOG]] | Хувилбарын өөрчлөлтийн жагсаалт |
 
 *Шинэчлэгдсэн: 2026-09-21 | v0.4.0*

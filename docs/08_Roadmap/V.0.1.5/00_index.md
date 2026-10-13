@@ -1,7 +1,15 @@
+---
+title: "V.0.1.5 — Sprint Implementation Plan Index"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-11
+tags: [roadmap, v0.1.5]
+---
+
 # V.0.1.5 — Sprint Implementation Plan Index
 
 > ## 🔒 v0.1 ХААГДСАН (2026-10-11) — сүүлийн хувилбар `v0.1.6.1` (Кемп пилот)
-> Шинэ хөгжүүлэлт → `../V.0.2/` (`01_plan_draft.md`, `00_backlog_and_tech_debt.md`). v0.1-д зөвхөн P0 hotfix (`release/v0.1` салбар → `v0.1.7`+).
+> Шинэ хөгжүүлэлт → `../V.0.2/` ([[01_plan_draft]], [[00_backlog_and_tech_debt]]). v0.1-д зөвхөн P0 hotfix (`release/v0.1` салбар → `v0.1.7`+).
 
 > Үүсгэсэн: 2026-09-21 | Шинэчлэгдсэн: 2026-10-10
 > **Энэ файл бүх sprint файлуудын индекс юм.**
@@ -28,23 +36,23 @@
 
 | Файл | Агуулга | Хамаарал |
 |------|---------|----------|
-| `00_index.md` | Энэ файл — индекс, явцын хуваарь | — |
-| `01_analysis_and_plan_2026-10-08.md` | Шинжилгээ + Phase 0–6 төлөвлөгөө, шийдвэр B | **Эхэлж унших** |
-| `sprint_6_schema_isolation.md` | ⛔ Орлогдсон — ADR-001 (түүхэн лавлагаа) | — |
-| `sprint_7_advanced_workflow.md` | Sprint 7: Amount routing, delegation, escalation | Sprint 6 дараа |
-| `sprint_8_performance.md` | Sprint 8: Redis cache, cursor pagination, rate limit | Sprint 7 зэрэгцэж болно |
-| `sprint_9_modules.md` | Sprint 9: Inventory, Budget, Vendor, Report | Sprint 6 + 7 дараа |
-| `sprint_10_event_bus_testing.md` | Sprint 10: Cross-module event chain тест | Sprint 9 дараа |
-| `sprint_11_release.md` | Sprint 11: Release hardening, tag, changelog | Хамгийн сүүл |
+| [[00_index]] | Энэ файл — индекс, явцын хуваарь | — |
+| [[01_analysis_and_plan_2026-10-08]] | Шинжилгээ + Phase 0–6 төлөвлөгөө, шийдвэр B | **Эхэлж унших** |
+| [[sprint_6_schema_isolation]] | ⛔ Орлогдсон — ADR-001 (түүхэн лавлагаа) | — |
+| [[sprint_7_advanced_workflow]] | Sprint 7: Amount routing, delegation, escalation | Sprint 6 дараа |
+| [[sprint_8_performance]] | Sprint 8: Redis cache, cursor pagination, rate limit | Sprint 7 зэрэгцэж болно |
+| [[sprint_9_modules]] | Sprint 9: Inventory, Budget, Vendor, Report | Sprint 6 + 7 дараа |
+| [[sprint_10_event_bus_testing]] | Sprint 10: Cross-module event chain тест | Sprint 9 дараа |
+| [[sprint_11_release]] | Sprint 11: Release hardening, tag, changelog | Хамгийн сүүл |
 
 ---
 
 ## Claude-д Зориулсан Зааварчилгаа
 
 **Sprint эхлэхдээ:**
-1. `V.0.1.0/00_rules_and_context.md` уншина (RULE-01~20 — өөрчлөгдөөгүй!)
+1. [[00_rules_and_context]] уншина (RULE-01~20 — өөрчлөгдөөгүй!)
 2. Тухайн sprint-ийн файлыг уншина
-3. `docs/lessons_learned.md` шалгана (**ганц үндсэн файл**; root-ийнх нь заагч) (давтагдах алдаанаас зайлсхийх)
+3. [[lessons_learned]] шалгана (**ганц үндсэн файл**; root-ийнх нь заагч) (давтагдах алдаанаас зайлсхийх)
 
 **Жишээ: Sprint 7 дээр ажиллах бол:**
 ```
@@ -89,7 +97,7 @@ apps/e2e/           ← tests/*.spec.ts, global-setup/teardown (fixture), helper
 packages/           ← shared-types, prisma-rls-extension
 ```
 
-> Шинэ модуль нэмэх загвар: `docs/03_Data_Models_and_Security/03_Module_Template.md`
+> Шинэ модуль нэмэх загвар: [[03_Module_Template]]
 
 ---
 

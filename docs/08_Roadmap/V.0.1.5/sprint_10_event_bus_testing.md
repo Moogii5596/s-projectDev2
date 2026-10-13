@@ -1,3 +1,11 @@
+---
+title: "Sprint 10 — Event Bus Integration Testing (v0.1.5.5)"
+type: "Roadmap"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [event-bus, roadmap, v0.1.5]
+---
+
 # Sprint 10 — Event Bus Integration Testing (v0.1.5.5)
 
 > **Зорилго:** Cross-module event chain баталгаажуулах — MR → Workflow → Inventory → Budget дараалал

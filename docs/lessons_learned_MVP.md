@@ -1,3 +1,11 @@
+---
+title: "S Project — Lessons Learned"
+type: "Log"
+status: "Archived"
+last_updated: 2026-10-08
+tags: [lessons]
+---
+
 # S Project — Lessons Learned
 
 ## Migration алдаанууд

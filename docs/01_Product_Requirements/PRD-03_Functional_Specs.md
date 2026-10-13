@@ -1,3 +1,11 @@
+---
+title: "PRD-03_Functional_Specs"
+type: "PRD"
+status: "Active"
+last_updated: 2026-10-08
+tags: [core]
+---
+
 PRD-03: Functional Specifications & Reference Module (Material Requisition)
 Document ID: PRD-03
 Project: S Project

@@ -1,3 +1,11 @@
+---
+title: "Хувилбаржуулалтын Бодлого (Versioning Policy)"
+type: "Guide"
+status: "Active"
+last_updated: 2026-10-11
+tags: [release]
+---
+
 # Хувилбаржуулалтын Бодлого (Versioning Policy)
 
 ## Стандарт: SemVer 2.0.0
@@ -75,4 +83,4 @@ git tag -l "v*" --sort=-v:refname
 
 ## CHANGELOG.md холбоос
 
-Хувилбар бүрийн дэлгэрэнгүй өөрчлөлтийг [CHANGELOG.md](./CHANGELOG.md)-аас харна уу.
+Хувилбар бүрийн дэлгэрэнгүй өөрчлөлтийг [[CHANGELOG]]-аас харна уу.
