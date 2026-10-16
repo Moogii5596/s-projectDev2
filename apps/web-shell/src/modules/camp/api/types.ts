@@ -135,6 +135,61 @@ export interface CampUser {
   email: string
   fullName: string | null
   isActive: boolean
+  /** v0.2.2 Блок 4 (B4-Q3) */
+  role: 'OWNER' | 'ADMIN' | 'APPROVER' | 'REQUESTER'
+  phone: string | null
+  username: string | null
+  /** Дотоод `…login.invalid` хаяг — имэйл гэж харуулахгүй */
+  internalEmail: boolean
+  employee: { id: string; employeeCode: string; fullName: string; campId: string; campCode: string } | null
+  invite: { status: InviteStatus; channel: InviteChannel; expiresAt: string; createdAt: string } | null
+}
+
+/** v0.2.2 Блок 3–4: урилга */
+export type InviteStatus = 'PENDING' | 'USED' | 'EXPIRED' | 'REVOKED'
+export type InviteChannel = 'LINK' | 'EMAIL'
+export interface InviteResult {
+  inviteId: string
+  purpose: 'INVITE' | 'RESET'
+  channel: InviteChannel
+  expiresAt: string
+  path: string | null
+  url: string | null
+}
+export interface InviteOptions {
+  emailEnabled: boolean
+  publicUrl: string | null
+}
+export interface CreateEmployeeUserResult {
+  userId: string
+  employeeId: string
+  hasEmail: boolean
+  phone: string | null
+  username: string | null
+}
+
+/** GET /camp/users/:userId/permissions (Блок 1) */
+export type PermissionSource = 'TEMPLATE' | 'DIRECT'
+export interface UserPermissionRow {
+  id: string
+  permissionCode: string
+  campId: string | null
+  source: PermissionSource
+  userRoleId: string | null
+  role: { id: string; name: string } | null
+  createdAt: string
+}
+export interface UserPermissions {
+  user: { id: string; email: string; fullName: string | null; isActive: boolean }
+  permissions: UserPermissionRow[]
+  assignments: { userRoleId: string; campId: string | null; role: { id: string; name: string }; outdated: boolean; add: string[]; remove: string[] }[]
+}
+
+/** Албан тушаал → эрхийн загвар (Блок 2) */
+export type CampTemplateScope = 'ALL_CAMPS' | 'EMPLOYEE_CAMP'
+export interface PositionTemplates {
+  position: { id: string; name: string }
+  templates: { roleId: string; roleName: string; isSystem: boolean; scope: CampTemplateScope }[]
 }
 
 export interface Role {
@@ -199,6 +254,8 @@ export interface Employee {
   mealLocationId?: string | null
   mealsIncluded?: boolean | null
   positionRef?: { name: string } | null
+  /** v0.2.2 Блок 4: холбогдсон нэвтрэх эрх (core_users.id) */
+  userId?: string | null
   /** Эцсийн (эффектив) утга ба эх сурвалж */
   effective?: EmployeeEffective
 }

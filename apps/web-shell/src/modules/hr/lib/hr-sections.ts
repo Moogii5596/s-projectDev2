@@ -5,7 +5,7 @@
  * Зам: `/hr/:campId/<section>` — `campId` = «үндсэн ажлын байр» (H-Q1; v0.3-т site ерөнхий болно).
  * Албан тушаал tenant-түвшний каталог боловч цэсний тасралтгүй байдлын үүднээс ажлын байрны layout дотор харуулна.
  */
-export const HR_SECTIONS = ['employees', 'departments', 'crews', 'shifts', 'attendance', 'import', 'positions'] as const
+export const HR_SECTIONS = ['employees', 'users', 'departments', 'crews', 'shifts', 'attendance', 'import', 'positions'] as const
 export type HrSection = (typeof HR_SECTIONS)[number]
 
 export const HR_DEFAULT_SECTION: HrSection = 'employees'

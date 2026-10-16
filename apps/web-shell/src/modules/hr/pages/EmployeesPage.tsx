@@ -12,6 +12,7 @@ import { EMPLOYEE_STATUS_LABEL } from '../../camp/lib/labels'
 import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../camp/components/ui'
 import ImportDialog, { ExportButton } from '../../camp/components/ImportDialog'
 import { EMPLOYEE_IMPORT_COLUMNS } from '../lib/import-columns'
+import EmployeeAccess from '../components/EmployeeAccess'
 import { useTranslation } from 'react-i18next'
 
 
@@ -380,6 +381,7 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
           )}
         </Field>
       )}
+      {emp && <EmployeeAccess campId={campId} emp={emp} />}
       <ErrorBox error={m.error ?? orgs.error ?? depts.error} />
     </Modal>
   )

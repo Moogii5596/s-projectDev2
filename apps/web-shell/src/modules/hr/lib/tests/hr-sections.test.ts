@@ -7,8 +7,8 @@ import { HR_DEFAULT_SECTION, HR_SECTIONS, LEGACY_CAMP_SECTIONS, hrPath, isHrSect
 const ID = '0192a000-0000-7000-8000-000000000001'
 
 describe('hr-sections', () => {
-  it('ADR-006 §5.1-ийн цэс: Ажилтан, Хэлтэс, Бригад, Ээлж, Ирц, Импорт, Албан тушаал', () => {
-    expect([...HR_SECTIONS]).toEqual(['employees', 'departments', 'crews', 'shifts', 'attendance', 'import', 'positions'])
+  it('ADR-006 §5.1-ийн цэс (+ Блок 4: Хэрэглэгч)', () => {
+    expect([...HR_SECTIONS]).toEqual(['employees', 'users', 'departments', 'crews', 'shifts', 'attendance', 'import', 'positions'])
     expect(HR_DEFAULT_SECTION).toBe('employees')
   })
 

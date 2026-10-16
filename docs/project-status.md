@@ -13,6 +13,7 @@ tags: [status, v0.2.2]
 
 ## 1. Одоо (2026-10-16)
 - **Сүүлийн release:** `v0.2.1` (2026-10-12) — пилот (Sino Hydro, Кемп) энэ хувилбар дээр, `https://sino.gobiverse.website` (Cloudflare Tunnel).
+- **IDE:** 2026-10-16-наас Cursor дээр хөгжүүлнэ — [[06_Cursor_Setup]].
 - **Хөгжүүлэлт:** `v0.2.2` — хэрэглэгч ба ажилтан ([[07_v0.2.2_tech_plan]], явц [[08_v0.2.2_progress]]).
 
 | v0.2.2 | Төлөв |
@@ -22,13 +23,14 @@ tags: [status, v0.2.2]
 | Блок 2.5 — домэйн, Cloudflare Tunnel | ✅ `d116772` |
 | Блок 3 — урилга, хэрэглэгч үүсгэх, нууц үг сэргээх | ✅ `c88086d` |
 | Блок H1 — HR backend зөөлт (DB хөндөхгүй) ([[ADR-006_HR_Core_Module]] §5) | ✅ `7f506d0` |
-| Блок H2 — HR frontend («Хүний нөөц» цэс, `/hr/:campId/…`) | ✅ cloud (2026-10-16) — commit + e2e хүлээгдэж байна |
-| **Блок 4** — хэрэглэгч удирдах UI (HR дээр) | 📋 дараагийнх |
-| Блок 5 — профайл, ажлаас гаргах · Блок 6 — release | 📋 |
+| Блок H2 — HR frontend («Хүний нөөц» цэс, `/hr/:campId/…`) | ✅ `8787569` (e2e хүлээгдэж байна) |
+| Блок 4 — хэрэглэгч удирдах UI (HR дээр) | ✅ cloud (2026-10-16) — 4а `8787569`, 4б commit + e2e хүлээгдэж байна |
+| **Блок 5** — профайл, ажлаас гаргах, PII лог | 📋 дараагийнх |
+| Блок 6 — release | 📋 |
 
 ## 2. Дараагийн алхам
-1. H2-ыг таны машин дээр commit → CI + `pnpm e2e`; дараа нь **Блок 4** (хэрэглэгч удирдах UI, «Хүний нөөц» дээр).
-2. Блок 5 → 6; release-ийн өмнө staging-д заавал шалгах зүйлс — [[08_v0.2.2_progress]] «Staging».
+1. Блок 4б-г таны машин дээр commit → CI + `pnpm e2e`; дараа нь **Блок 5** (профайл, ажлаас гарах).
+2. Блок 6; release-ийн өмнө staging-д заавал шалгах зүйлс — [[08_v0.2.2_progress]] «Staging».
 3. Дараагийн хувилбар: `v0.2.3` (хөрөнгө ажилтанд, ээлжийн календарь, гэрээ + үнэ) — [[03_v0.2_full_plan]].
 
 ## 3. Нээлттэй асуудал / эрсдэл
@@ -40,5 +42,5 @@ tags: [status, v0.2.2]
 | 4 | vault-д алга spec (Event bus гэрээ, FIX-01~04) | [[INDEX]] → Missing Specs |
 | 5 | `camp-master` (7), `route-probe` (1) integration — v0.2.2 Блок 1–3-ын дараа хуучин хүлээлттэй (H1-ээс өмнө ч унадаг) | [[08_v0.2.2_progress]] «Блок H1 — тест» |
 
-## 4. Тест (сүүлийн бүтэн ажиллагаа — v0.2.2 Блок 3/H1, cloud; H2: web-shell 83 + UI smoke)
-core-kernel unit 634 · web-shell 83 · integration (бодит PG + RLS) `camp-v022-*` + RLS ногоон · tsc / eslint цэвэр. Файлын зураглал, команд: [[07_Test_Map]]; орчин: [[02_Local_Supabase_Docker_Windows]].
+## 4. Тест (сүүлийн бүтэн ажиллагаа — v0.2.2 Блок 3/H1, cloud; H2/4: web-shell 89 + UI smoke)
+core-kernel unit 634 · web-shell 89 · integration (бодит PG + RLS) `camp-v022-*` + RLS ногоон · tsc / eslint цэвэр. Файлын зураглал, команд: [[07_Test_Map]]; орчин: [[02_Local_Supabase_Docker_Windows]].

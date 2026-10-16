@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
@@ -13,7 +13,8 @@ import { ActiveBadge, Button, Card, Empty, ErrorBox, Loading, PageHeader, Table,
  * Засах: бүх кемпийн `camp.master.manage` (байгууллагын админ). Нэр давхардахгүй (зай, том/жижиг үсэг үл хамаарна — backend).
  * Устгахгүй — идэвхгүй болгоно (одоогийн ажилтан / байранд хэвээр үлдэнэ, шинээр сонгогдохгүй).
  */
-export default function CatalogPage({ kind }: { kind: CatalogKind }) {
+/** `rowAction` — v0.2.2 Блок 4: мөрөнд нэмэлт товч (HR албан тушаалын «Эрхийн загвар») */
+export default function CatalogPage({ kind, rowAction }: { kind: CatalogKind; rowAction?: (c: CatalogItem) => ReactNode }) {
   const { t } = useTranslation()
   const perms = useCampPermissions()
   const canEdit = perms.can(P.MASTER_MANAGE)
@@ -53,6 +54,7 @@ export default function CatalogPage({ kind }: { kind: CatalogKind }) {
                   <ActiveBadge active={c.isActive} />
                 </td>
                 <td className={`${td} text-right whitespace-nowrap space-x-3`}>
+                  {rowAction?.(c)}
                   {canEdit &&
                     (editing?.id === c.id ? (
                       <>

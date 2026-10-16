@@ -126,7 +126,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/scripts/pilot-admin.spec.ts` | 7 | validate* · onboard · ensureUser |
 | `core-kernel/src/scripts/test-user.spec.ts` | 9 | ensureTestUser · assertLocalUrl · parseDotenv / parseArgs |
 
-## Unit — web-shell — 15 файл, ~83 тест
+## Unit — web-shell — 16 файл, ~89 тест
 
 Команд: `pnpm --filter web-shell test`
 
@@ -145,10 +145,11 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/camp/lib/tests/last-camp.test.ts` | 3 | last-camp (FB-11) |
 | `web-shell/src/modules/camp/lib/tests/permission-label.test.ts` | 3 | permissionLabel |
 | `web-shell/src/modules/hr/lib/tests/hr-sections.test.ts` | 4 | hr-sections |
+| `web-shell/src/modules/hr/lib/tests/user-access.test.ts` | 6 | inviteLink · loginName · userState · permissionView |
 | `web-shell/src/modules/inventory/lib/tests/quantity.test.ts` | 5 | inventory quantity (numeric(15,3), float-гүй) |
 | `web-shell/src/modules/report/lib/tests/report.test.ts` | 5 | report lib |
 
-## E2E (Playwright) — 11 файл, ~62 тест
+## E2E (Playwright) — 12 файл, ~66 тест
 
 Команд: `pnpm test:e2e`
 
@@ -160,6 +161,7 @@ tags: [codebase, testing, generated]
 | `e2e/tests/camp-ops.spec.ts` | 7 |  |
 | `e2e/tests/camp-v020.spec.ts` | 8 |  |
 | `e2e/tests/camp-v021.spec.ts` | 7 |  |
+| `e2e/tests/camp-v022-users.spec.ts` | 4 |  |
 | `e2e/tests/camp.spec.ts` | 6 |  |
 | `e2e/tests/modules-lite.spec.ts` | 8 |  |
 | `e2e/tests/multi-tenant.spec.ts` | 5 |  |

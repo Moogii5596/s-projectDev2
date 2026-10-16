@@ -59,24 +59,25 @@ tags: [codebase, frontend, generated]
 | `/camp/departments` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:47` |
 | `/camp/crews` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:48` |
 | `/camp/*` | `Navigate` |  | `modules/camp/CampRoutes.tsx:50` |
-| `/hr (index)` | `HrHomePage` |  | `modules/hr/HrRoutes.tsx:21` |
-| `/hr/positions` | `HrHomePage` |  | `modules/hr/HrRoutes.tsx:22` |
-| `/hr/:campId` | `HrLayout` |  | `modules/hr/HrRoutes.tsx:23` |
-| `/hr (index)` | `Navigate` |  | `modules/hr/HrRoutes.tsx:24` |
-| `/hr/employees` | `EmployeesPage` |  | `modules/hr/HrRoutes.tsx:25` |
-| `/hr/departments` | `DepartmentsPage` |  | `modules/hr/HrRoutes.tsx:26` |
-| `/hr/crews` | `CrewsPage` |  | `modules/hr/HrRoutes.tsx:27` |
-| `/hr/shifts` | `ShiftsPage` |  | `modules/hr/HrRoutes.tsx:28` |
-| `/hr/attendance` | `AttendancePage` |  | `modules/hr/HrRoutes.tsx:29` |
-| `/hr/import` | `HrImportPage` |  | `modules/hr/HrRoutes.tsx:30` |
-| `/hr/positions` | `CatalogPage` |  | `modules/hr/HrRoutes.tsx:31` |
-| `/hr/*` | `Navigate` |  | `modules/hr/HrRoutes.tsx:32` |
+| `/hr (index)` | `HrHomePage` |  | `modules/hr/HrRoutes.tsx:22` |
+| `/hr/positions` | `HrHomePage` |  | `modules/hr/HrRoutes.tsx:23` |
+| `/hr/:campId` | `HrLayout` |  | `modules/hr/HrRoutes.tsx:24` |
+| `/hr (index)` | `Navigate` |  | `modules/hr/HrRoutes.tsx:25` |
+| `/hr/employees` | `EmployeesPage` |  | `modules/hr/HrRoutes.tsx:26` |
+| `/hr/departments` | `DepartmentsPage` |  | `modules/hr/HrRoutes.tsx:27` |
+| `/hr/crews` | `CrewsPage` |  | `modules/hr/HrRoutes.tsx:28` |
+| `/hr/shifts` | `ShiftsPage` |  | `modules/hr/HrRoutes.tsx:29` |
+| `/hr/attendance` | `AttendancePage` |  | `modules/hr/HrRoutes.tsx:30` |
+| `/hr/import` | `HrImportPage` |  | `modules/hr/HrRoutes.tsx:31` |
+| `/hr/positions` | `HrPositionsPage` |  | `modules/hr/HrRoutes.tsx:32` |
+| `/hr/users` | `HrUsersPage` |  | `modules/hr/HrRoutes.tsx:33` |
 | `/hr/*` | `Navigate` |  | `modules/hr/HrRoutes.tsx:34` |
+| `/hr/*` | `Navigate` |  | `modules/hr/HrRoutes.tsx:36` |
 
 ## Орчуулгын файлууд (`packages/i18n`)
 
 | Файл | Түлхүүр |
 |---|---|
-| `web.en.json` | 774 |
-| `web.mn.json` | 774 |
-| `web.zh.json` | 774 |
+| `web.en.json` | 829 |
+| `web.mn.json` | 829 |
+| `web.zh.json` | 829 |

@@ -40,8 +40,9 @@ tags: [codebase, frontend, camp, i18n]
 - `HrRoutes.tsx` — `/hr` (сүүлийн / ганц ажлын байр → шууд, эс бөгөөс жагсаалт), `/hr/positions`, `/hr/:campId/{employees,departments,crews,shifts,attendance,import,positions}`. `campId` = «үндсэн ажлын байр» (одоогоор кемп).
 - `components/HrLayout.tsx` — ажлын байр сонгогч (солиход ижил хэсэгт үлдэнэ) + цэс · `components/LegacyHrRedirect.tsx` — Кемпийн хуучин хаяг → HR.
 - `api/hr-api.ts` — **`hrApi`** (`/api/v1/hr/sites/:campId/...`): хэлтэс, бригад, ажилтан, ирц (`movements`, `movement-imports`), ээлж (`shift-calendar`, `shift-adjustments`), мастер импорт/экспорт (`data-imports`, `export/:type` — `rooms` ч), `dataImports` түүх. Query/Input type (`EmployeeQuery`, `MovementQuery`, `EmployeeInput`). DTO type `camp/api/types.ts`-д (RULE-20).
-- `pages/` — `Employees`, `Departments`, `Crews`, `Shifts`, `Attendance` (Кемпээс зөөсөн; «Ирц» нь Кемпийн `stays`-ыг харуулна), `HrHomePage`, `HrImportPage`.
-- `lib/` — `hr-sections` (хэсэг, зам, хуучин хаягийн зураглал), `import-columns` (ажилтан/хэлтсийн импортын багана); тест `lib/tests`.
+- `pages/` — `Employees` (засах цонхонд `EmployeeAccess`), `Departments`, `Crews`, `Shifts`, `Attendance` (Кемпээс зөөсөн; «Ирц» нь Кемпийн `stays`-ыг харуулна), `HrHomePage`, `HrImportPage`, `HrUsersPage` (Блок 4), `HrPositionsPage` (`CatalogPage` + `rowAction` «Эрхийн загвар»).
+- `components/` (Блок 4) — `EmployeeAccess` (нэвтрэх эрх үүсгэх), `InviteActions` (линк / имэйл), `UserPermissionsModal` (загвар/шууд эрх), `PositionTemplatesModal`. API — `campApi` (`users`, `setUserActive`, `createEmployeeUser`, `inviteUser`, `inviteOptions`, `userPermissions`, `grantDirect`, `revokeDirect`, `positionTemplates`, `setPositionTemplates`, `applyPositionTemplates`).
+- `lib/` — `hr-sections` (хэсэг, зам, хуучин хаягийн зураглал), `user-access` (урилгын линк, нэвтрэх нэр, төлөв, шүүлт, эрхийн бүлэглэл), `import-columns` (ажилтан/хэлтсийн импортын багана); тест `lib/tests`.
 - **Хамаарал:** `ui.tsx`, `useCampMutation`, `campKeys`, `ImportDialog`, `EmployeePicker`, `ShiftPattern`, `CatalogPage`, `camp/lib/*` — Кемпээс import (shared руу салгах — QA-10, v0.3). Шинэ HR хуудас: `hrApi` → `campKeys` → `HrRoutes` + `HR_SECTIONS` → `hr.section.*` i18n.
 
 ## 3. Бусад модуль

@@ -8,6 +8,13 @@ import type {
   Camp,
   CampSettings,
   CampUser,
+  CampTemplateScope,
+  CreateEmployeeUserResult,
+  InviteChannel,
+  InviteOptions,
+  InviteResult,
+  PositionTemplates,
+  UserPermissions,
   MealLocation,
   MaintenanceAction,
   MaintenanceDetail,
@@ -64,6 +71,20 @@ export const campApi = {
   /** v0.2.2 — загвар өөрчилсний дараа хэрэглэгчдэд хэрэгжүүлэх (автоматаар биш) */
   roleApplyPreview: (id: string) => get<RoleApplyPreview>(`${V1}/roles/${id}/apply-preview`),
   applyRole: (id: string) => post<{ roleId: string; affectedUsers: number; added: number; removed: number }>(`${V1}/roles/${id}/apply`, {}),
+  /** v0.2.2 Блок 4 (B4-Q2): идэвхгүй болгох / сэргээх */
+  setUserActive: (userId: string, isActive: boolean) => patch<{ id: string; isActive: boolean }>(`${V1}/users/${userId}`, { isActive }),
+  /** Блок 3: ажилтны картаас нэвтрэх эрх (email: undefined = картынх, null = имэйлгүй) */
+  createEmployeeUser: (campId: string, employeeId: string, email?: string | null) =>
+    post<CreateEmployeeUserResult>(campUrl(campId, `/employees/${employeeId}/create-user`), email === undefined ? {} : { email }),
+  inviteUser: (userId: string, channel: InviteChannel) => post<InviteResult>(`${V1}/users/${userId}/invites`, { channel }),
+  inviteOptions: () => get<InviteOptions>(`${V1}/invites/options`),
+  userPermissions: (userId: string) => get<UserPermissions>(`${V1}/users/${userId}/permissions`),
+  grantDirect: (userId: string, body: { permissionCode: string; campId: string | null }) => post<unknown>(`${V1}/users/${userId}/permissions`, body),
+  revokeDirect: (id: string) => del<unknown>(`${V1}/user-permissions/${id}`),
+  positionTemplates: (positionId: string) => get<PositionTemplates>(`${V1}/positions/${positionId}/role-templates`),
+  setPositionTemplates: (positionId: string, templates: { roleId: string; scope: CampTemplateScope }[]) =>
+    put<PositionTemplates>(`${V1}/positions/${positionId}/role-templates`, { templates }),
+  applyPositionTemplates: (positionId: string) => post<{ positionId: string; users: number }>(`${V1}/positions/${positionId}/role-templates/apply`, {}),
   userRoles: (q: { userId?: string; roleId?: string; campId?: string } = {}) => get<UserRole[]>(`${V1}/user-roles`, q),
   assignUserRole: (body: { userId: string; roleId: string; campId: string | null }) => post<unknown>(`${V1}/user-roles`, body),
   removeUserRole: (id: string) => del<unknown>(`${V1}/user-roles/${id}`),

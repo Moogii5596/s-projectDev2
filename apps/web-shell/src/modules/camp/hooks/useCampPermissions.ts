@@ -8,6 +8,10 @@ export const campKeys = {
   myPerms: (campId?: string) => ['camp', 'me', 'perms', campId ?? 'tenant'] as const,
   permissions: ['camp', 'permissions'] as const,
   users: ['camp', 'users'] as const,
+  /** v0.2.2 Блок 4 */
+  userPerms: (userId: string) => ['camp', 'users', userId, 'perms'] as const,
+  inviteOptions: ['camp', 'invite-options'] as const,
+  positionTemplates: (positionId: string) => ['camp', 'position-templates', positionId] as const,
   roles: ['camp', 'roles'] as const,
   userRoles: ['camp', 'user-roles'] as const,
   camps: ['camp', 'camps'] as const,
