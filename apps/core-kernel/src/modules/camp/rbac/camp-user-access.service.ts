@@ -8,6 +8,8 @@ import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { UserAdminService } from '../../../auth/user-admin.service';
 import { InviteService } from '../../../auth/invite.service';
 import { CampEmployeeLoginService } from './camp-employee-login.service';
+import { deactivateBlocker } from './user-list';
+import { CampAuditAction } from '@prisma/client';
 
 const P = CAMP_PERMISSIONS;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -85,6 +87,45 @@ export class CampUserAccessService {
       });
     });
     return res;
+  }
+
+  /**
+   * v0.2.2 Блок 4 (B4-Q2): PATCH /camp/users/:userId { isActive } — идэвхгүй болгох / сэргээх.
+   * GoTrue-д ban (нэвтрэлт, refresh хаагдана) → `core_users.is_active` (Кемпийн бүх API шууд 403) + хүлээгдэж буй урилгыг хүчингүй.
+   * DB амжилтгүй бол ban-ийг буцаана. Өөрийгөө / сүүлийн идэвхтэй OWNER-ийг идэвхгүй болгохгүй.
+   */
+  async setActive(tenantId: string, authId: string, userId: string, isActive: boolean) {
+    const prep = await inTenantTx(this.prisma, tenantId, async (tx) => {
+      const actorUserId = await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
+      const user = await tx.coreUser.findFirst({ where: { id: userId, tenantId }, select: { id: true, authId: true, role: true, isActive: true, fullName: true, email: true } });
+      if (!user) throw notFound('camp.err.rbac.5');
+      if (!isActive) {
+        const owners = user.role === 'OWNER' ? await tx.coreUser.count({ where: { tenantId, role: 'OWNER', isActive: true } }) : 0;
+        const blocked = deactivateBlocker(user, actorUserId, owners);
+        if (blocked) throw badRequest(blocked);
+      }
+      return user;
+    });
+    if (prep.isActive === isActive) return { id: prep.id, isActive };
+    await this.userAdmin.setBanned(prep.authId, !isActive);
+    try {
+      await inTenantTx(this.prisma, tenantId, async (tx) => {
+        const actorUserId = await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
+        await tx.coreUser.updateMany({ where: { id: userId, tenantId }, data: { isActive } });
+        if (!isActive) {
+          await tx.coreUserInvite.updateMany({ where: { tenantId, userId, usedAt: null, revokedAt: null }, data: { revokedAt: new Date() } });
+        }
+        await this.audit.record(tx, {
+          tenantId, campId: null, entityType: 'user_account', entityId: userId, action: CampAuditAction.UPDATE, actorUserId,
+          fields: ['isActive'], before: { isActive: prep.isActive }, after: { isActive },
+          summaryParams: { name: prep.fullName ?? prep.email },
+        });
+      });
+    } catch (err) {
+      await this.userAdmin.setBanned(prep.authId, isActive).catch(() => undefined);
+      throw err;
+    }
+    return { id: userId, isActive };
   }
 
   /** GET /camp/invites/options — имэйл суваг идэвхтэй эсэх (UI товч) */

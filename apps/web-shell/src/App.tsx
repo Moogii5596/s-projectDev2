@@ -13,6 +13,7 @@ import ApprovalSlaPage from './pages/ApprovalSlaPage';
 import WorkflowDefinitionPage from './pages/WorkflowDefinitionPage';
 import DelegationPage from './pages/DelegationPage';
 import CampRoutes from './modules/camp/CampRoutes';
+import HrRoutes from './modules/hr/HrRoutes';
 import InventoryPage from './modules/inventory/InventoryPage';
 import VendorsPage from './modules/vendor/VendorsPage';
 import ReportPage from './modules/report/ReportPage';
@@ -59,6 +60,8 @@ export default function App() {
 
           {/* Шат 8: Кемп модуль (V1) */}
           {isEnabled('camp') && <Route path="/camp/*" element={<CampRoutes />} />}
+          {/* v0.2.2 H2: Хүний нөөц (camp асвал автоматаар — lib/modules.ts) */}
+          {isEnabled('hr') && <Route path="/hr/*" element={<HrRoutes />} />}
 
           {/* Sprint 4: MFE Remote — /mfe route */}
           {isEnabled('mfe') && (

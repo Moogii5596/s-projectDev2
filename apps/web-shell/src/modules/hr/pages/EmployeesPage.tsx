@@ -1,31 +1,19 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { campApi, type EmployeeQuery } from '../api/camp-api'
-import type { CatalogItem, Employee, EmployeeStatus, ValueSource } from '../api/types'
-import { inherited } from '../lib/effective'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
-import { EMPLOYEE_STATUS_LABEL } from '../lib/labels'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../components/ui'
-import ImportDialog, { ExportButton, type GridColumn } from '../components/ImportDialog'
+import { campApi } from '../../camp/api/camp-api'
+import { hrApi, type EmployeeQuery } from '../api/hr-api'
+import type { CatalogItem, Employee, EmployeeStatus, ValueSource } from '../../camp/api/types'
+import { inherited } from '../../camp/lib/effective'
+import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
+import { useCampMutation } from '../../camp/hooks/useCampMutation'
+import { P } from '../../camp/lib/permissions'
+import { EMPLOYEE_STATUS_LABEL } from '../../camp/lib/labels'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../camp/components/ui'
+import ImportDialog, { ExportButton } from '../../camp/components/ImportDialog'
+import { EMPLOYEE_IMPORT_COLUMNS } from '../lib/import-columns'
 import { useTranslation } from 'react-i18next'
 
-/** FB-08 (v0.2.0): Excel / хүснэгтээр оруулах — баганын түлхүүр backend EMPLOYEES_SPEC-тэй ижил */
-const IMPORT_COLUMNS: GridColumn[] = [
-  { key: 'employeeCode', label: 'camp.emp.col.code', required: true },
-  { key: 'fullName', label: 'camp.emp.col.full_name', required: true },
-  { key: 'position', label: 'camp.emp.col.position' },
-  { key: 'mealLocation', label: 'camp.emp.col.meal_location' },
-  { key: 'mealsIncluded', label: 'camp.emp.col.meals_included' },
-  { key: 'phone', label: 'camp.emp.col.phone' },
-  { key: 'email', label: 'camp.emp.col.email' },
-  { key: 'organization', label: 'camp.emp.col.organization', required: true },
-  { key: 'department', label: 'camp.emp.col.department', required: true },
-  { key: 'crew', label: 'camp.emp.col.crew' },
-  { key: 'status', label: 'camp.emp.col.status' },
-]
 
 /** <select>-ийн утга ↔ boolean | null ('' = албан тушаалаас / анхдагч) */
 const toTri = (v: string): boolean | null => (v === '' ? null : v === 'yes')
@@ -46,8 +34,8 @@ export default function EmployeesPage() {
   const { campId = '' } = useParams()
   const perms = useCampPermissions(campId)
   const canEdit = perms.can(P.EMPLOYEE_MANAGE)
-  const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => campApi.departments(campId) })
-  const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => campApi.crews(campId) })
+  const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => hrApi.departments(campId) })
+  const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => hrApi.crews(campId) })
   const [filter, setFilter] = useState<EmployeeQuery>({ status: 'ACTIVE' })
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState<Employee | 'new' | null>(null)
@@ -58,7 +46,7 @@ export default function EmployeesPage() {
   const q: EmployeeQuery = { ...filter, q: search.trim() || undefined, limit: 50 }
   const list = useInfiniteQuery({
     queryKey: [...campKeys.employees(campId), q],
-    queryFn: ({ pageParam }) => campApi.employees(campId, { ...q, cursor: pageParam }),
+    queryFn: ({ pageParam }) => hrApi.employees(campId, { ...q, cursor: pageParam }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   })
@@ -220,7 +208,7 @@ export default function EmployeesPage() {
           campId={campId}
           type="employees"
           title={t('camp.emp.import_title')}
-          columns={IMPORT_COLUMNS}
+          columns={EMPLOYEE_IMPORT_COLUMNS}
           invalidate={[campKeys.employees(campId), campKeys.departments(campId), campKeys.crews(campId), campKeys.catalog('positions'), ...campKeys.operational(campId)]}
           onClose={() => setImporting(false)}
         />
@@ -232,8 +220,8 @@ export default function EmployeesPage() {
 function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee | null; onClose: () => void }) {
   const { t } = useTranslation()
   const orgs = useQuery({ queryKey: [...campKeys.organizations, 'active'], queryFn: () => campApi.organizations({ activeOnly: true }) })
-  const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => campApi.departments(campId) })
-  const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => campApi.crews(campId) })
+  const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => hrApi.departments(campId) })
+  const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => hrApi.crews(campId) })
   const positions = useQuery({ queryKey: campKeys.catalog('positions'), queryFn: () => campApi.catalog('positions') })
   const posSettings = useQuery({ queryKey: campKeys.positionSettings(campId), queryFn: () => campApi.positionSettings(campId) })
   const settings = useQuery({ queryKey: campKeys.settings(campId), queryFn: () => campApi.settings(campId) })
@@ -265,7 +253,7 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
     crewId: f.crewId || null,
   })
   const m = useCampMutation(
-    () => (emp ? campApi.updateEmployee(campId, emp.id, { ...body(), status: f.status }) : campApi.createEmployee(campId, body())),
+    () => (emp ? hrApi.updateEmployee(campId, emp.id, { ...body(), status: f.status }) : hrApi.createEmployee(campId, body())),
     [campKeys.employees(campId), ...campKeys.operational(campId)],
     onClose,
   )
@@ -405,7 +393,7 @@ function BulkBar({ campId, ids, positions, onDone }: { campId: string; ids: stri
   const [value, setValue] = useState('')
   const m = useCampMutation(
     () =>
-      campApi.bulkEmployees(campId, {
+      hrApi.bulkEmployees(campId, {
         ids,
         ...(action === 'meals' ? { mealsIncluded: toTri(value) } : {}),
         ...(action === 'location' ? { mealLocationId: value || null } : {}),

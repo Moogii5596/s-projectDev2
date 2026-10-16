@@ -3,20 +3,21 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
-import { campApi, type MovementQuery } from '../api/camp-api'
-import type { Direction, ImportPreview, ImportRowError, MealType, ShiftType, StayShiftGroup } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
-import { DIRECTION_LABEL, IMPORT_STATUS_LABEL, KIND_LABEL, MEAL_LABEL, MEAL_ORDER, SHIFT_LABEL, STAY_GROUPS, STAY_GROUP_LABEL } from '../lib/labels'
-import { filterStays, type StayFilter } from '../lib/stays'
-import { addDays, todayUb } from '../lib/dates'
-import { rangeProblem } from '../lib/calendar'
-import { type MealMode, mealsPayload } from '../lib/meals'
-import { downloadBlob } from '../lib/download'
+import { campApi } from '../../camp/api/camp-api'
+import { hrApi, type MovementQuery } from '../api/hr-api'
+import type { Direction, ImportPreview, ImportRowError, MealType, ShiftType, StayShiftGroup } from '../../camp/api/types'
+import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
+import { useCampMutation } from '../../camp/hooks/useCampMutation'
+import { P } from '../../camp/lib/permissions'
+import { DIRECTION_LABEL, IMPORT_STATUS_LABEL, KIND_LABEL, MEAL_LABEL, MEAL_ORDER, SHIFT_LABEL, STAY_GROUPS, STAY_GROUP_LABEL } from '../../camp/lib/labels'
+import { filterStays, type StayFilter } from '../../camp/lib/stays'
+import { addDays, todayUb } from '../../camp/lib/dates'
+import { rangeProblem } from '../../camp/lib/calendar'
+import { type MealMode, mealsPayload } from '../../camp/lib/meals'
+import { downloadBlob } from '../../camp/lib/download'
 import i18n from '../../../i18n'
-import EmployeePicker, { type PickedEmployee } from '../components/EmployeePicker'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../components/ui'
+import EmployeePicker, { type PickedEmployee } from '../../camp/components/EmployeePicker'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../camp/components/ui'
 
 const MAX_UPLOAD = 2 * 1024 * 1024
 const meals = (m: MealType[] | null) => (m === null ? '—' : m.length === 0 ? i18n.t('camp.att.no_meal') : m.map((x) => MEAL_LABEL[x]).join(', '))
@@ -131,19 +132,19 @@ function ImportCard({ campId, preview, setPreview }: { campId: string; preview: 
   const [localError, setLocalError] = useState<string | null>(null)
   const [confirmErrors, setConfirmErrors] = useState<ImportRowError[] | null>(null)
   const [done, setDone] = useState<string | null>(null)
-  const history = useQuery({ queryKey: campKeys.imports(campId), queryFn: () => campApi.imports(campId) })
+  const history = useQuery({ queryKey: campKeys.imports(campId), queryFn: () => hrApi.imports(campId) })
 
-  const upload = useCampMutation((file: File) => campApi.uploadImport(campId, file), [campKeys.imports(campId)], (res) => {
+  const upload = useCampMutation((file: File) => hrApi.uploadImport(campId, file), [campKeys.imports(campId)], (res) => {
     setPreview(res)
     setErrorsOnly(res.summary.errorRows > 0)
     setConfirmErrors(null)
     setDone(null)
   })
-  const confirm = useCampMutation((id: string) => campApi.confirmImport(campId, id), [...campKeys.operational(campId)], (r) => {
+  const confirm = useCampMutation((id: string) => hrApi.confirmImport(campId, id), [...campKeys.operational(campId)], (r) => {
     setPreview(null)
     setDone(t('camp.att.confirmed', { movements: r.movements, newStays: r.newStays, closedStays: r.closedStays, adjustments: r.adjustments }))
   })
-  const cancel = useCampMutation((id: string) => campApi.cancelImport(campId, id), [campKeys.imports(campId)], () => setPreview(null))
+  const cancel = useCampMutation((id: string) => hrApi.cancelImport(campId, id), [campKeys.imports(campId)], () => setPreview(null))
 
   const onFile = (file: File | undefined) => {
     setLocalError(null)
@@ -158,7 +159,7 @@ function ImportCard({ campId, preview, setPreview }: { campId: string; preview: 
   }
   const download = async () => {
     try {
-      downloadBlob(await campApi.importTemplate(campId), 'camp-attendance-template.xlsx')
+      downloadBlob(await hrApi.importTemplate(campId), 'camp-attendance-template.xlsx')
     } catch {
       setLocalError(t('camp.att.template_error'))
     }
@@ -323,8 +324,8 @@ function MovementsCard({ campId, canEdit, onPreview }: { campId: string; canEdit
   const [filter, setFilter] = useState<MovementFilter>({})
   const [adding, setAdding] = useState(false)
   const [bulk, setBulk] = useState(false)
-  const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => campApi.departments(campId) })
-  const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => campApi.crews(campId) })
+  const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => hrApi.departments(campId) })
+  const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => hrApi.crews(campId) })
   const problem = rangeProblem(from, to, 93)
   const q: MovementQuery = {
     from,
@@ -336,10 +337,10 @@ function MovementsCard({ campId, canEdit, onPreview }: { campId: string; canEdit
   }
   const list = useQuery({
     queryKey: [...campKeys.movements(campId), q],
-    queryFn: () => campApi.movements(campId, q),
+    queryFn: () => hrApi.movements(campId, q),
     enabled: !problem,
   })
-  const del = useCampMutation((id: string) => campApi.deleteMovement(campId, id), [...campKeys.operational(campId)])
+  const del = useCampMutation((id: string) => hrApi.deleteMovement(campId, id), [...campKeys.operational(campId)])
   const setF = (k: keyof MovementFilter, v: string) => setFilter((f) => ({ ...f, [k]: v || undefined }))
 
   return (
@@ -528,7 +529,7 @@ function MovementModal({ campId, onClose }: { campId: string; onClose: () => voi
   const payload = mealsPayload(mode, picked)
   const m = useCampMutation(
     () =>
-      campApi.createMovement(campId, {
+      hrApi.createMovement(campId, {
         employeeId: emp[0].id,
         date,
         direction,
@@ -577,12 +578,12 @@ function BulkMovementModal({ campId, onClose, onPreview }: { campId: string; onC
   const [crewId, setCrewId] = useState('')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => campApi.departments(campId) })
-  const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => campApi.crews(campId) })
+  const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => hrApi.departments(campId) })
+  const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => hrApi.crews(campId) })
   const emps = useQuery({
     queryKey: [...campKeys.employees(campId), 'bulk', departmentId, crewId, search.trim()],
     queryFn: () =>
-      campApi.employees(campId, {
+      hrApi.employees(campId, {
         status: 'ACTIVE',
         limit: 100,
         ...(departmentId ? { departmentId } : {}),
@@ -594,7 +595,7 @@ function BulkMovementModal({ campId, onClose, onPreview }: { campId: string; onC
   const payload = mealsPayload(mode, picked)
   const m = useCampMutation(
     () =>
-      campApi.manualMovements(campId, {
+      hrApi.manualMovements(campId, {
         date,
         direction,
         employeeIds: [...selected],

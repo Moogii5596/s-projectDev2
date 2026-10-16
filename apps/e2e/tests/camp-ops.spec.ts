@@ -59,10 +59,11 @@ async function selectRoom(dialog: ReturnType<Page['getByRole']>, roomNo: string)
   await select.selectOption(value as string);
 }
 
+/** v0.2.2 H2: Ирц, Ээлж, Ажилтан → «Хүний нөөц» */
 async function openSection(page: Page, section: string) {
-  await page.goto(`/camp/${campId}`);
-  await page.waitForURL('**/attendance');
-  await page.getByRole('navigation', { name: 'Кемпийн хэсгүүд' }).getByRole('link', { name: section, exact: true }).click();
+  await page.goto(`/hr/${campId}`);
+  await page.waitForURL('**/employees');
+  await page.getByRole('navigation', { name: 'Хүний нөөцийн хэсгүүд' }).getByRole('link', { name: section, exact: true }).click();
 }
 
 test.describe.serial('Кемп — өдөр тутмын ажиллагаа', () => {

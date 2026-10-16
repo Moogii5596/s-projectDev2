@@ -2,7 +2,7 @@
 title: "Frontend route-ууд (web-shell)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 tags: [codebase, frontend, generated]
 ---
 
@@ -14,52 +14,69 @@ tags: [codebase, frontend, generated]
 
 | Зам | Компонент | Нөхцөл | Файл |
 |---|---|---|---|
-| `/login` | `LoginPage` |  | `App.tsx:31` |
-| `/invite/:token` | `SetPasswordPage` |  | `App.tsx:33` |
-| `/reset/:token` | `SetPasswordPage` |  | `App.tsx:34` |
-| `/forgot` | `ForgotPasswordPage` |  | `App.tsx:35` |
-| `/change-password` | `ChangePasswordPage` |  | `App.tsx:40` |
-| `/` | `Navigate` |  | `App.tsx:43` |
-| `/requisitions` | `MRListPage` |  | `App.tsx:46` |
-| `/requisitions/new` | `MRCreatePage` |  | `App.tsx:47` |
-| `/requisitions/:id` | `MRDetailPage` |  | `App.tsx:48` |
-| `/admin/approval-sla` | `ApprovalSlaPage` |  | `App.tsx:49` |
-| `/admin/workflow-definitions` | `WorkflowDefinitionPage` |  | `App.tsx:50` |
-| `/admin/delegations` | `DelegationPage` |  | `App.tsx:51` |
-| `/inventory` | `InventoryPage` | модуль `inventory` | `App.tsx:56` |
-| `/vendors` | `VendorsPage` | модуль `vendors` | `App.tsx:57` |
-| `/reports` | `ReportPage` | модуль `reports` | `App.tsx:58` |
-| `/camp/*` | `CampRoutes` | модуль `camp` | `App.tsx:61` |
-| `/mfe/*` | `Suspense` |  | `App.tsx:65` |
-| `*` | `Navigate` |  | `App.tsx:78` |
-| `/camp (index)` | `CampHomePage` |  | `modules/camp/CampRoutes.tsx:19` |
-| `/camp/system` | `Navigate` |  | `modules/camp/CampRoutes.tsx:21` |
-| `/camp/system/:section` | `SystemSettingsPage` |  | `modules/camp/CampRoutes.tsx:22` |
-| `/camp/admin/organizations` | `Navigate` |  | `modules/camp/CampRoutes.tsx:23` |
-| `/camp/admin/roles` | `Navigate` |  | `modules/camp/CampRoutes.tsx:24` |
-| `/camp/admin/user-roles` | `Navigate` |  | `modules/camp/CampRoutes.tsx:25` |
-| `/camp/admin/asset-categories` | `Navigate` |  | `modules/camp/CampRoutes.tsx:26` |
-| `/camp/:campId` | `CampLayout` |  | `modules/camp/CampRoutes.tsx:27` |
-| `/camp (index)` | `Navigate` |  | `modules/camp/CampRoutes.tsx:28` |
-| `/camp/attendance` | `AttendancePage` |  | `modules/camp/CampRoutes.tsx:29` |
-| `/camp/shifts` | `ShiftsPage` |  | `modules/camp/CampRoutes.tsx:30` |
-| `/camp/rooms` | `RoomBoardPage` |  | `modules/camp/CampRoutes.tsx:31` |
-| `/camp/meals` | `PresencePage` |  | `modules/camp/CampRoutes.tsx:32` |
-| `/camp/maintenance` | `MaintenanceListPage` |  | `modules/camp/CampRoutes.tsx:33` |
-| `/camp/maintenance/:id` | `MaintenanceDetailPage` |  | `modules/camp/CampRoutes.tsx:34` |
-| `/camp/assets` | `AssetsPage` |  | `modules/camp/CampRoutes.tsx:35` |
-| `/camp/employees` | `EmployeesPage` |  | `modules/camp/CampRoutes.tsx:36` |
+| `/login` | `LoginPage` |  | `App.tsx:32` |
+| `/invite/:token` | `SetPasswordPage` |  | `App.tsx:34` |
+| `/reset/:token` | `SetPasswordPage` |  | `App.tsx:35` |
+| `/forgot` | `ForgotPasswordPage` |  | `App.tsx:36` |
+| `/change-password` | `ChangePasswordPage` |  | `App.tsx:41` |
+| `/` | `Navigate` |  | `App.tsx:44` |
+| `/requisitions` | `MRListPage` |  | `App.tsx:47` |
+| `/requisitions/new` | `MRCreatePage` |  | `App.tsx:48` |
+| `/requisitions/:id` | `MRDetailPage` |  | `App.tsx:49` |
+| `/admin/approval-sla` | `ApprovalSlaPage` |  | `App.tsx:50` |
+| `/admin/workflow-definitions` | `WorkflowDefinitionPage` |  | `App.tsx:51` |
+| `/admin/delegations` | `DelegationPage` |  | `App.tsx:52` |
+| `/inventory` | `InventoryPage` | модуль `inventory` | `App.tsx:57` |
+| `/vendors` | `VendorsPage` | модуль `vendors` | `App.tsx:58` |
+| `/reports` | `ReportPage` | модуль `reports` | `App.tsx:59` |
+| `/camp/*` | `CampRoutes` | модуль `camp` | `App.tsx:62` |
+| `/hr/*` | `HrRoutes` | модуль `hr` | `App.tsx:64` |
+| `/mfe/*` | `Suspense` |  | `App.tsx:68` |
+| `*` | `Navigate` |  | `App.tsx:81` |
+| `/camp (index)` | `CampHomePage` |  | `modules/camp/CampRoutes.tsx:21` |
+| `/camp/system` | `Navigate` |  | `modules/camp/CampRoutes.tsx:23` |
+| `/camp/system/positions` | `Navigate` |  | `modules/camp/CampRoutes.tsx:24` |
+| `/camp/system/:section` | `SystemSettingsPage` |  | `modules/camp/CampRoutes.tsx:25` |
+| `/camp/admin/organizations` | `Navigate` |  | `modules/camp/CampRoutes.tsx:26` |
+| `/camp/admin/roles` | `Navigate` |  | `modules/camp/CampRoutes.tsx:27` |
+| `/camp/admin/user-roles` | `Navigate` |  | `modules/camp/CampRoutes.tsx:28` |
+| `/camp/admin/asset-categories` | `Navigate` |  | `modules/camp/CampRoutes.tsx:29` |
+| `/camp/:campId` | `CampLayout` |  | `modules/camp/CampRoutes.tsx:30` |
+| `/camp (index)` | `Navigate` |  | `modules/camp/CampRoutes.tsx:31` |
+| `/camp/rooms` | `RoomBoardPage` |  | `modules/camp/CampRoutes.tsx:32` |
+| `/camp/meals` | `PresencePage` |  | `modules/camp/CampRoutes.tsx:33` |
+| `/camp/maintenance` | `MaintenanceListPage` |  | `modules/camp/CampRoutes.tsx:34` |
+| `/camp/maintenance/:id` | `MaintenanceDetailPage` |  | `modules/camp/CampRoutes.tsx:35` |
+| `/camp/assets` | `AssetsPage` |  | `modules/camp/CampRoutes.tsx:36` |
 | `/camp/settings` | `Navigate` |  | `modules/camp/CampRoutes.tsx:38` |
-| `/camp/settings/:section` | `CampSettingsPage` |  | `modules/camp/CampRoutes.tsx:39` |
-| `/camp/facilities` | `Navigate` |  | `modules/camp/CampRoutes.tsx:40` |
-| `/camp/departments` | `Navigate` |  | `modules/camp/CampRoutes.tsx:41` |
-| `/camp/crews` | `Navigate` |  | `modules/camp/CampRoutes.tsx:42` |
-| `/camp/*` | `Navigate` |  | `modules/camp/CampRoutes.tsx:44` |
+| `/camp/settings/departments` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:39` |
+| `/camp/settings/crews` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:40` |
+| `/camp/settings/:section` | `CampSettingsPage` |  | `modules/camp/CampRoutes.tsx:41` |
+| `/camp/facilities` | `Navigate` |  | `modules/camp/CampRoutes.tsx:42` |
+| `/camp/employees` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:44` |
+| `/camp/attendance` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:45` |
+| `/camp/shifts` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:46` |
+| `/camp/departments` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:47` |
+| `/camp/crews` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:48` |
+| `/camp/*` | `Navigate` |  | `modules/camp/CampRoutes.tsx:50` |
+| `/hr (index)` | `HrHomePage` |  | `modules/hr/HrRoutes.tsx:21` |
+| `/hr/positions` | `HrHomePage` |  | `modules/hr/HrRoutes.tsx:22` |
+| `/hr/:campId` | `HrLayout` |  | `modules/hr/HrRoutes.tsx:23` |
+| `/hr (index)` | `Navigate` |  | `modules/hr/HrRoutes.tsx:24` |
+| `/hr/employees` | `EmployeesPage` |  | `modules/hr/HrRoutes.tsx:25` |
+| `/hr/departments` | `DepartmentsPage` |  | `modules/hr/HrRoutes.tsx:26` |
+| `/hr/crews` | `CrewsPage` |  | `modules/hr/HrRoutes.tsx:27` |
+| `/hr/shifts` | `ShiftsPage` |  | `modules/hr/HrRoutes.tsx:28` |
+| `/hr/attendance` | `AttendancePage` |  | `modules/hr/HrRoutes.tsx:29` |
+| `/hr/import` | `HrImportPage` |  | `modules/hr/HrRoutes.tsx:30` |
+| `/hr/positions` | `CatalogPage` |  | `modules/hr/HrRoutes.tsx:31` |
+| `/hr/*` | `Navigate` |  | `modules/hr/HrRoutes.tsx:32` |
+| `/hr/*` | `Navigate` |  | `modules/hr/HrRoutes.tsx:34` |
 
 ## Орчуулгын файлууд (`packages/i18n`)
 
 | Файл | Түлхүүр |
 |---|---|
-| `web.en.json` | 731 |
-| `web.mn.json` | 731 |
-| `web.zh.json` | 731 |
+| `web.en.json` | 774 |
+| `web.mn.json` | 774 |
+| `web.zh.json` | 774 |

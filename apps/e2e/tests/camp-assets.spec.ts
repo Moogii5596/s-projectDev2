@@ -37,7 +37,7 @@ async function api<T = { id: string }>(page: Page, method: string, path: string,
 
 async function openSection(page: Page, section: string) {
   await page.goto(`/camp/${campId}`);
-  await page.waitForURL('**/attendance');
+  await page.waitForURL('**/rooms');
   await page.getByRole('navigation', { name: 'Кемпийн хэсгүүд' }).getByRole('link', { name: section, exact: true }).click();
 }
 

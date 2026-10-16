@@ -28,6 +28,8 @@ const EMPLOYEE_SELECT = {
   positionId: true,
   mealLocationId: true,
   mealsIncluded: true,
+  /** v0.2.2 Блок 4: холбогдсон нэвтрэх эрх (core_users.id) — UI «Нэвтрэх эрх» */
+  userId: true,
   createdAt: true,
   updatedAt: true,
   organization: { select: { name: true } },

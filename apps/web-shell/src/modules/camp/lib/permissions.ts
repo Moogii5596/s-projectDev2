@@ -52,3 +52,14 @@ export function canInAnyCamp(perm: { isTenantAdmin: boolean; permissions: string
   if (perm.isTenantAdmin || perm.permissions.includes(code)) return true
   return Object.values(perm.byCamp).some((list) => list.includes(code))
 }
+
+/**
+ * v0.2.2 H2 (H-Q3) — эрхийн харагдах нэр i18n-ээр **кодоор** (`perm.<code>`, mn/en/zh); DB-ийн `camp_permissions.name` хөндөгдөхгүй.
+ * Орчуулга алга (шинэ эрх DB-д нэмэгдээд json шинэчлэгдээгүй) → DB-ийн нэр.
+ */
+export const permissionLabelKey = (code: string): string => `perm.${code}`
+
+export function permissionLabel(p: { code: string; name: string }, exists: (key: string) => boolean, translate: (key: string) => string): string {
+  const key = permissionLabelKey(p.code)
+  return exists(key) ? translate(key) : p.name
+}

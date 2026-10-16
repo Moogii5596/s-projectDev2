@@ -79,7 +79,7 @@ test.describe.serial('Кемп v0.2.0', () => {
   });
 
   test('FB-08: ажилтан хүснэгтээр 3 мөр (1 алдаатай) → алдааг алгасаж 2 оруулна', async ({ page }) => {
-    await page.goto(`/camp/${campId}/employees`);
+    await page.goto(`/hr/${campId}/employees`);
     await page.getByRole('button', { name: 'Excel / хүснэгтээр оруулах' }).click();
     const dlg = page.getByRole('dialog');
     await dlg.getByRole('tab', { name: 'Хүснэгтээр оруулах' }).click();
@@ -128,7 +128,7 @@ test.describe.serial('Кемп v0.2.0', () => {
   });
 
   test('FB-14: олон хүний ирц (ростер A, ирэлт) → урьдчилсан → батлах; шүүлт', async ({ page }) => {
-    await page.goto(`/camp/${campId}/attendance`);
+    await page.goto(`/hr/${campId}/attendance`);
     await page.getByRole('button', { name: '+ Олон хүний ирц' }).click();
     const dlg = page.getByRole('dialog');
     await dlg.getByLabel('Огноо').fill(WED);
@@ -156,13 +156,24 @@ test.describe.serial('Кемп v0.2.0', () => {
 
     await page.goto(`/camp/${campId}/facilities`);
     await page.waitForURL(`**/camp/${campId}/settings/facilities`);
+    // v0.2.2 H2: хуучин хэлтэс/ростер/ажилтан/ирц/ээлжийн хаяг → «Хүний нөөц»
     await page.goto(`/camp/${campId}/crews`);
-    await page.waitForURL(`**/camp/${campId}/settings/crews`);
+    await page.waitForURL(`**/hr/${campId}/crews`);
     await expect(page.getByRole('button', { name: '+ Ростер бүртгэх' })).toBeVisible();
+    await page.goto(`/camp/${campId}/settings/departments`);
+    await page.waitForURL(`**/hr/${campId}/departments`);
+    await page.goto(`/camp/${campId}/employees`);
+    await page.waitForURL(`**/hr/${campId}/employees`);
+    await page.goto(`/camp/${campId}/attendance?x=1`);
+    await page.waitForURL(`**/hr/${campId}/attendance?x=1`);
+    await page.goto(`/camp/${campId}/shifts`);
+    await page.waitForURL(`**/hr/${campId}/shifts`);
+    await page.goto('/camp/system/positions');
+    await page.waitForURL('**/hr/*/positions');
     await page.goto('/camp/admin/organizations');
     await page.waitForURL('**/camp/system/organizations');
     await page.goto('/camp');
-    await page.waitForURL(`**/camp/${campId}/attendance`);
+    await page.waitForURL(`**/camp/${campId}/rooms`);
   });
 
   test.afterAll(async ({ browser }) => {
@@ -174,7 +185,7 @@ test.describe.serial('Кемп v0.2.0', () => {
   });
 
   test('олон хэл: EN → 中文 (цэс, хуудас, backend алдаа), профайлд хадгалагдана; буцааж МН', async ({ page, browser }) => {
-    await page.goto(`/camp/${campId}/employees`);
+    await page.goto(`/hr/${campId}/employees`);
     await page.getByRole('group', { name: 'Хэл' }).getByRole('button', { name: 'EN' }).click();
     await expect(page.getByRole('button', { name: 'Camp', exact: true })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Camp sections' }).getByRole('link', { name: 'Attendance' })).toBeVisible();

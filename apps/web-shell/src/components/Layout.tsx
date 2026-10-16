@@ -18,7 +18,7 @@ export default function Layout() {
   const queryClient = useQueryClient()
   // Кемпийн хуудсууд (эрхийн матриц, календарь) өргөн хүснэгттэй
   const { pathname } = useLocation()
-  const wide = pathname.startsWith('/camp')
+  const wide = pathname.startsWith('/camp') || pathname.startsWith('/hr')
   // Phase 6.0: идэвхтэй цэсийг тодруулна
   const navCls = (prefix: string) =>
     `text-sm hover:text-blue-600 ${pathname.startsWith(prefix) ? 'text-blue-600 font-medium' : 'text-gray-600'}`
@@ -41,6 +41,7 @@ export default function Layout() {
           S Project
         </span>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {isEnabled('hr') && <button onClick={() => navigate('/hr')} className={navCls('/hr')}>{t('nav.hr')}</button>}
           {isEnabled('camp') && <button onClick={() => navigate('/camp')} className={navCls('/camp')}>{t('nav.camp')}</button>}
           {isEnabled('inventory') && <button onClick={() => navigate('/inventory')} className={navCls('/inventory')}>{t('nav.inventory')}</button>}
           {isEnabled('vendors') && <button onClick={() => navigate('/vendors')} className={navCls('/vendors')}>{t('nav.vendors')}</button>}

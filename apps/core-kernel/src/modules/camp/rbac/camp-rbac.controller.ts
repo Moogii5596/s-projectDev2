@@ -11,6 +11,7 @@ import {
   LinkEmployeeUserDto,
   CreateEmployeeUserDto,
   CampInviteDto,
+  SetUserActiveDto,
   PositionPreviewQueryDto,
   QueryMyPermissionsDto,
   QueryUserRolesDto,
@@ -191,6 +192,13 @@ export class CampRbacController {
   inviteUser(@Req() req: FastifyRequest, @Param('userId', new ParseUUIDPipe()) userId: string, @Body() dto: CampInviteDto) {
     const u = reqUser(req);
     return this.userAccess.invite(u.tenantId, u.id, userId, dto.channel);
+  }
+
+  /** v0.2.2 Блок 4 (B4-Q2) */
+  @Patch('users/:userId')
+  setUserActive(@Req() req: FastifyRequest, @Param('userId', new ParseUUIDPipe()) userId: string, @Body() dto: SetUserActiveDto) {
+    const u = reqUser(req);
+    return this.userAccess.setActive(u.tenantId, u.id, userId, dto.isActive);
   }
 
   @Get('invites/options')

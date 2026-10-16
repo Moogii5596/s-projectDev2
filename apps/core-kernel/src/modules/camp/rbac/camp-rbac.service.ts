@@ -15,6 +15,7 @@ import {
 } from './camp-rbac.dto';
 import { CampAuditService } from '../common/camp-audit.service';
 import { buildApplyPreview, diffTemplate } from './template-diff';
+import { buildUserRows } from './user-list';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
 const P = CAMP_PERMISSIONS;
@@ -118,11 +119,26 @@ export class CampRbacService {
   async listUsers(tenantId: string, authId: string) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
-      return tx.coreUser.findMany({
+      const users = await tx.coreUser.findMany({
         where: { tenantId },
-        select: { id: true, email: true, fullName: true, isActive: true },
+        select: { id: true, email: true, fullName: true, isActive: true, role: true, phone: true, username: true },
         orderBy: [{ isActive: 'desc' }, { email: 'asc' }],
       });
+      const ids = users.map((x) => x.id);
+      // v0.2.2 Блок 4 (B4-Q3): холбогдсон ажилтан + сүүлийн урилга (INVITE)
+      const [employees, invites] = await Promise.all([
+        tx.hrEmployee.findMany({
+          where: { tenantId, userId: { in: ids } },
+          select: { id: true, userId: true, employeeCode: true, fullName: true, campId: true, camp: { select: { code: true } } },
+          orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+        }),
+        tx.coreUserInvite.findMany({
+          where: { tenantId, userId: { in: ids }, purpose: 'INVITE' },
+          select: { userId: true, channel: true, expiresAt: true, usedAt: true, revokedAt: true, createdAt: true },
+          orderBy: [{ createdAt: 'desc' }],
+        }),
+      ]);
+      return buildUserRows(users, employees, invites, new Date());
     });
   }
 

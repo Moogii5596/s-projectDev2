@@ -2,7 +2,7 @@
 title: "CHANGELOG"
 type: "Log"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 tags: [release]
 ---
 
@@ -16,6 +16,13 @@ tags: [release]
 ---
 
 ## [Unreleased]
+
+### v0.2.2 Блок H2 — «Хүний нөөц» цэс, frontend (2026-10-16) — [[ADR-006_HR_Core_Module]]
+- Шинэ дээд цэс **«Хүний нөөц»** (`/hr`): Ажилтан, Хэлтэс, Бригад (ростер), Ээлж, Ирц, Импорт, Албан тушаал; «Үндсэн ажлын байр» сонгогч. `VITE_MODULES=camp` бол автоматаар асна.
+- ⚠️ **Кемпийн цэс зөвхөн кемпийнх:** Өрөөний самбар (анхдагч), Хоол, Засвар, Хөрөнгө, Тохиргоо. Кемпийн тохиргооноос хэлтэс/ростер, «Системийн тохиргоо»-ноос албан тушаал → «Хүний нөөц». Хуучин хаягууд (`/camp/:id/employees`, `/attendance`, `/shifts`, `/settings/departments` г.м., `/camp/system/positions`) шинэ хаяг руу шилжинэ.
+- «Импорт» хуудас: ажилтан/хэлтсийн Excel импорт, экспорт, импортын түүх, ирцийн импортын түүх.
+- «Роль ба эрх»: эрхийн нэр орчуулгатай (mn/en/zh), «Хүний нөөц › …» / «Кемп › …» (DB нэр хөндөгдөөгүй).
+- Frontend `/api/v1/hr/...`, `/api/v1/core/organizations`-ийг дууддаг болсон; backend, DB өөрчлөгдөөгүй.
 
 ### v0.2.2 Блок H1 — HR / Core модуль, backend (2026-10-14) — [[ADR-006_HR_Core_Module]]
 - **DB өөрчлөгдөхгүй** (migration алга): Prisma model нэр `CampEmployee → HrEmployee`, `CampDepartment → HrDepartment`, `CampCrew → HrCrew`, `CampPosition → HrPosition`, `CampMovement(Import) → HrMovement(Import)`, `CampShiftAdjustment → HrShiftAdjustment`, `CampOrganization → CoreOrganization` (`@@map` хэвээр).

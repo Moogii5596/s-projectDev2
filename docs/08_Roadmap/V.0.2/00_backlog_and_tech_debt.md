@@ -2,7 +2,7 @@
 title: "v0.2 — Үлдсэн ажил ба техникийн өрийн нэгдсэн бүртгэл"
 type: "Roadmap"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 tags: [roadmap, v0.2]
 ---
 
@@ -102,6 +102,8 @@ tags: [roadmap, v0.2]
 | QA-07 | `pilot.ps1`-ийн автомат тест (pwsh + shim, PS-001) CI-д — v0.2.0: cloud harness-д 10 кейс (staging/upgrade/restore), repo/CI-д хараахан биш; Task Scheduler/Firewall хэсгийг гараар шалгах жагсаалт | lessons PS-001/002 | P2 | M | 🔄 harness ✅, CI 📋 |
 | QA-08 | `mfe-requisitions` (15 мөр stub) + Module Federation-ийг хадгалах уу, хасах уу | v0.1.5 | P2 | S | 📋 |
 | QA-09 | CONC-002 тест (30 зэрэгцээ MR) postgres горимд 4-өөс 1 удаа унав — алдааг барьж шалтгааныг батлах (таамаг: Prisma tx `maxWait`/`timeout`) | lessons TEST-019 | P2 | S | 📋 |
+| QA-10 | HR frontend Кемпээс хамаарна (`ui.tsx`, `useCampMutation`, `campKeys`, `types.ts`, `ImportDialog`, `EmployeePicker`, `CatalogPage`; «Ирц» → Кемпийн `stays`) → `modules/shared` руу салгах | v0.2.2 H2 (H2-Q3) | P2 | M | 📋 v0.3 |
+| QA-11 | e2e API helper-ууд хуучин `/api/v1/camp/...` (Deprecation) замыг дууддаг → хуучин зам устгахаас **өмнө** `/hr`, `/core` руу | v0.2.2 H2 | P1 | S | 📋 v0.2.3 |
 | I18N-02 | Олон хэлний үлдэгдэл: DTO (class-validator) мессеж, DB trigger-ийн тайлбар, ирцийн хуучин xlsx загвар (zh толгой/утга) | [[i18n-review]] §4 | P2 | M | 🔄 ирцийн xlsx zh ✅ v0.2.1; бусад 📋 |
 
 ## 5. Баримт

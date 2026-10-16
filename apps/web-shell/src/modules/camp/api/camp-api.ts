@@ -1,6 +1,5 @@
 import apiClient from '../../../api/client'
 import type {
-  AdjustmentReason,
   Asset,
   AssetCategory,
   AssetCondition,
@@ -9,14 +8,6 @@ import type {
   Camp,
   CampSettings,
   CampUser,
-  Crew,
-  Department,
-  Direction,
-  Employee,
-  EmployeeStatus,
-  ImportConfirmResult,
-  ImportHeader,
-  ImportPreview,
   MealLocation,
   MaintenanceAction,
   MaintenanceDetail,
@@ -25,8 +16,6 @@ import type {
   MaintenancePriority,
   MaintenanceRequest,
   MaintenanceStatus,
-  MealType,
-  Movement,
   PartSource,
   MyPermissions,
   Organization,
@@ -41,16 +30,9 @@ import type {
   RoomAllocation,
   RoomBoard,
   RoomStatus,
-  ShiftAdjustment,
-  ShiftCalendar,
   ShiftSegment,
-  ShiftType,
   UserRole,
   BulkRoomsInput,
-  DataImportPreview,
-  DataImportResult,
-  DataImportType,
-  ExportType,
   CatalogItem,
   CatalogKind,
   PositionSetting,
@@ -59,6 +41,9 @@ import type {
 } from './types'
 
 const V1 = '/api/v1/camp'
+/** v0.2.2 H2: tenant-түвшний HR/Core нөөц шинэ замаар (ADR-006 §5.1); байрны төрөл Кемпэд */
+const CORE_ORGS = '/api/v1/core/organizations'
+const CATALOG_BASE: Record<CatalogKind, string> = { positions: '/api/v1/hr/positions', 'building-types': `${V1}/building-types` }
 const campUrl = (campId: string, path = '') => `${V1}/camps/${campId}${path}`
 const get = async <T>(url: string, params?: object): Promise<T> => (await apiClient.get<T>(url, { params })).data
 const post = async <T>(url: string, body?: unknown): Promise<T> => (await apiClient.post<T>(url, body ?? {})).data
@@ -89,15 +74,15 @@ export const campApi = {
   createCamp: (body: { code: string; name: string; location?: string | null }) => post<Camp>(`${V1}/camps`, body),
   updateCamp: (campId: string, body: { name?: string; location?: string | null; isActive?: boolean }) => patch<Camp>(campUrl(campId), body),
 
-  // ── Байгууллага (tenant түвшин) ────────────────────────────
-  organizations: (q: { activeOnly?: boolean; serviceType?: OrgServiceType } = {}) => get<Organization[]>(`${V1}/organizations`, q),
-  createOrganization: (body: OrganizationInput) => post<Organization>(`${V1}/organizations`, body),
-  updateOrganization: (id: string, body: Partial<OrganizationInput> & { isActive?: boolean }) => patch<Organization>(`${V1}/organizations/${id}`, body),
+  // ── Байгууллага (tenant түвшин, Core) ────────────────────────────
+  organizations: (q: { activeOnly?: boolean; serviceType?: OrgServiceType } = {}) => get<Organization[]>(CORE_ORGS, q),
+  createOrganization: (body: OrganizationInput) => post<Organization>(CORE_ORGS, body),
+  updateOrganization: (id: string, body: Partial<OrganizationInput> & { isActive?: boolean }) => patch<Organization>(`${CORE_ORGS}/${id}`, body),
 
   // ── v0.2.1: байгууллагын каталог (албан тушаал, байрны төрөл) ──
-  catalog: (kind: CatalogKind, activeOnly = false) => get<CatalogItem[]>(`${V1}/${kind}`, { activeOnly }),
-  createCatalogItem: (kind: CatalogKind, name: string) => post<CatalogItem>(`${V1}/${kind}`, { name }),
-  updateCatalogItem: (kind: CatalogKind, id: string, body: { name?: string; isActive?: boolean }) => patch<CatalogItem>(`${V1}/${kind}/${id}`, body),
+  catalog: (kind: CatalogKind, activeOnly = false) => get<CatalogItem[]>(CATALOG_BASE[kind], { activeOnly }),
+  createCatalogItem: (kind: CatalogKind, name: string) => post<CatalogItem>(CATALOG_BASE[kind], { name }),
+  updateCatalogItem: (kind: CatalogKind, id: string, body: { name?: string; isActive?: boolean }) => patch<CatalogItem>(`${CATALOG_BASE[kind]}/${id}`, body),
   positionSettings: (campId: string) => get<PositionSetting[]>(campUrl(campId, '/position-settings')),
   savePositionSetting: (
     campId: string,
@@ -125,63 +110,8 @@ export const campApi = {
   createRoom: (campId: string, body: RoomInput & { buildingId: string }) => post<Room>(campUrl(campId, '/rooms'), body),
   updateRoom: (campId: string, id: string, body: Partial<RoomInput> & { status?: RoomStatus }) => patch<Room>(campUrl(campId, `/rooms/${id}`), body),
 
-  // ── Хэлтэс, баг ────────────────────────────────────────────
-  departments: (campId: string) => get<Department[]>(campUrl(campId, '/departments')),
-  createDepartment: (campId: string, body: { code: string; name: string; shiftPattern?: ShiftSegment[] }) =>
-    post<Department>(campUrl(campId, '/departments'), body),
-  updateDepartment: (campId: string, id: string, body: { name?: string; isActive?: boolean }) =>
-    patch<Department>(campUrl(campId, `/departments/${id}`), body),
-  setShiftPattern: (campId: string, id: string, segments: ShiftSegment[]) =>
-    put<Department>(campUrl(campId, `/departments/${id}/shift-pattern`), { segments }),
-  crews: (campId: string) => get<Crew[]>(campUrl(campId, '/crews')),
-  createCrew: (campId: string, body: { code: string; name?: string | null; rosterAnchorDate: string }) => post<Crew>(campUrl(campId, '/crews'), body),
-  updateCrew: (campId: string, id: string, body: { name?: string | null; rosterAnchorDate?: string; isActive?: boolean }) =>
-    patch<Crew>(campUrl(campId, `/crews/${id}`), body),
-
-  // ── Ажилтан ────────────────────────────────────────────────
-  employees: (campId: string, q: EmployeeQuery) => get<Page<Employee>>(campUrl(campId, '/employees'), q),
-  createEmployee: (campId: string, body: EmployeeInput) => post<Employee>(campUrl(campId, '/employees'), body),
-  updateEmployee: (campId: string, id: string, body: Partial<EmployeeInput> & { status?: EmployeeStatus }) =>
-    patch<Employee>(campUrl(campId, `/employees/${id}`), body),
-  /** v0.2.1 (Д-2): олон ажилтанд нэг дор (≤ 500) — null = цэвэрлэх (албан тушаалаас / анхдагч) */
-  bulkEmployees: (campId: string, body: { ids: string[]; mealsIncluded?: boolean | null; mealLocationId?: string | null; positionId?: string | null }) =>
-    post<{ updated: number }>(campUrl(campId, '/employees/bulk'), body),
-
-  // ── Ирц ────────────────────────────────────────────────────
-  /** Загвар xlsx (JWT-тэй тул blob-оор татна) */
-  importTemplate: async (campId: string): Promise<Blob> =>
-    (await apiClient.get<Blob>(campUrl(campId, '/movement-imports/template'), { responseType: 'blob' })).data,
-  /**
-   * multipart: Content-Type-ийг 'multipart/form-data' болгож өгнө — client-ийн анхдагч 'application/json' үлдвэл
-   * axios FormData-г JSON болгон хувиргана. Browser boundary-г өөрөө нэмнэ.
-   */
-  uploadImport: async (campId: string, file: File): Promise<ImportPreview> => {
-    const form = new FormData()
-    form.append('file', file)
-    return (await apiClient.post<ImportPreview>(campUrl(campId, '/movement-imports'), form, { headers: { 'Content-Type': 'multipart/form-data' } })).data
-  },
-  imports: (campId: string) => get<ImportHeader[]>(campUrl(campId, '/movement-imports')),
-  confirmImport: (campId: string, id: string) => post<ImportConfirmResult>(campUrl(campId, `/movement-imports/${id}/confirm`)),
-  cancelImport: (campId: string, id: string) => post<unknown>(campUrl(campId, `/movement-imports/${id}/cancel`)),
-  movements: (campId: string, q: MovementQuery) => get<Movement[]>(campUrl(campId, '/movements'), q),
   /** v0.2.1 (C-14): D өдөр кемпэд байгаа хүмүүс, тооцоолсон ээлжтэй */
   stays: (campId: string, date: string, shift?: StayShiftGroup) => get<Stay[]>(campUrl(campId, '/stays'), { date, ...(shift ? { shift } : {}) }),
-  /** FB-14 (v0.2.0): олон ажилтны ирц → импортын урсгал (PREVIEW) */
-  manualMovements: (campId: string, body: { date: string; direction: Direction; meals?: MealType[] | null; shift?: ShiftType; employeeIds: string[] }) =>
-    post<ImportPreview>(campUrl(campId, '/movement-imports/manual'), body),
-  createMovement: (campId: string, body: { employeeId: string; date: string; direction: Direction; meals?: MealType[]; shift?: ShiftType }) =>
-    post<unknown>(campUrl(campId, '/movements'), body),
-  deleteMovement: (campId: string, id: string) => del<unknown>(campUrl(campId, `/movements/${id}`)),
-
-  // ── Ээлж ───────────────────────────────────────────────────
-  shiftCalendar: (campId: string, q: { from: string; to: string; departmentId?: string; crewId?: string }) =>
-    get<ShiftCalendar>(campUrl(campId, '/shift-calendar'), q),
-  shiftAdjustments: (campId: string, q: { from: string; to: string; employeeId?: string }) => get<ShiftAdjustment[]>(campUrl(campId, '/shift-adjustments'), q),
-  createShiftAdjustments: (
-    campId: string,
-    body: { employeeIds: string[]; startDate: string; endDate: string; shift: ShiftType; reasonType: AdjustmentReason; reason?: string | null },
-  ) => post<{ created: number }>(campUrl(campId, '/shift-adjustments'), body),
-  deleteShiftAdjustment: (campId: string, id: string) => del<unknown>(campUrl(campId, `/shift-adjustments/${id}`)),
 
   // ── Өрөө ───────────────────────────────────────────────────
   roomBoard: (campId: string, date: string) => get<RoomBoard>(campUrl(campId, '/room-board'), { date }),
@@ -204,25 +134,6 @@ export const campApi = {
   moveAsset: (campId: string, id: string, body: { toRoomId: string | null; toBuildingId?: string | null; reason?: string | null }) => post<Asset>(campUrl(campId, `/assets/${id}/move`), body),
   writeOffAsset: (campId: string, id: string, reason: string) => post<Asset>(campUrl(campId, `/assets/${id}/write-off`), { reason }),
   assetMovements: (campId: string, id: string) => get<AssetMovement[]>(campUrl(campId, `/assets/${id}/movements`)),
-
-  // ── v0.2.0 §0.5: мастер өгөгдлийн импорт/экспорт ─────────
-  dataTemplate: async (campId: string, type: DataImportType): Promise<Blob> =>
-    (await apiClient.get<Blob>(campUrl(campId, `/data-imports/${type}/template`), { responseType: 'blob' })).data,
-  dataUploadXlsx: async (campId: string, type: DataImportType, file: File): Promise<DataImportPreview> => {
-    const form = new FormData()
-    form.append('file', file)
-    return (await apiClient.post<DataImportPreview>(campUrl(campId, `/data-imports/${type}`), form, { headers: { 'Content-Type': 'multipart/form-data' } })).data
-  },
-  dataUploadRows: (campId: string, type: DataImportType, rows: Record<string, unknown>[]) => post<DataImportPreview>(campUrl(campId, `/data-imports/${type}`), { rows }),
-  dataConfirm: (campId: string, type: DataImportType, id: string, skipErrors: boolean) =>
-    post<DataImportResult>(campUrl(campId, `/data-imports/${type}/${id}/confirm`), { skipErrors }),
-  dataCancel: (campId: string, type: DataImportType, id: string) => post<unknown>(campUrl(campId, `/data-imports/${type}/${id}/cancel`)),
-  exportFile: async (campId: string, type: ExportType): Promise<{ blob: Blob; fileName: string }> => {
-    const res = await apiClient.get<Blob>(campUrl(campId, `/export/${type}`), { responseType: 'blob' })
-    const cd = String(res.headers['content-disposition'] ?? '')
-    const m = /filename="([^"]+)"/.exec(cd)
-    return { blob: res.data, fileName: m?.[1] ?? `${type}.xlsx` }
-  },
 
   // ── Засвар ─────────────────────────────────────────────────
   maintenanceList: (campId: string, q: MaintenanceQuery) => get<Page<MaintenanceRequest>>(campUrl(campId, '/maintenance'), q),
@@ -281,45 +192,6 @@ export interface PartInput {
   unitPrice?: number | null
   vatIncluded?: boolean
   source: PartSource
-}
-
-export interface EmployeeQuery {
-  cursor?: string
-  limit?: number
-  q?: string
-  departmentId?: string
-  crewId?: string
-  organizationId?: string
-  status?: EmployeeStatus
-  /** v0.2.1: UUID эсвэл 'none' */
-  positionId?: string
-  mealsIncluded?: boolean
-}
-
-export interface MovementQuery {
-  from: string
-  to: string
-  employeeId?: string
-  /** FB-14 */
-  departmentId?: string
-  crewId?: string
-  position?: string
-  q?: string
-}
-
-export interface EmployeeInput {
-  organizationId: string
-  departmentId: string
-  crewId?: string | null
-  employeeCode: string
-  fullName: string
-  position?: string | null
-  /** v0.2.1 */
-  positionId?: string | null
-  mealLocationId?: string | null
-  mealsIncluded?: boolean | null
-  phone?: string | null
-  email?: string | null
 }
 
 export interface OrganizationInput {

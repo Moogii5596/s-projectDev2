@@ -3,21 +3,35 @@
  *
  *   хоосон / "all" → бүгд (хөгжүүлэлт, анхдагч)
  *   "camp"         → зөвхөн Кемп (пилот) — цэс, route, нүүр хуудас (/camp) үүгээр шүүгдэнэ
+ *   v0.2.2 H2: "hr" (Хүний нөөц) — Кемп ажилтны өгөгдлөө HR-ээс авдаг тул `camp` асаахад `hr` автоматаар асна
+ *              (MODULE_REQUIRES; пилотын `VITE_MODULES=camp` өөрчлөгдөхгүй).
  *
  * Зөвхөн UI-г шүүнэ (backend эрх хэвээр). Цэвэр функц — unit тестлэгдэнэ (supabase import хийхгүй, FE-005).
  */
-export const APP_MODULES = ['mr', 'camp', 'inventory', 'vendors', 'reports', 'mfe'] as const;
+export const APP_MODULES = ['mr', 'camp', 'hr', 'inventory', 'vendors', 'reports', 'mfe'] as const;
 export type AppModule = (typeof APP_MODULES)[number];
 
 /** Модуль бүрийн нүүр зам — эхний идэвхтэй модуль нь апп-ын нүүр болно */
 export const MODULE_HOME: Record<AppModule, string> = {
   mr: '/requisitions',
   camp: '/camp',
+  hr: '/hr',
   inventory: '/inventory',
   vendors: '/vendors',
   reports: '/reports',
   mfe: '/mfe',
 };
+
+/** Модулийн хамаарал: түлхүүр модуль асвал утга дахь модулиуд мөн асна (H2: camp → hr) */
+export const MODULE_REQUIRES: Partial<Record<AppModule, readonly AppModule[]>> = {
+  camp: ['hr'],
+};
+
+function withRequired(picked: Iterable<AppModule>): Set<AppModule> {
+  const out = new Set<AppModule>(picked);
+  for (const m of [...out]) for (const dep of MODULE_REQUIRES[m] ?? []) out.add(dep);
+  return out;
+}
 
 export function parseModules(raw: string | undefined): ReadonlySet<AppModule> {
   const value = (raw ?? '').trim().toLowerCase();
@@ -27,7 +41,7 @@ export function parseModules(raw: string | undefined): ReadonlySet<AppModule> {
   if (unknown.length > 0) {
     throw new Error(`VITE_MODULES буруу: ${unknown.join(', ')} (${APP_MODULES.join(', ')} эсвэл all)`);
   }
-  return new Set(picked as AppModule[]);
+  return withRequired(picked as AppModule[]);
 }
 
 export function homePath(modules: ReadonlySet<AppModule>): string {

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
 import { makeCan } from '../lib/permissions'
 
+/** Query key-ийн ганц эх сурвалж — HR (v0.2.2 H2) мөн эдгээрийг ашиглана (ирц ↔ өрөө/хоолны харагдац хамт invalidate) */
 export const campKeys = {
   all: ['camp'] as const,
   myPerms: (campId?: string) => ['camp', 'me', 'perms', campId ?? 'tenant'] as const,
@@ -20,6 +21,8 @@ export const campKeys = {
   crews: (campId: string) => ['camp', campId, 'crews'] as const,
   employees: (campId: string) => ['camp', campId, 'employees'] as const,
   imports: (campId: string) => ['camp', campId, 'imports'] as const,
+  /** v0.2.2 H2: мастер өгөгдлийн импортын түүх (HR «Импорт») */
+  dataImports: (campId: string) => ['camp', campId, 'data-imports'] as const,
   movements: (campId: string) => ['camp', campId, 'movements'] as const,
   calendar: (campId: string) => ['camp', campId, 'calendar'] as const,
   adjustments: (campId: string) => ['camp', campId, 'adjustments'] as const,

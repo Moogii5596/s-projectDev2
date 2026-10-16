@@ -10,16 +10,14 @@ import { P } from '../lib/permissions'
 import { weekdayName, weekdayNames } from '../lib/labels'
 import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Table, inputCls, td } from '../components/ui'
 import FacilitiesPage from './FacilitiesPage'
-import DepartmentsPage from './DepartmentsPage'
-import CrewsPage from './CrewsPage'
 import PositionSettingsPage from './PositionSettingsPage'
 
 /**
  * /camp/:campId/settings/:section — кемпийн тохиргооны каталог (FB-05, v0.2.0):
- * зүүн цэс (Ерөнхий · Хоолны байршил · Байр, өрөө · Хэлтэс, ээлж · Ростер) → баруун талд тухайн хэсэг.
- * Хуучин /facilities, /departments, /crews → энд redirect (CampRoutes).
+ * зүүн цэс (Ерөнхий · Хоолны байршил · Албан тушаалын хоол/ээлж · Байр, өрөө) → баруун талд тухайн хэсэг.
+ * Хуучин /facilities → энд redirect. v0.2.2 H2: хэлтэс, бригад → «Хүний нөөц» (/hr/:campId/...) (CampRoutes).
  */
-export const SETTINGS_SECTIONS = ['general', 'meal-locations', 'positions', 'facilities', 'departments', 'crews'] as const
+export const SETTINGS_SECTIONS = ['general', 'meal-locations', 'positions', 'facilities'] as const
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number]
 
 export default function CampSettingsPage() {
@@ -48,8 +46,6 @@ export default function CampSettingsPage() {
         {section === 'meal-locations' && <MealLocationsSection />}
         {section === 'positions' && <PositionSettingsPage />}
         {section === 'facilities' && <FacilitiesPage />}
-        {section === 'departments' && <DepartmentsPage />}
-        {section === 'crews' && <CrewsPage />}
       </div>
     </div>
   )

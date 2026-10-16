@@ -44,7 +44,7 @@ export default function PositionSettingsPage() {
         {rows.data && rows.data.length === 0 && (
           <Empty>
             {t('camp.pos.empty')}{' '}
-            <Link to="/camp/system/positions" className="text-blue-600 hover:underline">
+            <Link to="/hr/positions" className="text-blue-600 hover:underline">
               {t('camp.system.section.positions')}
             </Link>
           </Empty>

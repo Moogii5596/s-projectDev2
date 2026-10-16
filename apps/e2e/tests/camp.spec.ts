@@ -27,11 +27,18 @@ async function openCamp(page: Page) {
     throw new Error('admin@test.mn-д кемпийн эрх алга — supabase/dev/camp_e2e_grant.sql-ийг ажиллуулна уу (README тэмдэглэл)');
   }
   await page.getByRole('link', { name: new RegExp(CAMP_NAME) }).click();
-  // кемп нээгдэхэд анхдагч хэсэг = Ирц (багц 2); тохиргоо руу шилжинэ
-  await page.waitForURL('**/attendance');
+  // кемп нээгдэхэд анхдагч хэсэг = Өрөөний самбар (v0.2.2 H2; ирц → Хүний нөөц); тохиргоо руу шилжинэ
+  await page.waitForURL('**/rooms');
   await page.getByRole('link', { name: 'Тохиргоо', exact: true }).click();
   // v0.2.0 FB-05: тохиргооны каталог (зүүн цэс) — анхдагч "Ерөнхий"
   await page.waitForURL('**/settings/general');
+}
+
+/** v0.2.2 H2: «Хүний нөөц» (сүүлд нээсэн кемп = үндсэн ажлын байр) → хэсэг */
+async function openHr(page: Page, section: string) {
+  await page.getByRole('button', { name: 'Хүний нөөц', exact: true }).click();
+  await page.waitForURL('**/hr/*/employees');
+  await page.getByRole('navigation', { name: 'Хүний нөөцийн хэсгүүд' }).getByRole('link', { name: section, exact: true }).click();
 }
 
 /** Тохиргооны зүүн цэсний хэсэг */
@@ -98,7 +105,7 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
 
   test('хэлтэс + ээлжийн загвар (1–7 өдөр, 8–14 шөнө)', async ({ page }) => {
     await openCamp(page);
-    await openSetting(page, 'Хэлтэс, ээлж');
+    await openHr(page, 'Хэлтэс');
     await page.getByRole('button', { name: '+ Хэлтэс' }).click();
     const dlg = page.getByRole('dialog');
     await dlg.getByLabel('Код').fill('MINE');
@@ -120,7 +127,7 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
 
   test('ростер (FB-06): солигдох гарагаас өөр өдөр → хадгалах боломжгүй', async ({ page }) => {
     await openCamp(page);
-    await openSetting(page, 'Ростер');
+    await openHr(page, 'Бригад (ростер)');
     await page.getByRole('button', { name: '+ Ростер бүртгэх' }).click();
     const dlg = page.getByRole('dialog');
     const wed = nextWednesday();

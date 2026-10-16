@@ -20,8 +20,9 @@ import CatalogPage from './CatalogPage'
 /**
  * /camp/system/:section — FB-11 (v0.2.0) "Системийн тохиргоо": кемпүүд, байгууллага, албан тушаал, байрны төрөл (v0.2.1), хөрөнгийн ангилал,
  * роль ба эрх, хэрэглэгчийн роль, орчуулга (OWNER/ADMIN). Хуучин /camp/admin/* → энд redirect.
+ * v0.2.2 H2: албан тушаал → «Хүний нөөц» (/hr/positions).
  */
-const SECTIONS = ['camps', 'organizations', 'positions', 'building-types', 'asset-categories', 'roles', 'user-roles', 'translations'] as const
+const SECTIONS = ['camps', 'organizations', 'building-types', 'asset-categories', 'roles', 'user-roles', 'translations'] as const
 
 export default function SystemSettingsPage() {
   const { t } = useTranslation()
@@ -56,7 +57,6 @@ export default function SystemSettingsPage() {
         <div className="min-w-0 flex-1">
           {section === 'camps' && <CampsSection />}
           {section === 'organizations' && <OrganizationsPage />}
-          {section === 'positions' && <CatalogPage kind="positions" />}
           {section === 'building-types' && <CatalogPage kind="building-types" />}
           {section === 'asset-categories' && <AssetCategoriesPage />}
           {section === 'roles' && <RolesPage />}

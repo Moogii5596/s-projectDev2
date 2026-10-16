@@ -10,9 +10,14 @@ describe('parseModules', () => {
     expect([...parseModules(' ALL ')]).toEqual([...APP_MODULES]);
   });
 
-  it('camp → зөвхөн кемп; таслалаар олон', () => {
-    expect([...parseModules('camp')]).toEqual(['camp']);
-    expect([...parseModules(' Camp , reports ')]).toEqual(['camp', 'reports']);
+  it('camp → кемп + hr (v0.2.2 H2 хамаарал); таслалаар олон', () => {
+    expect([...parseModules('camp')]).toEqual(['camp', 'hr']);
+    expect([...parseModules(' Camp , reports ')]).toEqual(['camp', 'reports', 'hr']);
+  });
+
+  it('hr дангаараа → зөвхөн hr (кемпийг асаахгүй)', () => {
+    expect([...parseModules('hr')]).toEqual(['hr']);
+    expect([...parseModules('hr,camp')]).toEqual(['hr', 'camp']);
   });
 
   it('үл мэдэгдэх модуль → алдаа (бичгийн алдааг чимээгүй өнгөрөөхгүй)', () => {
@@ -25,6 +30,11 @@ describe('homePath', () => {
     expect(homePath(parseModules(''))).toBe('/requisitions');
     expect(homePath(parseModules('camp'))).toBe('/camp');
     expect(homePath(parseModules('reports,camp'))).toBe('/camp');
+  });
+
+  it('H2: camp асаахад нүүр /camp хэвээр (hr нүүр болохгүй); зөвхөн hr → /hr', () => {
+    expect(homePath(parseModules('camp'))).toBe('/camp');
+    expect(homePath(parseModules('hr'))).toBe('/hr');
   });
 
   it('зөвхөн mfe → алдаа', () => {

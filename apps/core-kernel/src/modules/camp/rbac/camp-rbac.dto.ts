@@ -1,4 +1,4 @@
-import { ArrayMaxSize, ArrayUnique, IsArray, IsEmail, IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CampTemplateScope } from '@prisma/client';
 import { trim, trimOrNull } from '../common/camp-dto.util';
@@ -101,4 +101,10 @@ export class CreateEmployeeUserDto {
 export class CampInviteDto {
   @IsIn(['LINK', 'EMAIL'])
   channel!: 'LINK' | 'EMAIL';
+}
+
+/** v0.2.2 Блок 4 (B4-Q2): PATCH /camp/users/:userId { isActive } */
+export class SetUserActiveDto {
+  @IsBoolean()
+  isActive!: boolean;
 }

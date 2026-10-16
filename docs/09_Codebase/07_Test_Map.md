@@ -2,7 +2,7 @@
 title: "Тестийн зураглал"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 tags: [codebase, testing, generated]
 ---
 
@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 25 файл, ~234 тест
+## Integration (бодит PG + RLS) — 26 файл, ~237 тест
 
 Команд: `pnpm test:integration`
 
@@ -31,6 +31,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/camp-v022-invite.integration.spec.ts` | 5 | v0.2.2 Блок 3 — урилга, хэрэглэгч үүсгэх (integration) |
 | `core-kernel/test/camp-v022-login.integration.spec.ts` | 7 | v0.2.2 Блок 2 — нэвтрэх нэр, ажилтан ↔ хэрэглэгч (integration) |
 | `core-kernel/test/camp-v022-perms.integration.spec.ts` | 7 | v0.2.2 Блок 1 — camp_user_permissions (integration) |
+| `core-kernel/test/camp-v022-users.integration.spec.ts` | 3 | v0.2.2 Блок 4 — хэрэглэгч удирдах (integration) |
 | `core-kernel/test/event-bus.integration.spec.ts` | 5 | 🔗 5.2 Гинж: MR → Workflow → Budget → Outbox → Redis · 🔒 5.0 Зэрэгцээ poller — event бүр яг нэг удаа [EVT-001] · ♻️ 5.3 Retry + DLQ |
 | `core-kernel/test/hr-routes.integration.spec.ts` | 7 | 👥 HR ажилтан, бүтэц — шинэ ба хуучин зам ижил · 🗓 HR ирц → Кемпийн байрлалт (H-Q2) · 📥 HR импорт / экспорт · 🔒 RLS (app_user) — HR model нэр солигдсон ч DB хүснэгт хэвээр |
 | `core-kernel/test/i18n-overrides.integration.spec.ts` | 7 | 🌐 Орчуулгын Excel · 🗣 Хэрэглэгчийн хэл · 🌐 Кемпийн алдаа 3 хэлээр (code + params + message) |
@@ -44,7 +45,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 73 файл, ~556 тест
+## Unit — core-kernel — 74 файл, ~567 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -92,6 +93,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/camp/master/tests/camp-master.services.test.ts` | 28 | CampsService (Шат 2.4) · CampFacilitiesService (Шат 2.4) · CoreOrganizationsService (Шат 2.4) · HrDepartmentsService (Шат 2.4) · HrCrewsService (Шат 2.4) · HrEmployeesService (Шат 2.4) |
 | `core-kernel/src/modules/camp/rbac/tests/camp-rbac.service.test.ts` | 23 | CampRbacService (Шат 2.2) · Эрхийн V1/V2 хүрээ (D8, 2026-10-09) · CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүлэх, шууд эрх) |
 | `core-kernel/src/modules/camp/rbac/tests/template-diff.test.ts` | 2 | template-diff (v0.2.2 D-09) |
+| `core-kernel/src/modules/camp/rbac/tests/user-access-b4.test.ts` | 11 | user-list (цэвэр) · CampRbacService.listUsers (B4-Q3) · CampUserAccessService.setActive (B4-Q2) |
 | `core-kernel/src/modules/camp/settings/tests/camp-settings.service.test.ts` | 12 | CampSettingsService (Шат 2.3) |
 | `core-kernel/src/modules/event-bus/cloud-events.adapter.spec.ts` | 6 | CloudEventsAdapter |
 | `core-kernel/src/modules/event-bus/dlq.service.spec.ts` | 3 | DlqService |
@@ -124,14 +126,14 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/scripts/pilot-admin.spec.ts` | 7 | validate* · onboard · ensureUser |
 | `core-kernel/src/scripts/test-user.spec.ts` | 9 | ensureTestUser · assertLocalUrl · parseDotenv / parseArgs |
 
-## Unit — web-shell — 13 файл, ~74 тест
+## Unit — web-shell — 15 файл, ~83 тест
 
 Команд: `pnpm --filter web-shell test`
 
 | Файл | Тест | describe |
 |---|---|---|
 | `web-shell/src/i18n/tests/i18n.test.ts` | 4 | орчуулгын каталог · i18n ажиллагаа |
-| `web-shell/src/lib/tests/modules.test.ts` | 6 | parseModules · homePath · resolveSupabaseUrl |
+| `web-shell/src/lib/tests/modules.test.ts` | 8 | parseModules · homePath · resolveSupabaseUrl |
 | `web-shell/src/lib/tests/mr-approval.test.ts` | 8 | approvalState [SEC-004] — backend approvalDenial-тэй ижил · stepViews |
 | `web-shell/src/lib/tests/password-change.test.ts` | 4 | password-change (v0.2.2 D-06) · displayLogin |
 | `web-shell/src/lib/tests/unauthorized.test.ts` | 3 | handleUnauthorized [FE-007] |
@@ -141,6 +143,8 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/camp/lib/tests/camp-v021-lib.test.ts` | 4 | v0.2.1 filterStays (C-14) · v0.2.1 хөрөнгийн байршил (C-12) · v0.2.1 inherited (Q1): албан тушаал(кемп) ?? кемпийн анхдагч |
 | `web-shell/src/modules/camp/lib/tests/grid.test.ts` | 5 | grid (хүснэгтээр оруулах) · room-range (FB-07) |
 | `web-shell/src/modules/camp/lib/tests/last-camp.test.ts` | 3 | last-camp (FB-11) |
+| `web-shell/src/modules/camp/lib/tests/permission-label.test.ts` | 3 | permissionLabel |
+| `web-shell/src/modules/hr/lib/tests/hr-sections.test.ts` | 4 | hr-sections |
 | `web-shell/src/modules/inventory/lib/tests/quantity.test.ts` | 5 | inventory quantity (numeric(15,3), float-гүй) |
 | `web-shell/src/modules/report/lib/tests/report.test.ts` | 5 | report lib |
 

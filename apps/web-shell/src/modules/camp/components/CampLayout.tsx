@@ -11,8 +11,10 @@ import { Badge, ErrorBox, Loading, inputSmCls } from './ui'
 /**
  * Кемп тус бүрийн хэсгүүд: өдөр тутмын ажиллагаа эхэнд, тохиргоо сүүлд.
  * FB-05 (v0.2.0): Байр/Хэлтэс/Ростер нь "Тохиргоо" каталог руу шилжсэн (settings/:section).
+ * v0.2.2 H2: зөвхөн кемпийнх (өрөө, хоол, засвар, хөрөнгө, тохиргоо); ажилтан/ирц/ээлж → «Хүний нөөц».
  */
-export const CAMP_SECTIONS = ['attendance', 'shifts', 'rooms', 'meals', 'maintenance', 'assets', 'employees', 'settings'] as const
+export const CAMP_SECTIONS = ['rooms', 'meals', 'maintenance', 'assets', 'settings'] as const
+export const CAMP_DEFAULT_SECTION = 'rooms'
 
 export default function CampLayout() {
   const { t } = useTranslation()
@@ -30,8 +32,8 @@ export default function CampLayout() {
 
   /** Кемп солиход ижил хэсэгт үлдэнэ (жнь /camp/A/rooms → /camp/B/rooms) */
   const switchTo = (id: string) => {
-    const section = pathname.split('/')[3] ?? 'attendance'
-    navigate(`/camp/${id}/${(CAMP_SECTIONS as readonly string[]).includes(section) ? section : 'attendance'}`)
+    const section = pathname.split('/')[3] ?? CAMP_DEFAULT_SECTION
+    navigate(`/camp/${id}/${(CAMP_SECTIONS as readonly string[]).includes(section) ? section : CAMP_DEFAULT_SECTION}`)
   }
 
   return (

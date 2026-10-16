@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type ClipboardEvent } from 'react'
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { campApi } from '../api/camp-api'
+import { hrApi } from '../../hr/api/hr-api'
 import type { DataImportPreview, DataImportResult, DataImportType, ExportType } from '../api/types'
 import { downloadBlob } from '../lib/download'
 import { parseTsv, emptyGrid, gridToRows, pasteInto } from '../lib/grid'
@@ -48,25 +48,25 @@ export default function ImportDialog({
   const [result, setResult] = useState<DataImportResult | null>(null)
 
   const template = useMutation({
-    mutationFn: () => campApi.dataTemplate(campId, type),
+    mutationFn: () => hrApi.dataTemplate(campId, type),
     onSuccess: (blob) => downloadBlob(blob, `${type}-template.xlsx`),
   })
   const upload = useMutation({
     mutationFn: (input: File | Record<string, unknown>[]) =>
-      input instanceof File ? campApi.dataUploadXlsx(campId, type, input) : campApi.dataUploadRows(campId, type, input),
+      input instanceof File ? hrApi.dataUploadXlsx(campId, type, input) : hrApi.dataUploadRows(campId, type, input),
     onSuccess: (p) => {
       setPreview(p)
       setOnlyErrors(false)
     },
   })
   const confirm = useMutation({
-    mutationFn: () => campApi.dataConfirm(campId, type, preview!.import.id, skipErrors),
+    mutationFn: () => hrApi.dataConfirm(campId, type, preview!.import.id, skipErrors),
     onSuccess: (r) => {
       setResult(r)
       for (const k of invalidate) void qc.invalidateQueries({ queryKey: k })
     },
   })
-  const cancel = useMutation({ mutationFn: () => campApi.dataCancel(campId, type, preview!.import.id), onSuccess: () => setPreview(null) })
+  const cancel = useMutation({ mutationFn: () => hrApi.dataCancel(campId, type, preview!.import.id), onSuccess: () => setPreview(null) })
 
   const labels = useMemo(() => columns.map((c) => t(c.label)), [columns, t])
   const onPaste = (e: ClipboardEvent<HTMLInputElement>, r: number, c: number) => {
@@ -270,7 +270,7 @@ export default function ImportDialog({
 export function ExportButton({ campId, type }: { campId: string; type: ExportType }) {
   const { t } = useTranslation()
   const m = useMutation({
-    mutationFn: () => campApi.exportFile(campId, type),
+    mutationFn: () => hrApi.exportFile(campId, type),
     onSuccess: ({ blob, fileName }) => downloadBlob(blob, fileName),
   })
   return (

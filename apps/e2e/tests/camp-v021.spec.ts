@@ -61,8 +61,8 @@ test.describe.serial('Кемп v0.2.1', () => {
     ids.crew = (await api(page, 'POST', `/camps/${campId}/crews`, { code: 'A', rosterAnchorDate: WED })).id;
   });
 
-  test('Системийн тохиргоо › Албан тушаал: нэмэх; давхардсан нэр (зай/үсэг) → алдаа', async ({ page }) => {
-    await page.goto('/camp/system/positions');
+  test('Хүний нөөц › Албан тушаал: нэмэх; давхардсан нэр (зай/үсэг) → алдаа', async ({ page }) => {
+    await page.goto(`/hr/${campId}/positions`);
     await page.getByLabel('Шинэ албан тушаал').fill(POS);
     await page.getByRole('button', { name: 'Нэмэх', exact: true }).click();
     await expect(page.getByRole('cell', { name: POS, exact: true })).toBeVisible();
@@ -88,7 +88,7 @@ test.describe.serial('Кемп v0.2.1', () => {
       ids[code] = (await api(page, 'POST', `/camps/${campId}/employees`, { organizationId: ids.org, departmentId: ids.dept, crewId: ids.crew, employeeCode: code, fullName: `Н ${code}`, positionId })).id;
       await api(page, 'POST', `/camps/${campId}/movements`, { employeeId: ids[code], date: WED, direction: 'ARRIVAL' });
     }
-    await page.goto(`/camp/${campId}/employees`);
+    await page.goto(`/hr/${campId}/employees`);
     const g1 = page.getByRole('row', { name: new RegExp(`${STAMP}-G1`) });
     const d1 = page.getByRole('row', { name: new RegExp(`${STAMP}-D1`) });
     await expect(g1).toContainText(/Уулын пост\s*\(албан тушаалаас\)/);
@@ -99,7 +99,7 @@ test.describe.serial('Кемп v0.2.1', () => {
     await page.getByLabel('Огноо').fill(D2);
     await expect(page.getByText('Кемпэд 2 хүн')).toBeVisible();
 
-    await page.goto(`/camp/${campId}/employees`);
+    await page.goto(`/hr/${campId}/employees`);
     await page.getByLabel(`${STAMP}-D1-г сонгох`).check();
     const bar = page.getByRole('region', { name: 'Олноор өөрчлөх' });
     await expect(bar).toContainText('1 ажилтан сонгосон');
@@ -116,7 +116,7 @@ test.describe.serial('Кемп v0.2.1', () => {
   });
 
   test('C-14 өдрийн ирц: тооцоолсон ээлжээр шүүнэ (Өдөр 2, Шөнө 0, Ирэх/явах — ирсэн өдөр)', async ({ page }) => {
-    await page.goto(`/camp/${campId}/attendance`);
+    await page.goto(`/hr/${campId}/attendance`);
     const card = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Өдрийн ирц' }) });
     await card.getByLabel('Огноо').fill(D2);
     const chips = card.getByRole('group', { name: 'Ээлжээр шүүх' });
@@ -159,7 +159,7 @@ test.describe.serial('Кемп v0.2.1', () => {
     await page.goto(`/camp/${campId}/settings/positions`);
     await page.getByRole('group', { name: 'Хэл' }).getByRole('button', { name: 'EN' }).click();
     await expect(page.getByRole('heading', { name: 'Positions' })).toBeVisible();
-    await page.goto(`/camp/${campId}/employees`);
+    await page.goto(`/hr/${campId}/employees`);
     await expect(page.getByRole('columnheader', { name: 'Work meal location' })).toBeVisible();
     await page.getByRole('group', { name: 'Language' }).getByRole('button', { name: 'МН' }).click();
     await expect(page.getByRole('button', { name: 'Кемп', exact: true })).toBeVisible();

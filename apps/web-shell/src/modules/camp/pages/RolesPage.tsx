@@ -4,7 +4,7 @@ import { campApi } from '../api/camp-api'
 import type { PermissionDef, Role } from '../api/types'
 import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
-import { P, mergeRolePermissions, visiblePermissions } from '../lib/permissions'
+import { P, mergeRolePermissions, permissionLabel, visiblePermissions } from '../lib/permissions'
 import { SYSTEM_ROLE_LABEL } from '../lib/labels'
 import { Badge, Button, Card, ErrorBox, Field, Loading, Modal, NoAccess, PageHeader, inputCls } from '../components/ui'
 import { useTranslation } from 'react-i18next'
@@ -16,7 +16,8 @@ import { useTranslation } from 'react-i18next'
  * "N хэрэглэгчид хэрэгжүүлэх" цонх (урьдчилсан харагдац → батлах); алгасвал баганад "хэрэгжээгүй" товч үлдэнэ.
  */
 export default function RolesPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const permLabel = (p: PermissionDef) => permissionLabel(p, (k) => i18n.exists(k), (k) => t(k))
   const perms = useCampPermissions()
   const canManage = perms.can(P.ROLES_MANAGE)
   const catalog = useQuery({ queryKey: campKeys.permissions, queryFn: campApi.permissions, enabled: canManage })
@@ -111,14 +112,14 @@ export default function RolesPage() {
                 {visible.map((p: PermissionDef) => (
                   <tr key={p.code}>
                     <td className="px-3 py-2">
-                      <div className="text-gray-900">{p.name}</div>
+                      <div className="text-gray-900">{permLabel(p)}</div>
                       <div className="text-[11px] font-mono text-gray-400">{p.code}</div>
                     </td>
                     {roles.data.map((r) => (
                       <td key={r.id} className={`text-center ${draft[r.id] ? 'bg-blue-50/40' : ''}`}>
                         <input
                           type="checkbox"
-                          aria-label={`${r.name}: ${p.name}`}
+                          aria-label={`${r.name}: ${permLabel(p)}`}
                           checked={selectedOf(r).includes(p.code)}
                           onChange={() => toggle(r, p.code)}
                         />

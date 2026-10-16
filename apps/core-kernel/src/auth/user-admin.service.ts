@@ -20,6 +20,9 @@ export interface CreateUserInput {
   locale?: string;
 }
 
+/** ~100 жил — GoTrue-д «үүрд» гэсэн утга алга */
+const BAN_FOREVER = '876000h';
+
 /**
  * v0.2.2 Блок 3 — Supabase Auth + core_users хэрэглэгч үүсгэх ГАНЦ газар (SEC-005 нэгтгэл: `register`, ажилтны картаас).
  * GoTrue-д үүсгээд DB-д бичнэ; DB амжилтгүй бол GoTrue хэрэглэгчийг буцааж устгана.
@@ -84,6 +87,15 @@ export class UserAdminService {
     } catch (err) {
       await this.admin().auth.admin.deleteUser(authId).catch((e: Error) => this.logger.error(`GoTrue rollback алдаа: ${e.message}`));
       throw err;
+    }
+  }
+
+  /** v0.2.2 Блок 4: идэвхгүй хэрэглэгч GoTrue-ээр нэвтэрч / токен сэргээж чадахгүй (ban). `false` → ban арилгана */
+  async setBanned(authId: string, banned: boolean): Promise<void> {
+    const { error } = await this.admin().auth.admin.updateUserById(authId, { ban_duration: banned ? BAN_FOREVER : 'none' });
+    if (error) {
+      this.logger.error(`ban (${banned}) алдаа: ${error.message}`);
+      throw new AppError(HttpStatus.SERVICE_UNAVAILABLE, 'auth.service_unavailable');
     }
   }
 

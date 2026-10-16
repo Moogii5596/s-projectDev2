@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { campApi } from '../api/camp-api'
+import { hrApi } from '../../hr/api/hr-api'
 import type { Employee } from '../api/types'
 import { inputCls } from './ui'
 import { useTranslation } from 'react-i18next'
@@ -43,7 +43,7 @@ export default function EmployeePicker({
   const term = useDebounced(q.trim())
   const results = useQuery({
     queryKey: ['camp', campId, 'employee-search', term],
-    queryFn: () => campApi.employees(campId, { q: term || undefined, status: 'ACTIVE', limit: 20 }),
+    queryFn: () => hrApi.employees(campId, { q: term || undefined, status: 'ACTIVE', limit: 20 }),
     enabled: term.length > 0,
   })
   const pick = (e: Employee) => {

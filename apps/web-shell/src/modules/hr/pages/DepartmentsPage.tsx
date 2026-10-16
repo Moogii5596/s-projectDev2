@@ -1,23 +1,19 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { campApi } from '../api/camp-api'
-import type { Department } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
-import { weekdayName } from '../lib/labels'
-import ImportDialog, { ExportButton, type GridColumn } from '../components/ImportDialog'
-import { PatternStrip, ShiftPatternModal } from '../components/ShiftPattern'
-import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, td } from '../components/ui'
+import { campApi } from '../../camp/api/camp-api'
+import { hrApi } from '../api/hr-api'
+import type { Department } from '../../camp/api/types'
+import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
+import { useCampMutation } from '../../camp/hooks/useCampMutation'
+import { P } from '../../camp/lib/permissions'
+import { weekdayName } from '../../camp/lib/labels'
+import ImportDialog, { ExportButton } from '../../camp/components/ImportDialog'
+import { DEPARTMENT_IMPORT_COLUMNS } from '../lib/import-columns'
+import { PatternStrip, ShiftPatternModal } from '../../camp/components/ShiftPattern'
+import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, td } from '../../camp/components/ui'
 import { useTranslation } from 'react-i18next'
 
-/** FB-02 (v0.2.0): Excel / хүснэгтээр оруулах — баганын түлхүүр backend DEPARTMENTS_SPEC-тэй ижил */
-const IMPORT_COLUMNS: GridColumn[] = [
-  { key: 'code', label: 'camp.dept.col.code', required: true },
-  { key: 'name', label: 'camp.dept.col.name', required: true },
-  { key: 'active', label: 'camp.dept.col.active' },
-]
 
 /**
  * Тохиргоо › Хэлтэс, ээлж — хэлтэс + ээлжийн загвар (master.manage).
@@ -28,7 +24,7 @@ export default function DepartmentsPage() {
   const { t } = useTranslation()
   const { campId = '' } = useParams()
   const perms = useCampPermissions(campId)
-  const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => campApi.departments(campId) })
+  const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => hrApi.departments(campId) })
   const settings = useQuery({ queryKey: campKeys.settings(campId), queryFn: () => campApi.settings(campId) })
   const [infoModal, setInfoModal] = useState<Department | 'new' | null>(null)
   const [patternModal, setPatternModal] = useState<Department | null>(null)
@@ -117,7 +113,7 @@ export default function DepartmentsPage() {
           initial={patternModal.shiftPatterns}
           onDays={onDays}
           changeover={changeover}
-          save={(segments) => campApi.setShiftPattern(campId, patternModal.id, segments)}
+          save={(segments) => hrApi.setShiftPattern(campId, patternModal.id, segments)}
           invalidate={[campKeys.departments(campId)]}
           onClose={() => setPatternModal(null)}
         />
@@ -128,7 +124,7 @@ export default function DepartmentsPage() {
           campId={campId}
           type="departments"
           title={t('camp.dept.import_title')}
-          columns={IMPORT_COLUMNS}
+          columns={DEPARTMENT_IMPORT_COLUMNS}
           invalidate={[campKeys.departments(campId)]}
           onClose={() => setImporting(false)}
         />
@@ -145,8 +141,8 @@ function DeptModal({ campId, dept, onClose }: { campId: string; dept: Department
   const m = useCampMutation(
     () =>
       dept
-        ? campApi.updateDepartment(campId, dept.id, { name: name.trim(), isActive })
-        : campApi.createDepartment(campId, { code: code.trim(), name: name.trim() }),
+        ? hrApi.updateDepartment(campId, dept.id, { name: name.trim(), isActive })
+        : hrApi.createDepartment(campId, { code: code.trim(), name: name.trim() }),
     [campKeys.departments(campId)],
     onClose,
   )
@@ -187,7 +183,7 @@ function DeptEmployeesModal({ campId, dept, onClose }: { campId: string; dept: D
   const { t } = useTranslation()
   const q = useQuery({
     queryKey: [...campKeys.employees(campId), 'dept', dept.id],
-    queryFn: () => campApi.employees(campId, { departmentId: dept.id, status: 'ACTIVE', limit: 100 }),
+    queryFn: () => hrApi.employees(campId, { departmentId: dept.id, status: 'ACTIVE', limit: 100 }),
   })
   const groups = new Map<string, { code: string; name: string; crew: string | null }[]>()
   for (const e of q.data?.data ?? []) {
