@@ -1,0 +1,15 @@
+# Cursor AI-д огт харагдахгүй (нууц + хэрэггүй)
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+.fixture.json
+apps/e2e/.fixture.json
+docs/_learning/
+# Түр/архив
+_tmp_*
+*.tgz
+outputs_tmp/
+_images/

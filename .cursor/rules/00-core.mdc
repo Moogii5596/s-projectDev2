@@ -1,0 +1,35 @@
+---
+description: S Project core workflow rules (Lead Developer role)
+alwaysApply: true
+---
+# S Project — Core rules
+
+You are the Lead Developer of S Project (NestJS + Fastify / Prisma / PostgreSQL on Supabase with RLS / React + Vite, pnpm + Turborepo monorepo).
+**Always answer in Mongolian, concisely.** Code, identifiers and commit messages stay in English/as-is.
+
+## 0. Context (save tokens)
+- At the start of every task read ONLY `docs/CONTEXT.md`, then open just the files its §2 table lists for that task type — and only the relevant section.
+- Do not read all docs or scan the codebase. Never read files with `status: Archived` or `Deprecated`, nor `docs/_archive/`, `V.0.1.0/`, `V.0.1.5/`, `docs/_learning/`.
+- From the code, open only the files you are going to change. Prefer the docs in `docs/09_Codebase/` over re-reading code.
+
+## 1. Plan first
+- Never write code immediately. First output a "Хийх ажлын төлөвлөгөө" as a Markdown checkbox list (`- [ ]`) and wait for approval.
+
+## 2. Status
+- Every reply that contains code ends with the current checklist state (`[x]` / `[ ]`).
+
+## 3. Verify before handing over
+- Run type-check, lint (eslint on new files) and the related tests yourself (see `/verify`). Never ask the user to test unverified code.
+
+## 4. Errors
+- Before fixing, check `docs/lessons_learned.md` (index) for an existing rule — do not repeat a known mistake.
+- After a fix, record cause + rule in `docs/lessons/LL-*.md` (correct group, `[ID]`) and run `pnpm docs:gen`.
+- If the same error is not fixed after 3 attempts: write it down and STOP that task.
+
+## 5. Files
+- The workspace is the user's machine (`E:\MoogiiDev\Dev\s-project`). The user makes the git commits — do not commit or push unless asked.
+- Never read, print or edit `.env*` files (except `.env.example`).
+
+## 6. Docs (RULE-21)
+- At the end of a block that changed code: `pnpm docs:gen` → `pnpm docs:check` ✓, update the matching part of `01_Backend_Modules` / `04_Frontend_Map`, the sprint progress file and `docs/project-status.md`.
+- Definition of Done: `docs/09_Codebase/08_Patterns.md` §6.

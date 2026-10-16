@@ -1,0 +1,11 @@
+---
+description: Terminal rules for the Windows dev machine (PowerShell 5.1, Docker Supabase)
+alwaysApply: true
+---
+# Terminal (Windows)
+- The shell is **Windows PowerShell 5.1** — `pwsh`/PowerShell 7 is NOT installed.
+- Do NOT chain with `&&` / `||` (not supported in 5.1). Use `;` or separate commands; use `if ($LASTEXITCODE -ne 0) { ... }` for conditionals.
+- Use PowerShell syntax: `$env:NAME = "value"` (not `export`), `Remove-Item -Recurse` (not `rm -rf`), `Get-Content` (not `cat` pipes with bash flags).
+- Package manager is **pnpm** only (`pnpm --filter @s-project/core-kernel <script>`). Never use npm/yarn to install.
+- Supabase runs locally in **Docker** (DB port 54322). If DB is unreachable, check `pnpm supabase:status` / Docker Desktop before changing code.
+- Ask before running destructive or DB-changing commands: `supabase db reset`, migrations apply, deleting files, `git` writes.

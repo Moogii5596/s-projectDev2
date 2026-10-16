@@ -1,0 +1,15 @@
+{
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[prisma]": { "editor.defaultFormatter": "Prisma.prisma" },
+  "editor.codeActionsOnSave": { "source.fixAll.eslint": "explicit" },
+  "files.eol": "\n",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "search.exclude": {
+    "**/node_modules": true, "**/dist": true, "**/.turbo": true,
+    "docs/_archive": true, "_tmp_*": true
+  },
+  "files.watcherExclude": { "**/node_modules/**": true, "**/.turbo/**": true, "**/dist/**": true }
+}

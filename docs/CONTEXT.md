@@ -25,6 +25,7 @@ S Project — гаднаа нийгмийн сүлжээ, цаанаа ERP; бү
 | Тест | [[07_Test_Map]] (хамаарах файл л) → [[08_Patterns]] §4 |
 | Алдаа засах | [[lessons_learned]]-ийн **тухайн бүлэг** → (хэрэгтэй бол) `lessons/LL-*.md`-д `[ID]` хайх |
 | Пилот / deploy / staging | [[04_Pilot_Camp_Windows]] (тухайн §) · [[05_Cloudflare_Tunnel]] · [[06_Config_Env]] |
+| IDE / Cursor тохиргоо | [[06_Cursor_Setup]] |
 | Төлөвлөлт / шинэ хувилбар | [[01_Development_Roadmap]] → [[03_v0.2_full_plan]] → [[00_backlog_and_tech_debt]] → холбогдох PRD / ADR |
 | Бүтээгдэхүүн / архитектурын асуулт | [[PRD-01_Core_Vision]] · [[ARCH-00_System_Overview]] · [[PRD-06_Vision_Business_Model]] |
 | Баримт бичиг засах | [[INDEX]] (бүрэн жагсаалт) + энэ файл §5 |

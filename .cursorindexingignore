@@ -1,0 +1,17 @@
+# Индекслэхгүй (хэрэгтэй үед @-ээр нээж болно)
+node_modules/
+**/dist/
+**/.turbo/
+.turbo/
+coverage/
+playwright-report/
+test-results/
+blob-report/
+pnpm-lock.yaml
+apps/web-shell/@mf-types/
+docs/_archive/
+docs/08_Roadmap/_archive/
+docs/08_Roadmap/V.0.1.0/
+docs/08_Roadmap/V.0.1.5/
+docs/lessons_learned_MVP.md
+docs/CHANGELOG.md

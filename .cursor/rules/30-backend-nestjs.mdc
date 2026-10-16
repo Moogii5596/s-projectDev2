@@ -1,0 +1,23 @@
+---
+description: NestJS backend, API/DTO and test rules for core-kernel
+globs: apps/core-kernel/**
+alwaysApply: false
+---
+# Backend (core-kernel) — see docs/09_Codebase/08_Patterns.md §2, §4
+Before coding read: `00_Codebase_Map` → relevant part of `01_Backend_Modules` → `02_API_Catalog` / `03_DB_Catalog` section.
+
+## NestJS
+- Global guards/interceptors: `APP_GUARD` + `useExisting` in AppModule (RULE-07).
+- Prisma enums from `@prisma/client` (RULE-02); type-only imports use `import type` (RULE-09).
+- `req.user.id` is the Supabase authId ≠ `core_users.id`; resolve with `resolveUserId` for FKs (RULE-13).
+- `$use` middleware needs the raw-action guard (RULE-14).
+
+## API
+- DTO names exactly match frontend types (RULE-20). Use the shared pagination/response types (RULE-17).
+- Errors = `code` + `params` (`common/i18n/app-error.ts`); messages in mn/en/zh (`messages.ts`).
+
+## Tests (vitest + unplugin-swc, RULE-08)
+- `overrideProvider` only for existing providers; new ones go in `providers[]` (RULE-01).
+- Mock with `app.get(Service).method = mock`; prototype patching is forbidden (RULE-10).
+- `afterAll` → `await app?.close()` (RULE-06). RLS tests use dual PrismaClient (RULE-16). Integration: `pool: 'forks'`, `singleFork` (RULE-18).
+- Run only the related test files, not the whole suite.

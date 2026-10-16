@@ -1,0 +1,14 @@
+---
+description: Database, migration, Prisma and RLS rules
+globs: supabase/**,apps/core-kernel/prisma/**,packages/prisma-rls-extension/**
+alwaysApply: false
+---
+# DB / Prisma / RLS (full text: docs/09_Codebase/08_Patterns.md §1, §3)
+- Schema source = `supabase/migrations/*.sql`. **`prisma db push` is forbidden** (MIG-001). After a migration: local reset + `pnpm db:generate`.
+- Assign the migration number at implementation time; never rename an applied migration (MIG-002).
+- IDs: `uuid_generate_v7()` (RULE-11). Every UUID field in Prisma has `@db.Uuid` (RULE-05). Enum change order: RULE-15.
+- A column used by an RLS policy cannot change type — plan migrations accordingly.
+- New tenant table: ENABLE + FORCE RLS + policy `TO app_user` + GRANT; for camp/core tables `SELECT camp_apply_tenant_rls('<table>');` (RULE-12).
+- Tenant data always inside `inTenantTx(prisma, tenantId, tx => …)`; `set_config('app.tenant_id', …, true)`, never `SET LOCAL` (RULE-03/04).
+- `SYSTEM_DATABASE_URL` only for system jobs.
+- Prisma reads `apps/core-kernel/.env` (not the root `.env`).

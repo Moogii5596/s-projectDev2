@@ -39,6 +39,7 @@ tags: [index, moc]
 - [[01_Tech_Stack_Decision]] — стек (хувилбар, шалтгаан)
 - [[02_Local_Supabase_Docker_Windows]] — local орчин, тест командууд
 - [[03_Enterprise_VPC_Deployment]] — VPC / dedicated runbook
+- [[06_Cursor_Setup]] — Cursor IDE: rules, commands, ignore, UI тохиргоо
 - [[04_Pilot_Camp_Windows]] — пилот: нэг Windows машин, `pilot.ps1`, staging, нөөц
 - [[05_Cloudflare_Tunnel]] — байгууллага холбох
 

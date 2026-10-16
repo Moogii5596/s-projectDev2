@@ -1,0 +1,10 @@
+---
+description: React + Vite frontend rules (web-shell, mfe-requisitions)
+globs: apps/web-shell/**,apps/mfe-requisitions/**,packages/i18n/**
+alwaysApply: false
+---
+# Frontend — see docs/09_Codebase/04_Frontend_Map.md, 09_Frontend_Routes.md
+- React + Vite + Tailwind. Dev API calls go through the Vite proxy (RULE-19).
+- Frontend types use the exact backend DTO names (RULE-20).
+- Use existing components (`modules/camp/components/ui.tsx`); do NOT add a new UI library.
+- All UI text via i18n (mn/en/zh) — no hard-coded strings. New page: `04_Frontend_Map` §6; translations: §4.
