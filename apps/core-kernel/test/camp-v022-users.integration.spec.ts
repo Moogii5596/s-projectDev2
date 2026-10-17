@@ -3,7 +3,7 @@
  * Бодит PostgreSQL + app_user (RLS). GoTrue шаардахгүй: `UserAdminService.setBanned`-ийг stub (TEST-022 загвар).
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { CampAccessService } from '../src/modules/camp/common/camp-access.service';
@@ -11,6 +11,9 @@ import { CampAuditService } from '../src/modules/camp/common/camp-audit.service'
 import { CampRbacService } from '../src/modules/camp/rbac/camp-rbac.service';
 import { CampUserAccessService } from '../src/modules/camp/rbac/camp-user-access.service';
 import { ADMIN_DB_URL, APP_USER_DB_URL } from './helpers/db-urls';
+
+/** ck_core_user_invites_hash: 64 hex (SHA-256) — TEST-025 */
+const hex = (s: string) => createHash('sha256').update(s).digest('hex');
 
 const cache = {
   buildKey: (...p: string[]) => p.join(':'),
@@ -55,8 +58,8 @@ describe('v0.2.2 Блок 4 — хэрэглэгч удирдах (integration)'
     const day = 86_400_000;
     await admin.coreUserInvite.createMany({
       data: [
-        { tenantId: tA, userId: user.u1, tokenHash: `old-${sfx}`, purpose: 'INVITE', channel: 'EMAIL', expiresAt: new Date(Date.now() - day), createdAt: new Date(Date.now() - 2 * day) },
-        { tenantId: tA, userId: user.u1, tokenHash: `new-${sfx}`, purpose: 'INVITE', channel: 'LINK', expiresAt: new Date(Date.now() + day) },
+        { tenantId: tA, userId: user.u1, tokenHash: hex(`old-${sfx}`), purpose: 'INVITE', channel: 'EMAIL', expiresAt: new Date(Date.now() - day), createdAt: new Date(Date.now() - 2 * day) },
+        { tenantId: tA, userId: user.u1, tokenHash: hex(`new-${sfx}`), purpose: 'INVITE', channel: 'LINK', expiresAt: new Date(Date.now() + day) },
       ],
     });
   });

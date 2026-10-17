@@ -2,7 +2,7 @@
 title: "Эрхийн каталог (Кемп RBAC)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-10-17
 tags: [codebase, auth, camp, generated]
 ---
 
@@ -10,19 +10,20 @@ tags: [codebase, auth, camp, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `apps/core-kernel/src/modules/camp/common/camp-permissions.ts` (код) · migration-ийн `camp_permissions` (нэр) · `camp_seed_default_roles` (`20261013003_camp_roles_v022_seed.sql`, анхдагч роль). Код ба DB ЯГ ижил байх ёстой (`camp-master.integration.spec.ts` тулгана).
+Эх сурвалж: `apps/core-kernel/src/modules/camp/common/camp-permissions.ts` (код) · migration-ийн `camp_permissions` (нэр) · `camp_seed_default_roles` (`20261017002_camp_employees_termination.sql`, анхдагч роль). Код ба DB ЯГ ижил байх ёстой (`camp-master.integration.spec.ts` тулгана).
 
 Шинэ эрх: (1) migration-д INSERT, (2) `camp-permissions.ts`, (3) хэрэгтэй бол seed роль → `pnpm docs:gen`. Хэрэглэгчийн эцсийн эрх = `camp_user_permissions` (v0.2.2 Блок 1, ганц эх сурвалж). Үндсэн (core) роль — [[03_DB_Catalog]] → Enum. Загвар: [[ADR-003_Users_Login_Permissions]].
 
-## Кемпийн эрх (17)
+## Кемпийн эрх (18)
 
 | Код | Нэр | Хувилбар | CAMP_ADMIN | CAMP_MANAGER | CATERING_ADMIN | EMPLOYEE | Ашигласан файл |
 |---|---|---|---|---|---|---|---|
 | `camp.settings.manage` | Кемпийн тохиргоо (НӨАТ, ростер, хоол идэх байршил) | V1 | ✅ |  |  |  | `camp-settings.service.ts` |
-| `camp.roles.manage` | Роль, эрхийн тохиргоо | V1 | ✅ |  |  |  | `camp-employee-login.service.ts` `camp-rbac.service.ts` `camp-user-access.service.ts` |
+| `camp.roles.manage` | Роль, эрхийн тохиргоо | V1 | ✅ |  |  |  | `camp-employee-login.service.ts` `camp-rbac.service.ts` `camp-user-access.service.ts` `hr-employee-lifecycle.service.ts` |
 | `camp.master.manage` | Мастер өгөгдөл (кемп, байр, өрөө, хэлтэс, баг, байгууллага) | V1 | ✅ |  |  |  | `camp-catalog.service.ts` `camp-facilities.service.ts` `camps.service.ts` `core-organizations.service.ts` `departments.handler.ts` `hr-crews.service.ts` `hr-departments.service.ts` `hr-positions.service.ts` |
 | `camp.contract.manage` | Гэрээ, ажил, үнэ | V2 | ✅ |  |  |  | — |
 | `camp.employee.manage` | Ажилтан бүртгэл | V1 | ✅ |  | ✅ |  | `hr-employees.service.ts` `employees.handler.ts` |
+| `camp.employee.terminate` | Ажлаас гаргах, дахин ажилд авах | V1 | ✅ |  |  |  | `hr-employee-lifecycle.service.ts` `camp-snapshot.ts` |
 | `camp.movement.import` | Ирц (xlsx) импорт | V1 | ✅ | ✅ |  |  | `hr-attendance.service.ts` |
 | `camp.shift.adjust` | Ээлжийн зохицуулалт | V1 | ✅ | ✅ |  |  | `hr-shifts.service.ts` |
 | `camp.room.manage` | Өрөө хуваарилалт | V1 | ✅ |  | ✅ |  | `camp-rooms.service.ts` `camp-facilities.service.ts` |
@@ -40,7 +41,7 @@ tags: [codebase, auth, camp, generated]
 
 | Код | Нэр | Тайлбар | Эрхийн тоо |
 |---|---|---|---|
-| CAMP_ADMIN | Кемп админ | Тохиргоо, эрх, гэрээ, мастер өгөгдөл, засвар эхлүүлэх/хаах | 13 |
+| CAMP_ADMIN | Кемп админ | Тохиргоо, эрх, гэрээ, мастер өгөгдөл, засвар эхлүүлэх/хаах | 14 |
 | CAMP_MANAGER | Кемп менежер | Ирц, ээлж, батлах, хоолны захиалга | 7 |
 | CATERING_ADMIN | Катеринг админ | Бохир ус/хог, сэлбэг, хоол хүлээн авах | 8 |
 | EMPLOYEE | Ажилтан | Өөрийн засварын хүсэлт (дараа: feed, хоолны гомдол, цэс) | 1 |

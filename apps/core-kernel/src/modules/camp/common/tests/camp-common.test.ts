@@ -10,9 +10,9 @@ import { expectTenantTx, setActor, setup } from './camp-test-utils';
 const P = CAMP_PERMISSIONS;
 
 describe('Camp permission каталог (Шат 2.1)', () => {
-  it('17 эрх, давхардалгүй, camp.<x>.<y> хэлбэртэй (DB CHECK-тэй ижил regex)', () => {
-    expect(CAMP_PERMISSION_CODES).toHaveLength(17);
-    expect(new Set(CAMP_PERMISSION_CODES).size).toBe(17);
+  it('18 эрх (v0.2.2 Блок 5: + camp.employee.terminate), давхардалгүй, camp.<x>.<y> хэлбэртэй (DB CHECK-тэй ижил regex)', () => {
+    expect(CAMP_PERMISSION_CODES).toHaveLength(18);
+    expect(new Set(CAMP_PERMISSION_CODES).size).toBe(18);
     for (const c of CAMP_PERMISSION_CODES) expect(c).toMatch(/^camp\.[a-z_]+\.[a-z_]+$/);
   });
   it('isCampPermission', () => {

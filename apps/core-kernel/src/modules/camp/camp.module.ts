@@ -5,6 +5,7 @@ import { HrModule } from '../hr/hr.module';
 import { CAMP_HR_LEGACY_CONTROLLERS } from './legacy/hr-legacy.controller';
 import { CampHrBridge } from './camp-hr.bridge';
 import { CampStayStore, CampStaysService } from './attendance/camp-stays.service';
+import { CampEmployeeSite } from './attendance/camp-employee-site';
 import { CampAuditController } from './audit/camp-audit.controller';
 import { CampRbacController } from './rbac/camp-rbac.controller';
 import { CampRbacService } from './rbac/camp-rbac.service';
@@ -62,6 +63,7 @@ import { CampCatalogService } from './catalog/camp-catalog.service';
     CampAssetsService,
     CampMaintenanceService,
     CampStayStore,
+    CampEmployeeSite,
     CampStaysService,
     CampHrBridge,
   ],

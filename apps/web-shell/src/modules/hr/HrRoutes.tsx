@@ -9,6 +9,7 @@ import ShiftsPage from './pages/ShiftsPage'
 import AttendancePage from './pages/AttendancePage'
 import HrPositionsPage from './pages/HrPositionsPage'
 import HrUsersPage from './pages/HrUsersPage'
+import EmployeeProfilePage from './pages/EmployeeProfilePage'
 import { HR_DEFAULT_SECTION } from './lib/hr-sections'
 
 /**
@@ -24,6 +25,7 @@ export default function HrRoutes() {
       <Route path=":campId" element={<HrLayout />}>
         <Route index element={<Navigate to={HR_DEFAULT_SECTION} replace />} />
         <Route path="employees" element={<EmployeesPage />} />
+        <Route path="employees/:employeeId" element={<EmployeeProfilePage />} />
         <Route path="departments" element={<DepartmentsPage />} />
         <Route path="crews" element={<CrewsPage />} />
         <Route path="shifts" element={<ShiftsPage />} />

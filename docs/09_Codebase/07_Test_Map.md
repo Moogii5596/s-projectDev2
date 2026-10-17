@@ -2,7 +2,7 @@
 title: "Тестийн зураглал"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-16
+last_updated: 2026-10-17
 tags: [codebase, testing, generated]
 ---
 
@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 26 файл, ~237 тест
+## Integration (бодит PG + RLS) — 27 файл, ~244 тест
 
 Команд: `pnpm test:integration`
 
@@ -31,6 +31,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/camp-v022-invite.integration.spec.ts` | 5 | v0.2.2 Блок 3 — урилга, хэрэглэгч үүсгэх (integration) |
 | `core-kernel/test/camp-v022-login.integration.spec.ts` | 7 | v0.2.2 Блок 2 — нэвтрэх нэр, ажилтан ↔ хэрэглэгч (integration) |
 | `core-kernel/test/camp-v022-perms.integration.spec.ts` | 7 | v0.2.2 Блок 1 — camp_user_permissions (integration) |
+| `core-kernel/test/camp-v022-terminate.integration.spec.ts` | 7 | v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд авах, PII лог (integration) |
 | `core-kernel/test/camp-v022-users.integration.spec.ts` | 3 | v0.2.2 Блок 4 — хэрэглэгч удирдах (integration) |
 | `core-kernel/test/event-bus.integration.spec.ts` | 5 | 🔗 5.2 Гинж: MR → Workflow → Budget → Outbox → Redis · 🔒 5.0 Зэрэгцээ poller — event бүр яг нэг удаа [EVT-001] · ♻️ 5.3 Retry + DLQ |
 | `core-kernel/test/hr-routes.integration.spec.ts` | 7 | 👥 HR ажилтан, бүтэц — шинэ ба хуучин зам ижил · 🗓 HR ирц → Кемпийн байрлалт (H-Q2) · 📥 HR импорт / экспорт · 🔒 RLS (app_user) — HR model нэр солигдсон ч DB хүснэгт хэвээр |
@@ -45,7 +46,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 74 файл, ~567 тест
+## Unit — core-kernel — 75 файл, ~585 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -100,6 +101,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/event-bus/event-bus.service.spec.ts` | 2 | EventBusService.emit (Phase 5.1 [EVT-003]) |
 | `core-kernel/src/modules/event-bus/outbox-poller.service.spec.ts` | 10 | OutboxPollerService |
 | `core-kernel/src/modules/hr/attendance/tests/import.test.ts` | 15 | import-parser · import-planner |
+| `core-kernel/src/modules/hr/employees/tests/hr-employee-lifecycle.test.ts` | 18 | цэвэр функц · HrEmployeeLifecycleService · HrEmployeesService — ажлаас гарсан бүртгэл (v0.2.2 Блок 5) |
 | `core-kernel/src/modules/hr/employees/tests/hr-employees-v021.test.ts` | 5 | v0.2.1 HrEmployeesService — албан тушаал, хоолны байршил, хоол авах |
 | `core-kernel/src/modules/hr/org/tests/shift-pattern.test.ts` | 7 | normalizeShiftPattern (Шат 2.4) |
 | `core-kernel/src/modules/hr/positions/tests/hr-positions.service.test.ts` | 4 | v0.2.1 каталог — normName / resolvePositionByName · HrPositionsService — албан тушаалын каталог (v0.2.1 C-01 → v0.2.2 H1) |
@@ -126,7 +128,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/scripts/pilot-admin.spec.ts` | 7 | validate* · onboard · ensureUser |
 | `core-kernel/src/scripts/test-user.spec.ts` | 9 | ensureTestUser · assertLocalUrl · parseDotenv / parseArgs |
 
-## Unit — web-shell — 16 файл, ~89 тест
+## Unit — web-shell — 17 файл, ~97 тест
 
 Команд: `pnpm --filter web-shell test`
 
@@ -145,11 +147,12 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/camp/lib/tests/last-camp.test.ts` | 3 | last-camp (FB-11) |
 | `web-shell/src/modules/camp/lib/tests/permission-label.test.ts` | 3 | permissionLabel |
 | `web-shell/src/modules/hr/lib/tests/hr-sections.test.ts` | 4 | hr-sections |
+| `web-shell/src/modules/hr/lib/tests/termination.test.ts` | 8 | terminationFormError · lifecycleActions · terminationEffects · орчуулга (mn/en/zh) |
 | `web-shell/src/modules/hr/lib/tests/user-access.test.ts` | 6 | inviteLink · loginName · userState · permissionView |
 | `web-shell/src/modules/inventory/lib/tests/quantity.test.ts` | 5 | inventory quantity (numeric(15,3), float-гүй) |
 | `web-shell/src/modules/report/lib/tests/report.test.ts` | 5 | report lib |
 
-## E2E (Playwright) — 12 файл, ~66 тест
+## E2E (Playwright) — 13 файл, ~71 тест
 
 Команд: `pnpm test:e2e`
 
@@ -161,6 +164,7 @@ tags: [codebase, testing, generated]
 | `e2e/tests/camp-ops.spec.ts` | 7 |  |
 | `e2e/tests/camp-v020.spec.ts` | 8 |  |
 | `e2e/tests/camp-v021.spec.ts` | 7 |  |
+| `e2e/tests/camp-v022-terminate.spec.ts` | 5 |  |
 | `e2e/tests/camp-v022-users.spec.ts` | 4 |  |
 | `e2e/tests/camp.spec.ts` | 6 |  |
 | `e2e/tests/modules-lite.spec.ts` | 8 |  |

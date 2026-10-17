@@ -2,7 +2,7 @@
 title: "Frontend route-ууд (web-shell)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-16
+last_updated: 2026-10-17
 tags: [codebase, frontend, generated]
 ---
 
@@ -59,25 +59,26 @@ tags: [codebase, frontend, generated]
 | `/camp/departments` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:47` |
 | `/camp/crews` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:48` |
 | `/camp/*` | `Navigate` |  | `modules/camp/CampRoutes.tsx:50` |
-| `/hr (index)` | `HrHomePage` |  | `modules/hr/HrRoutes.tsx:22` |
-| `/hr/positions` | `HrHomePage` |  | `modules/hr/HrRoutes.tsx:23` |
-| `/hr/:campId` | `HrLayout` |  | `modules/hr/HrRoutes.tsx:24` |
-| `/hr (index)` | `Navigate` |  | `modules/hr/HrRoutes.tsx:25` |
-| `/hr/employees` | `EmployeesPage` |  | `modules/hr/HrRoutes.tsx:26` |
-| `/hr/departments` | `DepartmentsPage` |  | `modules/hr/HrRoutes.tsx:27` |
-| `/hr/crews` | `CrewsPage` |  | `modules/hr/HrRoutes.tsx:28` |
-| `/hr/shifts` | `ShiftsPage` |  | `modules/hr/HrRoutes.tsx:29` |
-| `/hr/attendance` | `AttendancePage` |  | `modules/hr/HrRoutes.tsx:30` |
-| `/hr/import` | `HrImportPage` |  | `modules/hr/HrRoutes.tsx:31` |
-| `/hr/positions` | `HrPositionsPage` |  | `modules/hr/HrRoutes.tsx:32` |
-| `/hr/users` | `HrUsersPage` |  | `modules/hr/HrRoutes.tsx:33` |
-| `/hr/*` | `Navigate` |  | `modules/hr/HrRoutes.tsx:34` |
+| `/hr (index)` | `HrHomePage` |  | `modules/hr/HrRoutes.tsx:23` |
+| `/hr/positions` | `HrHomePage` |  | `modules/hr/HrRoutes.tsx:24` |
+| `/hr/:campId` | `HrLayout` |  | `modules/hr/HrRoutes.tsx:25` |
+| `/hr (index)` | `Navigate` |  | `modules/hr/HrRoutes.tsx:26` |
+| `/hr/employees` | `EmployeesPage` |  | `modules/hr/HrRoutes.tsx:27` |
+| `/hr/employees/:employeeId` | `EmployeeProfilePage` |  | `modules/hr/HrRoutes.tsx:28` |
+| `/hr/departments` | `DepartmentsPage` |  | `modules/hr/HrRoutes.tsx:29` |
+| `/hr/crews` | `CrewsPage` |  | `modules/hr/HrRoutes.tsx:30` |
+| `/hr/shifts` | `ShiftsPage` |  | `modules/hr/HrRoutes.tsx:31` |
+| `/hr/attendance` | `AttendancePage` |  | `modules/hr/HrRoutes.tsx:32` |
+| `/hr/import` | `HrImportPage` |  | `modules/hr/HrRoutes.tsx:33` |
+| `/hr/positions` | `HrPositionsPage` |  | `modules/hr/HrRoutes.tsx:34` |
+| `/hr/users` | `HrUsersPage` |  | `modules/hr/HrRoutes.tsx:35` |
 | `/hr/*` | `Navigate` |  | `modules/hr/HrRoutes.tsx:36` |
+| `/hr/*` | `Navigate` |  | `modules/hr/HrRoutes.tsx:38` |
 
 ## Орчуулгын файлууд (`packages/i18n`)
 
 | Файл | Түлхүүр |
 |---|---|
-| `web.en.json` | 829 |
-| `web.mn.json` | 829 |
-| `web.zh.json` | 829 |
+| `web.en.json` | 887 |
+| `web.mn.json` | 887 |
+| `web.zh.json` | 887 |

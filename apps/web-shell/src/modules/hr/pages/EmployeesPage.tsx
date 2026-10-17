@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { campApi } from '../../camp/api/camp-api'
 import { hrApi, type EmployeeQuery } from '../api/hr-api'
@@ -63,7 +63,9 @@ export default function EmployeesPage() {
       else n.add(id)
       return n
     })
-  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id))
+  // v0.2.2 Блок 5: ажлаас гарсан бүртгэлийг олноор өөрчлөхгүй
+  const selectable = rows.filter((r) => r.status !== 'TERMINATED')
+  const allSelected = selectable.length > 0 && selectable.every((r) => selected.has(r.id))
 
   return (
     <Card
@@ -116,6 +118,7 @@ export default function EmployeesPage() {
           <option value="">{t('camp.filter.all_statuses')}</option>
           <option value="ACTIVE">{EMPLOYEE_STATUS_LABEL.ACTIVE}</option>
           <option value="INACTIVE">{EMPLOYEE_STATUS_LABEL.INACTIVE}</option>
+          <option value="TERMINATED">{EMPLOYEE_STATUS_LABEL.TERMINATED}</option>
         </select>
       </div>
       {canEdit && selected.size > 0 && (
@@ -134,7 +137,7 @@ export default function EmployeesPage() {
                     type="checkbox"
                     aria-label={t('camp.emp.select_all')}
                     checked={allSelected}
-                    onChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))}
+                    onChange={() => setSelected(allSelected ? new Set() : new Set(rows.filter((r) => r.status !== 'TERMINATED').map((r) => r.id)))}
                   />,
                 ]
               : []),
@@ -154,11 +157,17 @@ export default function EmployeesPage() {
             <tr key={e.id} className={selected.has(e.id) ? 'bg-blue-50/50' : ''}>
               {canEdit && (
                 <td className={td}>
-                  <input type="checkbox" aria-label={t('camp.emp.select', { code: e.employeeCode })} checked={selected.has(e.id)} onChange={() => toggle(e.id)} />
+                  {e.status !== 'TERMINATED' && (
+                    <input type="checkbox" aria-label={t('camp.emp.select', { code: e.employeeCode })} checked={selected.has(e.id)} onChange={() => toggle(e.id)} />
+                  )}
                 </td>
               )}
               <td className={`${td} font-mono`}>{e.employeeCode}</td>
-              <td className={`${td} font-medium text-gray-900`}>{e.fullName}</td>
+              <td className={`${td} font-medium text-gray-900`}>
+                <Link to={`/hr/${campId}/employees/${e.id}`} className="hover:text-blue-700 hover:underline">
+                  {e.fullName}
+                </Link>
+              </td>
               <td className={`${td} text-gray-600`}>{e.positionRef?.name ?? e.position ?? '—'}</td>
               <td className={td}>{e.department.code}</td>
               <td className={td}>{e.crew?.code ?? <span className="text-gray-400">{t('camp.emp.no_crew')}</span>}</td>
@@ -183,10 +192,11 @@ export default function EmployeesPage() {
               </td>
               <td className={`${td} text-gray-600`}>{e.organization.name}</td>
               <td className={td}>
-                <Badge tone={e.status === 'ACTIVE' ? 'green' : 'gray'}>{EMPLOYEE_STATUS_LABEL[e.status]}</Badge>
+                <Badge tone={e.status === 'ACTIVE' ? 'green' : e.status === 'TERMINATED' ? 'red' : 'gray'}>{EMPLOYEE_STATUS_LABEL[e.status]}</Badge>
+                {e.status === 'TERMINATED' && e.terminatedAt && <span className="ml-1 text-[11px] text-gray-400">{e.terminatedAt.slice(0, 10)}</span>}
               </td>
               <td className={`${td} text-right`}>
-                {canEdit && (
+                {canEdit && e.status !== 'TERMINATED' && (
                   <Button variant="ghost" onClick={() => setModal(e)}>
                     {t('camp.common.edit')}
                   </Button>

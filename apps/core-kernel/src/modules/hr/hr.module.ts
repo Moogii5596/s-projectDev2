@@ -11,6 +11,8 @@ import { HrAttendanceController } from './attendance/hr-attendance.controller';
 import { HrAttendanceService } from './attendance/hr-attendance.service';
 import { HrShiftsService } from './attendance/hr-shifts.service';
 import { HrAttendanceHooks } from './attendance/stay-store';
+import { HrEmployeeHooks } from './employees/employee-hooks';
+import { HrEmployeeLifecycleService } from './employees/hr-employee-lifecycle.service';
 import { HrDataController } from './import/hr-data.controller';
 import { HrDataImportService } from './import/hr-data-import.service';
 
@@ -22,6 +24,8 @@ const SERVICES = [
   HrAttendanceService,
   HrShiftsService,
   HrAttendanceHooks,
+  HrEmployeeHooks,
+  HrEmployeeLifecycleService,
   HrDataImportService,
 ];
 

@@ -246,3 +246,17 @@ tags: [lessons]
 - **Нөхцөл:** Хуучин `/camp/...` замуудыг `class CampX extends HrX {}` (+ `@Controller('camp/…')`) болгосон. Файлыг `hr-legacy.controllers.ts` гэж нэрлэсэн → `docs:gen` зөвхөн `*.controller.ts`-ийг уншдаг, мөн өвлөсөн route-ийг танихгүй байсан → 39 endpoint каталогоос дутсан.
 - **Шийдэл:** Файлыг `hr-legacy.controller.ts` болгосон; `gen-codebase-docs.mjs`-д `extends` controller-ийн route-уудыг эцгийнхээс угтвар сольж нэмэх (+ `Deprecated` тэмдэглэл) алхам нэмсэн → 201 endpoint.
 - **Дүрэм:** Controller файл үргэлж `*.controller.ts`. Өвлөсөн controller-ийн route param нэр эцгийнхтэй ИЖИЛ байна (`:campId`) — method-ийн `@Param('campId')` хуваалцана.
+
+### [TEST-025] Integration тестийн бэлтгэл өгөгдөл DB-ийн CHECK-ийг зөрчсөн — cloud-д ажиллуулаагүй тест CI-д анх удаа унах байсан (v0.2.2 Блок 5-д илэрсэн)
+- **Нөхцөл:** `camp-v022-users.integration` (Блок 4) урилгыг `tokenHash: 'old-<sfx>'` гэж шууд үүсгэсэн → `ck_core_user_invites_hash` (64 hex) → beforeAll унана. Блок 4-т cloud-д Prisma engine 403 гэж ажиллуулаагүй, «CI-д» гэж үлдээсэн.
+- **Шийдэл:** `createHash('sha256').update(…).digest('hex')`. TEST-010 harness-аар (wasm + adapter-pg, PG16) cloud-д 3/3 ногоон.
+- **Дүрэм:** «Cloud-д ажиллахгүй, CI-д» гэж шинэ integration тест үлдээхгүй — TEST-010 harness-аар заавал нэг удаа ажиллуулна. Тестийн бэлтгэл өгөгдөл migration-ийн CHECK/хэлбэрийг (hash, код, огноо) хангана.
+
+### [MIG-003] Шинэ enum утгыг partial index-д ашиглах — ADD VALUE тусдаа migration (RULE-15 давтан батлав, v0.2.2 Блок 5)
+- **Нөхцөл:** `CampEmployeeStatus += TERMINATED` ба `uq_camp_employees_code … WHERE status <> 'TERMINATED'` нэг файлд байвал `unsafe use of new value` (нэг transaction).
+- **Шийдэл:** `20261017001` = зөвхөн `ADD VALUE` (TERMINATED, TERMINATE, REHIRE); `20261017002` = багана, CHECK, partial unique, эрх. Цэвэр PG16 дээр 47 migration-ийг файл бүрийг `psql -1`-ээр (Supabase CLI-тэй ижил — нэг transaction) apply хийж шалгав.
+- **Дүрэм:** Enum утга нэмэх migration-д тэр утгыг хэрэглэх юу ч (index, CHECK, seed, функц) бичихгүй.
+
+### [PROC-008] (давтагдсан — 2 дахь удаа, 2026-10-17) `pkill -f "vite --port"` — дүрэм мэдсээр байж зөрчив (exit 144)
+- **Тохиолдсон:** Блок 5-ын UI smoke-ийн дараа vite-ийг `pkill -f`-ээр зогсоох гэж ажлын мөр (docs:gen) тасарсан. Хор хөнөөлгүй (дахин ажиллуулсан).
+- **Дүрэм (хэвээр, чангатгав):** арын процессыг tool-ийн `run_in_background` + `timeout N`-оор эхлүүлнэ — өөрөө дуусна; гараар зогсоох бол `kill <PID>` (PID-ийг эхлүүлэхдээ файлд). `pkill`/`killall` командыг cloud-д огт бичихгүй.

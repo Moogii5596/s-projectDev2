@@ -2,7 +2,7 @@
 title: "Backend модулиуд (core-kernel)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-10-17
 tags: [codebase, backend, camp, hr, auth]
 ---
 
@@ -74,6 +74,9 @@ tags: [codebase, backend, camp, hr, auth]
 - `employees/hr-employees.service.ts` (ажилтан, bulk; эффектив хоол/байршил — `camp/common/position-defaults.ts`) · `org/hr-departments.service.ts` + `shift-pattern.ts` (хэлтэс, ээлжийн загвар) · `org/hr-crews.service.ts` (бригад) · `positions/hr-positions.service.ts` (албан тушаалын каталог + `resolvePositionByName`, `assertPosition`, `normName`).
 - **Хүснэгт:** `camp_employees`, `camp_departments`, `camp_department_shift_patterns`, `camp_crews`, `camp_positions`. Кемп × албан тушаалын анхдагч (`camp_position_settings`, `camp_position_shift_patterns`) — Кемпийнх ([[#camp/catalog]]).
 - **Эрх:** `camp.employee.manage`, `camp.master.manage`. Нэвтрэх эрх / урилга (Блок 2–3) — [[#camp/rbac]]-д үлдсэн (`/camp/camps/:campId/employees/:id/{user,create-user}`).
+- **Амьдралын мөчлөг (v0.2.2 Блок 5, [[07_v0.2.2_tech_plan]] §13):** `employees/hr-employee-lifecycle.service.ts` — `terminate` (D-07: нэг tx — кемпэд байвал явалт ирцийн planner-ээр, өрөө чөлөөлөх порт, `TERMINATED` + огноо/шалтгаан, хэрэглэгч идэвхгүй + урилга хүчингүй, аудит `TERMINATE`; GoTrue ban tx-ээс өмнө, алдаа гарвал буцаана; огнооноос хойш ирц → 409), `rehire` (шинэ бүртгэл `rehired_from_id`, ижил код — partial unique; хэрэглэгч шилжинэ: бүх роль/шууд эрх устаж DB trigger загвараас дахин олгоно; ban арилна), `profile` (мэдээлэл, нэвтрэх эрх, ирц 20, кемпэд эсэх, өрөөний түүх, аудит — `summary` орчуулсан; PII лог атом `INSERT … WHERE NOT EXISTS` 15 мин), `piiViews` (тухайн кемпийн `camp.roles.manage`). Цэвэр: `terminationDateError`, `terminationUserBlocker`.
+- **Порт:** `employees/employee-hooks.ts` — `EmployeeSitePort` (`releaseOnTermination`, `roomHistory`) + `HrEmployeeHooks`; хэрэгжүүлэлт `camp/attendance/camp-employee-site.ts`, бүртгэл `CampHrBridge`. API: `GET employees/:id/{profile,pii-views}`, `POST employees/:id/{terminate,rehire}` (эрх `camp.employee.terminate`). Хүснэгт `camp_pii_access_log` (app_user: SELECT, INSERT л).
+- **TERMINATED-ийн дүрэм:** жагсаалт анхдагчаар хасна (`status=TERMINATED` шүүлтээр), засах/бөөнөөр → 409, `assertCodeUnique`/импорт/ирцийн planner кодоор TERMINATED биш бүртгэлийг сонгоно (импорт: зөвхөн гарсан кодтой мөр → `row.code_terminated`), экспорт хасна. Тест: `hr-employee-lifecycle.test`, `camp-v022-terminate` integration.
 
 ## hr/attendance
 - **Ирц:** `hr-attendance.service.ts` — xlsx импорт **PREVIEW → CONFIRM** (нэг tx), гараар бүртгэл, устгал · `hr-shifts.service.ts` (ээлжийн өөрчлөлт, календарь). Цэвэр функц: `import-parser`, `import-planner`, `attendance-state`, `roster`, `shift-resolver`, `meal-rules`, `range` (огноо — `camp/common/camp-date.ts`).
@@ -87,7 +90,7 @@ tags: [codebase, backend, camp, hr, auth]
 - `core.module.ts` — `CoreOrganizationsService` (байгууллагууд — гэрээт г.м.), `/api/v1/core/organizations`. Хүснэгт `camp_organizations` (model `CoreOrganization`). Эрх: `camp.master.manage`.
 
 ## camp — нийтлэг
-- `camp.module.ts` — бүх дэд модулийг бүртгэнэ; `HrModule`, `CoreModule`-ийг import хийнэ (Кемп → HR, эсрэгээрээ үгүй). `camp-hr.bridge.ts` — HR-д байрлалтын порт, `rooms` экспорт бүртгэнэ. `common/camp-common.module.ts` — `CampAccessService`, `CampAuditService` (HR/Core хуваалцана). Кемп = уурхайн кемпийн катеринг үйлчилгээ ([[01_plan_and_erd]]).
+- `camp.module.ts` — бүх дэд модулийг бүртгэнэ; `HrModule`, `CoreModule`-ийг import хийнэ (Кемп → HR, эсрэгээрээ үгүй). `camp-hr.bridge.ts` — HR-д байрлалтын порт, ажилтны мөчлөгийн порт (`CampEmployeeSite` — Блок 5), `rooms` экспорт бүртгэнэ. `common/camp-common.module.ts` — `CampAccessService`, `CampAuditService` (HR/Core хуваалцана). Кемп = уурхайн кемпийн катеринг үйлчилгээ ([[01_plan_and_erd]]).
 - `common/camp-access.service.ts` — эрх шалгах: `require(tx, tenantId, authId, campId, codes)` (эрх), `requireAccess(...)` (кемпийн гишүүнчлэл л), `requireInAnyCamp`. **Tenant OWNER/ADMIN = бүх кемпийн бүх эрх** (анхны тохиргоо). · `camp-permissions.ts` — `CAMP_PERMISSIONS` (DB-тэй ЯГ ижил, [[05_Permissions_Catalog]]) · `camp-tx.ts` — `inTenantTx` + огноо/цагийн хөрвүүлэлт (`toDbDate`, `fromDbDate`…) · `camp-errors.ts` (DB алдаа → HTTP, нөөц хамгаалалт) · `camp-audit.service.ts` (`camp_audit_log`) · `camp-lookup.ts` (кемп байгаа эсэх — эрх шалгасны ДАРАА) · `camp-request.ts` (`reqUser(req)`) · `camp-i18n.ts`.
 - **Хэв маяг:** service-ийн public метод бүр `(tenantId, authId, campId, …)` → `withCampErrors(() => inTenantTx(...))` → эхэнд `access.require/requireAccess`. Эрхийн alias: `const P = CAMP_PERMISSIONS`.
 - **Шилжилт:** ажилтан / хэлтэс / ээлж / ирц / гэрээт байгууллага → HR модуль руу ([[ADR-006_HR_Core_Module]], v0.2.2).

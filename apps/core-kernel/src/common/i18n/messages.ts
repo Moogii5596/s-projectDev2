@@ -71,6 +71,7 @@ export const MESSAGES = {
   'row.ref_not_found': { mn: '"{value}" олдсонгүй', en: '"{value}" was not found', zh: '未找到 "{value}"' },
   'row.ref_inactive': { mn: '"{value}" идэвхгүй байна', en: '"{value}" is inactive', zh: '"{value}" 已停用' },
   'row.ref_ambiguous': { mn: '"{value}" нэртэй {n} бичлэг байна — кодоор/регистрээр бичнэ үү', en: '{n} records are named "{value}" — use the code/registration number', zh: '有 {n} 条名为 "{value}" 的记录 — 请使用编码/注册号' },
+  'row.code_terminated': { mn: '"{value}" кодтой ажилтан ажлаас гарсан — профайлаас «Дахин ажилд авах»-аар бүртгэнэ үү', en: 'The employee with code "{value}" has left — use "Rehire" on the profile', zh: '编码 "{value}" 的员工已离职 — 请在档案中使用“重新录用”' },
   'row.code_other_camp': { mn: '"{value}" код өөр кемпэд ({camp}) бүртгэлтэй', en: 'Code "{value}" is registered in another camp ({camp})', zh: '编码 "{value}" 已在其他营地（{camp}）登记' },
   'row.dept_has_active': { mn: 'Хэлтэст идэвхтэй {n} ажилтан байна — идэвхгүй болгох боломжгүй', en: 'The department has {n} active employees — cannot deactivate', zh: '该部门有 {n} 名在职员工 — 无法停用' },
 
@@ -108,7 +109,8 @@ export const MESSAGES = {
   'col.employee.crew': { mn: 'Ростерын код', en: 'Roster code', zh: '轮班表编码' },
   'col.employee.status': { mn: 'Төлөв', en: 'Status', zh: '状态' },
   'enum.employee_status.ACTIVE': { mn: 'Идэвхтэй', en: 'Active', zh: '在职' },
-  'enum.employee_status.INACTIVE': { mn: 'Идэвхгүй', en: 'Inactive', zh: '离职' },
+  'enum.employee_status.INACTIVE': { mn: 'Идэвхгүй', en: 'Inactive', zh: '停用' },
+  'enum.employee_status.TERMINATED': { mn: 'Ажлаас гарсан', en: 'Terminated', zh: '已离职' },
 
   // ── Хэлтэс ─────────────────────────────────────────────
   'table.departments': { mn: 'Хэлтэс', en: 'Departments', zh: '部门' },
@@ -362,6 +364,18 @@ export const MESSAGES = {
   'camp.err.facilities.9': { mn: 'Байранд {assets} хөрөнгө байрлаж байна — эхлээд шилжүүлнэ үү', en: 'The building holds {assets} asset(s) — move them first', zh: '该楼栋内有 {assets} 项资产，请先移走' },
   'camp.err.maintenance.asset_in_building': { mn: 'Хөрөнгө {inventoryNo} заасан өрөөнд байхгүй (байранд, өрөөгүй байрласан)', en: 'Asset {inventoryNo} is not in the specified room (it is placed in the building, not in a room)', zh: '资产 {inventoryNo} 不在指定房间（放置在楼栋内，不在房间）' },
   'camp.err.settings.10': { mn: 'Ростерын урт {from} → {to} өөрчлөхөд ээлжийн загвар буруу болно. Эхлээд эдгээр албан тушаалын (энэ кемп) загварыг шинэчилнэ үү: {names}', en: 'Changing the roster length {from} → {to} would make shift patterns invalid. Update the patterns of these positions (this camp) first: {names}', zh: '将轮班天数 {from} → {to} 会使班次模板失效。请先更新以下职位（本营地）的模板：{names}' },
+  // v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд авах, профайл
+  'camp.err.employees.terminated': { mn: 'Ажлаас гарсан ажилтны бүртгэлийг засах боломжгүй (дахин ажилд авбал шинэ бүртгэл үүснэ)', en: 'A terminated employee record cannot be edited (rehiring creates a new record)', zh: '已离职员工的记录不能修改（重新录用将创建新记录）' },
+  'camp.err.employees.bulk_terminated': { mn: '{n} ажилтан ажлаас гарсан тул өөрчлөх боломжгүй', en: '{n} employee(s) have left and cannot be changed', zh: '{n} 名员工已离职，无法修改' },
+  'camp.err.employees.already_terminated': { mn: 'Ажилтан аль хэдийн ажлаас гарсан', en: 'The employee has already left', zh: '该员工已离职' },
+  'camp.err.employees.terminate_date': { mn: 'Ажлаас гарсан огноо буруу байна', en: 'Invalid termination date', zh: '离职日期无效' },
+  'camp.err.employees.terminate_future': { mn: 'Ажлаас гарсан огноо өнөөдрөөс ({today}) хойш байж болохгүй', en: 'The termination date cannot be after today ({today})', zh: '离职日期不能晚于今天（{today}）' },
+  'camp.err.employees.movements_after': { mn: '{date}-нд ирцийн бүртгэл байна — эхлээд түүнийг устгах эсвэл огноог өөрчилнө үү', en: 'There is an attendance record on {date} — delete it first or change the date', zh: '{date} 有考勤记录 — 请先删除或更改日期' },
+  'camp.err.employees.departure': { mn: 'Кемпээс явсныг автоматаар бүртгэж чадсангүй: {errors}. Ирцэд явалтыг гараар бүртгээд дахин оролдоно уу', en: 'Could not record the departure automatically: {errors}. Record it in attendance and try again', zh: '无法自动登记离营：{errors}。请在考勤中手动登记后重试' },
+  'camp.err.employees.not_terminated': { mn: 'Зөвхөн ажлаас гарсан ажилтныг дахин ажилд авна', en: 'Only a terminated employee can be rehired', zh: '只能重新录用已离职的员工' },
+  'camp.err.employees.already_rehired': { mn: 'Энэ бүртгэлээс аль хэдийн дахин ажилд авсан ({code})', en: 'Already rehired from this record ({code})', zh: '已从该记录重新录用（{code}）' },
+  'audit.employee.terminate': { mn: '{code} {name} ажилтан ажлаас гарсан ({date})', en: 'Employee {code} {name} left ({date})', zh: '员工 {code} {name} 已离职（{date}）' },
+  'audit.employee.rehire': { mn: '{code} {name} ажилтныг дахин ажилд авав (өмнөх бүртгэл {fromCode})', en: 'Rehired employee {code} {name} (previous record {fromCode})', zh: '重新录用了员工 {code} {name}（原记录 {fromCode}）' },
 } satisfies Record<string, Entry>;
 
 export type MessageCode = keyof typeof MESSAGES;

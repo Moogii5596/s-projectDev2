@@ -2,7 +2,7 @@
 title: "DB каталог (migration-аас)"
 type: "Database"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-10-17
 tags: [codebase, database, rls, generated]
 ---
 
@@ -10,7 +10,7 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (44 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **64** хүснэгт, 35 enum, 24 функц, 53 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (47 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **65** хүснэгт, 36 enum, 24 функц, 53 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
@@ -18,7 +18,7 @@ tags: [codebase, database, rls, generated]
 
 **Бусад (tenant, MR, workflow, event bus, модулиуд):** [[#approval_logs]] · [[#auth_guard.password_failures]] · [[#budget_allocations]] · [[#budget_commitments]] · [[#budget_periods]] · [[#dlq_events]] · [[#i18n_override_history]] · [[#i18n_overrides]] · [[#idempotency_keys]] · [[#installed_modules]] · [[#inventory_items]] · [[#mr_headers]] · [[#mr_items]] · [[#outbox_events]] · [[#super_admins]] · [[#tenant_routes]] · [[#tenants]] · [[#vendors]] · [[#workflow_definitions]] · [[#workflow_delegations]] · [[#workflow_instances]] · [[#workflow_sla_logs]] · [[#workflow_step_logs]]
 
-**Кемп (`camp_*`):** [[#camp_asset_categories]] · [[#camp_asset_movements]] · [[#camp_assets]] · [[#camp_audit_log]] · [[#camp_building_types]] · [[#camp_buildings]] · [[#camp_contract_item_prices]] · [[#camp_contract_items]] · [[#camp_contracts]] · [[#camp_cost_entries]] · [[#camp_crews]] · [[#camp_data_imports]] · [[#camp_department_shift_patterns]] · [[#camp_departments]] · [[#camp_employees]] · [[#camp_haul_records]] · [[#camp_maintenance_parts]] · [[#camp_maintenance_requests]] · [[#camp_meal_locations]] · [[#camp_meal_order_lines]] · [[#camp_meal_orders]] · [[#camp_movement_imports]] · [[#camp_movements]] · [[#camp_organizations]] · [[#camp_permissions]] · [[#camp_position_role_templates]] · [[#camp_position_settings]] · [[#camp_position_shift_patterns]] · [[#camp_positions]] · [[#camp_role_permissions]] · [[#camp_roles]] · [[#camp_room_allocations]] · [[#camp_rooms]] · [[#camp_settings]] · [[#camp_shift_adjustments]] · [[#camp_stays]] · [[#camp_user_permissions]] · [[#camp_user_roles]] · [[#camps]]
+**Кемп (`camp_*`):** [[#camp_asset_categories]] · [[#camp_asset_movements]] · [[#camp_assets]] · [[#camp_audit_log]] · [[#camp_building_types]] · [[#camp_buildings]] · [[#camp_contract_item_prices]] · [[#camp_contract_items]] · [[#camp_contracts]] · [[#camp_cost_entries]] · [[#camp_crews]] · [[#camp_data_imports]] · [[#camp_department_shift_patterns]] · [[#camp_departments]] · [[#camp_employees]] · [[#camp_haul_records]] · [[#camp_maintenance_parts]] · [[#camp_maintenance_requests]] · [[#camp_meal_locations]] · [[#camp_meal_order_lines]] · [[#camp_meal_orders]] · [[#camp_movement_imports]] · [[#camp_movements]] · [[#camp_organizations]] · [[#camp_permissions]] · [[#camp_pii_access_log]] · [[#camp_position_role_templates]] · [[#camp_position_settings]] · [[#camp_position_shift_patterns]] · [[#camp_positions]] · [[#camp_role_permissions]] · [[#camp_roles]] · [[#camp_room_allocations]] · [[#camp_rooms]] · [[#camp_settings]] · [[#camp_shift_adjustments]] · [[#camp_stays]] · [[#camp_user_permissions]] · [[#camp_user_roles]] · [[#camps]]
 
 **Үндсэн (`core_*`):** [[#core_user_invites]] · [[#core_users]]
 
@@ -810,7 +810,7 @@ Trigger: `trg_camp_departments_updated_at`
 
 ### camp_employees
 
-🔒🔒 · үүсгэсэн `20261009002_camp_master.sql` · өөрчлөлт: +email (`20261011003_camp_employees_email.sql`), +position_id (`20261012003_camp_employees_position_meals.sql`), +meal_location_id (`20261012003_camp_employees_position_meals.sql`), +meals_included (`20261012003_camp_employees_position_meals.sql`), +user_id (`20261013004_core_users_login.sql`)
+🔒🔒 · үүсгэсэн `20261009002_camp_master.sql` · өөрчлөлт: +email (`20261011003_camp_employees_email.sql`), +position_id (`20261012003_camp_employees_position_meals.sql`), +meal_location_id (`20261012003_camp_employees_position_meals.sql`), +meals_included (`20261012003_camp_employees_position_meals.sql`), +user_id (`20261013004_core_users_login.sql`), +terminated_at (`20261017002_camp_employees_termination.sql`), +termination_reason (`20261017002_camp_employees_termination.sql`), +termination_note (`20261017002_camp_employees_termination.sql`), +rehired_from_id (`20261017002_camp_employees_termination.sql`)
 
 | Багана | Төрөл | Шинж | FK |
 |---|---|---|---|
@@ -832,8 +832,12 @@ Trigger: `trg_camp_departments_updated_at`
 | meal_location_id | UUID |  |  |
 | meals_included | BOOLEAN |  |  |
 | user_id | UUID |  |  |
+| terminated_at | DATE |  |  |
+| termination_reason | "CampTerminationReason" |  |  |
+| termination_note | TEXT |  |  |
+| rehired_from_id | UUID |  |  |
 
-Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, camp_id, id)` · `UNIQUE (tenant_id, employee_code)` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id)` · `FOREIGN KEY (tenant_id, organization_id) REFERENCES camp_organizations (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, department_id) REFERENCES camp_departments (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, camp_id, crew_id) REFERENCES camp_crews (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, position_id) REFERENCES camp_positions (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, meal_location_id) REFERENCES camp_meal_locations (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, user_id) REFERENCES core_users (tenant_id, id) ON DELETE SET NULL (user_id)`
+Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, camp_id, id)` · `UNIQUE (tenant_id, employee_code)` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id)` · `FOREIGN KEY (tenant_id, organization_id) REFERENCES camp_organizations (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, department_id) REFERENCES camp_departments (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, camp_id, crew_id) REFERENCES camp_crews (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, position_id) REFERENCES camp_positions (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, meal_location_id) REFERENCES camp_meal_locations (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, user_id) REFERENCES core_users (tenant_id, id) ON DELETE SET NULL (user_id)` · `CHECK ( (status = 'TERMINATED') = (terminated_at IS NOT NULL AND termination_reason IS NOT NULL) )` · `CHECK ( termination_reason IS DISTINCT FROM 'OTHER' OR btrim(coalesce(termination_note, '')) <> '' )` · `FOREIGN KEY (tenant_id, rehired_from_id) REFERENCES camp_employees (tenant_id, id)`
 
 Policy: `tenant_isolation_camp_employees` (permissive ALL → app_user (camp_apply_tenant_rls))
 
@@ -1090,6 +1094,23 @@ Trigger: `trg_camp_organizations_updated_at`
 | name | TEXT | NN |  |
 | sort_order | INTEGER | NN |  |
 | created_at | TIMESTAMPTZ | NN |  |
+
+### camp_pii_access_log
+
+🔒🔒 · үүсгэсэн `20261017003_camp_pii_access_log.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK NN |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| viewer_user_id | UUID | NN |  |
+| employee_id | UUID | NN |  |
+| context | TEXT | NN |  |
+| viewed_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `FOREIGN KEY (tenant_id, viewer_user_id) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, employee_id) REFERENCES camp_employees (tenant_id, id) ON DELETE CASCADE`
+
+Policy: `tenant_isolation_camp_pii_access_log` (permissive ALL → app_user)
 
 ### camp_position_role_templates
 
@@ -1451,14 +1472,14 @@ Trigger: `update_core_users_updated_at`
 | Enum | Утгууд | Migration |
 |---|---|---|
 | CampAssetCondition | GOOD, DAMAGED, WRITTEN_OFF | `20261009004_camp_assets_maintenance.sql` |
-| CampAuditAction | CREATE, UPDATE, DEACTIVATE, IMPORT | `20261011001_camp_audit_log.sql` |
+| CampAuditAction | CREATE, UPDATE, DEACTIVATE, IMPORT, TERMINATE, REHIRE | `20261011001_camp_audit_log.sql` |
 | CampContractStatus | DRAFT, ACTIVE, TERMINATED | `20261009005_camp_contracts.sql` |
 | CampContractUnit | TRIP, M3, TON, PERSON_DAY | `20261009005_camp_contracts.sql` |
 | CampCostSource | HAUL, MEAL, MAINTENANCE_PART | `20261009006_camp_operations.sql` |
 | CampDataImportSource | XLSX, GRID | `20261011002_camp_data_imports.sql` |
 | CampDataImportStatus | PREVIEW, CONFIRMED, CANCELLED | `20261011002_camp_data_imports.sql` |
 | CampDataImportType | EMPLOYEES, DEPARTMENTS | `20261011002_camp_data_imports.sql` |
-| CampEmployeeStatus | ACTIVE, INACTIVE | `20261009002_camp_master.sql` |
+| CampEmployeeStatus | ACTIVE, INACTIVE, TERMINATED | `20261009002_camp_master.sql` |
 | CampHaulStatus | DRAFT, SUBMITTED, APPROVED, REJECTED | `20261009006_camp_operations.sql` |
 | CampHaulType | SEWAGE, WASTE | `20261009006_camp_operations.sql` |
 | CampImportStatus | PREVIEW, CONFIRMED, CANCELLED | `20261009003_camp_attendance.sql` |
@@ -1478,6 +1499,7 @@ Trigger: `update_core_users_updated_at`
 | CampShiftAdjustmentReason | EARLY_ARRIVAL, SHIFT_CHANGE, OTHER | `20261009003_camp_attendance.sql` |
 | CampShiftType | DAY, NIGHT | `20261009002_camp_master.sql` |
 | CampTemplateScope | ALL_CAMPS, EMPLOYEE_CAMP | `20261013002_camp_position_role_templates.sql` |
+| CampTerminationReason | RESIGNED, DISMISSED, CONTRACT_END, OTHER | `20261017002_camp_employees_termination.sql` |
 | CampVolumeUnit | M3, TON | `20261009006_camp_operations.sql` |
 | CoreInviteChannel | LINK, EMAIL | `20261013005_core_user_invites.sql` |
 | CoreInvitePurpose | INVITE, RESET | `20261013005_core_user_invites.sql` |
@@ -1501,7 +1523,7 @@ Trigger: `update_core_users_updated_at`
 | `camp_meal_order_lines_guard` |  | `20261009006_camp_operations.sql` |
 | `camp_meal_orders_guard` |  | `20261009006_camp_operations.sql` |
 | `camp_roles_protect_system` |  | `20261009001_camp_rbac.sql` |
-| `camp_seed_default_roles` | p_tenant_id uuid | `20261013003_camp_roles_v022_seed.sql` |
+| `camp_seed_default_roles` | p_tenant_id uuid | `20261017002_camp_employees_termination.sql` |
 | `camp_stays_validate` |  | `20261009003_camp_attendance.sql` |
 | `camp_tenant_exists` | p_tenant_id uuid | `20261009001_camp_rbac.sql` |
 | `camp_tenants_after_insert` |  | `20261009001_camp_rbac.sql` |

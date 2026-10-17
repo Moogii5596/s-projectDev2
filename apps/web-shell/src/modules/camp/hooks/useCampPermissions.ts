@@ -24,6 +24,9 @@ export const campKeys = {
   departments: (campId: string) => ['camp', campId, 'departments'] as const,
   crews: (campId: string) => ['camp', campId, 'crews'] as const,
   employees: (campId: string) => ['camp', campId, 'employees'] as const,
+  /** v0.2.2 Блок 5 — `employees`-ийн доор (ажилтан засахад хамт invalidate) */
+  employeeProfile: (campId: string, id: string) => ['camp', campId, 'employees', id, 'profile'] as const,
+  piiViews: (campId: string, id: string) => ['camp', campId, 'employees', id, 'pii-views'] as const,
   imports: (campId: string) => ['camp', campId, 'imports'] as const,
   /** v0.2.2 H2: мастер өгөгдлийн импортын түүх (HR «Импорт») */
   dataImports: (campId: string) => ['camp', campId, 'data-imports'] as const,

@@ -11,6 +11,8 @@ export const CAMP_PERMISSIONS = {
   MASTER_MANAGE: 'camp.master.manage',
   CONTRACT_MANAGE: 'camp.contract.manage',
   EMPLOYEE_MANAGE: 'camp.employee.manage',
+  /** v0.2.2 Блок 5 (B5-Q2): ажлаас гаргах, дахин ажилд авах — Кемп админ (20261017002) */
+  EMPLOYEE_TERMINATE: 'camp.employee.terminate',
   MOVEMENT_IMPORT: 'camp.movement.import',
   SHIFT_ADJUST: 'camp.shift.adjust',
   ROOM_MANAGE: 'camp.room.manage',

@@ -15,6 +15,7 @@ import type {
   RoomStatus,
   ShiftType,
   StayShiftGroup,
+  TerminationReason,
 } from '../api/types'
 
 /**
@@ -47,7 +48,9 @@ export const DIRECTION_LABEL = labels<Direction>('direction', ['ARRIVAL', 'DEPAR
 export const KIND_LABEL = labels<MovementKind>('movement_kind', ['ROSTER', 'OFF_ROSTER'])
 export const IMPORT_STATUS_LABEL = labels<ImportStatus>('import_status', ['PREVIEW', 'CONFIRMED', 'CANCELLED'])
 export const REASON_LABEL = labels<AdjustmentReason>('adjust_reason', ['EARLY_ARRIVAL', 'SHIFT_CHANGE', 'OTHER'])
-export const EMPLOYEE_STATUS_LABEL = labels<EmployeeStatus>('employee_status', ['ACTIVE', 'INACTIVE'])
+export const EMPLOYEE_STATUS_LABEL = labels<EmployeeStatus>('employee_status', ['ACTIVE', 'INACTIVE', 'TERMINATED'])
+/** v0.2.2 Блок 5 */
+export const TERMINATION_REASON_LABEL = labels<TerminationReason>('termination_reason', ['RESIGNED', 'DISMISSED', 'CONTRACT_END', 'OTHER'])
 /** Хоолны задаргааны бүлэг (backend PresenceBreakdown.group) */
 export const PRESENCE_GROUP_LABEL = labels<string>('presence_group', ['DAY', 'NIGHT', 'UNKNOWN', 'MOVEMENT'])
 export const CONDITION_LABEL = labels<AssetCondition>('asset_condition', ['GOOD', 'DAMAGED', 'WRITTEN_OFF'])

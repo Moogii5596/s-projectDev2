@@ -223,7 +223,9 @@ export interface UserRole {
 }
 
 // ── Шат 8 багц 2: ажилтан, ирц, ээлж, өрөө, хоол ─────────────
-export type EmployeeStatus = 'ACTIVE' | 'INACTIVE'
+export type EmployeeStatus = 'ACTIVE' | 'INACTIVE' | 'TERMINATED'
+/** v0.2.2 Блок 5 (B5-Q4) — ажлаас гарсан шалтгаан; OTHER бол тайлбар заавал */
+export type TerminationReason = 'RESIGNED' | 'DISMISSED' | 'CONTRACT_END' | 'OTHER'
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'NIGHT'
 export type Direction = 'ARRIVAL' | 'DEPARTURE'
 export type MovementKind = 'ROSTER' | 'OFF_ROSTER'
@@ -256,8 +258,87 @@ export interface Employee {
   positionRef?: { name: string } | null
   /** v0.2.2 Блок 4: холбогдсон нэвтрэх эрх (core_users.id) */
   userId?: string | null
+  /** v0.2.2 Блок 5: ажлаас гарсан (TERMINATED) — огноо (ISO), шалтгаан */
+  terminatedAt?: string | null
+  terminationReason?: TerminationReason | null
   /** Эцсийн (эффектив) утга ба эх сурвалж */
   effective?: EmployeeEffective
+}
+
+/** v0.2.2 Блок 5 — GET /hr/sites/:campId/employees/:id/profile (нээх бүрт PII лог) */
+export interface EmployeeProfile {
+  id: string
+  campId: string
+  employeeCode: string
+  fullName: string
+  position: string | null
+  phone: string | null
+  email: string | null
+  status: EmployeeStatus
+  organizationId: string
+  departmentId: string
+  crewId: string | null
+  positionId: string | null
+  mealLocationId: string | null
+  mealsIncluded: boolean | null
+  /** YYYY-MM-DD */
+  terminatedAt: string | null
+  terminationReason: TerminationReason | null
+  terminationNote: string | null
+  createdAt: string
+  updatedAt: string
+  userId: string | null
+  organization: { name: string }
+  department: { code: string; name: string }
+  crew: { code: string } | null
+  positionRef: { name: string } | null
+  user: { id: string; isActive: boolean; phone: string | null; username: string | null; hasEmail: boolean } | null
+  rehiredFrom: { id: string; employeeCode: string; terminatedAt: string | null } | null
+  rehiredAs: { id: string; employeeCode: string; status: EmployeeStatus } | null
+  attendance: {
+    /** Одоо кемпэд байгаа бол ирсэн огноо */
+    inCampSince: string | null
+    movements: { id: string; movementDate: string; direction: Direction; kind: MovementKind; meals: MealType[] }[]
+  }
+  rooms: { id: string; roomNo: string; buildingName: string; startDate: string; endDate: string | null }[]
+  history: {
+    id: string
+    entityType: string
+    action: string
+    summaryKey: string
+    /** Хүсэлтийн хэлээр орчуулсан */
+    summary: string
+    diff: Record<string, { from: unknown; to: unknown }>
+    actorName: string | null
+    createdAt: string
+  }[]
+  can: { terminate: boolean; viewPiiLog: boolean }
+}
+
+export interface PiiView {
+  id: string
+  viewerUserId: string
+  viewerName: string | null
+  context: string
+  viewedAt: string
+}
+
+export interface TerminateResult {
+  id: string
+  status: 'TERMINATED'
+  terminatedAt: string
+  departureRecorded: boolean
+  roomsClosed: number
+  roomsRemoved: number
+  userDeactivated: boolean
+}
+
+export interface RehireResult {
+  id: string
+  employeeCode: string
+  rehiredFromId: string
+  userId: string | null
+  userTransferred: boolean
 }
 
 export type ValueSource = 'EMPLOYEE' | 'POSITION' | 'DEFAULT'

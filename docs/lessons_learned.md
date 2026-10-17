@@ -2,7 +2,7 @@
 title: "Lessons Learned — индекс (ID → дүрэм)"
 type: "Log"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-10-17
 tags: [lessons, index, generated]
 ---
 
@@ -13,7 +13,7 @@ tags: [lessons, index, generated]
 > **Шинэ алдаа:** тохирох `lessons/LL-*.md`-д `### [TAG-NNN] Гарчиг` + **Тохиолдсон / Шалтгаан / Дүрэм** → [[LL-99_Changelog]]-д мөр → `pnpm docs:gen`. Давтагдвал шинэ ID биш — `### [ID] (давтагдсан, огноо) …`.
 > Файл: [[LL-01_Backend_DB]] · [[LL-02_Test_CI]] · [[LL-03_Env_Ops_Pilot]] · [[LL-04_Architecture_RLS]] · [[LL-05_Frontend]] · [[LL-06_Camp_v02]] · [[LL-07_Docs]] · Хуучин нэгтгэсэн файл (архив): [[lessons_learned_MVP]]
 
-Нийт **156** сургамж.
+Нийт **158** сургамж.
 
 ## DB, Prisma, RLS, migration
 
@@ -28,6 +28,7 @@ tags: [lessons, index, generated]
 | ENUM-002 | `UserRole.REQUESTER`, `MrStatus.DRAFT`, `MrStatus.PENDING_APPROVAL` | LL-01 §2 |
 | MIG-001 | `supabase/migrations/*.sql` → `pnpm exec supabase migration up` (auth хэрэглэгчийг устгахгүй) → `pnpm db:generate`. | LL-04 §14 |
 | MIG-002 | Migration файлын дугаарыг **хэрэгжүүлэх үед** (бодит дарааллаар) өгнө; tech plan-д зөвхөн «шинэ migration» гэж… | LL-06 §24 |
+| MIG-003 | Enum утга нэмэх migration-д тэр утгыг хэрэглэх юу ч (index, CHECK, seed, функц) бичихгүй. | LL-06 §24 |
 | MIGRATE-001 | DROP CHECK → CREATE ENUM → ALTER TYPE → RECREATE CHECK | LL-01 §3 |
 | MIGRATE-002 | DROP index → DROP CHECK → CREATE ENUM → ALTER TYPE → RECREATE index | LL-01 §3 |
 | PRISMA-001 | `id String @id @default(uuid()) @db.Uuid`, `tenantId String @map("tenant_id") @db.Uuid` | LL-01 §2 |
@@ -141,6 +142,7 @@ tags: [lessons, index, generated]
 | TEST-022 | Үүсгэгддэг (generated) файлд гараар засвар хийхгүй; хийх бол үүсгэх скриптийн нэг алхам болгоно. | LL-06 §22 |
 | TEST-023 | API-ийн зан төлөв өөрчлөхөөс өмнө `grep -rn '<endpoint>' test/ apps/e2e` — ажиллуулж чадахгүй тестийн хүлээлтийг ч шинэчилнэ. | LL-06 §22 |
 | TEST-024 | Аюулгүй байдлын шийдвэр (хугацаа, түгжээ) DB-ийн цаг (`now()`) дээр — app/driver-ийн Date хөрвүүлэлтэд найдахгүй. | LL-06 §22 |
+| TEST-025 | «Cloud-д ажиллахгүй, CI-д» гэж шинэ integration тест үлдээхгүй — TEST-010 harness-аар заавал нэг удаа ажиллуулна. Тестийн… | LL-06 §24 |
 | VITEST-001 | `vitest.integration.config.ts`-д: | LL-02 §5 |
 
 ## Frontend
@@ -194,7 +196,7 @@ tags: [lessons, index, generated]
 | PROC-005 | Phase/багц бүрийг төхөөрөмжийн одоогийн төлвөөс эхлүүлнэ; өмнөх cloud хуулбарыг хэзээ ч шууд deploy хийхгүй. | LL-04 §16 |
 | PROC-006 | Хуулах бүрт давтагдашгүй staged нэр (`plan_6_0.md`, bundle-д огноо/шат) ашиглана; хуулсны ДАРАА төхөөрөмж дээр hash… | LL-05 §19 |
 | PROC-007 | Танд өгөх команд бүрийг төслийн `package.json` script-ээс (эсвэл `pnpm <bin>`) авна — глобал суулгалт гэж үзэхгүй; заавар… | LL-05 §19 |
-| PROC-008 🔁 | pkill-ийг бусад бичвэргүй тусдаа дуудлагаар; урт скриптийг файлд бичээд тусад нь ажиллуулна. Cloud tool дуудлага дуусахад… | LL-03 §20, LL-06 §22 |
+| PROC-008 🔁 | pkill-ийг бусад бичвэргүй тусдаа дуудлагаар; урт скриптийг файлд бичээд тусад нь ажиллуулна. Cloud tool дуудлага дуусахад… | LL-03 §20, LL-06 §22, LL-06 §24 |
 | PROC-009 | Суулгах/байршуулах скриптийг **хоосон (шинэ clone)** төлөвөөс эхлэн туршина — тестийн орчинд "бэлэн" зүйл (node_modules,… | LL-03 §20 |
 | PROC-010 | Хэрэглэгчийн shell-д `.\script.ps1`-ээр ажиллах скрипт орчныг өөрчилбөл заавал буцаана; тестийг хэрэглэгчийн ажиллуулах… | LL-03 §20 |
 | PROC-011 | Төхөөрөмж рүү хуулах **бүрт** check файлд `өмнөх hash` заавал, скрипт тулгаад таарахгүй бол **юу ч бичихгүй зогсоно**… | LL-03 §20 |

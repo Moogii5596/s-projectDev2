@@ -9,6 +9,7 @@ import type {
   Department,
   Direction,
   Employee,
+  EmployeeProfile,
   EmployeeStatus,
   ExportType,
   ImportConfirmResult,
@@ -21,6 +22,10 @@ import type {
   ShiftCalendar,
   ShiftSegment,
   ShiftType,
+  PiiView,
+  RehireResult,
+  TerminateResult,
+  TerminationReason,
 } from '../../camp/api/types'
 
 /**
@@ -59,6 +64,13 @@ export const hrApi = {
   /** v0.2.1 (Д-2): олон ажилтанд нэг дор (≤ 500) — null = цэвэрлэх (албан тушаалаас / анхдагч) */
   bulkEmployees: (campId: string, body: { ids: string[]; mealsIncluded?: boolean | null; mealLocationId?: string | null; positionId?: string | null }) =>
     post<{ updated: number }>(siteUrl(campId, '/employees/bulk'), body),
+  /** v0.2.2 Блок 5 — профайл (нээх бүрт PII лог), «Хэн үзсэн», ажлаас гаргах, дахин ажилд авах */
+  employeeProfile: (campId: string, id: string) => get<EmployeeProfile>(siteUrl(campId, `/employees/${id}/profile`)),
+  piiViews: (campId: string, id: string) => get<{ data: PiiView[] }>(siteUrl(campId, `/employees/${id}/pii-views`)),
+  terminateEmployee: (campId: string, id: string, body: { date: string; reason: TerminationReason; note?: string | null }) =>
+    post<TerminateResult>(siteUrl(campId, `/employees/${id}/terminate`), body),
+  rehireEmployee: (campId: string, id: string, body: { employeeCode?: string; transferUser?: boolean }) =>
+    post<RehireResult>(siteUrl(campId, `/employees/${id}/rehire`), body),
 
   // ── Ирц ────────────────────────────────────────────────────
   /** Загвар xlsx (JWT-тэй тул blob-оор татна) */

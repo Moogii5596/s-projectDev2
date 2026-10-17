@@ -318,7 +318,7 @@ describe('HrEmployeesService (Шат 2.4)', () => {
     s.tx.hrEmployee.findFirst.mockResolvedValueOnce({ id: 'e1' }).mockResolvedValueOnce(null);
     await svc.update('t1', 'a1', 'c1', 'e1', { crewId: null, status: CampEmployeeStatus.INACTIVE, employeeCode: 'E002' });
     expect(s.tx.hrCrew.findFirst).not.toHaveBeenCalled();
-    expect(s.tx.hrEmployee.findFirst).toHaveBeenLastCalledWith({ where: { tenantId: 't1', employeeCode: 'E002', NOT: { id: 'e1' } }, select: { fullName: true } });
+    expect(s.tx.hrEmployee.findFirst).toHaveBeenLastCalledWith({ where: { tenantId: 't1', employeeCode: 'E002', status: { not: 'TERMINATED' }, NOT: { id: 'e1' } }, select: { fullName: true } });
     expect(s.tx.hrEmployee.update.mock.calls[0][0].data).toEqual({ crewId: null, employeeCode: 'E002', status: 'INACTIVE' });
   });
 

@@ -118,6 +118,7 @@ model CoreUser {
   campUserRoles             CampUserRole[]           @relation("CampUserRoleUser")
   campUserPermissions       CampUserPermission[]     @relation("CampUserPermissionUser")
   campEmployees             HrEmployee[]           @relation("CampEmployeeUser")
+  piiViews                  CampPiiAccessLog[]     @relation("CampPiiViewer")
   invites                   CoreUserInvite[]
   campShiftAdjustments      HrShiftAdjustment[]    @relation("CampShiftAdjustmentCreatedBy")
   campImportsUploaded       HrMovementImport[]     @relation("CampMovementImportUploadedBy")
@@ -605,6 +606,16 @@ enum CampOrgServiceType {
 enum CampEmployeeStatus {
   ACTIVE
   INACTIVE
+  /// v0.2.2 Блок 5 (20261017001) — ажлаас гарсан; дахин орвол ШИНЭ бүртгэл (Q8)
+  TERMINATED
+}
+
+/// v0.2.2 Блок 5 (20261017002, B5-Q4) — ажлаас гарсан шалтгаан; OTHER бол тайлбар заавал
+enum CampTerminationReason {
+  RESIGNED
+  DISMISSED
+  CONTRACT_END
+  OTHER
 }
 
 enum CampShiftAdjustmentReason {
@@ -712,6 +723,9 @@ enum CampAuditAction {
   UPDATE
   DEACTIVATE
   IMPORT
+  /// v0.2.2 Блок 5 (20261017001)
+  TERMINATE
+  REHIRE
 }
 
 enum CampDataImportType {
@@ -1121,12 +1135,22 @@ model HrEmployee {
   /// v0.2.2 (20261013004) — нэвтрэх эрх (1:1; uq_camp_employees_user — зөвхөн migration-д)
   userId           String?               @map("user_id") @db.Uuid
   user             CoreUser?             @relation("CampEmployeeUser", fields: [tenantId, userId], references: [tenantId, id], onDelete: SetNull, onUpdate: NoAction, map: "fk_camp_employees_user")
+  /// v0.2.2 Блок 5 (20261017002) — ажлаас гарсан огноо (TERMINATED ⇔ огноо + шалтгаан, ck_camp_employees_terminated)
+  terminatedAt      DateTime?              @map("terminated_at") @db.Date
+  terminationReason CampTerminationReason? @map("termination_reason")
+  terminationNote   String?                @map("termination_note")
+  /// Дахин ажилд авсан бол хуучин бүртгэл (нэгээс нэг — uq_camp_employees_rehired_from, зөвхөн migration-д)
+  rehiredFromId     String?                @map("rehired_from_id") @db.Uuid
+  rehiredFrom       HrEmployee?            @relation("HrEmployeeRehire", fields: [tenantId, rehiredFromId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_rehired_from")
+  rehiredAs         HrEmployee[]           @relation("HrEmployeeRehire")
+  piiAccessLogs     CampPiiAccessLog[]
   positionRef      HrPosition?         @relation(fields: [tenantId, positionId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_position")
   workMealLocation CampMealLocation?     @relation("CampEmployeeWorkMealLocation", fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_meal_location")
 
   @@unique([tenantId, id], map: "uq_camp_employees_tenant_id")
   @@unique([tenantId, campId, id], map: "uq_camp_employees_camp_id")
-  @@unique([tenantId, employeeCode], map: "uq_camp_employees_code")
+  /// uq_camp_employees_code = partial unique (status <> 'TERMINATED', Q-C2) — Prisma дэмжихгүй тул зөвхөн migration-д (20261017002)
+  @@index([tenantId, employeeCode], map: "idx_camp_employees_code")
   @@index([tenantId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_employees_cursor")
   @@index([tenantId, departmentId], map: "idx_camp_employees_department")
   @@index([tenantId, organizationId], map: "idx_camp_employees_org")
@@ -1803,4 +1827,22 @@ model CoreUserInvite {
   user CoreUser @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_core_user_invites_user")
 
   @@map("core_user_invites")
+}
+
+/// v0.2.2 Блок 5 (20261017003, PIL-03, D-08) — ажилтны хувийн мэдээлэл (профайл) үзсэн лог. Зөвхөн нэмэх (app_user: SELECT, INSERT).
+model CampPiiAccessLog {
+  id           String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  viewerUserId String   @map("viewer_user_id") @db.Uuid
+  employeeId   String   @map("employee_id") @db.Uuid
+  /// 'profile'
+  context      String
+  viewedAt     DateTime @default(now()) @map("viewed_at") @db.Timestamptz
+
+  viewer   CoreUser   @relation("CampPiiViewer", fields: [tenantId, viewerUserId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_pii_viewer")
+  employee HrEmployee @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_pii_employee")
+
+  @@index([tenantId, employeeId, viewedAt(sort: Desc)], map: "idx_camp_pii_access_employee")
+  @@index([tenantId, viewerUserId, employeeId, viewedAt(sort: Desc)], map: "idx_camp_pii_access_viewer")
+  @@map("camp_pii_access_log")
 }

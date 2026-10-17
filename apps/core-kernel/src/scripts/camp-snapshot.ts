@@ -61,8 +61,11 @@ export interface CampSnapshotPerms {
 /** Guard-ийн бодитоор шалгадаг эрх: v0.2.2+ → effective, v0.2.1 → legacy */
 export const enforcedPerms = (p: CampSnapshotPerms): string[] => p.effective ?? p.legacy;
 
-/** Q9 (v0.2.2): Кемп админ олголт бүрт засвар эхлүүлэх (parts) + хаах (close) */
-export const Q9_PERMS = ['camp.maintenance.parts', 'camp.maintenance.close'] as const;
+/**
+ * v0.2.2-ын хүлээгдэж буй нэмэлт: Кемп админ олголт бүрт засвар эхлүүлэх (parts) + хаах (close) — Q9 (20261013003),
+ * ажлаас гаргах / дахин ажилд авах — B5-Q2 (20261017002). Нэр нь хуучнаараа (`--expect=v022-q9`).
+ */
+export const Q9_PERMS = ['camp.maintenance.parts', 'camp.maintenance.close', 'camp.employee.terminate'] as const;
 
 /** A → B-д хүлээгдэж буй (зөвхөн нэмэгдэх) мөрүүд: B-ийн Кемп админ олголт × Q9, A-д байгаагүй нь */
 export function expectedQ9Additions(a: CampSnapshotPerms, b: CampSnapshotPerms): Set<string> {

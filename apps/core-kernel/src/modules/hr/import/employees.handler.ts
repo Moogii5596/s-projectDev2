@@ -63,8 +63,11 @@ async function loadRefs(tx: Tx, ctx: ImportCtx, codes: string[]) {
     tx.hrPosition.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true, isActive: true } }),
     tx.campMealLocation.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, name: true, isActive: true } }),
   ]);
+  // v0.2.2 Блок 5 (Q-C2): ажлаас гарсан бүртгэлийн код дахин ашиглагдаж болно — шинэчлэх нь зөвхөн TERMINATED биш бүртгэл
+  const live = existing.filter((e) => e.status !== CampEmployeeStatus.TERMINATED);
   return {
-    existing: new Map(existing.map((e) => [e.employeeCode.toUpperCase(), e as Current])),
+    existing: new Map(live.map((e) => [e.employeeCode.toUpperCase(), e as Current])),
+    terminated: new Set(existing.filter((e) => e.status === CampEmployeeStatus.TERMINATED).map((e) => e.employeeCode.toUpperCase())),
     depts: new Map(depts.map((d) => [d.code.toUpperCase(), d])),
     deptById: new Map(depts.map((d) => [d.id, d.code])),
     crews: new Map(crews.map((c) => [c.code.toUpperCase(), c])),
@@ -95,6 +98,10 @@ export const employeesHandler: DataImportHandler = {
       const cur = refs.existing.get(upper(v.employeeCode));
       if (cur && cur.campId !== ctx.campId) {
         errors.push({ column: 'employeeCode', code: 'row.code_other_camp', params: { value: String(v.employeeCode), camp: refs.campCode.get(cur.campId) ?? '?' } });
+      }
+      // Ажлаас гарсан хүнийг Excel-ээр шинээр үүсгэхгүй — профайлаас «Дахин ажилд авах» (түүх холбогдоно, Q-C)
+      if (!cur && refs.terminated.has(upper(v.employeeCode))) {
+        errors.push({ column: 'employeeCode', code: 'row.code_terminated', params: { value: String(v.employeeCode) } });
       }
       if (has(r, 'organization') && v.organization) {
         const key = upper(v.organization);
@@ -209,7 +216,7 @@ export const employeesHandler: DataImportHandler = {
 
   async exportRows(tx, ctx) {
     const rows = await tx.hrEmployee.findMany({
-      where: { tenantId: ctx.tenantId, campId: ctx.campId },
+      where: { tenantId: ctx.tenantId, campId: ctx.campId, status: { not: CampEmployeeStatus.TERMINATED } },
       select: {
         employeeCode: true, fullName: true, position: true, phone: true, email: true, status: true, mealsIncluded: true,
         positionRef: { select: { name: true } }, workMealLocation: { select: { name: true } },

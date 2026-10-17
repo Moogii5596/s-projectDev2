@@ -1,4 +1,4 @@
-import { CampMovementDirection, CampShiftAdjustmentReason } from '@prisma/client';
+import { CampEmployeeStatus, CampMovementDirection, CampShiftAdjustmentReason } from '@prisma/client';
 import { fromDbDate, toDbDate, Tx } from '../../camp/common/camp-tx';
 import { getRosterSettings } from '../../camp/common/camp-lookup';
 import { addDays } from '../../camp/common/camp-date';
@@ -44,7 +44,12 @@ export async function loadPlannerState(
   return {
     campId,
     settings,
-    employees: new Map(employees.map((e) => [e.employeeCode, { id: e.id, campId: e.campId, status: e.status, crewAnchor: e.crew ? fromDbDate(e.crew.rosterAnchorDate) : null }])),
+    // v0.2.2 Блок 5 (Q-C2): нэг код ажлаас гарсан + шинэ бүртгэлд байж болно — TERMINATED биш нь давуу (сүүлд бичигдэнэ)
+    employees: new Map(
+      [...employees]
+        .sort((x, y) => Number(x.status !== CampEmployeeStatus.TERMINATED) - Number(y.status !== CampEmployeeStatus.TERMINATED))
+        .map((e) => [e.employeeCode, { id: e.id, campId: e.campId, status: e.status, crewAnchor: e.crew ? fromDbDate(e.crew.rosterAnchorDate) : null }]),
+    ),
     stays: group(stays, (s) => ({ id: s.id, startDate: fromDbDate(s.startDate), endDate: s.endDate ? fromDbDate(s.endDate) : null })),
     movementKeys: new Set(movements.map((m) => movementKey(m.employeeId, fromDbDate(m.movementDate), m.direction))),
     adjustments: group(adjustments, (a) => ({ startDate: fromDbDate(a.startDate), endDate: fromDbDate(a.endDate) })),

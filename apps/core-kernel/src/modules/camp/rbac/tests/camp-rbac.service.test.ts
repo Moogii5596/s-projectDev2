@@ -174,7 +174,7 @@ describe('CampRbacService (Шат 2.2)', () => {
     expect(c2.permissions).toEqual([P.REPORT_VIEW]);
     setActor(s.tx, { role: UserRole.OWNER });
     s.cache.get.mockResolvedValue(null);
-    expect((await svc.myPermissions('t1', 'a1')).permissions).toHaveLength(17);
+    expect((await svc.myPermissions('t1', 'a1')).permissions).toHaveLength(18);
   });
 
   it('createRole BadRequest нь Forbidden-оос өмнө (validation) — эрхгүй ч үл мэдэгдэх код → 400', async () => {

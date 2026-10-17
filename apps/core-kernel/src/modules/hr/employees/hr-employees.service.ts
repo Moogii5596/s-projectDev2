@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { CampEmployeeStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CampAuditService } from '../../camp/common/camp-audit.service';
@@ -30,6 +30,9 @@ const EMPLOYEE_SELECT = {
   mealsIncluded: true,
   /** v0.2.2 Блок 4: холбогдсон нэвтрэх эрх (core_users.id) — UI «Нэвтрэх эрх» */
   userId: true,
+  /** v0.2.2 Блок 5 — ажлаас гарсан (TERMINATED) */
+  terminatedAt: true,
+  terminationReason: true,
   createdAt: true,
   updatedAt: true,
   organization: { select: { name: true } },
@@ -55,7 +58,8 @@ export class HrEmployeesService {
     private readonly audit: CampAuditService,
   ) {}
 
-  private async assertRefs(
+  /** Лавлах (байгууллага, хэлтэс, бригад, хоолны байршил) — `HrEmployeeLifecycleService` (дахин ажилд авах) ч ашиглана */
+  async assertRefs(
     tx: Tx,
     tenantId: string,
     campId: string,
@@ -82,7 +86,7 @@ export class HrEmployeesService {
   }
 
   /** `positionId` (каталог) эсвэл хуучин `position` текст → {positionId, position(текст)} */
-  private async resolvePosition(tx: Tx, tenantId: string, dto: { positionId?: string | null; position?: string | null }, currentId?: string | null) {
+  async resolvePosition(tx: Tx, tenantId: string, dto: { positionId?: string | null; position?: string | null }, currentId?: string | null) {
     if (dto.positionId !== undefined) {
       if (dto.positionId === null) return { positionId: null, position: null };
       const p = await assertPosition(tx, tenantId, dto.positionId, currentId);
@@ -96,9 +100,10 @@ export class HrEmployeesService {
     return {};
   }
 
-  private async assertCodeUnique(tx: Tx, tenantId: string, code: string, exceptId?: string) {
+  /** Q-C2 (v0.2.2 Блок 5): ажлаас гарсан (TERMINATED) бүртгэлийн код дахин ашиглагдана — uq_camp_employees_code partial */
+  async assertCodeUnique(tx: Tx, tenantId: string, code: string, exceptId?: string) {
     const dup = await tx.hrEmployee.findFirst({
-      where: { tenantId, employeeCode: code, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
+      where: { tenantId, employeeCode: code, status: { not: CampEmployeeStatus.TERMINATED }, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
       select: { fullName: true },
     });
     if (dup) throw conflict('camp.err.employees.7', { code, fullName: dup.fullName });
@@ -123,7 +128,8 @@ export class HrEmployeesService {
         ...(q.departmentId ? { departmentId: q.departmentId } : {}),
         ...(q.crewId ? { crewId: q.crewId === 'none' ? null : q.crewId } : {}),
         ...(q.organizationId ? { organizationId: q.organizationId } : {}),
-        ...(q.status ? { status: q.status } : {}),
+        // v0.2.2 Блок 5: ажлаас гарсан нь зөвхөн шүүлтээр (status=TERMINATED) харагдана
+        ...(q.status ? { status: q.status } : { status: { not: CampEmployeeStatus.TERMINATED } }),
         ...(q.positionId ? { positionId: q.positionId === 'none' ? null : q.positionId } : {}),
         ...(q.mealsIncluded !== undefined ? { mealsIncluded: q.mealsIncluded } : {}),
         ...(q.q
@@ -198,6 +204,8 @@ export class HrEmployeesService {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_MANAGE);
         const e = await tx.hrEmployee.findFirst({ where: { id, tenantId, campId }, select: EMPLOYEE_AUDIT_SELECT });
         if (!e) throw notFound('camp.err.employees.8');
+        // v0.2.2 Блок 5 (Q8): ажлаас гарсан бүртгэл = түүх — засахгүй (дахин орвол шинэ бүртгэл)
+        if ((e as { status?: unknown }).status === CampEmployeeStatus.TERMINATED) throw conflict('camp.err.employees.terminated');
         await this.assertRefs(tx, tenantId, campId, { organizationId: dto.organizationId, departmentId: dto.departmentId, crewId: dto.crewId, mealLocationId: dto.mealLocationId }, e as { mealLocationId?: string | null });
         if (dto.employeeCode !== undefined) await this.assertCodeUnique(tx, tenantId, dto.employeeCode, id);
         const fields = ['organizationId', 'departmentId', 'crewId', 'employeeCode', 'fullName', 'phone', 'email', 'status', 'mealLocationId', 'mealsIncluded'] as const;
@@ -256,6 +264,8 @@ export class HrEmployeesService {
           if (dto.mealsIncluded === undefined && dto.mealLocationId === undefined && dto.positionId === undefined) throw badRequest('camp.err.employees.bulk_empty');
           const before = await tx.hrEmployee.findMany({ where: { tenantId, campId, id: { in: dto.ids } }, select: EMPLOYEE_AUDIT_SELECT });
           if (before.length !== dto.ids.length) throw badRequest('camp.err.employees.bulk_not_found', { n: dto.ids.length - before.length });
+          const terminated = before.filter((b) => (b as { status?: unknown }).status === CampEmployeeStatus.TERMINATED).length;
+          if (terminated > 0) throw conflict('camp.err.employees.bulk_terminated', { n: terminated });
           if (dto.mealLocationId) await assertMealLocation(tx, tenantId, campId, dto.mealLocationId);
           const pos = dto.positionId !== undefined ? await this.resolvePosition(tx, tenantId, { positionId: dto.positionId }) : {};
           const data = {

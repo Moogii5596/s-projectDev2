@@ -1,6 +1,6 @@
-import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { CampEmployeeStatus } from '@prisma/client';
+import { CampEmployeeStatus, CampTerminationReason } from '@prisma/client';
 import { toBool, trim, trimOrNull } from '../../camp/common/camp-dto.util';
 
 // ── Ажилтан ──────────────────────────────────────────────────
@@ -69,7 +69,8 @@ export class UpdateEmployeeDto {
   @IsOptional() @Transform(trimOrNull) @IsEmail({}, { message: 'email буруу байна' }) @MaxLength(254)
   email?: string | null;
 
-  @IsOptional() @IsEnum(CampEmployeeStatus)
+  /** TERMINATED-ийг зөвхөн «Ажлаас гаргах» урсгалаар (v0.2.2 Блок 5) */
+  @IsOptional() @IsIn([CampEmployeeStatus.ACTIVE, CampEmployeeStatus.INACTIVE], { message: 'status: ACTIVE эсвэл INACTIVE' })
   status?: CampEmployeeStatus;
 
   /** v0.2.1 (C-01): каталогийн албан тушаал. null = хасах. Өгвөл `position` текстийг үл тоомсорлоно */
@@ -114,4 +115,32 @@ export class BulkEmployeesDto {
 
   @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all')
   positionId?: string | null;
+}
+
+// ── v0.2.2 Блок 5: ажлаас гаргах, дахин ажилд авах (Q8, Q-C, D-07) ─────────────
+export class TerminateEmployeeDto {
+  /** Ажлаас гарсан өдөр (YYYY-MM-DD) — өнөөдөр эсвэл өмнө (B5-Q3) */
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'date YYYY-MM-DD' })
+  date!: string;
+
+  @IsEnum(CampTerminationReason)
+  reason!: CampTerminationReason;
+
+  /** OTHER бол заавал (B5-Q4) */
+  @Transform(trimOrNull) @ValidateIf((o: TerminateEmployeeDto, v) => o.reason === CampTerminationReason.OTHER || (v !== null && v !== undefined))
+  @IsString() @IsNotEmpty({ message: 'note шаардлагатай (OTHER)' }) @MaxLength(500)
+  note?: string | null;
+}
+
+/**
+ * Дахин ажилд авах — хуучин (TERMINATED) бүртгэлээс ШИНЭ бүртгэл (Q8). Өгөөгүй талбар хуучнаасаа.
+ * `status`-ийг үл тооно (шинэ бүртгэл ACTIVE). `transferUser` (анхдагч true, Q-C (1)): хуучин нэвтрэх эрхийг шилжүүлж идэвхжүүлнэ.
+ */
+export class RehireEmployeeDto extends UpdateEmployeeDto {
+  @IsOptional() @IsBoolean()
+  transferUser?: boolean;
+}
+
+export class QueryPiiViewsDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(200) limit?: number;
 }
