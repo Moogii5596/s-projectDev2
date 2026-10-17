@@ -144,7 +144,8 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
   test('эрхийн матриц: V2 эрх (зардлын тайлан, хоолны захиалга) харагдахгүй; хэрэглэгчийн роль', async ({ page }) => {
     await page.goto('/camp/admin/roles');
     await expect(page.getByRole('heading', { name: 'Роль ба эрх' })).toBeVisible();
-    await expect(page.getByText('Кемпийн тохиргоо (НӨАТ, ростер, хоол идэх байршил)')).toBeVisible();
+    // v0.2.2 H2 (H2-Q5): эрхийн нэр = `perm.<code>` орчуулга («Кемп › …»)
+    await expect(page.getByText('Кемп › Тохиргоо (НӨАТ, ростер, хоол идэх байршил)')).toBeVisible();
     await expect(page.getByText('Зардлын тайлан харах')).toHaveCount(0);
     await expect(page.getByText('Хоолны захиалга өгөх')).toHaveCount(0);
 
