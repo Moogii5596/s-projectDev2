@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from '../helpers/auth.helper';
-import { loginAsUser } from '../helpers/fixture';
+import { fixture, loginAsUser } from '../helpers/fixture';
 
 /**
  * v0.2.1 — хоолны тооцооны загвар: албан тушаал (каталог) → кемпийн анхдагч байршил → ажилтан → хоолны тоо;
@@ -156,11 +156,15 @@ test.describe.serial('Кемп v0.2.1', () => {
     await expect(page.getByRole('link', { name: '+ Засварын хүсэлт' }).first()).toBeVisible();
   });
 
-  // TEST-026: профайлын хэл өөрчилдөг → fixture devAdmin (admin@test.mn-ийг ашигладаг зэрэг тестүүд EN болохгүй)
-  test('олон хэл: EN — Албан тушаал → Positions; ажилтны багана', async ({ browser }) => {
+  // TEST-026: профайлын хэл өөрчилдөг → тусдаа хэрэглэгч: fixture devAppr1 + энэ кемпийн «Кемп админ» роль
+  // (admin@test.mn — бусад тест, devAdmin — camp-v020-ийн хэлний тест; зэрэг ажиллахад хэл холилдохгүй)
+  test('олон хэл: EN — Албан тушаал → Positions; ажилтны багана', async ({ page: admin, browser }) => {
+    const roles = await api<{ id: string; systemCode: string | null }[]>(admin, 'GET', '/roles');
+    const roleId = roles.find((r) => r.systemCode === 'CAMP_ADMIN')?.id as string;
+    await api(admin, 'POST', '/user-roles', { userId: fixture().users.devAppr1.coreId, roleId, campId });
     const own = await browser.newContext();
     const page = await own.newPage();
-    await loginAsUser(page, 'devAdmin');
+    await loginAsUser(page, 'devAppr1');
     await page.goto(`/camp/${campId}/settings/positions`);
     await page.getByRole('group', { name: 'Хэл' }).getByRole('button', { name: 'EN' }).click();
     await expect(page.getByRole('heading', { name: 'Positions' })).toBeVisible();
