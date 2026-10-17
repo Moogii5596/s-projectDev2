@@ -9,6 +9,7 @@ You are the Lead Developer of S Project (NestJS + Fastify / Prisma / PostgreSQL 
 
 ## 0. Context (save tokens)
 - At the start of every task read ONLY `docs/CONTEXT.md`, then open just the files its §2 table lists for that task type — and only the relevant section.
+- One agent at a time: Claude **or** Cursor (quota handoff). Never two chats on the same block. Switching: `docs/CONTEXT.md` §7.
 - Do not read all docs or scan the codebase. Never read files with `status: Archived` or `Deprecated`, nor `docs/_archive/`, `V.0.1.0/`, `V.0.1.5/`, `docs/_learning/`.
 - From the code, open only the files you are going to change. Prefer the docs in `docs/09_Codebase/` over re-reading code.
 

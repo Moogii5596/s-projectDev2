@@ -2,13 +2,13 @@
 title: "S Project — Баримт бичгийн газрын зураг (INDEX)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-10-17
 tags: [index, moc]
 ---
 
 # S Project — Баримт бичгийн газрын зураг (INDEX)
 
-> **Claude:** эндээс биш [[CONTEXT]]-оос эхэл (нэг хуудас, ажлын төрлөөр унших файл). Энэ INDEX — хүнд зориулсан бүрэн жагсаалт (MOC).
+> **Агент (Claude / Cursor):** эндээс биш [[CONTEXT]]-оос эхэл (нэг хуудас, ажлын төрлөөр унших файл). Энэ INDEX — хүнд зориулсан бүрэн жагсаалт (MOC).
 > Одоогийн байдал → [[project-status]] · хувилбарууд → [[01_Development_Roadmap]] · шинэ баримт нэмэхэд тохирох хэсэгт `[[нэр]]` нэмж, `pnpm docs:check` ажиллуул.
 > Frontmatter: `type` = PRD · Architecture · Database · Roadmap · Guide · Log; `status` = Draft · Active · Deprecated · Archived. **Archived / Deprecated-ийг хөгжүүлэлтэд уншихгүй.**
 
@@ -39,7 +39,7 @@ tags: [index, moc]
 - [[01_Tech_Stack_Decision]] — стек (хувилбар, шалтгаан)
 - [[02_Local_Supabase_Docker_Windows]] — local орчин, тест командууд
 - [[03_Enterprise_VPC_Deployment]] — VPC / dedicated runbook
-- [[06_Cursor_Setup]] — Cursor IDE: rules, commands, ignore, UI тохиргоо
+- [[06_Cursor_Setup]] — Cursor IDE: rules, commands, ignore, UI тохиргоо · repo үндэс `CLAUDE.md` → [[CONTEXT]] (Claude Code)
 - [[04_Pilot_Camp_Windows]] — пилот: нэг Windows машин, `pilot.ps1`, staging, нөөц
 - [[05_Cloudflare_Tunnel]] — байгууллага холбох
 

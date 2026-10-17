@@ -2,13 +2,13 @@
 title: "Cursor IDE тохиргоо"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-16
+last_updated: 2026-10-17
 tags: [cursor, ide, setup, rules]
 ---
 
 # Cursor IDE тохиргоо
 
-> Хөгжүүлэлтийг 2026-10-16-наас Cursor дээр үргэлжлүүлнэ. Ажлын дүрэм нь [[CONTEXT]] §3–4-тэй ижил — rule файлууд тэр баримт руу заадаг (хуулбар биш).
+> Claude-ийн лимит дуусахад энэ IDE дээр үргэлжилнэ; reset хийхэд Claude. Хоёулаа [[CONTEXT]]-ээс эхэлнэ — зэрэгцээ биш (§7). Ажлын дүрэм нь CONTEXT §3–4-тэй ижил — rule файлууд тэр баримт руу заадаг (хуулбар биш).
 
 ## 1. Repo доторх файлууд (commit хийгдэнэ)
 | Файл | Үүрэг |
@@ -23,6 +23,7 @@ tags: [cursor, ide, setup, rules]
 | `.cursorignore` | AI огт уншихгүй: `.env*`, `docs/_learning/`, `_tmp_*` |
 | `.cursorindexingignore` | Индекслэхгүй: `node_modules`, `dist`, архив, lockfile |
 | `.vscode/settings.json`, `extensions.json` | Format on save, ESLint, Prettier, Prisma |
+| `.vscode/launch.json` | F5 debug: core-kernel `:3000`, web-shell Vite `:5173` + Chrome |
 
 Дүрэм өөрчлөгдвөл: эхлээд [[CONTEXT]] / [[08_Patterns]]-ийг засна, rule файл зөвхөн заалт.
 
@@ -36,6 +37,8 @@ tags: [cursor, ide, setup, rules]
 
 ## 3. Ажлын урсгал
 `/plan` → «Батлав» → хэрэгжүүлэх → `/verify` → (алдаа бол `/lesson`) → `/close-block` → commit (хэрэглэгч).
+
+Лимит дуусахад / Claude руу буцахад: [[CONTEXT]] §7 (progress «Зогссон цэг», `git status`).
 
 ## 4. Шалгах
 Шинэ Agent чатад: «Ямар rule идэвхтэй байна?» гэж асуухад 00 ба 10 нэрлэгдэх ёстой; `apps/core-kernel`-ийн файл нээхэд 30 нэмэгдэнэ.
