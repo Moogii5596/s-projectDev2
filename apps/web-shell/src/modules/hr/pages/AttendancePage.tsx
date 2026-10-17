@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
@@ -125,7 +125,7 @@ function DayListCard({ campId }: { campId: string }) {
 
 // ── Импорт ───────────────────────────────────────────────────
 
-function ImportCard({ campId, preview, setPreview }: { campId: string; preview: ImportPreview | null; setPreview: (p: ImportPreview | null) => void }) {
+function ImportCard({ campId, preview, setPreview }: { campId: string; preview: ImportPreview | null; setPreview: Dispatch<SetStateAction<ImportPreview | null>> }) {
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
   const [errorsOnly, setErrorsOnly] = useState(true)
@@ -144,7 +144,10 @@ function ImportCard({ campId, preview, setPreview }: { campId: string; preview: 
     setPreview(null)
     setDone(t('camp.att.confirmed', { movements: r.movements, newStays: r.newStays, closedStays: r.closedStays, adjustments: r.adjustments }))
   })
-  const cancel = useCampMutation((id: string) => hrApi.cancelImport(campId, id), [campKeys.imports(campId)], () => setPreview(null))
+  // Зөвхөн цуцалсан импортын preview-г хаана: цуцлалт дуусахаас өмнө шинэ файл оруулсан бол түүнийг арилгахгүй (TEST-026)
+  const cancel = useCampMutation((id: string) => hrApi.cancelImport(campId, id), [campKeys.imports(campId)], (_r, id) =>
+    setPreview((p) => (p?.import.id === id ? null : p)),
+  )
 
   const onFile = (file: File | undefined) => {
     setLocalError(null)

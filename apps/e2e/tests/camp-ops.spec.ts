@@ -109,6 +109,7 @@ test.describe.serial('Кемп — өдөр тутмын ажиллагаа', ()
     await expect(page.getByRole('button', { name: 'Батлах' })).toBeDisabled();
     await expect(page.getByText(/хоол заавал|meals заавал/).first()).toBeVisible();
     await page.getByRole('button', { name: 'Цуцлах' }).first().click();
+    await expect(page.getByText('Алдаатай 1')).toBeHidden(); // цуцлалт дууссаны дараа шинэ файл (уралдаан — TEST-026)
 
     await page.getByLabel('Ирцийн xlsx файл').setInputFiles({
       name: 'good.xlsx',
