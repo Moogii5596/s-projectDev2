@@ -184,8 +184,12 @@ test.describe.serial('Кемп v0.2.0', () => {
     await p.close();
   });
 
-  // @lang: admin@test.mn-ийн профайлын хэлийг өөрчилдөг → бусад тесттэй зэрэг биш, тусдаа project-оор хамгийн сүүлд (playwright.config.ts, TEST-026)
-  test('олон хэл: EN → 中文 (цэс, хуудас, backend алдаа), профайлд хадгалагдана; буцааж МН @lang', async ({ page, browser }) => {
+  // TEST-026: профайлын хэл өөрчилдөг тул admin@test.mn биш fixture devAdmin (ижил DEV tenant, ADMIN) — зэрэг ажиллаж буй
+  // бусад тест (admin@test.mn, монгол шошго) EN UI-тай нээгдэхгүй
+  test('олон хэл: EN → 中文 (цэс, хуудас, backend алдаа), профайлд хадгалагдана; буцааж МН', async ({ browser }) => {
+    const own = await browser.newContext();
+    const page = await own.newPage();
+    await loginAsUser(page, 'devAdmin');
     await page.goto(`/hr/${campId}/employees`);
     await page.getByRole('group', { name: 'Хэл' }).getByRole('button', { name: 'EN' }).click();
     await expect(page.getByRole('button', { name: 'Camp', exact: true })).toBeVisible();
@@ -205,7 +209,7 @@ test.describe.serial('Кемп v0.2.0', () => {
     // Шинэ төхөөрөмж (цэвэр контекст) — профайлын хэл
     const ctx = await browser.newContext();
     const other = await ctx.newPage();
-    await loginAs(other);
+    await loginAsUser(other, 'devAdmin');
     await other.goto('/camp?list=1');
     await expect(other.getByRole('button', { name: '营地', exact: true })).toBeVisible();
     await ctx.close();
@@ -215,6 +219,7 @@ test.describe.serial('Кемп v0.2.0', () => {
     // профайл ч МН руу буцсан эсэх
     const me = await api<{ locale: string }>(page, 'GET', '/api/v1/auth/me', undefined, true);
     expect(me.locale).toBe('mn');
+    await own.close();
   });
 });
 

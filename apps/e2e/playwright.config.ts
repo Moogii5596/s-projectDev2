@@ -21,14 +21,6 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      grepInvert: /@lang/,
-    },
-    // TEST-026: профайлын хэл (admin@test.mn) өөрчилдөг тест — бусад бүгд дууссаны ДАРАА (зэрэг ажиллахад тэд EN UI харж унадаг)
-    {
-      name: 'lang',
-      use: { ...devices['Desktop Chrome'] },
-      grep: /@lang/,
-      dependencies: ['chromium'],
     },
   ],
 

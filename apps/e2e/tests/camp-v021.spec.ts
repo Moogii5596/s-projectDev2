@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from '../helpers/auth.helper';
+import { loginAsUser } from '../helpers/fixture';
 
 /**
  * v0.2.1 — хоолны тооцооны загвар: албан тушаал (каталог) → кемпийн анхдагч байршил → ажилтан → хоолны тоо;
@@ -155,7 +156,11 @@ test.describe.serial('Кемп v0.2.1', () => {
     await expect(page.getByRole('link', { name: '+ Засварын хүсэлт' }).first()).toBeVisible();
   });
 
-  test('олон хэл: EN — Албан тушаал → Positions; ажилтны багана', async ({ page }) => {
+  // TEST-026: профайлын хэл өөрчилдөг → fixture devAdmin (admin@test.mn-ийг ашигладаг зэрэг тестүүд EN болохгүй)
+  test('олон хэл: EN — Албан тушаал → Positions; ажилтны багана', async ({ browser }) => {
+    const own = await browser.newContext();
+    const page = await own.newPage();
+    await loginAsUser(page, 'devAdmin');
     await page.goto(`/camp/${campId}/settings/positions`);
     await page.getByRole('group', { name: 'Хэл' }).getByRole('button', { name: 'EN' }).click();
     await expect(page.getByRole('heading', { name: 'Positions' })).toBeVisible();
@@ -163,5 +168,6 @@ test.describe.serial('Кемп v0.2.1', () => {
     await expect(page.getByRole('columnheader', { name: 'Work meal location' })).toBeVisible();
     await page.getByRole('group', { name: 'Language' }).getByRole('button', { name: 'МН' }).click();
     await expect(page.getByRole('button', { name: 'Кемп', exact: true })).toBeVisible();
+    await own.close();
   });
 });
