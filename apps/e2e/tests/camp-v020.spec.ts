@@ -184,11 +184,13 @@ test.describe.serial('Кемп v0.2.0', () => {
     await p.close();
   });
 
-  test('олон хэл: EN → 中文 (цэс, хуудас, backend алдаа), профайлд хадгалагдана; буцааж МН', async ({ page, browser }) => {
+  // @lang: admin@test.mn-ийн профайлын хэлийг өөрчилдөг → бусад тесттэй зэрэг биш, тусдаа project-оор хамгийн сүүлд (playwright.config.ts, TEST-026)
+  test('олон хэл: EN → 中文 (цэс, хуудас, backend алдаа), профайлд хадгалагдана; буцааж МН @lang', async ({ page, browser }) => {
     await page.goto(`/hr/${campId}/employees`);
     await page.getByRole('group', { name: 'Хэл' }).getByRole('button', { name: 'EN' }).click();
     await expect(page.getByRole('button', { name: 'Camp', exact: true })).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Camp sections' }).getByRole('link', { name: 'Attendance' })).toBeVisible();
+    // v0.2.2 H2: ирц «Хүний нөөц»-д
+    await expect(page.getByRole('navigation', { name: 'HR sections' }).getByRole('link', { name: 'Attendance' })).toBeVisible();
     // backend алдаа хэрэглэгчийн хэлээр (Accept-Language)
     await page.getByRole('button', { name: 'Import (Excel / table)' }).click();
     await page.getByRole('dialog').getByRole('tab', { name: 'Enter as table' }).click();

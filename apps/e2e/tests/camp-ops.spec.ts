@@ -59,11 +59,13 @@ async function selectRoom(dialog: ReturnType<Page['getByRole']>, roomNo: string)
   await select.selectOption(value as string);
 }
 
-/** v0.2.2 H2: Ирц, Ээлж, Ажилтан → «Хүний нөөц» */
+/** v0.2.2 H2: Ирц, Ээлж, Ажилтан → «Хүний нөөц»; Өрөөний самбар, Хоол — Кемпэд үлдсэн */
+const HR_SECTIONS = new Set(['Ирц', 'Ээлж', 'Ажилтан']);
 async function openSection(page: Page, section: string) {
-  await page.goto(`/hr/${campId}`);
-  await page.waitForURL('**/employees');
-  await page.getByRole('navigation', { name: 'Хүний нөөцийн хэсгүүд' }).getByRole('link', { name: section, exact: true }).click();
+  const hr = HR_SECTIONS.has(section);
+  await page.goto(hr ? `/hr/${campId}` : `/camp/${campId}`);
+  await page.waitForURL(hr ? '**/employees' : '**/rooms');
+  await page.getByRole('navigation', { name: hr ? 'Хүний нөөцийн хэсгүүд' : 'Кемпийн хэсгүүд' }).getByRole('link', { name: section, exact: true }).click();
 }
 
 test.describe.serial('Кемп — өдөр тутмын ажиллагаа', () => {

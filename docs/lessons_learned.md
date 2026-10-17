@@ -13,7 +13,7 @@ tags: [lessons, index, generated]
 > **Шинэ алдаа:** тохирох `lessons/LL-*.md`-д `### [TAG-NNN] Гарчиг` + **Тохиолдсон / Шалтгаан / Дүрэм** → [[LL-99_Changelog]]-д мөр → `pnpm docs:gen`. Давтагдвал шинэ ID биш — `### [ID] (давтагдсан, огноо) …`.
 > Файл: [[LL-01_Backend_DB]] · [[LL-02_Test_CI]] · [[LL-03_Env_Ops_Pilot]] · [[LL-04_Architecture_RLS]] · [[LL-05_Frontend]] · [[LL-06_Camp_v02]] · [[LL-07_Docs]] · Хуучин нэгтгэсэн файл (архив): [[lessons_learned_MVP]]
 
-Нийт **158** сургамж.
+Нийт **159** сургамж.
 
 ## DB, Prisma, RLS, migration
 
@@ -143,6 +143,7 @@ tags: [lessons, index, generated]
 | TEST-023 | API-ийн зан төлөв өөрчлөхөөс өмнө `grep -rn '<endpoint>' test/ apps/e2e` — ажиллуулж чадахгүй тестийн хүлээлтийг ч шинэчилнэ. | LL-06 §22 |
 | TEST-024 | Аюулгүй байдлын шийдвэр (хугацаа, түгжээ) DB-ийн цаг (`now()`) дээр — app/driver-ийн Date хөрвүүлэлтэд найдахгүй. | LL-06 §22 |
 | TEST-025 | «Cloud-д ажиллахгүй, CI-д» гэж шинэ integration тест үлдээхгүй — TEST-010 harness-аар заавал нэг удаа ажиллуулна. Тестийн… | LL-06 §24 |
+| TEST-026 | Хуваалцсан хэрэглэгчийн төлөвийг (хэл, эрх, нууц үг) өөрчилдөг e2e тест бусадтай зэрэг ажиллахгүй — тусдаа project /… | LL-06 §24 |
 | VITEST-001 | `vitest.integration.config.ts`-д: | LL-02 §5 |
 
 ## Frontend
