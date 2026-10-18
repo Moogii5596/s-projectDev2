@@ -26,12 +26,12 @@ tags: [status, v0.2.2]
 | Блок H2 — HR frontend («Хүний нөөц» цэс, `/hr/:campId/…`) | ✅ `8787569` (e2e хүлээгдэж байна) |
 | Блок 4 — хэрэглэгч удирдах UI (HR дээр) | ✅ `d586e18` (e2e ✅ 2026-10-17) |
 | Блок 5 — профайл, ажлаас гаргах, дахин ажилд авах, PII лог ([[07_v0.2.2_tech_plan]] §13) | ✅ `036f554` … `20bb87a` — e2e 71/71, CI ✅ (2026-10-17) |
-| Блок 6 — release бэлтгэл (PIL-10 code-split, QA-02, CHANGELOG, TC-v022-*) | ✅ cloud (2026-10-17) — commit + CI/e2e хүлээгдэж байна |
-| Блок 6б — анализын аюулгүй байдлын засвар (SEC-009 хэрэглэгч удирдах = OWNER/ADMIN, AUTH-004, SEC-010, AUTH-005, RBAC-001) | ✅ cloud (2026-10-17) — commit + CI/e2e хүлээгдэж байна |
+| Блок 6 — release бэлтгэл (PIL-10 code-split, QA-02, CHANGELOG, TC-v022-*) | ✅ `64f0174` — e2e 75/75 (2026-10-18) |
+| Блок 6б — анализын аюулгүй байдлын засвар (SEC-009 хэрэглэгч удирдах = OWNER/ADMIN, AUTH-004, SEC-010, AUTH-005, RBAC-001) | ✅ `64f0174` (Блок 6-тай нэг commit) — CI хүлээгдэж байна |
 | **Release `v0.2.2`** — tag → staging → пилот | 📋 дараагийнх |
 
 ## 2. Дараагийн алхам
-1. Блок 6 + 6б-г таны машин дээр commit → CI + `pnpm e2e` (fixture `devUserAdmin` шинэ, `auth-session.spec` шинэ).
+1. `64f0174`-ийн CI ногоон эсэхийг шалгах (e2e 75/75 ✅ таны машин дээр).
 2. **Release v0.2.2:** tag → staging (**эхэнд:** хэрэглэгч удирддаг хүн OWNER / ADMIN эсэх — SEC-009; [[08_v0.2.2_progress]] «Staging», [[pilot-test-guide]] §5г TC-v022-01…04) → `pilot.ps1 upgrade -Tag v0.2.2` → TC-v022-05…22. Өөрчлөлт: [[CHANGELOG]] `[v0.2.2]`.
 3. Дараагийн хувилбар: `v0.2.3` — **эхэнд ADR-007** (роль, эрх системийн түвшинд — PIL-13), хөрөнгө ажилтанд, ээлжийн календарь, гэрээ + үнэ; хуучин `/camp` HR замуудыг устгах — [[03_v0.2_full_plan]].
 
@@ -46,4 +46,4 @@ tags: [status, v0.2.2]
 | 5 | `camp-master` (7), `route-probe` (1) integration — v0.2.2 Блок 1–3-ын дараа хуучин хүлээлттэй (H1-ээс өмнө ч унадаг) | [[08_v0.2.2_progress]] «Блок H1 — тест» |
 
 ## 4. Тест (сүүлийн бүтэн ажиллагаа — v0.2.2 Блок 6б, cloud)
-core-kernel unit 677 · web-shell 98 · e2e 71/71 (таны машин, Блок 5) + `auth-session` 3 (CI-д) · integration (бодит PG + RLS) `camp-v022-*` ногоон (Блок 5; Блок 6-д backend логик өөрчлөгдөөгүй) · tsc / eslint цэвэр · web анхны ачаалал gzip 245 kB (PIL-10). Файлын зураглал, команд: [[07_Test_Map]]; орчин: [[02_Local_Supabase_Docker_Windows]].
+core-kernel unit 677 · web-shell 98 · e2e **75/75** (таны машин, 2026-10-18) · integration (бодит PG + RLS) `camp-v022-*` ногоон (Блок 5; Блок 6-д backend логик өөрчлөгдөөгүй) · tsc / eslint цэвэр · web анхны ачаалал gzip 245 kB (PIL-10). Файлын зураглал, команд: [[07_Test_Map]]; орчин: [[02_Local_Supabase_Docker_Windows]].
