@@ -117,6 +117,8 @@ afterAll(async () => {
 const emptyOk = (r: { method: string; path: string }, res: supertest.Response) => {
   if (r.method !== 'GET') return false;
   if (r.path.endsWith('/template')) return true;
+  // v0.2.2 Блок 3: урилга шалгах (нэвтрэлтгүй) — байхгүй токенд ч 200 { valid: false } (байгаа эсэхийг задруулахгүй, D-03)
+  if (r.path.endsWith('/auth/invites/:token')) return (res.body as { valid?: unknown })?.valid === false;
   const b = res.body as unknown;
   if (Array.isArray(b)) return b.length === 0;
   if (b && typeof b === 'object') {

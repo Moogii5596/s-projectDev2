@@ -125,11 +125,11 @@ describe('🔑 Каталог ба анхдагч роль', () => {
     expect(db).toEqual([...CAMP_PERMISSION_CODES].sort());
   });
 
-  it('шинэ tenant → 3 системийн роль (trigger); GET /camp/roles (ADMIN) 200', async () => {
+  it('шинэ tenant → 4 системийн роль (trigger; v0.2.2 Блок 1 — «Ажилтан» EMPLOYEE); GET /camp/roles (ADMIN) 200', async () => {
     const res = await api().get(`${V1}/roles`).set(as('admin'));
     expect(res.status).toBe(200);
     const sys = res.body.filter((r: { isSystem: boolean }) => r.isSystem).map((r: { systemCode: string }) => r.systemCode).sort();
-    expect(sys).toEqual([CampRoleCode.CAMP_ADMIN, CampRoleCode.CAMP_MANAGER, CampRoleCode.CATERING_ADMIN].sort());
+    expect(sys).toEqual([CampRoleCode.CAMP_ADMIN, CampRoleCode.CAMP_MANAGER, CampRoleCode.CATERING_ADMIN, CampRoleCode.EMPLOYEE].sort());
     ids.roleManager = res.body.find((r: { systemCode: string }) => r.systemCode === CampRoleCode.CAMP_MANAGER).id;
   });
 
@@ -370,9 +370,9 @@ describe('🔒 RLS leakage (app_user)', () => {
       ];
     });
 
-  it('өөр tenant context → [0,0,0]; өөрийн → [2,4,3]', async () => {
+  it('өөр tenant context → [0,0,0]; өөрийн → [2,4,4] (кемп, ажилтан, роль — v0.2.2: 4 системийн роль)', async () => {
     expect(await countAs(OTHER_TENANT_ID)).toEqual([0, 0, 0]);
-    expect(await countAs(tenantId)).toEqual([2, 4, 3]);
+    expect(await countAs(tenantId)).toEqual([2, 4, 4]);
   });
 
   it('өөр tenant context-оос энэ tenant-ийн нэрээр бичих → татгалзана', async () => {

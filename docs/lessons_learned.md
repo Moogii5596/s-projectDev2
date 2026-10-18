@@ -13,7 +13,7 @@ tags: [lessons, index, generated]
 > **Шинэ алдаа:** тохирох `lessons/LL-*.md`-д `### [TAG-NNN] Гарчиг` + **Тохиолдсон / Шалтгаан / Дүрэм** → [[LL-99_Changelog]]-д мөр → `pnpm docs:gen`. Давтагдвал шинэ ID биш — `### [ID] (давтагдсан, огноо) …`.
 > Файл: [[LL-01_Backend_DB]] · [[LL-02_Test_CI]] · [[LL-03_Env_Ops_Pilot]] · [[LL-04_Architecture_RLS]] · [[LL-05_Frontend]] · [[LL-06_Camp_v02]] · [[LL-07_Docs]] · Хуучин нэгтгэсэн файл (архив): [[lessons_learned_MVP]]
 
-Нийт **168** сургамж.
+Нийт **169** сургамж.
 
 ## DB, Prisma, RLS, migration
 
@@ -149,6 +149,7 @@ tags: [lessons, index, generated]
 | TEST-025 | «Cloud-д ажиллахгүй, CI-д» гэж шинэ integration тест үлдээхгүй — TEST-010 harness-аар заавал нэг удаа ажиллуулна. Тестийн… | LL-06 §24 |
 | TEST-026 | Хуваалцсан хэрэглэгчийн төлөвийг (хэл, эрх, нууц үг) өөрчилдөг e2e тест **тусдаа хэрэглэгч**ээр (fixture). Tenant даяар… | LL-06 §24 |
 | TEST-027 | Хэрэглэгчийн хуваалцсан төлөвийг (профайлын хэл, эрх, нууц үг, идэвхтэй эсэх) өөрчилдөг e2e тест бүр **өөрийн** fixture… | LL-06 §24 |
+| TEST-028 | Улаан тестийг «мэдэгдэж буй» гэж хойшлуулахгүй — тухайн блокт засна (эсвэл `it.skip` + шалтгаан + ID). Release-ийн… | LL-06 §24 |
 | VITEST-001 | `vitest.integration.config.ts`-д: | LL-02 §5 |
 
 ## Frontend
