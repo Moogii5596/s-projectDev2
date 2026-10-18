@@ -1,7 +1,7 @@
 ---
-title: 'CONTEXT — агентын эхлэх цэг (нэг хуудас)'
-type: 'Guide'
-status: 'Active'
+title: "CONTEXT — агентын эхлэх цэг (нэг хуудас)"
+type: "Guide"
+status: "Active"
 last_updated: 2026-10-17
 tags: [context, rules, moc]
 ---

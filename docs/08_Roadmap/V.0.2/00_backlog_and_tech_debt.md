@@ -2,13 +2,13 @@
 title: "v0.2 — Үлдсэн ажил ба техникийн өрийн нэгдсэн бүртгэл"
 type: "Roadmap"
 status: "Active"
-last_updated: 2026-10-17
+last_updated: 2026-10-19
 tags: [roadmap, v0.2]
 ---
 
 # v0.2 — Үлдсэн ажил ба техникийн өрийн нэгдсэн бүртгэл
 
-> **Ажлын ID-ийн ганц эх сурвалж** (C-, F-, V2-, PIL-, WF-, QA-, I18N-, DOC-, T3-). Хувилбарын хуваарь [[03_v0.2_full_plan]]-тай нийцнэ — зөрвөл төлөвлөгөөг үнэн гэж үзээд энд засна. **Төлөв:** ✅ гарсан хувилбар · 🔄 хэсэгчлэн · 📋 төлөвлөсөн · 🧭 алсын (2026-10-13 нотолгоо: [[CHANGELOG]], [[08_v0.2.2_progress]]).
+> **Ажлын ID-ийн ганц эх сурвалж** (C-, F-, V2-, PIL-, WF-, QA-, DEP-, ARC-, I18N-, DOC-, T3-). Хувилбарын хуваарь [[03_v0.2_full_plan]]-тай нийцнэ — зөрвөл төлөвлөгөөг үнэн гэж үзээд энд засна. **Төлөв:** ✅ гарсан хувилбар · 🔄 хэсэгчлэн · 📋 төлөвлөсөн · 🧭 алсын (2026-10-13 нотолгоо: [[CHANGELOG]], [[08_v0.2.2_progress]]).
 
 > Үүсгэсэн: 2026-10-11 (v0.1 хаагдах үед) · Эх сурвалж: [[01_analysis_and_plan_2026-10-08]] (Backlog), [[01_plan_and_erd]] (V2, D8),
 > [[LL-05_Frontend]] §19, [[LL-03_Env_Ops_Pilot]] §20, [[project-status]], v0.1.6 пилотын суулгалт · Төлөвлөгөө: [[01_plan_draft]]
@@ -37,6 +37,7 @@ tags: [roadmap, v0.2]
 | C-12 | FB-12 | Шилжүүлэх, шүүлтүүр, өрөөнөөс хөрөнгө/засвар, байранд хөрөнгө, байрны төрөл | P1/P2 | v0.2.0 (шүүлтүүр, шилжүүлэх) + v0.2.1 | ✅ v0.2.0 + v0.2.1 |
 | C-13 | FB-13 | Календарь дээр шууд засах; давхар зохицуулалт — сүүлийнх хүчинтэй, өмнөхийг түгжих | P1 | v0.2.3 | 📋 v0.2.3 |
 | C-14 | FB-14 | Ээлж/хэлтэс/албан тушаалаар шүүх; олон хүний ирц нэг дор | P1 | v0.2.0 (+ээлжээр v0.2.1) | ✅ v0.2.0 + v0.2.1 |
+| C-15 | — | Ирээдүйн (төлөвлөсөн) огноотой ажлаас гаргах — одоо зөвхөн өнөөдөр/өмнөх огноо (B5-Q3, [[07_v0.2.2_tech_plan]] §13) | P2 | v0.2.3 | 📋 v0.2.3 |
 
 **Бизнесийн асуулт (тухайн хувилбарын өмнө):** C-01 албан тушаал ↔ хэлтэс аль нь давамгайлах · C-04 хоолгүй хэлтсийн ажилтан хоолонд огт тоологдохгүй юу · C-09 ажлаас гарах огноо/шалтгаан, дахин ажилд орох, өрөө автоматаар чөлөөлөх · C-13 "сүүлийнх" = сүүлд бүртгэсэн үү, эхлэх огноо нь хожуу нь уу · C-12 байрны төрлүүд
 
@@ -65,7 +66,7 @@ tags: [roadmap, v0.2]
 
 | ID | Ажил | Эх сурвалж | Урьдч. | Хэмжээ | Төлөв |
 |---|---|---|---|---|---|
-| PIL-01 | **Хэрэглэгч удирдах UI** (нэмэх, role/кемпийн роль, нууц үг сэргээх, идэвхгүй болгох) — одоо зөвхөн `pilot.ps1 user`. SEC-005-ийн `POST /auth/register`-ийг үүнтэй нэгтгэх | runbook §10 | P1 | M | ✅ v0.2.2 Блок 3 + 4 («сүүлийн нэвтрэлт» 📋 v0.2.3) |
+| PIL-01 | **Хэрэглэгч удирдах UI** (нэмэх, role/кемпийн роль, нууц үг сэргээх, идэвхгүй болгох) — одоо зөвхөн `pilot.ps1 user`. SEC-005-ийн `POST /auth/register`-ийг үүнтэй нэгтгэх | runbook §10 | P1 | M | ✅ v0.2.2 Блок 3 + 4 («сүүлийн нэвтрэлт» → PIL-16) |
 | PIL-02 | "Нууц үг мартсан" / хэрэглэгч өөрийн нууц үгийг солих (SMTP тохиргоо шаардана) | runbook §16 | P1 | M | ✅ v0.2.2 Блок 3 |
 | PIL-03 | Хувийн мэдээллийн аудит лог — ажилтны мэдээллийг хэн, хэзээ үзсэн/өөрчилсөн | пилот: хувийн мэдээлэл | P1 | M | ✅ өөрчлөлтийн түүх v0.2.0; үзсэн бүртгэл (`camp_pii_access_log`, «Хэн үзсэн») v0.2.2 Блок 5 |
 | PIL-04 | Мониторинг: гаднаас uptime шалгалт, нөөцлөлт/backend унавал утсанд мэдэгдэл | runbook §16 | P1 | S | ✅ v0.2.1 |
@@ -80,6 +81,12 @@ tags: [roadmap, v0.2]
 | PIL-13 | **ADR-007** Роль, эрхийг системийн түвшинд: `camp_roles` → `core_roles`, `camp_permissions` → `core_permissions`, код модулиар (`hr.*`, `camp.*`, `core.users.*`), «Роль ба эрх» → Системийн тохиргоо; `camp.roles.manage` устгах (хэрэглэгчийн шийдвэр 2026-10-17) | v0.2.2 анализ (SEC-009) | P1 | L | 📋 v0.2.3 |
 | PIL-14 | Ажилтны хувийн мэдээлэл (утас, имэйл) — кемпэд эрхтэй хэн бүхэнд API-аар бүтнээр (жагсаалт, профайл). **Дотоод нийгмийн сүлжээтэй хамт** шийднэ: найзын хүсэлт, хэрэглэгч өөрөө нийтэд / найзуудад харуулах мэдээллээ сонгоно (хэрэглэгчийн шийдвэр 2026-10-17) | v0.2.2 анализ №2 | P1 | M | 📋 v0.3 (Feed) |
 | PIL-15 | Нууц үг солих / сэргээхэд бусад төхөөрөмжийн session-ийг цуцлах (GoTrue admin `signOut` / session устгах) | v0.2.2 анализ №6 | P2 | S | 📋 v0.2.3 |
+| PIL-16 | Хэрэглэгчийн жагсаалтад «Сүүлийн нэвтрэлт» (PIL-01-ээс салгав) | B4-Q3 | P2 | S | 📋 v0.2.3 |
+| PIL-17 | **Нууц үгийн доод урт 12 → 6** (хэрэглэгчийн санал, staging 2026-10-19: «12 хэтэрхий урт»). Хөндөх: GoTrue `minimum_password_length` (`deploy/pilot` + root `supabase/config.toml`), `AcceptInviteDto`/`ChangePasswordDto` `MinLength`, web `MIN_PASSWORD_LENGTH`, `pilot-auth-config.spec` (D-12), i18n `auth.change.min`. ⚠️ Богино нууц үгийг PIL-07 түгжээ (5 буруу / 15 мин) хамгаална — шийдвэрийг ADR-003-д тэмдэглэнэ | Staging TC-v022-05 | P1 | S | 📋 v0.2.3 |
+| PIL-18 | **Эрх олгох UX:** аль хэдийн олгосон роль / эрх сонголтын жагсаалтад хэвээр гарч, сонговол алдаа (409) заадаг → жагсаалтаас хасах эсвэл «олгогдсон» гэж харуулж идэвхгүй болгох (хэрэглэгчийн эрхийн цонх, роль олгох, албан тушаалын загвар) | Staging 2026-10-19 | P1 | S | 📋 v0.2.3 |
+| PIL-19 | **Эрхгүй цэс UI-д харагддаг:** хэрэглэгч хандах эрхгүй цэс / хэсэг (Хүний нөөц, Кемп, Системийн тохиргоо, HR / Кемпийн дэд хэсгүүд) харагдаж, нээхэд «эрх алга» гарна → `me/permissions`-ээр цэс, таб, товчийг нуух. ADR-007 (PIL-13)-той хамт — эрхийн код системийн түвшинд | Staging 2026-10-19 | P1 | M | 📋 v0.2.3 |
+| PIL-20 | `camp:snapshot --like=a.json` зөвхөн кемптэй байгууллагыг авдаг → кемпгүй байгууллагын `perms` «B-д алга» гэж худал зөрүү (staging 2026-10-19; `--today=` ашиглан тойрсон). `likeSlugs`-д `like.perms`-ийн түлхүүрийг нэмэх | Staging 2026-10-19 | P2 | S | 📋 v0.2.3 |
+| PIL-21 | `pilot.ps1 upgrade`: админ бус PowerShell-д `Disable-/Enable-ScheduledTask` «Access is denied» боловч «[OK]» хэвлэдэг (худал амжилт). Алдааг барьж анхааруулах, эсвэл эхэнд админ эрх шалгах. Мөн пилот дээр Tailscale Funnel асаалттай (Cloudflare-тэй давхар) — `tailscale funnel reset`, `status`-д анхааруулга | Пилот 2026-10-19 | P2 | S | 📋 v0.2.3 |
 
 ## 3. Workflow / MR (пилотод нуусан модулиуд)
 
@@ -102,13 +109,36 @@ tags: [roadmap, v0.2]
 | QA-03 | Frontend component тест (одоо зөвхөн цэвэр `lib/*`) | v0.1.5 backlog | P2 | M | 📋 |
 | QA-04 | Integration Redis mock-ийг санах ойн болгох (бичсэнээ уншдаг) — CACHE-001 | v0.1.5 backlog | P2 | S | 📋 |
 | QA-05 | Давхар RESTRICTIVE policy цэвэрлэх (PERMISSIVE-тэй ижил нөхцөл) | v0.1.5 backlog | P2 | S | 📋 |
-| QA-06 | ESLint анхааруулга 70 (`no-explicit-any`) | lint | P2 | S | 📋 |
+| QA-06 | ESLint анхааруулга 71 (core: `no-explicit-any` 65 + `no-unused-vars` 5, web: 1) — ихэнх нь spec болон MR/workflow (ARC-03) | lint 2026-10-18 | P2 | S | 📋 |
 | QA-07 | `pilot.ps1`-ийн автомат тест (pwsh + shim, PS-001) CI-д — v0.2.0: cloud harness-д 10 кейс (staging/upgrade/restore), repo/CI-д хараахан биш; Task Scheduler/Firewall хэсгийг гараар шалгах жагсаалт | lessons PS-001/002 | P2 | M | 🔄 harness ✅, CI 📋 |
-| QA-08 | `mfe-requisitions` (15 мөр stub) + Module Federation-ийг хадгалах уу, хасах уу | v0.1.5 | P2 | S | 📋 |
+| QA-08 | `mfe-requisitions` (15 мөр stub) + Module Federation-ийг хадгалах уу, хасах уу (`@module-federation/vite` web-shell build-ийн замд хэвээр) | v0.1.5 | P2 | S | 📋 |
 | QA-09 | CONC-002 тест (30 зэрэгцээ MR) postgres горимд 4-өөс 1 удаа унав — алдааг барьж шалтгааныг батлах (таамаг: Prisma tx `maxWait`/`timeout`) | lessons TEST-019 | P2 | S | 📋 |
 | QA-10 | HR frontend Кемпээс хамаарна (`ui.tsx`, `useCampMutation`, `campKeys`, `types.ts`, `ImportDialog`, `EmployeePicker`, `CatalogPage`; «Ирц» → Кемпийн `stays`) → `modules/shared` руу салгах | v0.2.2 H2 (H2-Q3) | P2 | M | 📋 v0.3 |
 | QA-11 | e2e API helper-ууд хуучин `/api/v1/camp/...` (Deprecation) замыг дууддаг → хуучин зам устгахаас **өмнө** `/hr`, `/core` руу | v0.2.2 H2 | P1 | S | 📋 v0.2.3 |
+| QA-12 | Хуучин `/api/v1/camp/...` HR controller 6-г устгах (`camp/legacy/hr-legacy.controller.ts`, H-Q4) — **QA-11-ийн дараа** | v0.2.2 H1 | P1 | S | 📋 v0.2.3 |
+| QA-13 | Хамаарал цэвэрлэх: ашиглагдаагүй `@nestjs/throttler`, `@s-project/prisma-rls-extension` (core-kernel), `@tanstack/react-query` (mfe); жагсаалтгүй (hoisting-оор л ажилладаг) `dotenv`, `@nestjs/schematics` (core-kernel), `exceljs` (e2e) → package.json-д | knip 2026-10-18; project-status §3 | P2 | S | 📋 v0.2.3 |
+| QA-14 | HR замын параметр `/hr/sites/:campId` → `siteId` (утга = ажлын байр, H-Q1) | v0.2.2 H1 | P3 | S | 📋 v0.3 |
+| QA-15 | Repo цэвэрлэгээ: root-ийн `_tmp_*` (~45), `a`, хоосон `outputs_tmp/`, root-ийн хуучин `lessons_learned.md` stub; `.gitattributes` (`*.ps1`, `Caddyfile` — LF/CRLF) | 2026-10-18 | P3 | S | 📋 |
+| QA-16 | Frontend-д **ErrorBoundary алга** — нэг компонент унахад цагаан дэлгэц (route `errorElement` + глобал boundary, i18n мессеж) | кодын анализ 2026-10-18 | P1 | S | 📋 v0.2.2 hotfix |
+| QA-17 | Ашиглагдаагүй код: 55 export, 68 type (knip), `route-ingress/register-route.dto.ts` (DEPRECATED давхар) | knip 2026-10-18 | P3 | S | 📋 v0.2.3 |
+| QA-18 | Production кодын type цоорхой: `as any` 19, `as unknown as` 27 | кодын анализ 2026-10-18 | P3 | S | 📋 |
+| QA-19 | `process.env`-ийг zod `env.config`-ийг тойрч уншдаг 6 файл (escalation, outbox, tenant-slug, prisma-log, main, system-prisma); `SYSTEM_DATABASE_URL` → `DATABASE_URL` «шилжилтийн» fallback-ийг хасаж fail-fast | кодын анализ 2026-10-18 | P3 | S | 📋 v0.2.3 |
+| QA-20 | `console.log/error` → Nest `Logger` (`db/redis.module.ts`, `main.ts`) | кодын анализ 2026-10-18 | P3 | S | 📋 v0.2.3 |
+| QA-21 | `schema.prisma` ↔ `supabase/migrations` зөрүүг автоматаар шалгах (CI-д `prisma migrate diff`, MIG-001) | кодын анализ 2026-10-18 | P2 | S–M | 📋 v0.2.3 |
 | I18N-02 | Олон хэлний үлдэгдэл: DTO (class-validator) мессеж, DB trigger-ийн тайлбар, ирцийн хуучин xlsx загвар (zh толгой/утга) | [[i18n-review]] §4 | P2 | M | 🔄 ирцийн xlsx zh ✅ v0.2.1; бусад 📋 |
+
+## 4б. Хамаарал ба архитектур (кодын анализ 2026-10-18)
+
+> `pnpm audit --prod`: **critical 1 · high 19 · moderate 22 · low 2**. Пилот интернэтэд нээлттэй тул эхэнд.
+
+| ID | Ажил | Эх сурвалж | Урьдч. | Хэмжээ | Төлөв |
+|---|---|---|---|---|---|
+| DEP-01 | `nodemailer 6.10.1` → сүүлийн хувилбар (урилгын имэйл: хүлээн авагчийн домэйн шалгалт тойрох, addressparser DoS, CRLF) | audit | P1 | S | 📋 v0.2.2 hotfix |
+| DEP-02 | NestJS 10.4 → 11 + Fastify 4.28 → 5 (v4 дэмжлэг дууссан; эвдэрсэн URL-ээр auth тойрох, body validation тойрох; `@fastify/middie` critical — Nest middleware ашиглаагүй тул бодит эрсдэл бага; `find-my-way`) | audit | P1 | M | 📋 v0.2.3 |
+| DEP-03 | `react-router` 6.30 → 7 (open redirect, moderate) | audit | P2 | M | 📋 v0.2.3 |
+| ARC-01 | Backend HR ↔ Кемп хоёр тийш хамааралтай: `hr` → `camp/common` ~80 import (camp-tx, permissions, errors, access, audit…), `camp` → `hr` 15 файл → `camp/common`-ийг `common/tenant` руу зөөх (QA-10-ийн backend тал) | madge/grep | P1 | M | 📋 v0.3 |
+| ARC-02 | Frontend API type гараар (`camp/api/types.ts` 88 type, 703 мөр; R20-оор гар синк) → `@nestjs/swagger` OpenAPI + type codegen | кодын анализ | P1 | M | 📋 v0.3 |
+| ARC-03 | Унтаа модулиуд (MR, workflow, budget, inventory, vendor, report, event-bus, route-ingress, mr-lifecycle) — backend ~3.7k, frontend ~630 мөр; lint анхааруулгын 65/70 → WF-05-тай хамт: хадгалах / хасах | кодын анализ | P2 | M | 📋 |
 
 ## 5. Баримт
 
@@ -116,6 +146,7 @@ tags: [roadmap, v0.2]
 |---|---|---|---|
 | DOC-01 | ADR-002 Хостинг (PIL-06-ийн шийдвэр) | P1 | 📋 v0.2.4 |
 | DOC-02 | Хэрэглэгчийн гарын авлага (Кемп) — [[pilot-test-guide]]-ээс үүсгэх | P2 | 🔄 `docs/_learning/user-guides/` эхэлсэн |
+| DOC-03 | «Missing Specs» (Event bus гэрээ, FIX-01~04): [[project-status]] §3 нь [[INDEX]]-ийн хэсэг рүү заадаг ч тэр хэсэг алга → INDEX-д нэмэх | P3 | 📋 |
 
 ## 6. v0.4+ руу шилжүүлсэн (2026-10-11 шийдвэр: v0.3 = дотоод Feed)
 

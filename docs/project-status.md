@@ -2,7 +2,7 @@
 title: "Төслийн төлөв (одоо ба дараагийн алхам)"
 type: "Log"
 status: "Active"
-last_updated: 2026-10-17
+last_updated: 2026-10-19
 tags: [status, v0.2.2]
 ---
 
@@ -11,10 +11,10 @@ tags: [status, v0.2.2]
 > **Ганц эх сурвалж:** "одоо юу хийгдэж байна, дараа нь юу" — энд. Хувилбарын жагсаалт → [[01_Development_Roadmap]] · өөрчлөлт → [[CHANGELOG]] · код → [[00_Codebase_Map]] · түүх (v0.1.x төлөв, тестийн хуучин үр дүн) → [[project-status_history_v0.1]].
 > Блок / хувилбар дуусах бүрт шинэчилнэ (дээд талын 3 хэсэг).
 
-## 1. Одоо (2026-10-17)
-- **Сүүлийн release:** `v0.2.1` (2026-10-12) — пилот (Sino Hydro, Кемп) энэ хувилбар дээр, `https://sino.gobiverse.website` (Cloudflare Tunnel).
+## 1. Одоо (2026-10-19)
+- **Сүүлийн release:** `v0.2.2` (2026-10-19) — пилот (Sino Hydro, Кемп) энэ хувилбар дээр (v0.2.0-оос шууд шинэчилсэн; v0.2.1 пилотод суугаагүй), `https://sino.gobiverse.website` (Cloudflare Tunnel).
 - **Агент:** Claude **эсвэл** Cursor — ээлжлэн (лимит дуусахад солино). Зэрэгцээ биш. Солих журам → [[CONTEXT]] §7. Cursor тохиргоо → [[06_Cursor_Setup]].
-- **Хөгжүүлэлт:** `v0.2.2` — хэрэглэгч ба ажилтан ([[07_v0.2.2_tech_plan]], явц [[08_v0.2.2_progress]]).
+- **Хөгжүүлэлт:** дараагийнх `v0.2.3` (төлөвлөгөө хараахан алга) — v0.2.2 дууссан ([[07_v0.2.2_tech_plan]], явц [[08_v0.2.2_progress]]).
 
 | v0.2.2 | Төлөв |
 |---|---|
@@ -28,21 +28,25 @@ tags: [status, v0.2.2]
 | Блок 5 — профайл, ажлаас гаргах, дахин ажилд авах, PII лог ([[07_v0.2.2_tech_plan]] §13) | ✅ `036f554` … `20bb87a` — e2e 71/71, CI ✅ (2026-10-17) |
 | Блок 6 — release бэлтгэл (PIL-10 code-split, QA-02, CHANGELOG, TC-v022-*) | ✅ `64f0174` — e2e 75/75 (2026-10-18) |
 | Блок 6б — анализын аюулгүй байдлын засвар (SEC-009 хэрэглэгч удирдах = OWNER/ADMIN, AUTH-004, SEC-010, AUTH-005, RBAC-001) | ✅ `64f0174` … `25448bb` — CI ✅, e2e 75/75 |
-| **Release `v0.2.2`** — tag → staging → пилот | 📋 дараагийнх |
+| **Release `v0.2.2`** — tag → staging → пилот | ✅ 2026-10-19 (staging A = B; пилот `upgrade` 00:47, нөөц `sinohydro-20261019-004700.7z`) |
 
 ## 2. Дараагийн алхам
 1. ✅ CI бүрэн ногоон (`25448bb`, 2026-10-18) — Lint · Unit · Integration · Build, E2E. Дараагийнх: tag `v0.2.2`.
-2. **Release v0.2.2:** tag → staging (**эхэнд:** хэрэглэгч удирддаг хүн OWNER / ADMIN эсэх — SEC-009; [[08_v0.2.2_progress]] «Staging», [[pilot-test-guide]] §5г TC-v022-01…04) → `pilot.ps1 upgrade -Tag v0.2.2` → TC-v022-05…22. Өөрчлөлт: [[CHANGELOG]] `[v0.2.2]`.
-3. Дараагийн хувилбар: `v0.2.3` — **эхэнд ADR-007** (роль, эрх системийн түвшинд — PIL-13), хөрөнгө ажилтанд, ээлжийн календарь, гэрээ + үнэ; хуучин `/camp` HR замуудыг устгах — [[03_v0.2_full_plan]].
+2. ✅ **Release v0.2.2 (2026-10-19):** tag → staging (**эхэнд:** хэрэглэгч удирддаг хүн OWNER / ADMIN эсэх — SEC-009; [[08_v0.2.2_progress]] «Staging», [[pilot-test-guide]] §5г TC-v022-01…04) → `pilot.ps1 upgrade -Tag v0.2.2` → TC-v022-05…22 (хэрэглэгч баталсан). Өөрчлөлт: [[CHANGELOG]] `[v0.2.2]`.
+3. Дараагийн хувилбар: `v0.2.3` — **эхэнд ADR-007** (роль, эрх системийн түвшинд — PIL-13), хөрөнгө ажилтанд, ээлжийн календарь, гэрээ + үнэ; хуучин `/camp` HR замуудыг устгах (QA-11 → QA-12), DEP-02 Nest 11 + Fastify 5 — [[03_v0.2_full_plan]]. Кодын анализын бүх олдвор (2026-10-18) → [[00_backlog_and_tech_debt]] QA-12…21, DEP-, ARC-.
 
 ## 3. Нээлттэй асуудал / эрсдэл
 | # | Асуудал | Хаана |
 |---|---|---|
 | 1 | Хостингийн шийдвэр (ADR-002 бичигдээгүй) — пилот нэг машин дээр, хувийн мэдээлэлтэй | PIL-06, [[00_backlog_and_tech_debt]] |
 | 2 | Supabase-ийн SMTP / GoTrue-ийн бодит шалгалт зөвхөн staging-д боломжтой (Блок 3) | [[08_v0.2.2_progress]] |
-| 3 | `packages/prisma-rls-extension` ашиглагдаагүй хамаарал | [[01_PostgreSQL_MultiTenant_RLS_Spec]] §6 |
-| 4 | vault-д алга spec (Event bus гэрээ, FIX-01~04) | [[INDEX]] → Missing Specs |
+| 3 | `packages/prisma-rls-extension` ашиглагдаагүй хамаарал | QA-13, [[01_PostgreSQL_MultiTenant_RLS_Spec]] §6 |
+| 4 | vault-д алга spec (Event bus гэрээ, FIX-01~04) — INDEX-д хэсэг хараахан алга | DOC-03 |
 | 5 | Ажилтны утас / имэйл кемпэд эрхтэй хэн бүхэнд API-аар харагдана — дотоод нийгмийн сүлжээтэй хамт шийднэ (хэрэглэгчийн шийдвэр) | PIL-14, [[00_backlog_and_tech_debt]] |
+| 6 | Эмзэг хамаарал (audit 2026-10-18: critical 1, high 19) — Fastify 4 / Nest 10, nodemailer | DEP-01 (v0.2.2 hotfix), DEP-02 (v0.2.3) |
+| 7 | Frontend-д ErrorBoundary алга — алдаа гарвал цагаан дэлгэц | QA-16 (v0.2.2 hotfix) |
+| 8 | HR ↔ Кемп backend хамаарал, гар API type — зөрөх эрсдэл | ARC-01, ARC-02 (v0.3) |
+| 9 | Пилот: Tailscale Funnel асаалттай хэвээр (Cloudflare Tunnel-тэй давхар нийтэд нээлттэй) — `tailscale funnel reset` | PIL-21 |
 
 ## 4. Тест (сүүлийн бүтэн ажиллагаа — v0.2.2 Блок 6б, cloud)
 core-kernel unit 677 · web-shell 98 · e2e **75/75** (таны машин, 2026-10-18) · integration (бодит PG + RLS) `camp-v022-*` ногоон (Блок 5; Блок 6-д backend логик өөрчлөгдөөгүй) · tsc / eslint цэвэр · web анхны ачаалал gzip 245 kB (PIL-10). Файлын зураглал, команд: [[07_Test_Map]]; орчин: [[02_Local_Supabase_Docker_Windows]].
