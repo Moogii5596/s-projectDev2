@@ -19,7 +19,7 @@ tags: [release]
 
 ---
 
-## [v0.2.2] — 2026-10-17 (бэлтгэл; tag тавьсан өдрөөр засна) — Хэрэглэгч ба ажилтан: утсаар нэвтрэх, урилга, «Хүний нөөц», ажлаас гаргах
+## [v0.2.2] — 2026-10-18 — Хэрэглэгч ба ажилтан: утсаар нэвтрэх, урилга, «Хүний нөөц», ажлаас гаргах
 
 > Төлөвлөгөө: [[07_v0.2.2_tech_plan]] · Явц: [[08_v0.2.2_progress]] · Шийдвэр: [[ADR-003_Users_Login_Permissions]], [[ADR-005_Org_Connectivity_Domains]], [[ADR-006_HR_Core_Module]]
 > Суулгах: **эхлээд staging** — snapshot A → `upgrade` → B, `--compare --expect=v022-q9` ✅ A = B, `pilot.ps1 auth-test`, утсаар нэвтрэх ([[08_v0.2.2_progress]] «Staging»); дараа нь `pilot.ps1 upgrade -Tag v0.2.2` · Туршилт: [[pilot-test-guide]] §5г (TC-v022-*)
