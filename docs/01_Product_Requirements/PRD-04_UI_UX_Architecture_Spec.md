@@ -2,7 +2,7 @@
 title: "PRD-04 — UX зарчим ба шаардлага"
 type: "PRD"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-10-19
 tags: [prd, ui, ux, i18n]
 ---
 
@@ -32,7 +32,7 @@ tags: [prd, ui, ux, i18n]
 - Кемп: кемп сонголт → ажиллагаа (ирц, ээлж, хоол/байрлалт, өрөөний самбар, засвар, хөрөнгө) · **Системийн тохиргоо** (`/camp/system/:section` — байгууллага, роль, хэрэглэгчийн эрх, каталог, орчуулга). Route-ын бүрэн жагсаалт: [[09_Frontend_Routes]].
 
 ## 4. Зорилт (🧭)
-- **Feed-ээр угтах нүүр** — ажилтан цэс биш хамт олны мэдээ, хоолны цэс, өөрийн хүсэлтийн явцаар угтагдана (v0.3, [[PRD-05_Internal_Social_Feed]]); дотоод + нийтийн нэг feed ([[PRD-06_Vision_Business_Model]] §4).
+- **Feed-ээр угтах нүүр** (⚠️ 2026-10-19: **v0.2.3**-т — нэвтрэхэд эхлээд Feed, M-0) — ажилтан цэс биш хамт олны мэдээ, хоолны цэс, өөрийн хүсэлтийн явцаар угтагдана (v0.3, [[PRD-05_Internal_Social_Feed]]); дотоод + нийтийн нэг feed ([[PRD-06_Vision_Business_Model]] §4).
 - **Модуль бүрийн UI-г динамикаар залгах** (sidebar / dashboard widget / route slot, manifest) — одоо build-ийн `VITE_MODULES`; хэрэгцээ гарвал ([[ARCH-05_UI_UX_Architecture_Spec]] §3).
 - **Offline горим** (Tier 3, PWA + локал кэш, sync зөрчлийн дэлгэц) — v0.4+, анхны санаа: [[PRD-04_UI_UX_Architecture_Spec.v1]].
 - Хэрэглэгчийн заавар (дүрээр): `docs/_learning/user-guides/` ([[_learning/README|_learning]]).

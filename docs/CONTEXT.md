@@ -2,7 +2,7 @@
 title: "CONTEXT — агентын эхлэх цэг (нэг хуудас)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-17
+last_updated: 2026-10-19
 tags: [context, rules, moc]
 ---
 
@@ -29,7 +29,7 @@ S Project — гаднаа нийгмийн сүлжээ, цаанаа ERP; бү
 | Алдаа засах                        | [[lessons_learned]]-ийн **тухайн бүлэг** → (хэрэгтэй бол) `lessons/LL-*.md`-д `[ID]` хайх                                                                                |
 | Пилот / deploy / staging           | [[04_Pilot_Camp_Windows]] (тухайн §) · [[05_Cloudflare_Tunnel]] · [[06_Config_Env]]                                                                                      |
 | IDE / Cursor тохиргоо              | [[06_Cursor_Setup]]                                                                                                                                                      |
-| Төлөвлөлт / шинэ хувилбар          | [[01_Development_Roadmap]] → [[03_v0.2_full_plan]] → [[00_backlog_and_tech_debt]] → холбогдох PRD / ADR                                                                  |
+| Төлөвлөлт / шинэ хувилбар          | [[01_Development_Roadmap]] → [[11_v0.2_completion_master_plan]] → [[00_backlog_and_tech_debt]] → холбогдох PRD / ADR                                                     |
 | Бүтээгдэхүүн / архитектурын асуулт | [[PRD-01_Core_Vision]] · [[ARCH-00_System_Overview]] · [[PRD-06_Vision_Business_Model]]                                                                                  |
 | Баримт бичиг засах                 | [[INDEX]] (бүрэн жагсаалт) + энэ файл §5                                                                                                                                 |
 
