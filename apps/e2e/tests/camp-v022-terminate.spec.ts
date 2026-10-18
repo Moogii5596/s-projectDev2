@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from '../helpers/auth.helper';
+import { switchUser } from '../helpers/fixture';
 
 /**
  * v0.2.2 Блок 5 — ажилтны профайл, ажлаас гаргах (кемпэд байгаа → явалт автоматаар), дахин ажилд авах.
@@ -55,6 +56,10 @@ test.describe.serial('v0.2.2 Блок 5 — профайл, ажлаас гар�
     await expect(page.getByRole('heading', { name: new RegExp(EMP_CODE) })).toBeVisible();
     await page.getByRole('tab', { name: 'Ирц' }).click();
     await expect(page.getByText(/Одоо кемпэд байна/)).toBeVisible();
+    // SEC-009 (Блок 6б): «Хэн үзсэн» — зөвхөн системийн админ (Кемп админд харагдахгүй)
+    await expect(page.getByRole('tab', { name: 'Хэн үзсэн' })).toHaveCount(0);
+    await switchUser(page, 'devUserAdmin');
+    await page.goto(`/hr/${campId}/employees/${ids.emp}`);
     await page.getByRole('tab', { name: 'Хэн үзсэн' }).click();
     await expect(page.getByRole('row').nth(1)).toBeVisible();
   });

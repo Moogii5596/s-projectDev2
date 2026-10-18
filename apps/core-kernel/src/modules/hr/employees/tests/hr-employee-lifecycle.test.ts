@@ -33,6 +33,10 @@ describe('цэвэр функц', () => {
     expect(terminationUserBlocker({ id: 'me', role: 'ADMIN', isActive: true }, 'me', 0)).toBe('camp.err.user.1');
     expect(terminationUserBlocker({ id: 'o', role: 'OWNER', isActive: true }, 'me', 1)).toBe('camp.err.user.2');
     expect(terminationUserBlocker({ id: 'o', role: 'OWNER', isActive: true }, 'me', 2)).toBeNull();
+    // SEC-009: системийн админы нэвтрэх эрхийг Кемп админ хаахгүй
+    expect(terminationUserBlocker({ id: 'a', role: 'ADMIN', isActive: true }, 'me', 0, false)).toBe('camp.err.access.admin');
+    expect(terminationUserBlocker({ id: 'o', role: 'OWNER', isActive: true }, 'me', 2, false)).toBe('camp.err.access.admin');
+    expect(terminationUserBlocker({ id: 'u', role: 'REQUESTER', isActive: true }, 'me', 0, false)).toBeNull();
   });
 
   it('шинэ мессеж mn/en/zh', () => {
@@ -52,6 +56,7 @@ describe('HrEmployeeLifecycleService', () => {
   let s: ReturnType<typeof setup>;
   let svc: HrEmployeeLifecycleService;
   let userAdmin: { setBanned: ReturnType<typeof vi.fn> };
+  let tenantCache: { invalidateMember: ReturnType<typeof vi.fn> };
   let site: { releaseOnTermination: ReturnType<typeof vi.fn>; roomHistory: ReturnType<typeof vi.fn> };
   let stays: { findForPlanner: ReturnType<typeof vi.fn> };
 
@@ -61,12 +66,13 @@ describe('HrEmployeeLifecycleService', () => {
   beforeEach(() => {
     s = setup();
     userAdmin = { setBanned: vi.fn().mockResolvedValue(undefined) };
+    tenantCache = { invalidateMember: vi.fn().mockResolvedValue(undefined) };
     site = { releaseOnTermination: vi.fn().mockResolvedValue({ closed: 1, removed: 0 }), roomHistory: vi.fn().mockResolvedValue([]) };
     stays = { findForPlanner: vi.fn().mockResolvedValue([]) };
     const hooks = new HrEmployeeHooks();
     hooks.registerSitePort(site as never);
     const employees = new HrEmployeesService(s.prisma as never, s.access, s.audit);
-    svc = new HrEmployeeLifecycleService(s.prisma as never, s.access, s.audit, employees, { stays } as never, hooks, userAdmin as never);
+    svc = new HrEmployeeLifecycleService(s.prisma as never, s.access, s.audit, employees, { stays } as never, hooks, userAdmin as never, tenantCache as never);
     asAdmin();
     s.tx.hrEmployee.findFirst.mockResolvedValue(emp());
     s.tx.hrEmployee.findFirstOrThrow = vi.fn().mockResolvedValue({ status: 'ACTIVE', terminatedAt: null, terminationReason: null, terminationNote: null });
@@ -114,7 +120,15 @@ describe('HrEmployeeLifecycleService', () => {
     expect(audit.map((a: { action: string; entityType: string }) => `${a.entityType}:${a.action}`)).toEqual(['employee:TERMINATE', 'user_account:DEACTIVATE']);
     expect(audit[0].summaryKey).toBe('audit.employee.terminate');
     expect(s.cache.invalidateTenant).toHaveBeenCalledWith('t1');
+    // №3 (Блок 6б): membership cache шууд цэвэрлэгдэнэ
+    expect(tenantCache.invalidateMember).toHaveBeenCalledWith('t1', USER.authId);
     expect(res).toMatchObject({ status: 'TERMINATED', departureRecorded: false, roomsClosed: 1, userDeactivated: true });
+  });
+
+  it('SEC-009: Кемп админ системийн админы (ADMIN) ажилтныг ажлаас гаргахад нэвтрэх эрхийг хаахгүй → 403, ban хийхгүй', async () => {
+    s.tx.hrEmployee.findFirst.mockResolvedValue(emp({ user: { ...USER, role: 'ADMIN' } }));
+    await expect(terminate()).rejects.toThrow(/зөвхөн системийн админ/);
+    expect(userAdmin.setBanned).not.toHaveBeenCalled();
   });
 
   it('terminate: нэвтрэх эрхгүй / идэвхгүй хэрэглэгч → ban хийхгүй', async () => {
@@ -192,13 +206,14 @@ describe('HrEmployeeLifecycleService', () => {
     expect(p.attendance.inCampSince).toBeNull();
   });
 
-  it('piiViews: зөвхөн тухайн кемпийн camp.roles.manage (Кемп админ) — бусад 403', async () => {
+  it('piiViews (SEC-009): зөвхөн системийн админ — Кемп админ (roles.manage) ч 403', async () => {
     asAdmin([P.EMPLOYEE_MANAGE, P.EMPLOYEE_TERMINATE]);
     await expect(svc.piiViews('t1', 'a1', 'c1', 'e1', {})).rejects.toThrow(ForbiddenException);
     asAdmin([P.ROLES_MANAGE]);
+    await expect(svc.piiViews('t1', 'a1', 'c1', 'e1', {})).rejects.toThrow(ForbiddenException);
+    setActor(s.tx, { userId: 'cu-admin', role: UserRole.ADMIN });
     s.tx.campPiiAccessLog.findMany.mockResolvedValueOnce([{ id: 'l1', viewerUserId: 'cu-admin', context: 'profile', viewedAt: new Date() }]);
     expect((await svc.piiViews('t1', 'a1', 'c1', 'e1', {})).data).toHaveLength(1);
-    await expect(svc.piiViews('t1', 'a1', 'c2', 'e1', {})).rejects.toThrow(ForbiddenException);
   });
 });
 

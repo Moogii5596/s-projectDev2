@@ -4,6 +4,8 @@
  */
 export const CHANGE_PASSWORD_PATH = '/change-password'
 export const PASSWORD_CHANGE_REQUIRED = 'auth.password_change_required'
+/** D-12: нууц үг ≥ 12 (backend-тэй ижил). ChangePassword + SetPassword хуудас хуваалцана. */
+export const MIN_PASSWORD_LENGTH = 12
 
 export function isPasswordChangeRequired(error: unknown): boolean {
   const r = (error as { response?: { status?: number; data?: { code?: string } } } | null)?.response

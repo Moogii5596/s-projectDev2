@@ -4,13 +4,13 @@ import { campApi } from '../api/camp-api'
 import type { PermissionDef, Role } from '../api/types'
 import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
-import { P, mergeRolePermissions, permissionLabel, visiblePermissions } from '../lib/permissions'
+import { isSystemAdmin, mergeRolePermissions, permissionLabel, visiblePermissions } from '../lib/permissions'
 import { SYSTEM_ROLE_LABEL } from '../lib/labels'
 import { Badge, Button, Card, ErrorBox, Field, Loading, Modal, NoAccess, PageHeader, inputCls } from '../components/ui'
 import { useTranslation } from 'react-i18next'
 
 /**
- * /camp/admin/roles — роль × эрхийн матриц (roles.manage, tenant түвшин).
+ * /camp/admin/roles — роль × эрхийн матриц (системийн админ — SEC-009).
  * V2 эрх (availableIn = 'v2') харагдахгүй, гэхдээ роль эзэмшиж байвал хадгалахад хасагдахгүй.
  * v0.2.2 (ADR-003 §2.4): роль = загвар. Хадгалахад хэрэглэгчийн эрх АВТОМАТААР өөрчлөгдөхгүй →
  * "N хэрэглэгчид хэрэгжүүлэх" цонх (урьдчилсан харагдац → батлах); алгасвал баганад "хэрэгжээгүй" товч үлдэнэ.
@@ -19,7 +19,7 @@ export default function RolesPage() {
   const { t, i18n } = useTranslation()
   const permLabel = (p: PermissionDef) => permissionLabel(p, (k) => i18n.exists(k), (k) => t(k))
   const perms = useCampPermissions()
-  const canManage = perms.can(P.ROLES_MANAGE)
+  const canManage = isSystemAdmin(perms.data)
   const catalog = useQuery({ queryKey: campKeys.permissions, queryFn: campApi.permissions, enabled: canManage })
   const roles = useQuery({ queryKey: campKeys.roles, queryFn: campApi.roles, enabled: canManage })
   const [draft, setDraft] = useState<Record<string, string[]>>({})

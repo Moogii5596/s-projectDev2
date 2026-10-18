@@ -2,7 +2,7 @@
  * [FE-007] 401 → локал session устгаад /login (давталтгүй)
  */
 import { describe, expect, it, vi } from 'vitest'
-import { handleUnauthorized } from '../unauthorized'
+import { handleUnauthorized, isSessionRevoked } from '../unauthorized'
 
 function deps(path: string, signOutFails = false) {
   const order: string[] = []
@@ -37,5 +37,17 @@ describe('handleUnauthorized [FE-007]', () => {
     const { d } = deps('/camp', true)
     await handleUnauthorized(d)
     expect(d.redirect).toHaveBeenCalledWith('/login')
+  })
+})
+
+describe('isSessionRevoked (v0.2.2 Блок 6б, №3)', () => {
+  const err = (status: number, code?: string) => ({ response: { status, data: code ? { code } : {} } })
+  it('403 auth.not_member / camp.err.access.1 → true; бусад 403, 401, алдаагүй → false', () => {
+    expect(isSessionRevoked(err(403, 'auth.not_member'))).toBe(true)
+    expect(isSessionRevoked(err(403, 'camp.err.access.1'))).toBe(true)
+    expect(isSessionRevoked(err(403, 'camp.err.access.2'))).toBe(false)
+    expect(isSessionRevoked(err(403))).toBe(false)
+    expect(isSessionRevoked(err(401, 'auth.not_member'))).toBe(false)
+    expect(isSessionRevoked(null)).toBe(false)
   })
 })

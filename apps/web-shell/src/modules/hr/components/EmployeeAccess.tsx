@@ -6,7 +6,7 @@ import { campApi } from '../../camp/api/camp-api'
 import type { Employee } from '../../camp/api/types'
 import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
 import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { P } from '../../camp/lib/permissions'
+import { isSystemAdmin } from '../../camp/lib/permissions'
 import { Badge, Button, ErrorBox, inputSmCls } from '../../camp/components/ui'
 import InviteActions from './InviteActions'
 import { loginName, userState } from '../lib/user-access'
@@ -14,13 +14,13 @@ import { loginName, userState } from '../lib/user-access'
 const STATE_TONE = { ACTIVE: 'green', INVITED: 'yellow', NO_INVITE: 'gray', INACTIVE: 'red' } as const
 
 /**
- * v0.2.2 Блок 4 (B4-Q1) — ажилтны засах цонхны «Нэвтрэх эрх» хэсэг (зөвхөн `camp.roles.manage`).
+ * v0.2.2 Блок 4 (B4-Q1) — ажилтны засах цонхны «Нэвтрэх эрх» хэсэг (зөвхөн системийн админ — SEC-009).
  * Холбоогүй → «Нэвтрэх эрх үүсгэх» (имэйл: картынх / өөр / имэйлгүй); холбосон → нэвтрэх нэр, төлөв, урилга.
  */
 export default function EmployeeAccess({ campId, emp }: { campId: string; emp: Employee }) {
   const { t } = useTranslation()
   const perms = useCampPermissions()
-  const canManage = perms.can(P.ROLES_MANAGE)
+  const canManage = isSystemAdmin(perms.data)
   const [createdId, setCreatedId] = useState<string | null>(null)
   const userId = emp.userId ?? createdId
   const users = useQuery({ queryKey: campKeys.users, queryFn: campApi.users, enabled: canManage && !!userId })

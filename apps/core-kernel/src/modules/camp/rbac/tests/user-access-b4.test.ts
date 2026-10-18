@@ -13,6 +13,7 @@ import { MESSAGES } from '../../../../common/i18n/messages';
 
 const P = CAMP_PERMISSIONS;
 const NOW = new Date('2026-10-16T04:00:00Z');
+const tenantCache = { invalidateMember: vi.fn().mockResolvedValue(undefined) };
 const d = (iso: string) => new Date(iso);
 
 describe('user-list (цэвэр)', () => {
@@ -68,7 +69,7 @@ describe('CampRbacService.listUsers (B4-Q3)', () => {
   });
 
   it('tenant-ийн tx дотор; ажилтан + урилгыг tenantId-аар шүүнэ', async () => {
-    setActor(s.tx, { roles: [{ campId: null, perms: [P.ROLES_MANAGE] }] });
+    setActor(s.tx, { role: UserRole.ADMIN });
     s.tx.coreUser.findMany.mockResolvedValueOnce([{ id: 'u1', email: 'a@b.mn', fullName: 'A', isActive: true, role: 'REQUESTER', phone: null, username: null }]);
     const svc = new CampRbacService(s.prisma as never, s.access, s.audit);
     const rows = await svc.listUsers('t1', 'a1');
@@ -88,11 +89,11 @@ describe('CampUserAccessService.setActive (B4-Q2)', () => {
   beforeEach(() => {
     s = setup();
     userAdmin = { setBanned: vi.fn().mockResolvedValue(undefined) };
-    svc = new CampUserAccessService(s.prisma as never, s.access, s.audit, userAdmin as never, {} as never, {} as never);
+    svc = new CampUserAccessService(s.prisma as never, s.access, s.audit, userAdmin as never, {} as never, {} as never, tenantCache as never);
   });
 
   const asManager = (found: unknown = target) =>
-    setActor(s.tx, { userId: 'cu-me', roles: [{ campId: null, perms: [P.ROLES_MANAGE] }] }, (a) => ('id' in a.where ? found : null));
+    setActor(s.tx, { userId: 'cu-me', role: UserRole.ADMIN }, (a) => ('id' in a.where ? found : null));
 
   it('roles.manage-гүй → 403, ban хийхгүй', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.ROLES_MANAGE] }] });
@@ -117,6 +118,22 @@ describe('CampUserAccessService.setActive (B4-Q2)', () => {
     expect(s.tx.coreUserInvite.updateMany).not.toHaveBeenCalled();
   });
 
+  it('№3: идэвхгүй болгосны дараа membership + эрхийн cache шууд цэвэрлэгдэнэ', async () => {
+    asManager();
+    tenantCache.invalidateMember.mockClear();
+    await svc.setActive('t1', 'a1', 'u2', false);
+    expect(tenantCache.invalidateMember).toHaveBeenCalledWith('t1', 'auth-2');
+    expect(s.cache.invalidateTenant).toHaveBeenCalledWith('t1');
+  });
+
+  it('№5: ажлаас гарсан ажилтны хэрэглэгчийг сэргээхгүй → 400, unban хийхгүй', async () => {
+    asManager({ ...target, isActive: false });
+    s.tx.hrEmployee.findFirst.mockResolvedValueOnce({ id: 'e-old' });
+    await expect(svc.setActive('t1', 'a1', 'u2', true)).rejects.toThrow(/Дахин ажилд авах/);
+    expect(s.tx.hrEmployee.findFirst.mock.calls[0][0].where).toEqual({ tenantId: 't1', userId: 'u2', status: 'TERMINATED' });
+    expect(userAdmin.setBanned).not.toHaveBeenCalled();
+  });
+
   it('өөрчлөлтгүй бол юу ч хийхгүй', async () => {
     asManager();
     await svc.setActive('t1', 'a1', 'u2', true);
@@ -138,5 +155,37 @@ describe('CampUserAccessService.setActive (B4-Q2)', () => {
     s.tx.coreUser.updateMany.mockRejectedValueOnce(new Error('db down'));
     await expect(svc.setActive('t1', 'a1', 'u2', false)).rejects.toThrow('db down');
     expect(userAdmin.setBanned.mock.calls).toEqual([['auth-2', true], ['auth-2', false]]);
+  });
+});
+
+describe('SEC-009 (Блок 6б) — хэрэглэгч удирдах = зөвхөн системийн админ (OWNER / ADMIN)', () => {
+  const campAdmin = (s: ReturnType<typeof setup>) =>
+    setActor(s.tx, { userId: 'cu-camp', roles: [{ campId: null, perms: [P.ROLES_MANAGE, P.EMPLOYEE_MANAGE] }] }, (a) =>
+      'id' in a.where ? { id: 'owner', authId: 'auth-owner', role: UserRole.OWNER, isActive: true, fullName: 'Owner', email: 'o@x' } : null);
+
+  it('Кемп админ (бүх кемпийн roles.manage) OWNER-т урилгын линк үүсгэж чадахгүй — токен үүсэхгүй', async () => {
+    const s = setup();
+    const invites = { createInvite: vi.fn() };
+    campAdmin(s);
+    const svc = new CampUserAccessService(s.prisma as never, s.access, s.audit, {} as never, invites as never, {} as never, tenantCache as never);
+    await expect(svc.invite('t1', 'a1', 'owner', 'LINK')).rejects.toThrow(ForbiddenException);
+    expect(invites.createInvite).not.toHaveBeenCalled();
+  });
+
+  it('Кемп админ ADMIN / OWNER-ийг идэвхгүй болгож чадахгүй — ban хийхгүй', async () => {
+    const s = setup();
+    const userAdmin = { setBanned: vi.fn() };
+    campAdmin(s);
+    const svc = new CampUserAccessService(s.prisma as never, s.access, s.audit, userAdmin as never, {} as never, {} as never, tenantCache as never);
+    await expect(svc.setActive('t1', 'a1', 'owner', false)).rejects.toThrow(ForbiddenException);
+    expect(userAdmin.setBanned).not.toHaveBeenCalled();
+  });
+
+  it('Кемп админ хэрэглэгчийн жагсаалт, роль олголтыг харахгүй', async () => {
+    const s = setup();
+    campAdmin(s);
+    const svc = new CampRbacService(s.prisma as never, s.access, s.audit);
+    await expect(svc.listUsers('t1', 'a1')).rejects.toThrow(ForbiddenException);
+    await expect(svc.assignUserRole('t1', 'a1', { userId: 'u2', roleId: 'r1' })).rejects.toThrow(ForbiddenException);
   });
 });

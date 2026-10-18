@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CampAuditAction, CampEmployeeStatus, CampMovementDirection } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { UserAdminService } from '../../../auth/user-admin.service';
+import { TenantCacheService } from '../../../auth/tenant-cache.service';
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CampAuditService, type AuditEntry } from '../../camp/common/camp-audit.service';
 import { isInternalEmail } from '../../../auth/invite-token';
@@ -30,9 +31,12 @@ export function terminationUserBlocker(
   user: { id: string; role: string; isActive: boolean } | null,
   actorUserId: string,
   activeOwners: number,
-): 'camp.err.user.1' | 'camp.err.user.2' | null {
+  actorIsTenantAdmin = true,
+): 'camp.err.user.1' | 'camp.err.user.2' | 'camp.err.access.admin' | null {
   if (!user || !user.isActive) return null;
   if (user.id === actorUserId) return 'camp.err.user.1';
+  // SEC-009: системийн админы (OWNER / ADMIN) нэвтрэх эрхийг зөвхөн системийн админ хаана
+  if (!actorIsTenantAdmin && CampAccessService.isTenantAdminRole(user.role)) return 'camp.err.access.admin';
   if (user.role === 'OWNER' && activeOwners <= 1) return 'camp.err.user.2';
   return null;
 }
@@ -61,6 +65,7 @@ export class HrEmployeeLifecycleService {
     private readonly attendanceHooks: HrAttendanceHooks,
     private readonly hooks: HrEmployeeHooks,
     private readonly userAdmin: UserAdminService,
+    private readonly tenantCache: TenantCacheService,
   ) {}
 
   // ── Ажлаас гаргах ──────────────────────────────────────────
@@ -80,10 +85,11 @@ export class HrEmployeeLifecycleService {
 
     const prep = await inTenantTx(this.prisma, tenantId, async (tx) => {
       const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_TERMINATE);
+      const actor = await this.access.resolve(tx, tenantId, authId);
       const e = await this.loadForTermination(tx, tenantId, campId, id);
       await this.assertNoMovementsAfter(tx, tenantId, id, dto.date);
       const owners = e.user?.role === 'OWNER' ? await tx.coreUser.count({ where: { tenantId, role: 'OWNER', isActive: true } }) : 0;
-      const blocked = terminationUserBlocker(e.user, actorUserId, owners);
+      const blocked = terminationUserBlocker(e.user, actorUserId, owners, actor.perms.isTenantAdmin);
       if (blocked) throw badRequest(blocked);
       return e;
     });
@@ -97,6 +103,8 @@ export class HrEmployeeLifecycleService {
       if (banUser) await this.userAdmin.setBanned(banUser.authId, false).catch(() => undefined);
       throw err;
     }
+    // №3 (Блок 6б): нэвтрэх эрх хаагдсан бол membership cache-ийг шууд цэвэрлэнэ
+    if (banUser) await this.tenantCache.invalidateMember(tenantId, banUser.authId);
     await this.access.invalidate(tenantId);
     return result;
   }
@@ -197,7 +205,12 @@ export class HrEmployeeLifecycleService {
     const transfer = dto.transferUser ?? true;
     const prep = await inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_TERMINATE);
-      return this.loadForRehire(tx, tenantId, campId, id, dto);
+      const loaded = await this.loadForRehire(tx, tenantId, campId, id, dto);
+      // SEC-009: системийн админы нэвтрэх эрхийг (идэвхжүүлэх, роль цэвэрлэх) зөвхөн системийн админ шилжүүлнэ
+      if (transfer && loaded.old.user && CampAccessService.isTenantAdminRole(loaded.old.user.role)) {
+        await this.access.requireTenantAdmin(tx, tenantId, authId);
+      }
+      return loaded;
     });
     const unbanUser = transfer && prep.old.user ? prep.old.user : null;
     if (unbanUser && !unbanUser.isActive) await this.userAdmin.setBanned(unbanUser.authId, false);
@@ -208,6 +221,7 @@ export class HrEmployeeLifecycleService {
       if (unbanUser && !unbanUser.isActive) await this.userAdmin.setBanned(unbanUser.authId, true).catch(() => undefined);
       throw err;
     }
+    if (unbanUser) await this.tenantCache.invalidateMember(tenantId, unbanUser.authId);
     await this.access.invalidate(tenantId);
     return created;
   }
@@ -216,7 +230,7 @@ export class HrEmployeeLifecycleService {
     const old = await tx.hrEmployee.findFirst({
       where: { id, tenantId, campId },
       include: {
-        user: { select: { id: true, authId: true, isActive: true, fullName: true, email: true } },
+        user: { select: { id: true, authId: true, isActive: true, fullName: true, email: true, role: true } },
         rehiredAs: { select: { employeeCode: true } },
       },
     });
@@ -348,7 +362,8 @@ export class HrEmployeeLifecycleService {
         history,
         can: {
           terminate: CampAccessService.has(actor.perms, campId, P.EMPLOYEE_TERMINATE),
-          viewPiiLog: CampAccessService.has(actor.perms, campId, P.ROLES_MANAGE),
+          // SEC-009 (Блок 6б): «Хэн үзсэн» — зөвхөн системийн админ (OWNER / ADMIN)
+          viewPiiLog: actor.perms.isTenantAdmin,
         },
       };
     });
@@ -384,10 +399,10 @@ export class HrEmployeeLifecycleService {
     return new Map(users.map((u) => [u.id, u.fullName || u.email]));
   }
 
-  /** GET /hr/sites/:campId/employees/:id/pii-views — «Хэн үзсэн»: тухайн кемпийн Кемп админ (camp.roles.manage) + tenant admin */
+  /** GET /hr/sites/:campId/employees/:id/pii-views — «Хэн үзсэн»: зөвхөн системийн админ (SEC-009) */
   async piiViews(tenantId: string, authId: string, campId: string, id: string, q: QueryPiiViewsDto) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
-      await this.access.require(tx, tenantId, authId, campId, P.ROLES_MANAGE);
+      await this.access.requireTenantAdmin(tx, tenantId, authId);
       const e = await tx.hrEmployee.findFirst({ where: { id, tenantId, campId }, select: { id: true } });
       if (!e) throw notFound('camp.err.employees.8');
       const rows = await tx.campPiiAccessLog.findMany({

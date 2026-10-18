@@ -33,8 +33,19 @@ export function makeCan(perm: { isTenantAdmin: boolean; permissions: string[] } 
 }
 
 /** V1 UI-д харуулах эрхүүд (D8: availableIn = 'v2' нуугдана) */
-export function visiblePermissions<T extends { availableIn: string }>(list: T[]): T[] {
-  return list.filter((p) => p.availableIn === 'v1')
+/**
+ * v0.2.2 Блок 6б (SEC-009): хэрэглэгч / роль удирдах нь системийн роль (OWNER / ADMIN) — модулийн эрх биш.
+ * `camp.roles.manage` DB-д үлдсэн ч юу ч зөвшөөрөхгүй → матрицад харуулахгүй (ADR-007, v0.2.3-т цэвэрлэнэ).
+ */
+export const RETIRED_PERMISSIONS: readonly string[] = ['camp.roles.manage']
+
+export function visiblePermissions<T extends { code?: string; availableIn: string }>(list: T[]): T[] {
+  return list.filter((p) => p.availableIn === 'v1' && !RETIRED_PERMISSIONS.includes(p.code ?? ''))
+}
+
+/** SEC-009: хэрэглэгч, роль удирдах (урилга, идэвхгүй болгох, эрх олгох, «Хэн үзсэн») — системийн админ эсэх */
+export function isSystemAdmin(perms: { isTenantAdmin?: boolean } | null | undefined): boolean {
+  return perms?.isTenantAdmin === true
 }
 
 /**

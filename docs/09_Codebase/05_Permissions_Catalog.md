@@ -2,7 +2,7 @@
 title: "Эрхийн каталог (Кемп RBAC)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-17
+last_updated: 2026-10-18
 tags: [codebase, auth, camp, generated]
 ---
 
@@ -19,7 +19,7 @@ tags: [codebase, auth, camp, generated]
 | Код | Нэр | Хувилбар | CAMP_ADMIN | CAMP_MANAGER | CATERING_ADMIN | EMPLOYEE | Ашигласан файл |
 |---|---|---|---|---|---|---|---|
 | `camp.settings.manage` | Кемпийн тохиргоо (НӨАТ, ростер, хоол идэх байршил) | V1 | ✅ |  |  |  | `camp-settings.service.ts` |
-| `camp.roles.manage` | Роль, эрхийн тохиргоо | V1 | ✅ |  |  |  | `camp-employee-login.service.ts` `camp-rbac.service.ts` `camp-user-access.service.ts` `hr-employee-lifecycle.service.ts` |
+| `camp.roles.manage` | Роль, эрхийн тохиргоо | V1 | ✅ |  |  |  | — |
 | `camp.master.manage` | Мастер өгөгдөл (кемп, байр, өрөө, хэлтэс, баг, байгууллага) | V1 | ✅ |  |  |  | `camp-catalog.service.ts` `camp-facilities.service.ts` `camps.service.ts` `core-organizations.service.ts` `departments.handler.ts` `hr-crews.service.ts` `hr-departments.service.ts` `hr-positions.service.ts` |
 | `camp.contract.manage` | Гэрээ, ажил, үнэ | V2 | ✅ |  |  |  | — |
 | `camp.employee.manage` | Ажилтан бүртгэл | V1 | ✅ |  | ✅ |  | `hr-employees.service.ts` `employees.handler.ts` |

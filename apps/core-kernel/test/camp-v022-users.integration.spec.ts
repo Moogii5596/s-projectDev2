@@ -31,7 +31,7 @@ describe('v0.2.2 Блок 4 — хэрэглэгч удирдах (integration)'
   const rbac = new CampRbacService(rls as never, access, audit);
   const banned: [string, boolean][] = [];
   const userAdmin = { setBanned: async (authId: string, b: boolean) => void banned.push([authId, b]) };
-  const svc = new CampUserAccessService(rls as never, access, audit, userAdmin as never, {} as never, {} as never);
+  const svc = new CampUserAccessService(rls as never, access, audit, userAdmin as never, {} as never, {} as never, { invalidateMember: async () => undefined } as never);
 
   const sfx = randomUUID().slice(0, 8);
   const tenantIds: string[] = [];

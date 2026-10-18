@@ -2,14 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CampAuditService } from '../common/camp-audit.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { normalizeMnPhone, usernameFromCode } from '../../../auth/login-identifier';
 import { TenantCacheService } from '../../../auth/tenant-cache.service';
 
-const P = CAMP_PERMISSIONS;
 const key = (code: string, campId: string | null) => `${code}@${campId ?? '*'}`;
 const unkey = (k: string) => {
   const i = k.lastIndexOf('@');
@@ -66,7 +64,7 @@ export class CampEmployeeLoginService {
   async link(tenantId: string, authId: string, campId: string, employeeId: string, userId: string | null) {
     const res = await withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
-        const actorUserId = await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
+        const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         const e = await this.findEmployee(tx, tenantId, campId, employeeId);
         if (userId === null) {
           if (!e.userId) return { employeeId, userId: null, phone: null, username: null };
@@ -111,7 +109,7 @@ export class CampEmployeeLoginService {
    */
   async positionPreview(tenantId: string, authId: string, campId: string, employeeId: string, positionId: string | null) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
-      await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
+      await this.access.requireTenantAdmin(tx, tenantId, authId);
       const e = await this.findEmployee(tx, tenantId, campId, employeeId);
       if (!e.userId) return { employeeId, userId: null, add: [], remove: [] };
       const rows = await tx.campUserPermission.findMany({
@@ -148,7 +146,7 @@ export class CampEmployeeLoginService {
   async applyPositionTemplates(tenantId: string, authId: string, positionId: string) {
     const res = await withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
-        await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
+        await this.access.requireTenantAdmin(tx, tenantId, authId);
         const pos = await tx.hrPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true } });
         if (!pos) throw notFound('camp.err.rbac.12');
         const emps = await tx.hrEmployee.findMany({

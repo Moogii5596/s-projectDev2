@@ -11,7 +11,7 @@ export type FixtureUserKey =
   | 'aReq' | 'aAppr' | 'aAdmin'
   | 'bReq' | 'bAdmin'
   | 'wfReq' | 'wfAppr1' | 'wfAppr2' | 'wfAdmin'
-  | 'devReq' | 'devAppr1' | 'devAppr2' | 'devAdmin';
+  | 'devReq' | 'devAppr1' | 'devAppr2' | 'devAdmin' | 'devUserAdmin' | 'devLangAdmin';
 
 export interface FixtureUser {
   email: string;
@@ -85,4 +85,17 @@ export async function loginAsUser(page: Page, key: FixtureUserKey): Promise<void
   await page.locator('input[type="password"]').fill(u.password);
   await page.getByRole('button', { name: /нэвтрэх|login/i }).click();
   await page.waitForURL('**/requisitions**', { timeout: 15_000 });
+}
+
+/**
+ * v0.2.2 Блок 6б: нэг тест дотор өөр хэрэглэгч рүү шилжих — локал session-ийг цэвэрлээд нэвтэрнэ
+ * (нэвтэрсэн үед /login нүүр рүү redirect хийдэг тул шууд loginAsUser ажиллахгүй).
+ */
+export async function switchUser(page: Page, key: FixtureUserKey): Promise<void> {
+  if (page.url().startsWith('http')) {
+    await page.evaluate(() => {
+      for (const k of Object.keys(localStorage)) if (/^sb-.*-auth-token$/.test(k)) localStorage.removeItem(k);
+    });
+  }
+  await loginAsUser(page, key);
 }

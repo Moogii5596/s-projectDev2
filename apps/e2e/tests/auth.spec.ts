@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { loginAs } from '../helpers/auth.helper';
+import { REPO_ROOT } from '../helpers/fixture-paths';
+
+const ROOT_VERSION = (JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf8')) as { version: string }).version;
 
 test.describe('Auth flow', () => {
   test('login → /requisitions руу чиглүүлнэ', async ({ page }) => {
@@ -29,6 +34,7 @@ test.describe('Auth flow', () => {
     expect(res.status()).toBe(200);
     const body = await res.json() as { status: string; version: string };
     expect(body.status).toBe('ok');
-    expect(body.version).toBe('0.2.0'); // Phase 6.4.2: APP_VERSION (= package.json)
+    // Phase 6.4.2: APP_VERSION = root package.json (PROC-019 — release бүрт хамт солигдоно; хатуу утга бичихгүй)
+    expect(body.version).toBe(ROOT_VERSION);
   });
 });

@@ -6,7 +6,7 @@ import { campApi } from '../../camp/api/camp-api'
 import type { CampUser } from '../../camp/api/types'
 import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
 import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { P } from '../../camp/lib/permissions'
+import { isSystemAdmin } from '../../camp/lib/permissions'
 import { Badge, Button, Card, Empty, ErrorBox, Loading, Modal, NoAccess, Table, inputSmCls, td } from '../../camp/components/ui'
 import InviteActions from '../components/InviteActions'
 import UserPermissionsModal from '../components/UserPermissionsModal'
@@ -17,13 +17,13 @@ const STATES: UserState[] = ['ACTIVE', 'INVITED', 'NO_INVITE', 'INACTIVE']
 
 /**
  * /hr/:campId/users — v0.2.2 Блок 4 (B4-Q1…Q4): байгууллагын бүх хэрэглэгч (tenant түвшин).
- * Нэвтрэх нэр, холбогдсон ажилтан, урилгын төлөв; эрх, шинэ линк, идэвхгүй болгох / сэргээх. Эрх: `camp.roles.manage`.
+ * Нэвтрэх нэр, холбогдсон ажилтан, урилгын төлөв; эрх, шинэ линк, идэвхгүй болгох / сэргээх. Эрх: системийн админ (OWNER / ADMIN, SEC-009).
  * Шинэ хэрэглэгч — «Ажилтан» → засах → «Нэвтрэх эрх».
  */
 export default function HrUsersPage() {
   const { t } = useTranslation()
   const perms = useCampPermissions()
-  const canManage = perms.can(P.ROLES_MANAGE)
+  const canManage = isSystemAdmin(perms.data)
   const users = useQuery({ queryKey: campKeys.users, queryFn: campApi.users, enabled: canManage })
   const [q, setQ] = useState('')
   const [state, setState] = useState<UserState | ''>('')

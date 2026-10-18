@@ -23,13 +23,15 @@ import CatalogPage from './CatalogPage'
  * v0.2.2 H2: албан тушаал → «Хүний нөөц» (/hr/positions).
  */
 const SECTIONS = ['camps', 'organizations', 'building-types', 'asset-categories', 'roles', 'user-roles', 'translations'] as const
+const ADMIN_ONLY: readonly string[] = ['roles', 'user-roles', 'translations']
 
 export default function SystemSettingsPage() {
   const { t } = useTranslation()
   const { section = 'camps' } = useParams()
   const { me } = useMe()
   const isOrgAdmin = me?.role === 'OWNER' || me?.role === 'ADMIN'
-  const visible = SECTIONS.filter((s) => s !== 'translations' || isOrgAdmin)
+  // SEC-009 (Блок 6б): роль ба эрх, хэрэглэгчийн роль, орчуулга — зөвхөн системийн админ
+  const visible = SECTIONS.filter((s) => !ADMIN_ONLY.includes(s) || isOrgAdmin)
   if (!(SECTIONS as readonly string[]).includes(section)) return <Navigate to="/camp/system/camps" replace />
 
   return (

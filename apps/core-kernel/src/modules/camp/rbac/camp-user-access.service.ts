@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CampAuditService } from '../common/camp-audit.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx } from '../common/camp-tx';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { UserAdminService } from '../../../auth/user-admin.service';
@@ -10,8 +9,8 @@ import { InviteService } from '../../../auth/invite.service';
 import { CampEmployeeLoginService } from './camp-employee-login.service';
 import { deactivateBlocker } from './user-list';
 import { CampAuditAction } from '@prisma/client';
+import { TenantCacheService } from '../../../auth/tenant-cache.service';
 
-const P = CAMP_PERMISSIONS;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
@@ -27,6 +26,7 @@ export class CampUserAccessService {
     private readonly userAdmin: UserAdminService,
     private readonly invites: InviteService,
     private readonly login: CampEmployeeLoginService,
+    private readonly tenantCache: TenantCacheService,
   ) {}
 
   /**
@@ -35,7 +35,7 @@ export class CampUserAccessService {
    */
   async createUserForEmployee(tenantId: string, tenantSlug: string, authId: string, campId: string, employeeId: string, email: string | null | undefined) {
     const prep = await inTenantTx(this.prisma, tenantId, async (tx) => {
-      await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
+      await this.access.requireTenantAdmin(tx, tenantId, authId);
       const e = await tx.hrEmployee.findFirst({
         where: { id: employeeId, tenantId, campId },
         select: { id: true, fullName: true, email: true, status: true, userId: true },
@@ -64,7 +64,7 @@ export class CampUserAccessService {
       throw err;
     }
     await inTenantTx(this.prisma, tenantId, async (tx) => {
-      const actorUserId = await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
+      const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
       await this.audit.record(tx, {
         tenantId, campId, entityType: 'user_account', entityId: user.id, action: 'CREATE', actorUserId,
         fields: ['employeeId', 'hasEmail'], before: null, after: { employeeId, hasEmail: !!prep.email },
@@ -76,7 +76,7 @@ export class CampUserAccessService {
 
   /** POST /camp/users/:userId/invites { channel } — LINK: линк нэг удаа буцна; EMAIL: имэйлээр */
   async invite(tenantId: string, authId: string, userId: string, channel: 'LINK' | 'EMAIL') {
-    const actorUserId = await inTenantTx(this.prisma, tenantId, (tx) => this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE));
+    const actorUserId = await inTenantTx(this.prisma, tenantId, (tx) => this.access.requireTenantAdmin(tx, tenantId, authId));
     const res = await this.invites.createInvite({ tenantId, userId, purpose: 'INVITE', channel, createdBy: actorUserId });
     await inTenantTx(this.prisma, tenantId, async (tx) => {
       const u = await tx.coreUser.findFirst({ where: { id: userId, tenantId }, select: { fullName: true, email: true } });
@@ -96,9 +96,14 @@ export class CampUserAccessService {
    */
   async setActive(tenantId: string, authId: string, userId: string, isActive: boolean) {
     const prep = await inTenantTx(this.prisma, tenantId, async (tx) => {
-      const actorUserId = await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
+      const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
       const user = await tx.coreUser.findFirst({ where: { id: userId, tenantId }, select: { id: true, authId: true, role: true, isActive: true, fullName: true, email: true } });
       if (!user) throw notFound('camp.err.rbac.5');
+      if (isActive && !user.isActive) {
+        // №5 (Блок 6б): ажлаас гарсан ажилтны хэрэглэгчийг энд сэргээхгүй — «Дахин ажилд авах» (шинэ бүртгэл, загвараас эрх)
+        const terminated = await tx.hrEmployee.findFirst({ where: { tenantId, userId, status: 'TERMINATED' }, select: { id: true } });
+        if (terminated) throw badRequest('camp.err.user.terminated');
+      }
       if (!isActive) {
         const owners = user.role === 'OWNER' ? await tx.coreUser.count({ where: { tenantId, role: 'OWNER', isActive: true } }) : 0;
         const blocked = deactivateBlocker(user, actorUserId, owners);
@@ -110,7 +115,7 @@ export class CampUserAccessService {
     await this.userAdmin.setBanned(prep.authId, !isActive);
     try {
       await inTenantTx(this.prisma, tenantId, async (tx) => {
-        const actorUserId = await this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE);
+        const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         await tx.coreUser.updateMany({ where: { id: userId, tenantId }, data: { isActive } });
         if (!isActive) {
           await tx.coreUserInvite.updateMany({ where: { tenantId, userId, usedAt: null, revokedAt: null }, data: { revokedAt: new Date() } });
@@ -125,12 +130,15 @@ export class CampUserAccessService {
       await this.userAdmin.setBanned(prep.authId, isActive).catch(() => undefined);
       throw err;
     }
+    // №3 (Блок 6б): membership (5 мин) + эрхийн cache — идэвхгүй болсон хэрэглэгч шууд гарна (guard 403 auth.not_member)
+    await this.tenantCache.invalidateMember(tenantId, prep.authId);
+    await this.access.invalidate(tenantId);
     return { id: userId, isActive };
   }
 
   /** GET /camp/invites/options — имэйл суваг идэвхтэй эсэх (UI товч) */
   async options(tenantId: string, authId: string) {
-    await inTenantTx(this.prisma, tenantId, (tx) => this.access.require(tx, tenantId, authId, null, P.ROLES_MANAGE));
+    await inTenantTx(this.prisma, tenantId, (tx) => this.access.requireTenantAdmin(tx, tenantId, authId));
     return this.invites.options();
   }
 }

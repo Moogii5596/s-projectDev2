@@ -8,6 +8,7 @@ import LanguageSwitcher from './LanguageSwitcher'
 import { useI18nSync } from '../hooks/useI18nSync'
 import { useMe } from '../hooks/useMe'
 import { CHANGE_PASSWORD_PATH, displayLogin } from '../lib/password-change'
+import PageSuspense from './PageSuspense'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -73,7 +74,7 @@ export default function Layout() {
 
       {/* Content */}
       <main className={`${wide ? 'max-w-7xl' : 'max-w-5xl'} mx-auto px-4 sm:px-6 py-8`}>
-        <Outlet />
+        <PageSuspense><Outlet /></PageSuspense>
       </main>
     </div>
   )

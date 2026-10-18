@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { AxiosError, AxiosHeaders } from 'axios'
 import { daysToSegments, formatRanges, missingDays, patternProblem, segmentsToDays } from '../shift-pattern'
-import { P, makeCan, mergeRolePermissions, visiblePermissions } from '../permissions'
+import { P, isSystemAdmin, makeCan, mergeRolePermissions, visiblePermissions } from '../permissions'
 import { apiErrorMessage } from '../errors'
 import { addDays, isoWeekday, todayUb } from '../dates'
 
@@ -59,8 +59,12 @@ describe('permissions', () => {
     expect(can(P.ROOM_MANAGE, P.MASTER_MANAGE)).toBe(true)
   })
 
-  it('visiblePermissions: V2-ийг нууна', () => {
+  it('visiblePermissions: V2-ийг нууна; SEC-009 — camp.roles.manage (хуучирсан) нууна', () => {
     expect(visiblePermissions([{ code: 'a', availableIn: 'v1' }, { code: 'b', availableIn: 'v2' }]).map((p) => p.code)).toEqual(['a'])
+    expect(visiblePermissions([{ code: 'camp.roles.manage', availableIn: 'v1' }, { code: 'a', availableIn: 'v1' }]).map((p) => p.code)).toEqual(['a'])
+    expect(isSystemAdmin({ isTenantAdmin: true })).toBe(true)
+    expect(isSystemAdmin({ isTenantAdmin: false })).toBe(false)
+    expect(isSystemAdmin(undefined)).toBe(false)
   })
 
   it('mergeRolePermissions: нуугдсан V2 эрх хадгалахад хасагдахгүй; харагдах эрх сонголтоор солигдоно', () => {

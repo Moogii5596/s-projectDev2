@@ -21,3 +21,15 @@ export async function handleUnauthorized(deps: UnauthorizedDeps): Promise<void> 
   }
   if (deps.currentPath() !== '/login') deps.redirect('/login')
 }
+
+/**
+ * v0.2.2 Блок 6б (№3): серверт хэрэглэгч ИДЭВХГҮЙ болсон / байгууллагаас хасагдсан — токен хүчинтэй ч 403.
+ *   `auth.not_member` (guard), `camp.err.access.1` (кемп/HR — хэрэглэгч идэвхгүй). 401-тэй адил: локал session → /login.
+ * Бусад 403 (эрх дутуу) → хэвээр (хуудсанд «эрх алга» мессеж).
+ */
+export const SESSION_REVOKED_CODES: readonly string[] = ['auth.not_member', 'camp.err.access.1']
+
+export function isSessionRevoked(error: unknown): boolean {
+  const r = (error as { response?: { status?: number; data?: { code?: string } } } | null)?.response
+  return r?.status === 403 && SESSION_REVOKED_CODES.includes(r.data?.code ?? '')
+}

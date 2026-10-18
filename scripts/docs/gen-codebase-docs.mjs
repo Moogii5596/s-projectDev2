@@ -127,7 +127,8 @@ function analyzeMethod(file, name, literals = []) {
     const h = methodBody(src, m[1]);
     if (h) text += h;
   }
-  return { perms: permsIn(text, aliases), access: /\.requireAccess\(|\.require\w*\(/.test(text) };
+  // v0.2.2 Блок 6б (SEC-009): requireTenantAdmin → системийн роль OWNER / ADMIN
+  return { perms: permsIn(text, aliases), access: /\.requireAccess\(|\.require\w*\(/.test(text), admin: /\.requireTenantAdmin\(/.test(text) };
 }
 
 const controllers = tsFiles.filter((f) => f.endsWith('.controller.ts'));
@@ -175,19 +176,20 @@ for (const f of controllers) {
           let perms = [];
           let access = false;
           let via = '';
+          let admin = false;
           if (call) {
             const cls = fields.get(call[1]);
             svc = `${cls ?? call[1]}.${call[2]}`;
             const sf = cls && classFile.get(cls);
             const literals = [...(body.slice(call.index).match(/\(([^)]*)\)/)?.[1] ?? '').matchAll(/'([a-zA-Z_]+)'/g)].map((x) => x[1]);
-            if (sf) ({ perms, access, via } = analyzeMethod(sf, call[2], literals));
+            if (sf) ({ perms, access, via, admin = false } = analyzeMethod(sf, call[2], literals));
           }
           perms = [...new Set([...perms, ...permsIn(body)])];
           const pub = classLevelSkip || decos.some((x) => x.name === 'SkipAuth');
           const notes = decos
             .filter((x) => ['UseGuards', 'AllowPasswordChangeRequired', 'UseInterceptors'].includes(x.name))
             .map((x) => (x.name === 'UseGuards' ? `UseGuards(${x.arg})` : x.name));
-          apiRows.push({ verb: verb.name.toUpperCase(), full: route, sub, ctrl, method: mm[1], svc, perms, access, via, pub, notes, file: rel(f), line: lineBase + i + 1 });
+          apiRows.push({ verb: verb.name.toUpperCase(), full: route, sub, ctrl, method: mm[1], svc, perms, access, via, admin, pub, notes, file: rel(f), line: lineBase + i + 1 });
         }
         decos = [];
       } else if (/^ {2}[^ @/*]/.test(ln)) {
@@ -220,13 +222,13 @@ for (const f of controllers) {
     'Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).\n\n' +
     '**Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — ' +
     'олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). ' +
-    '`гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. ' +
+    '**OWNER·ADMIN** = зөвхөн системийн роль (`requireTenantAdmin` — хэрэглэгч / роль удирдах, SEC-009), `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. ' +
     'Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].\n\n## Агуулга\n\n';
   for (const [area, rows] of byArea) body += `- [[#${area}]] — ${rows.length}\n`;
   for (const [area, rows] of byArea) {
     body += `\n## ${area}\n\n| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |\n|---|---|---|---|---|\n`;
     for (const r of rows) {
-      const perms = (r.perms.length ? r.perms.map((p) => `\`${p}\``).join(' ') : r.access ? 'гишүүн' : '—') + (r.via ? ` (\`${r.via}\`)` : '');
+      const perms = (r.perms.length ? r.perms.map((p) => `\`${p}\``).join(' ') + (r.admin ? ' / OWNER·ADMIN' : '') : r.admin ? '**OWNER·ADMIN**' : r.access ? 'гишүүн' : '—') + (r.via ? ` (\`${r.via}\`)` : '');
       const note = [r.pub ? '🌐' : '', ...r.notes, `\`${r.file.split('/').pop()}:${r.line}\``].filter(Boolean).join(' ');
       body += `| ${r.verb} | \`${esc(r.full)}\` | \`${r.ctrl}.${r.method}\` → \`${esc(r.svc) || '—'}\` | ${perms} | ${note} |\n`;
     }
@@ -561,7 +563,8 @@ for (const f of migs) {
       const p = attrs.match(/path=["']([^"']+)["']/) || attrs.match(/path=\{\s*['"`]([^'"`]+)['"`]\s*\}/);
       const index = /\bindex\b/.test(attrs);
       if (!p && !index) continue;
-      const el = attrs.match(/element=\{\s*<(\w+)/);
+      // Suspense / PageSuspense ороогчийг алгасаж жинхэнэ хуудсыг (v0.2.2 Блок 6 — lazy)
+      const el = src.slice(m.index, m.index + 400).match(/element=\{\s*(?:<(?:Page)?Suspense\b[^>]*>\s*)*<(\w+)/);
       const before = src.slice(Math.max(0, m.index - 80), m.index);
       const cond = before.match(/isEnabled\('(\w+)'\)\s*&&\s*$/);
       const route = p ? (base && !p[1].startsWith('/') ? `${base}/${p[1]}` : p[1]) : base ? `${base} (index)` : '(index)';

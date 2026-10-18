@@ -1,15 +1,18 @@
+import { lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import CampLayout from './components/CampLayout'
-import CampHomePage from './pages/CampHomePage'
-import CampSettingsPage from './pages/CampSettingsPage'
-import SystemSettingsPage from './pages/SystemSettingsPage'
-import RoomBoardPage from './pages/RoomBoardPage'
-import PresencePage from './pages/PresencePage'
-import AssetsPage from './pages/AssetsPage'
-import MaintenanceListPage from './pages/MaintenanceListPage'
-import MaintenanceDetailPage from './pages/MaintenanceDetailPage'
 import LegacyHrRedirect from '../hr/components/LegacyHrRedirect'
 import { CAMP_DEFAULT_SECTION } from './components/CampLayout'
+
+// v0.2.2 Блок 6 (PIL-10): хуудас бүр тусдаа chunk (Suspense — Layout-ийн Outlet)
+const CampHomePage = lazy(() => import('./pages/CampHomePage'))
+const CampSettingsPage = lazy(() => import('./pages/CampSettingsPage'))
+const SystemSettingsPage = lazy(() => import('./pages/SystemSettingsPage'))
+const RoomBoardPage = lazy(() => import('./pages/RoomBoardPage'))
+const PresencePage = lazy(() => import('./pages/PresencePage'))
+const AssetsPage = lazy(() => import('./pages/AssetsPage'))
+const MaintenanceListPage = lazy(() => import('./pages/MaintenanceListPage'))
+const MaintenanceDetailPage = lazy(() => import('./pages/MaintenanceDetailPage'))
 
 /**
  * /camp/* — Кемп модуль (Шат 8, V1; v0.2.0 — системийн тохиргоо, тохиргооны каталог).

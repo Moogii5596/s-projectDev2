@@ -8,6 +8,7 @@ import { useAuth } from '../../../hooks/useAuth'
 import { setLastCamp } from '../../camp/lib/last-camp'
 import { Badge, ErrorBox, Loading, inputSmCls } from '../../camp/components/ui'
 import { HR_SECTIONS, hrPath, sectionFromPath } from '../lib/hr-sections'
+import PageSuspense from '../../../components/PageSuspense'
 
 /**
  * v0.2.2 H2 — «Хүний нөөц»: «үндсэн ажлын байр» сонгогч + хэсгүүд.
@@ -81,7 +82,7 @@ export default function HrLayout() {
               </NavLink>
             ))}
           </nav>
-          <Outlet />
+          <PageSuspense><Outlet /></PageSuspense>
         </>
       )}
     </div>

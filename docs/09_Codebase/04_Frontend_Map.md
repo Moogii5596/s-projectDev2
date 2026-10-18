@@ -15,11 +15,11 @@ tags: [codebase, frontend, camp, i18n]
 
 | Хавтас | Юу |
 |---|---|
-| `App.tsx` | Route мод: нийтийн (`/login`, `/invite/:token`, `/reset/:token`, `/forgot`) → `ProtectedRoute` → `Layout` → модулиуд (`isEnabled(...)`) |
-| `api/` | `client.ts` — axios (`VITE_API_BASE_URL` хоосон бол same-origin → Vite proxy, RULE-19; токен, хэл, 401 → `lib/unauthorized.ts`, нууц үг солих → `lib/password-change.ts`) · `auth.ts` (server sign-in, урилга, нууц үг) · `me.ts` · `requisitions.ts` · `workflow.ts` · `i18n.ts` |
-| `components/` | `Layout`, `ProtectedRoute`, `LanguageSwitcher`, `StatusBadge`, `RejectModal`, `ErrorMessage`, `LoadingSpinner`, `MfeDisabled` |
+| `App.tsx` | Route мод: нийтийн (`/login`, `/invite/:token`, `/reset/:token`, `/forgot` — үндсэн chunk-д) → `ProtectedRoute` → `Layout` → модулиуд (`isEnabled(...)`). Нэвтэрсний дараах хуудас / модуль бүр `React.lazy` (PIL-10) |
+| `api/` | `client.ts` — axios (`VITE_API_BASE_URL` хоосон бол same-origin → Vite proxy, RULE-19; токен, хэл, 401 болон 403 `auth.not_member` / `camp.err.access.1` (`isSessionRevoked` — AUTH-004) → `lib/unauthorized.ts`, нууц үг солих → `lib/password-change.ts`) · `auth.ts` (server sign-in, урилга, нууц үг) · `me.ts` · `requisitions.ts` · `workflow.ts` · `i18n.ts` |
+| `components/` | `Layout`, `ProtectedRoute`, `PageSuspense` (lazy хуудасны `Suspense` — `Layout`, `CampLayout`, `HrLayout`-ийн `<Outlet />`-ийг ороосон), `LanguageSwitcher`, `StatusBadge`, `RejectModal`, `ErrorMessage`, `LoadingSpinner`, `MfeDisabled` |
 | `hooks/` | `useAuth`, `useMe`, `useMR`, `useMRRealtime` (Supabase Realtime — амжилтгүй бол чимээгүй), `useI18nSync` |
-| `lib/` | `supabase.ts` (session; пилотод same-origin `/auth/v1`) · `modules.ts` (`APP_MODULES`, `VITE_MODULES` задлах, `MODULE_REQUIRES` — `camp` → `hr`, нүүр зам) · `roles.ts` (core role, `canWrite` = OWNER/ADMIN) · `mr-approval.ts` |
+| `lib/` | `supabase.ts` (session; пилотод same-origin `/auth/v1`) · `modules.ts` (`APP_MODULES`, `VITE_MODULES` задлах, `MODULE_REQUIRES` — `camp` → `hr`, нүүр зам) · `roles.ts` (core role, `canWrite` = OWNER/ADMIN) · `mr-approval.ts` · (Кемп) `modules/camp/lib/permissions.ts` — `isSystemAdmin(perms)`: хэрэглэгч / роль удирдах UI зөвхөн OWNER / ADMIN (SEC-009), `RETIRED_PERMISSIONS` (`camp.roles.manage` матрицад харагдахгүй) |
 | `config/enabled-modules.ts` | `ENABLED_MODULES`, `HOME_PATH`, `isEnabled()` |
 | `pages/` | MR (`MRList/Create/DetailPage`), workflow админ (`ApprovalSla`, `WorkflowDefinition`, `Delegation`), auth (`Login`, `SetPassword`, `ForgotPassword`, `ChangePassword`) |
 | `modules/<name>/` | Модуль бүр өөрийн `api`, хуудас, `lib` — §2–§3 |
@@ -58,10 +58,11 @@ tags: [codebase, frontend, camp, i18n]
 ## 5. Модуль асаах ба build
 - `VITE_MODULES` (`all` | `camp` | таслалаар) — цэс/route/нүүр зам (`lib/modules.ts`). Пилот = `camp`. Бусад `VITE_*`: [[06_Config_Env]].
 - Dev: `:5173`, `/api` → `:3000` proxy. Build → nginx (docker) эсвэл пилотын Caddy (static).
+- **Code-split (v0.2.2 Блок 6, PIL-10):** `CampRoutes` / `HrRoutes` доторх хуудас бүр `lazy(() => import('./pages/X'))`; `vite.config.ts` `manualChunks` → `vendor-supabase`, `vendor-router`, `vendor-i18n`, `vendor-axios` (react / react-query-г federation `shared`). `main.tsx`: `vite:preloadError` → хуудсыг 60 сек-д нэг удаа дахин ачаална (шинэ хувилбарын дараах хуучин chunk). Хэмжээ: [[08_v0.2.2_progress]] «Блок 6».
 
 ## 6. Шинэ хуудас нэмэх (товч)
 1. Backend DTO-г шалга ([[02_API_Catalog]] → service → `*.dto.ts`) → `api/types.ts`-д ижил нэртэй type (RULE-20).
 2. `campApi`-д функц → query key-г `campKeys`-д → `useQuery` / `useCampMutation`.
-3. Хуудас `pages/` → route `CampRoutes.tsx` → цэс `CampLayout.tsx` (эрхээр нуух — `useCampPermissions`). HR бол `modules/hr` → `HrRoutes.tsx` + `hr-sections.ts` (§2б).
+3. Хуудас `pages/` → route `CampRoutes.tsx` (`const X = lazy(() => import('./pages/X'))` — хуудсаас тогтмол/функц import хийхгүй, үгүй бол үндсэн chunk-д орно; хуваалцах зүйл → `lib/`) → цэс `CampLayout.tsx` (эрхээр нуух — `useCampPermissions`). HR бол `modules/hr` → `HrRoutes.tsx` + `hr-sections.ts` (§2б).
 4. Текст → `packages/i18n/web.*.json`. Цэвэр логик → `lib/` + unit тест.
 5. `pnpm docs:gen` (route каталог) · энэ файлыг шинэчил (RULE-21).

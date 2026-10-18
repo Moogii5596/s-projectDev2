@@ -158,10 +158,15 @@ test.describe.serial('Кемп v0.2.1', () => {
 
   // TEST-026: профайлын хэл өөрчилдөг → тусдаа хэрэглэгч: fixture devAppr1 + энэ кемпийн «Кемп админ» роль
   // (admin@test.mn — бусад тест, devAdmin — camp-v020-ийн хэлний тест; зэрэг ажиллахад хэл холилдохгүй)
-  test('олон хэл: EN — Албан тушаал → Positions; ажилтны багана', async ({ page: admin, browser }) => {
+  test('олон хэл: EN — Албан тушаал → Positions; ажилтны багана', async ({ browser }) => {
+    // SEC-009 (v0.2.2 Блок 6б): роль олгох = зөвхөн системийн админ → fixture devUserAdmin
+    const admCtx = await browser.newContext();
+    const admin = await admCtx.newPage();
+    await loginAsUser(admin, 'devUserAdmin');
     const roles = await api<{ id: string; systemCode: string | null }[]>(admin, 'GET', '/roles');
     const roleId = roles.find((r) => r.systemCode === 'CAMP_ADMIN')?.id as string;
     await api(admin, 'POST', '/user-roles', { userId: fixture().users.devAppr1.coreId, roleId, campId });
+    await admCtx.close();
     const own = await browser.newContext();
     const page = await own.newPage();
     await loginAsUser(page, 'devAppr1');

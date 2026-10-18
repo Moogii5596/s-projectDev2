@@ -7,6 +7,7 @@ import { campKeys } from '../hooks/useCampPermissions'
 import { useAuth } from '../../../hooks/useAuth'
 import { setLastCamp } from '../lib/last-camp'
 import { Badge, ErrorBox, Loading, inputSmCls } from './ui'
+import PageSuspense from '../../../components/PageSuspense'
 
 /**
  * Кемп тус бүрийн хэсгүүд: өдөр тутмын ажиллагаа эхэнд, тохиргоо сүүлд.
@@ -89,7 +90,7 @@ export default function CampLayout() {
               </NavLink>
             ))}
           </nav>
-          <Outlet />
+          <PageSuspense><Outlet /></PageSuspense>
         </>
       )}
     </div>

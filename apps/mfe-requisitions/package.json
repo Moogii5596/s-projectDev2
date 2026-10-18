@@ -1,6 +1,6 @@
 {
   "name": "@s-project/mfe-requisitions",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "private": true,
   "description": "S Project MFE — Requisitions Remote",
   "type": "module",

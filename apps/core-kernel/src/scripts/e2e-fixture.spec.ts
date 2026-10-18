@@ -75,7 +75,7 @@ describe('teardownFixture', () => {
     expect(errors).toEqual(['tenant a: locked']);
     expect(db.deleteTenant).toHaveBeenCalledTimes(3);
     const devIds = Object.values(f.users).filter((u) => u.tenant === 'dev').map((u) => u.coreId);
-    expect(devIds).toHaveLength(4);
+    expect(devIds).toHaveLength(6);
     expect(db.cleanupDevTenant).toHaveBeenCalledWith('dev-id', devIds, 'E2E-9');
     expect(auth.deleteUser).toHaveBeenCalledTimes(Object.keys(FIXTURE_USERS).length);
   });

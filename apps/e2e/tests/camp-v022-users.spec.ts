@@ -1,10 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from '../helpers/auth.helper';
+import { loginAsUser } from '../helpers/fixture';
 
 /**
  * v0.2.2 Блок 4 — «Хүний нөөц»: ажилтны «Нэвтрэх эрх» (имэйлгүй) → урилгын линк; «Хэрэглэгч» жагсаалт, эрхийн цонх;
  * албан тушаалын эрхийн загвар. Бэлтгэлийг шинэ `/hr`, `/core` API-аар (QA-11).
- * УРЬДЧИЛСАН НӨХЦӨЛ: `supabase/dev/camp_e2e_grant.sql` (admin@test.mn — OWNER / Кемп админ).
+ * v0.2.2 Блок 6б (SEC-009): хэрэглэгч / роль удирдах = зөвхөн системийн админ → fixture `devUserAdmin` (ADMIN);
+ * admin@test.mn (APPROVER + Кемп админ) «Хэрэглэгч» хэсэгт хандахгүй (сүүлийн тест).
  * Идэвхгүй болгох (GoTrue ban) — integration `camp-v022-users` (энд бодит хэрэглэгчийг хаахгүй).
  */
 const STAMP = Date.now().toString(36).toUpperCase();
@@ -36,7 +38,7 @@ async function api<T = { id: string }>(page: Page, method: string, path: string,
 
 test.describe.serial('v0.2.2 Блок 4 — хэрэглэгч удирдах', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page);
+    await loginAsUser(page, 'devUserAdmin');
   });
 
   test('бэлтгэл (API): ажлын байр, хэлтэс, байгууллага, албан тушаал, ажилтан', async ({ page }) => {
@@ -80,5 +82,13 @@ test.describe.serial('v0.2.2 Блок 4 — хэрэглэгч удирдах', 
     await expect(dlg.getByText('Хадгалаагүй өөрчлөлттэй')).toBeHidden();
     await dlg.getByRole('button', { name: 'Ажилтнуудад хэрэгжүүлэх' }).click();
     await expect(dlg.getByText(/хэрэглэгчид хэрэгжүүллээ/)).toBeVisible();
+  });
+
+  test('SEC-009: Кемп админ (системийн админ биш) «Хэрэглэгч» хэсэгт хандахгүй', async ({ browser }) => {
+    const page = await browser.newPage();
+    await loginAs(page);
+    await page.goto(`/hr/${campId}/users`);
+    await expect(page.getByText('энэ хэсэгт хандах эрх алга')).toBeVisible();
+    await page.close();
   });
 });

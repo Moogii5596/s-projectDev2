@@ -44,7 +44,7 @@ describe('v0.2.2 Блок 3 — урилга, хэрэглэгч үүсгэх (i
   const config = { get: (k: string) => (k === 'PUBLIC_APP_URL' ? 'https://sino.gobiverse.website' : undefined) };
   const mailer = { isEnabled: () => false, send: async () => undefined };
   const invites = new InviteService(config as never, rls as never, admin as never, userAdmin as never, mailer as never, tenantCache as never, signIn as never, redis as never);
-  const ua = new CampUserAccessService(rls as never, access, audit, userAdmin as never, invites, login);
+  const ua = new CampUserAccessService(rls as never, access, audit, userAdmin as never, invites, login, { invalidateMember: async () => undefined } as never);
 
   const sfx = randomUUID().slice(0, 8);
   const tenantIds: string[] = [];

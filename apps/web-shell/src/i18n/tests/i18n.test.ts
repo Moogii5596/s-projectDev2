@@ -24,6 +24,12 @@ function walk(dir: string): string[] {
 }
 const SCOPE = [
   ...walk(join(SRC, 'modules', 'camp')),
+  // v0.2.2 Блок 6: «Хүний нөөц», урилга / нууц үгийн хуудсууд
+  ...walk(join(SRC, 'modules', 'hr')),
+  join(SRC, 'pages', 'SetPasswordPage.tsx'),
+  join(SRC, 'pages', 'ForgotPasswordPage.tsx'),
+  join(SRC, 'pages', 'ChangePasswordPage.tsx'),
+  join(SRC, 'components', 'PageSuspense.tsx'),
   join(SRC, 'components', 'Layout.tsx'),
   join(SRC, 'components', 'LanguageSwitcher.tsx'),
   join(SRC, 'components', 'ProtectedRoute.tsx'),

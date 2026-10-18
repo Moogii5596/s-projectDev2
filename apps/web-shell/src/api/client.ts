@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { supabase } from '../lib/supabase'
-import { handleUnauthorized } from '../lib/unauthorized'
+import { handleUnauthorized, isSessionRevoked } from '../lib/unauthorized'
 import { handlePasswordChangeRequired, isPasswordChangeRequired } from '../lib/password-change'
 import { currentLang } from '../i18n'
 
@@ -36,7 +36,8 @@ apiClient.interceptors.response.use(
     if (isPasswordChangeRequired(error)) {
       handlePasswordChangeRequired({ currentPath: () => window.location.pathname, redirect: (path) => { window.location.href = path } })
     }
-    if (error.response?.status === 401) {
+    // №3 (Блок 6б): идэвхгүй болсон / ажлаас гарсан хэрэглэгч (403 auth.not_member) — 401-тэй адил гаргана
+    if (error.response?.status === 401 || isSessionRevoked(error)) {
       await handleUnauthorized({
         signOutLocal: () => supabase.auth.signOut({ scope: 'local' }),
         currentPath: () => window.location.pathname,

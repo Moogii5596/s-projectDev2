@@ -9,7 +9,7 @@ import { inviteLink } from '../lib/user-access'
 
 /**
  * v0.2.2 Блок 4 — урилга: «Линк үүсгэх» (нэг удаа харагдана → хуулах) · «Имэйлээр илгээх» (SMTP + бодит имэйлтэй үед).
- * Шинэ урилга өмнөхийг хүчингүй болгоно (backend). Эрх: `camp.roles.manage`.
+ * Шинэ урилга өмнөхийг хүчингүй болгоно (backend). Эрх: системийн админ (SEC-009).
  */
 export default function InviteActions({ userId, hasRealEmail }: { userId: string; hasRealEmail: boolean }) {
   const { t } = useTranslation()

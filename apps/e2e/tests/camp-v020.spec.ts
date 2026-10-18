@@ -184,12 +184,12 @@ test.describe.serial('Кемп v0.2.0', () => {
     await p.close();
   });
 
-  // TEST-026: профайлын хэл өөрчилдөг тул admin@test.mn биш fixture devAdmin (ижил DEV tenant, ADMIN) — зэрэг ажиллаж буй
-  // бусад тест (admin@test.mn, монгол шошго) EN UI-тай нээгдэхгүй
+  // TEST-026/027: профайлын хэл өөрчилдөг тул ТУСДАА fixture devLangAdmin (ижил DEV tenant, ADMIN) — зэрэг ажиллаж буй
+  // бусад тест (admin@test.mn, devAdmin — modules-lite, монгол шошго) EN / 中文 UI-тай нээгдэхгүй
   test('олон хэл: EN → 中文 (цэс, хуудас, backend алдаа), профайлд хадгалагдана; буцааж МН', async ({ browser }) => {
     const own = await browser.newContext();
     const page = await own.newPage();
-    await loginAsUser(page, 'devAdmin');
+    await loginAsUser(page, 'devLangAdmin');
     await page.goto(`/hr/${campId}/employees`);
     await page.getByRole('group', { name: 'Хэл' }).getByRole('button', { name: 'EN' }).click();
     await expect(page.getByRole('button', { name: 'Camp', exact: true })).toBeVisible();
@@ -209,7 +209,7 @@ test.describe.serial('Кемп v0.2.0', () => {
     // Шинэ төхөөрөмж (цэвэр контекст) — профайлын хэл
     const ctx = await browser.newContext();
     const other = await ctx.newPage();
-    await loginAsUser(other, 'devAdmin');
+    await loginAsUser(other, 'devLangAdmin');
     await other.goto('/camp?list=1');
     await expect(other.getByRole('button', { name: '营地', exact: true })).toBeVisible();
     await ctx.close();

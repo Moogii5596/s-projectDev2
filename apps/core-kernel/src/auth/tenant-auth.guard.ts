@@ -96,7 +96,8 @@ export class TenantAuthGuard implements CanActivate {
     const isMember = await this.tenantCacheService.isMember(tenantId, user.id);
     if (!isMember) {
       this.logger.warn(`Membership байхгүй: authId=${user.id} tenant=${tenantSlug}`);
-      throw new ForbiddenException('Та энэ байгууллагад харьяалагдахгүй байна');
+      // №3 (Блок 6б): код `auth.not_member` — frontend локал session-ийг устгаад /login (идэвхгүй болгосон / ажлаас гарсан)
+      throw forbidden('auth.not_member');
     }
 
     // v0.2.2 D-06: эхний нэвтрэлт / админ шинэчилсэн нууц үг → солих хүртэл зөвхөн зөвшөөрсөн route

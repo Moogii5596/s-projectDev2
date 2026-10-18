@@ -42,7 +42,7 @@ describe('v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд
   employeeHooks.registerSitePort(site);
   const userAdmin = { setBanned: vi.fn().mockResolvedValue(undefined) };
   const employees = new HrEmployeesService(rls as never, access, audit);
-  const svc = new HrEmployeeLifecycleService(rls as never, access, audit, employees, attendanceHooks, employeeHooks, userAdmin as never);
+  const svc = new HrEmployeeLifecycleService(rls as never, access, audit, employees, attendanceHooks, employeeHooks, userAdmin as never, { invalidateMember: async () => undefined } as never);
 
   const sfx = randomUUID().slice(0, 8);
   const TODAY = todayUb();
@@ -201,7 +201,7 @@ describe('v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд
     expect(state.employees.get('SH1')).toMatchObject({ id: res.id, status: 'ACTIVE' });
   });
 
-  it('profile + PII лог: 15 мин-д 1 мөр; «Хэн үзсэн» зөвхөн camp.roles.manage; app_user засах/устгах эрхгүй', async () => {
+  it('profile + PII лог: 15 мин-д 1 мөр; «Хэн үзсэн» зөвхөн системийн админ; app_user засах/устгах эрхгүй', async () => {
     const e = await admin.hrEmployee.findFirstOrThrow({ where: { tenantId: tA, employeeCode: 'SH1', status: 'TERMINATED' } });
     const p1 = await svc.profile(tA, auth.hrOnly, c1, e.id);
     await svc.profile(tA, auth.hrOnly, c1, e.id);
@@ -216,9 +216,11 @@ describe('v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд
     expect(await admin.campPiiAccessLog.count({ where: { employeeId: e.id } })).toBe(2);
 
     await expect(svc.piiViews(tA, auth.hrOnly, c1, e.id, {})).rejects.toThrow(ForbiddenException);
-    expect((await svc.profile(tA, auth.campAdmin, c1, e.id)).can).toEqual({ terminate: true, viewPiiLog: true });
-    expect((await svc.piiViews(tA, auth.owner, c1, e.id, {})).data).toHaveLength(3);
-    const views = await svc.piiViews(tA, auth.campAdmin, c1, e.id, {});
+    // SEC-009 (Блок 6б): «Хэн үзсэн» — зөвхөн системийн админ; Кемп админ ч 403
+    expect((await svc.profile(tA, auth.campAdmin, c1, e.id)).can).toEqual({ terminate: true, viewPiiLog: false });
+    await expect(svc.piiViews(tA, auth.campAdmin, c1, e.id, {})).rejects.toThrow(ForbiddenException);
+    const views = await svc.piiViews(tA, auth.owner, c1, e.id, {});
+    expect(views.data).toHaveLength(3);
     expect(views.data.map((v) => v.viewerName)).toEqual(['campAdmin', 'hrOnly', 'hrOnly']);
     expect(views.data[1]).toMatchObject({ viewerUserId: user.hrOnly, context: 'profile' });
 

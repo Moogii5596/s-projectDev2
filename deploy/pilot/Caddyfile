@@ -81,6 +81,11 @@
 			roll_size 20MiB
 			roll_keep 10
 		}
-		format json
+		# v0.2.2 Блок 6б (№4): урилга / нууц үг сэргээх токен (72 / 1 цаг хүчинтэй) лог-д бичигдэхгүй.
+		# DB-д зөвхөн hash хадгалдаг — энд ч хадгалахгүй. Caddy 2.8, 2.10-д шалгасан (`caddy validate`).
+		format filter {
+			request>uri regexp (/(?:invite|reset|api/v1/auth/invites)/)[A-Za-z0-9_-]+ ${1}***
+			wrap json
+		}
 	}
 }

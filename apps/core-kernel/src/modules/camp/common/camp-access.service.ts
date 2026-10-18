@@ -88,6 +88,22 @@ export class CampAccessService {
     return actor.userId;
   }
 
+  /**
+   * v0.2.2 Блок 6б (SEC-009): хэрэглэгч удирдах (урилга, идэвхгүй болгох, холбох), роль ба эрх — ЗӨВХӨН
+   * системийн роль OWNER / ADMIN. Модулийн роль (Кемп админ г.м.) энэ эрхийг өгөхгүй (ADR-007, v0.2.3).
+   * core_users.id буцаана.
+   */
+  async requireTenantAdmin(tx: Tx, tenantId: string, authId: string): Promise<string> {
+    const actor = await this.resolve(tx, tenantId, authId);
+    if (!actor.perms.isTenantAdmin) throw forbidden('camp.err.access.admin');
+    return actor.userId;
+  }
+
+  /** Системийн роль (OWNER / ADMIN) эсэх — зорилтот хэрэглэгчийг хамгаалахад */
+  static isTenantAdminRole(role: string | null | undefined): boolean {
+    return (TENANT_ADMIN_ROLES as readonly string[]).includes(role ?? '');
+  }
+
   /** Тухайн эрх аль НЭГ кемпэд (эсвэл бүх кемпэд) байвал — tenant түвшний лавлах (жнь хөрөнгийн ангилал) */
   static hasInAnyCamp(perms: CampPermissionSet, code: CampPermission): boolean {
     return CampAccessService.has(perms, null, code) || Object.values(perms.byCamp).some((p) => p.includes(code));

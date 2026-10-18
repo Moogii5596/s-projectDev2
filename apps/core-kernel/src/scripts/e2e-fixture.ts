@@ -27,6 +27,10 @@ export const FIXTURE_USERS = {
   devAppr1: { tenant: 'dev', role: 'APPROVER' },
   devAppr2: { tenant: 'dev', role: 'APPROVER' },
   devAdmin: { tenant: 'dev', role: 'ADMIN' },
+  /** v0.2.2 Блок 6б (SEC-009): хэрэглэгч / роль удирдах e2e — системийн админ; профайлын хэл өөрчлөхгүй (TEST-026) */
+  devUserAdmin: { tenant: 'dev', role: 'ADMIN' },
+  /** TEST-027: профайлын хэлийг өөрчилдөг e2e (camp-v020) — devAdmin-ийг бусад spec зэрэг ашигладаг */
+  devLangAdmin: { tenant: 'dev', role: 'ADMIN' },
 } as const satisfies Record<string, { tenant: FixtureTenantKey | 'dev'; role: FixtureRole }>;
 export type FixtureUserKey = keyof typeof FIXTURE_USERS;
 

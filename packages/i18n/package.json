@@ -1,6 +1,6 @@
 {
   "name": "@s-project/i18n",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "private": true,
   "description": "v0.2.0 §0.7 — Frontend-ийн анхдагч орчуулга (mn/en/zh). Backend орчуулгын Excel экспорт/шалгалтад уншина.",
   "files": [

@@ -7,7 +7,7 @@ import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
 import { useAuth } from '../../../hooks/useAuth'
 import { getLastCamp, resolveLastCamp } from '../lib/last-camp'
-import { P } from '../lib/permissions'
+import { P, isSystemAdmin } from '../lib/permissions'
 import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, inputCls } from '../components/ui'
 
 /**
@@ -44,7 +44,7 @@ export default function CampHomePage() {
   if (!params.get('list') && active.length === 1) return <Navigate to={`/camp/${active[0].id}`} replace />
 
   const canMaster = perms.can(P.MASTER_MANAGE)
-  const canSystem = canMaster || perms.can(P.ROLES_MANAGE) || perms.data?.isTenantAdmin === true
+  const canSystem = canMaster || isSystemAdmin(perms.data)
 
   return (
     <div className="space-y-6">

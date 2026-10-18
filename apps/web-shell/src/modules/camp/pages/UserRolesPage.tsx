@@ -4,7 +4,7 @@ import { campApi } from '../api/camp-api'
 import type { UserRole } from '../api/types'
 import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
+import { isSystemAdmin } from '../lib/permissions'
 import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, NoAccess, PageHeader, Table, inputCls, inputSmCls, td } from '../components/ui'
 import { useTranslation } from 'react-i18next'
 
@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next'
 export default function UserRolesPage() {
   const { t } = useTranslation()
   const perms = useCampPermissions()
-  const canManage = perms.can(P.ROLES_MANAGE)
+  const canManage = isSystemAdmin(perms.data)
   const users = useQuery({ queryKey: campKeys.users, queryFn: campApi.users, enabled: canManage })
   const roles = useQuery({ queryKey: campKeys.roles, queryFn: campApi.roles, enabled: canManage })
   const camps = useQuery({ queryKey: campKeys.camps, queryFn: () => campApi.camps(false), enabled: canManage })

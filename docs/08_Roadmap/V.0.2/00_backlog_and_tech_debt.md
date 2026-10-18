@@ -74,8 +74,12 @@ tags: [roadmap, v0.2]
 | PIL-07 | Auth-ийн нэвтрэлтийн хязгаар Caddy-ийн ард бүх хэрэглэгчид нэг IP-ээр хуваалцагддаг → бодит IP (X-Forwarded-For) | runbook §15 | P2 | S | ✅ v0.2.1 |
 | PIL-08 | Excel export: ажилтан, ирц, өрөөний самбар, хоолны тоо (V1-д ирцийн загвараас өөр export алга) | Explore 2026-10-11 | P1? | M | 🔄 ажилтан/хэлтэс/өрөө ✅ v0.2.0; ирц/хоол 📋 |
 | PIL-09 | Анхдагч "Кемп админ" рольд засвар эхлүүлэх/хаах эрх алга (`maintenance.parts` = Катеринг админ, `maintenance.close` = Кемп менежер) — санаатай хуваарилалт уу, өөрчлөх үү (бизнес шийдвэр) | Explore 2026-10-11 | P2 | S | ✅ v0.2.2 Блок 1 (Q9) |
-| PIL-10 | Web bundle 509 kB (gzip 140) → code-split; утас + Funnel-ээр анхны ачаалал | build анхааруулга | P2 | S | 📋 |
+| PIL-10 | Web bundle 509 kB (gzip 140) → code-split; утас + Funnel-ээр анхны ачаалал | build анхааруулга | P2 | S | ✅ v0.2.2 Блок 6 (gzip 310 → 245 kB) |
 | PIL-11 | ✅ v0.2.0: `pilot.ps1 upgrade -Tag` (+ `-Profile staging`, `camp:snapshot`) | runbook §13, §13в | — | — | ✅ v0.2.0 |
+| PIL-12 | Web: `@supabase/supabase-js` → зөвхөн `@supabase/auth-js` (realtime-ийг MR-д lazy) — `vendor-supabase` 222 kB (анхны ачааллын ~27%); localStorage-ийн `sb-*-auth-token` түлхүүрийг хадгалж session алдагдуулахгүй | PIL-10 хэмжилт (Блок 6) | P3 | S | 📋 |
+| PIL-13 | **ADR-007** Роль, эрхийг системийн түвшинд: `camp_roles` → `core_roles`, `camp_permissions` → `core_permissions`, код модулиар (`hr.*`, `camp.*`, `core.users.*`), «Роль ба эрх» → Системийн тохиргоо; `camp.roles.manage` устгах (хэрэглэгчийн шийдвэр 2026-10-17) | v0.2.2 анализ (SEC-009) | P1 | L | 📋 v0.2.3 |
+| PIL-14 | Ажилтны хувийн мэдээлэл (утас, имэйл) — кемпэд эрхтэй хэн бүхэнд API-аар бүтнээр (жагсаалт, профайл). **Дотоод нийгмийн сүлжээтэй хамт** шийднэ: найзын хүсэлт, хэрэглэгч өөрөө нийтэд / найзуудад харуулах мэдээллээ сонгоно (хэрэглэгчийн шийдвэр 2026-10-17) | v0.2.2 анализ №2 | P1 | M | 📋 v0.3 (Feed) |
+| PIL-15 | Нууц үг солих / сэргээхэд бусад төхөөрөмжийн session-ийг цуцлах (GoTrue admin `signOut` / session устгах) | v0.2.2 анализ №6 | P2 | S | 📋 v0.2.3 |
 
 ## 3. Workflow / MR (пилотод нуусан модулиуд)
 
@@ -94,7 +98,7 @@ tags: [roadmap, v0.2]
 | ID | Ажил | Эх сурвалж | Урьдч. | Хэмжээ | Төлөв |
 |---|---|---|---|---|---|
 | QA-01 | **GitHub Actions ногоон эсэх v0.1.5-аас хойш шалгагдаагүй** (CI-004) — эхний ажил | lessons CI-004 | P1 | S | ✅ v0.2.0 (CI-005~007) |
-| QA-02 | E2E: "серверт session хүчингүй" (FE-007), бодит Supabase-ийн auth тохиргоо (OPS-003 — CI-д бодит Supabase бий) | lessons §20 | P1 | S | 📋 |
+| QA-02 | E2E: "серверт session хүчингүй" (FE-007), бодит Supabase-ийн auth тохиргоо (OPS-003 — CI-д бодит Supabase бий) | lessons §20 | P1 | S | ✅ v0.2.2 Блок 6 (`auth-session.spec`, `pilot-auth-config.spec`) |
 | QA-03 | Frontend component тест (одоо зөвхөн цэвэр `lib/*`) | v0.1.5 backlog | P2 | M | 📋 |
 | QA-04 | Integration Redis mock-ийг санах ойн болгох (бичсэнээ уншдаг) — CACHE-001 | v0.1.5 backlog | P2 | S | 📋 |
 | QA-05 | Давхар RESTRICTIVE policy цэвэрлэх (PERMISSIVE-тэй ижил нөхцөл) | v0.1.5 backlog | P2 | S | 📋 |

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from '../helpers/auth.helper';
+import { loginAsUser } from '../helpers/fixture';
 
 /**
  * Кемп модуль — Шат 8 багц 3 (хөрөнгө, засвар + сэлбэг, зардал). Бодит core-kernel + Supabase + web-shell.
@@ -53,7 +54,7 @@ test.describe.serial('Кемп — хөрөнгө ба засвар', () => {
     await loginAs(page);
   });
 
-  test('бэлтгэл (API): кемп, өрөө, катеринг байгууллага, засварын эрх', async ({ page }) => {
+  test('бэлтгэл (API): кемп, өрөө, катеринг байгууллага, засварын эрх', async ({ page, browser }) => {
     campId = (await api(page, 'POST', '/camps', { code: CODE, name: CAMP_NAME })).id;
     const b = (await api(page, 'POST', `/camps/${campId}/buildings`, { code: 'B1', name: 'Байр 1' })).id;
     await api(page, 'POST', `/camps/${campId}/rooms`, { buildingId: b, roomNo: '101', capacity: 2 });
@@ -64,8 +65,13 @@ test.describe.serial('Кемп — хөрөнгө ба засвар', () => {
     });
     // admin@test.mn-д энэ кемпэд сэлбэг/хаах эрх (Кемп админ ролийнд байхгүй)
     const me = await api<{ userId: string }>(page, 'GET', '/me/permissions');
-    const role = (await api(page, 'POST', '/roles', { name: `E2E засвар ${STAMP}`, permissionCodes: ['camp.maintenance.parts', 'camp.maintenance.close'] })).id;
-    await api(page, 'POST', '/user-roles', { userId: me.userId, roleId: role, campId });
+    // SEC-009 (v0.2.2 Блок 6б): роль үүсгэх / олгох = зөвхөн системийн админ → fixture devUserAdmin
+    const ctx = await browser.newContext();
+    const adm = await ctx.newPage();
+    await loginAsUser(adm, 'devUserAdmin');
+    const role = (await api(adm, 'POST', '/roles', { name: `E2E засвар ${STAMP}`, permissionCodes: ['camp.maintenance.parts', 'camp.maintenance.close'] })).id;
+    await api(adm, 'POST', '/user-roles', { userId: me.userId, roleId: role, campId });
+    await ctx.close();
   });
 
   test('хөрөнгийн ангилал нэмэх (давхар нэр → алдаа)', async ({ page }) => {

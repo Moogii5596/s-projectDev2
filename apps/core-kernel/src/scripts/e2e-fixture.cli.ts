@@ -95,6 +95,8 @@ async function main(): Promise<void> {
           // v0.2.0: DEV tenant-ийн fixture хэрэглэгчийн орчуулгын засвар/түүх (append-only — зөвхөн системийн холболтоор)
           await tx.$executeRaw`DELETE FROM i18n_override_history WHERE tenant_id = ${tenantId}::uuid AND changed_by = ANY(${coreIds}::uuid[])`;
           await tx.$executeRaw`DELETE FROM i18n_overrides WHERE tenant_id = ${tenantId}::uuid AND updated_by = ANY(${coreIds}::uuid[])`;
+          // v0.2.2 Блок 6б: devUserAdmin-ийн (хэрэглэгч / роль удирдах e2e) аудит мөр — actor FK (append-only, системийн холболт)
+          await tx.$executeRaw`DELETE FROM camp_audit_log WHERE tenant_id = ${tenantId}::uuid AND actor_user_id = ANY(${coreIds}::uuid[])`;
           await tx.$executeRaw`DELETE FROM core_users WHERE tenant_id = ${tenantId}::uuid AND id = ANY(${coreIds}::uuid[])`;
         }
       });

@@ -60,12 +60,19 @@ describe('AppError helper-ууд (v0.2.0 — Кемпийн алдаа кодт�
     });
   });
 
-  it('кемпийн кодонд ашигласан camp.* / enum.* түлхүүр бүр каталогт байна', () => {
-    const root = join(__dirname, '../../../modules/camp');
-    const files = (readdirSync(root, { recursive: true }) as string[]).filter((f) => f.endsWith('.ts') && !f.includes('tests'));
+  it('camp / hr / core / auth кодонд ашигласан алдааны түлхүүр бүр каталогт байна (v0.2.2 H1: код hr, core руу шилжсэн)', () => {
     const used = new Set<string>();
-    for (const f of files) {
-      for (const m of readFileSync(join(root, f), 'utf8').matchAll(/['`]((?:camp\.(?:err|row|warn)|enum\.(?:weekday|maintenance_status))\.[\w.]+?)['`$]/g)) used.add(m[1]);
+    for (const dir of ['../../../modules/camp', '../../../modules/hr', '../../../modules/core', '../../../auth']) {
+      const root = join(__dirname, dir);
+      const files = (readdirSync(root, { recursive: true }) as string[]).filter(
+        (f) => f.endsWith('.ts') && !f.includes('tests') && !/\.(spec|test)\.ts$/.test(f),
+      );
+      for (const f of files) {
+        const src = readFileSync(join(root, f), 'utf8');
+        for (const m of src.matchAll(/['`]((?:camp\.(?:err|row|warn)|enum\.(?:weekday|maintenance_status))\.[\w.]+?)['`$]/g)) used.add(m[1]);
+        // auth.* — зөвхөн каталогийн загвартай (auth.<snake>) — config.toml-ийн `auth.email` г.м. биш
+        for (const m of src.matchAll(/['`](auth\.[a-z]+_[a-z_]+)['`]/g)) used.add(m[1]);
+      }
     }
     expect(used.size).toBeGreaterThan(100);
     const missing = [...used].filter((k) => !(k in MESSAGES) && !k.endsWith('.'));

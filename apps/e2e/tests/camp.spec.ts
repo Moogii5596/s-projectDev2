@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from '../helpers/auth.helper';
+import { switchUser } from '../helpers/fixture';
 
 /**
  * Кемп модуль — Шат 8 багц 1 (тохиргоо, мастер өгөгдөл, роль/эрх). Бодит core-kernel + Supabase + web-shell.
@@ -142,12 +143,15 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
   });
 
   test('эрхийн матриц: V2 эрх (зардлын тайлан, хоолны захиалга) харагдахгүй; хэрэглэгчийн роль', async ({ page }) => {
+    // SEC-009 (Блок 6б): роль ба эрх = зөвхөн системийн админ
+    await switchUser(page, 'devUserAdmin');
     await page.goto('/camp/admin/roles');
     await expect(page.getByRole('heading', { name: 'Роль ба эрх' })).toBeVisible();
     // v0.2.2 H2 (H2-Q5): эрхийн нэр = `perm.<code>` орчуулга («Кемп › …»)
     await expect(page.getByText('Кемп › Тохиргоо (НӨАТ, ростер, хоол идэх байршил)')).toBeVisible();
     await expect(page.getByText('Зардлын тайлан харах')).toHaveCount(0);
     await expect(page.getByText('Хоолны захиалга өгөх')).toHaveCount(0);
+    await expect(page.getByText('Систем › Роль, эрхийн тохиргоо')).toHaveCount(0); // хуучирсан эрх (SEC-009)
 
     await page.goto('/camp/admin/user-roles');
     await page.getByLabel('Хэрэглэгч хайх').fill('admin@test.mn');

@@ -2,16 +2,16 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CatalogItem } from '../../camp/api/types'
 import { useCampPermissions } from '../../camp/hooks/useCampPermissions'
-import { P } from '../../camp/lib/permissions'
+import { isSystemAdmin } from '../../camp/lib/permissions'
 import { Button } from '../../camp/components/ui'
 import CatalogPage from '../../camp/pages/CatalogPage'
 import PositionTemplatesModal from '../components/PositionTemplatesModal'
 
-/** /hr/:campId/positions — албан тушаалын каталог + (B4-Q5) мөр бүрт «Эрхийн загвар» (`camp.roles.manage`) */
+/** /hr/:campId/positions — албан тушаалын каталог + (B4-Q5) мөр бүрт «Эрхийн загвар» (системийн админ) */
 export default function HrPositionsPage() {
   const { t } = useTranslation()
   const perms = useCampPermissions()
-  const canRoles = perms.can(P.ROLES_MANAGE)
+  const canRoles = isSystemAdmin(perms.data)
   const [tpl, setTpl] = useState<CatalogItem | null>(null)
   return (
     <>

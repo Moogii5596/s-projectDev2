@@ -1,22 +1,26 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
-import ChangePasswordPage from './pages/ChangePasswordPage';
+import Layout from './components/Layout';
+import PageSuspense from './components/PageSuspense';
+// Нэвтрэлтгүй хуудсууд — үндсэн chunk-д (анхны ачаалал хурдан, утас + Tunnel)
+import LoginPage from './pages/LoginPage';
 import SetPasswordPage from './pages/SetPasswordPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import Layout from './components/Layout';
-import LoginPage from './pages/LoginPage';
-import MRListPage from './pages/MRListPage';
-import MRCreatePage from './pages/MRCreatePage';
-import MRDetailPage from './pages/MRDetailPage';
-import ApprovalSlaPage from './pages/ApprovalSlaPage';
-import WorkflowDefinitionPage from './pages/WorkflowDefinitionPage';
-import DelegationPage from './pages/DelegationPage';
-import CampRoutes from './modules/camp/CampRoutes';
-import HrRoutes from './modules/hr/HrRoutes';
-import InventoryPage from './modules/inventory/InventoryPage';
-import VendorsPage from './modules/vendor/VendorsPage';
-import ReportPage from './modules/report/ReportPage';
+
+// v0.2.2 Блок 6 (PIL-10): нэвтэрсний дараах хуудас/модуль бүр тусдаа chunk
+const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
+const MRListPage = lazy(() => import('./pages/MRListPage'));
+const MRCreatePage = lazy(() => import('./pages/MRCreatePage'));
+const MRDetailPage = lazy(() => import('./pages/MRDetailPage'));
+const ApprovalSlaPage = lazy(() => import('./pages/ApprovalSlaPage'));
+const WorkflowDefinitionPage = lazy(() => import('./pages/WorkflowDefinitionPage'));
+const DelegationPage = lazy(() => import('./pages/DelegationPage'));
+const CampRoutes = lazy(() => import('./modules/camp/CampRoutes'));
+const HrRoutes = lazy(() => import('./modules/hr/HrRoutes'));
+const InventoryPage = lazy(() => import('./modules/inventory/InventoryPage'));
+const VendorsPage = lazy(() => import('./modules/vendor/VendorsPage'));
+const ReportPage = lazy(() => import('./modules/report/ReportPage'));
 import { HOME_PATH, isEnabled } from './config/enabled-modules';
 
 // Sprint 4: Module Federation — React.lazy + dynamic import
@@ -38,7 +42,7 @@ export default function App() {
       {/* Protected */}
       <Route element={<ProtectedRoute />}>
         {/* v0.2.2 D-06: Layout-гүй (нууц үг солих шаардлагатай үед цэс харуулахгүй) */}
-        <Route path="/change-password" element={<ChangePasswordPage />} />
+        <Route path="/change-password" element={<PageSuspense><ChangePasswordPage /></PageSuspense>} />
         <Route element={<Layout />}>
           {/* v0.1.6: VITE_MODULES-оор шүүнэ (пилот = зөвхөн camp → нүүр /camp) */}
           <Route path="/" element={<Navigate to={HOME_PATH} replace />} />

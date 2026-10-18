@@ -5,12 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
 import { useMe } from '../hooks/useMe'
 import { changePasswordRequest } from '../api/auth'
-import { apiErrorMessage } from '../lib/password-change'
+import { MIN_PASSWORD_LENGTH, apiErrorMessage } from '../lib/password-change'
 import { HOME_PATH } from '../config/enabled-modules'
 import LanguageSwitcher from '../components/LanguageSwitcher'
-
-/** Supabase `minimum_password_length` (D-12) */
-export const MIN_PASSWORD_LENGTH = 12
 
 /**
  * v0.2.2 D-06 — нууц үг солих. `mustChangePassword` үед бусад хуудас хаалттай (backend 403) → энд л үлдэнэ.

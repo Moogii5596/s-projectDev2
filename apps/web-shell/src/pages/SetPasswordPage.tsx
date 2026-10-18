@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { acceptInvite, inspectInvite, type InviteInfo } from '../api/auth'
-import { MIN_PASSWORD_LENGTH } from './ChangePasswordPage'
+import { MIN_PASSWORD_LENGTH } from '../lib/password-change'
 
 /**
  * v0.2.2 Блок 3 (ADR-003 §2.3) — `/invite/:token` (шинэ хэрэглэгч) ба `/reset/:token` (нууц үг мартсан).

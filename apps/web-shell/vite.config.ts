@@ -28,6 +28,22 @@ export default defineConfig(({ mode }) => {
             replacement: fileURLToPath(new URL('./src/components/MfeDisabled.tsx', import.meta.url)),
           }],
     },
+    // v0.2.2 Блок 6 (PIL-10): vendor сангууд тусдаа chunk — release бүрт апп-ын код л өөрчлөгдөж,
+    // эдгээрийн hash хэвээр → утас cache-аас уншина. react/react-dom/react-query-г federation `shared` зохицуулна.
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return undefined
+            if (id.includes('/@supabase/')) return 'vendor-supabase'
+            if (id.includes('/react-router') || id.includes('/@remix-run/router/')) return 'vendor-router'
+            if (id.includes('/i18next') || id.includes('/react-i18next/')) return 'vendor-i18n'
+            if (id.includes('/axios/')) return 'vendor-axios'
+            return undefined
+          },
+        },
+      },
+    },
     server: {
       port: 5173,
       host: 'localhost',

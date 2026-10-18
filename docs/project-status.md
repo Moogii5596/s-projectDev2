@@ -25,13 +25,15 @@ tags: [status, v0.2.2]
 | Блок H1 — HR backend зөөлт (DB хөндөхгүй) ([[ADR-006_HR_Core_Module]] §5) | ✅ `7f506d0` |
 | Блок H2 — HR frontend («Хүний нөөц» цэс, `/hr/:campId/…`) | ✅ `8787569` (e2e хүлээгдэж байна) |
 | Блок 4 — хэрэглэгч удирдах UI (HR дээр) | ✅ `d586e18` (e2e ✅ 2026-10-17) |
-| Блок 5 — профайл, ажлаас гаргах, дахин ажилд авах, PII лог ([[07_v0.2.2_tech_plan]] §13) | ✅ `036f554` … `20bb87a` — e2e 71/71 (2026-10-17); push → CI |
-| **Блок 6** — release бэлтгэл | 📋 дараагийнх |
+| Блок 5 — профайл, ажлаас гаргах, дахин ажилд авах, PII лог ([[07_v0.2.2_tech_plan]] §13) | ✅ `036f554` … `20bb87a` — e2e 71/71, CI ✅ (2026-10-17) |
+| Блок 6 — release бэлтгэл (PIL-10 code-split, QA-02, CHANGELOG, TC-v022-*) | ✅ cloud (2026-10-17) — commit + CI/e2e хүлээгдэж байна |
+| Блок 6б — анализын аюулгүй байдлын засвар (SEC-009 хэрэглэгч удирдах = OWNER/ADMIN, AUTH-004, SEC-010, AUTH-005, RBAC-001) | ✅ cloud (2026-10-17) — commit + CI/e2e хүлээгдэж байна |
+| **Release `v0.2.2`** — tag → staging → пилот | 📋 дараагийнх |
 
 ## 2. Дараагийн алхам
-1. `git push` → CI ногоон; дараа нь **Блок 6** (release бэлтгэл).
-2. Блок 6; release-ийн өмнө staging-д заавал шалгах зүйлс — [[08_v0.2.2_progress]] «Staging».
-3. Дараагийн хувилбар: `v0.2.3` (хөрөнгө ажилтанд, ээлжийн календарь, гэрээ + үнэ) — [[03_v0.2_full_plan]].
+1. Блок 6 + 6б-г таны машин дээр commit → CI + `pnpm e2e` (fixture `devUserAdmin` шинэ, `auth-session.spec` шинэ).
+2. **Release v0.2.2:** tag → staging (**эхэнд:** хэрэглэгч удирддаг хүн OWNER / ADMIN эсэх — SEC-009; [[08_v0.2.2_progress]] «Staging», [[pilot-test-guide]] §5г TC-v022-01…04) → `pilot.ps1 upgrade -Tag v0.2.2` → TC-v022-05…22. Өөрчлөлт: [[CHANGELOG]] `[v0.2.2]`.
+3. Дараагийн хувилбар: `v0.2.3` — **эхэнд ADR-007** (роль, эрх системийн түвшинд — PIL-13), хөрөнгө ажилтанд, ээлжийн календарь, гэрээ + үнэ; хуучин `/camp` HR замуудыг устгах — [[03_v0.2_full_plan]].
 
 ## 3. Нээлттэй асуудал / эрсдэл
 | # | Асуудал | Хаана |
@@ -40,7 +42,8 @@ tags: [status, v0.2.2]
 | 2 | Supabase-ийн SMTP / GoTrue-ийн бодит шалгалт зөвхөн staging-д боломжтой (Блок 3) | [[08_v0.2.2_progress]] |
 | 3 | `packages/prisma-rls-extension` ашиглагдаагүй хамаарал | [[01_PostgreSQL_MultiTenant_RLS_Spec]] §6 |
 | 4 | vault-д алга spec (Event bus гэрээ, FIX-01~04) | [[INDEX]] → Missing Specs |
+| 6 | Ажилтны утас / имэйл кемпэд эрхтэй хэн бүхэнд API-аар харагдана — дотоод нийгмийн сүлжээтэй хамт шийднэ (хэрэглэгчийн шийдвэр) | PIL-14, [[00_backlog_and_tech_debt]] |
 | 5 | `camp-master` (7), `route-probe` (1) integration — v0.2.2 Блок 1–3-ын дараа хуучин хүлээлттэй (H1-ээс өмнө ч унадаг) | [[08_v0.2.2_progress]] «Блок H1 — тест» |
 
-## 4. Тест (сүүлийн бүтэн ажиллагаа — v0.2.2 Блок 5, cloud)
-core-kernel unit 663 · web-shell 97 · integration (бодит PG + RLS) `camp-v022-*` + RLS ногоон · tsc / eslint цэвэр. Файлын зураглал, команд: [[07_Test_Map]]; орчин: [[02_Local_Supabase_Docker_Windows]].
+## 4. Тест (сүүлийн бүтэн ажиллагаа — v0.2.2 Блок 6б, cloud)
+core-kernel unit 677 · web-shell 98 · e2e 71/71 (таны машин, Блок 5) + `auth-session` 3 (CI-д) · integration (бодит PG + RLS) `camp-v022-*` ногоон (Блок 5; Блок 6-д backend логик өөрчлөгдөөгүй) · tsc / eslint цэвэр · web анхны ачаалал gzip 245 kB (PIL-10). Файлын зураглал, команд: [[07_Test_Map]]; орчин: [[02_Local_Supabase_Docker_Windows]].

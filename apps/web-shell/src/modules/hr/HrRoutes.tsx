@@ -1,16 +1,19 @@
+import { lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import HrLayout from './components/HrLayout'
-import HrHomePage from './pages/HrHomePage'
-import HrImportPage from './pages/HrImportPage'
-import EmployeesPage from './pages/EmployeesPage'
-import DepartmentsPage from './pages/DepartmentsPage'
-import CrewsPage from './pages/CrewsPage'
-import ShiftsPage from './pages/ShiftsPage'
-import AttendancePage from './pages/AttendancePage'
-import HrPositionsPage from './pages/HrPositionsPage'
-import HrUsersPage from './pages/HrUsersPage'
-import EmployeeProfilePage from './pages/EmployeeProfilePage'
 import { HR_DEFAULT_SECTION } from './lib/hr-sections'
+
+// v0.2.2 Блок 6 (PIL-10): хуудас бүр тусдаа chunk (Suspense — Layout-ийн Outlet)
+const HrHomePage = lazy(() => import('./pages/HrHomePage'))
+const HrImportPage = lazy(() => import('./pages/HrImportPage'))
+const EmployeesPage = lazy(() => import('./pages/EmployeesPage'))
+const DepartmentsPage = lazy(() => import('./pages/DepartmentsPage'))
+const CrewsPage = lazy(() => import('./pages/CrewsPage'))
+const ShiftsPage = lazy(() => import('./pages/ShiftsPage'))
+const AttendancePage = lazy(() => import('./pages/AttendancePage'))
+const HrPositionsPage = lazy(() => import('./pages/HrPositionsPage'))
+const HrUsersPage = lazy(() => import('./pages/HrUsersPage'))
+const EmployeeProfilePage = lazy(() => import('./pages/EmployeeProfilePage'))
 
 /**
  * /hr/* — v0.2.2 H2 «Хүний нөөц» ([[ADR-006_HR_Core_Module]] §5.1).

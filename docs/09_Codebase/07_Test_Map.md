@@ -2,7 +2,7 @@
 title: "Тестийн зураглал"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-17
+last_updated: 2026-10-18
 tags: [codebase, testing, generated]
 ---
 
@@ -46,7 +46,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 75 файл, ~585 тест
+## Unit — core-kernel — 76 файл, ~599 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -59,6 +59,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/auth/invite-token.spec.ts` | 4 | invite-token (v0.2.2 Блок 3) · auth-mail (D-04) |
 | `core-kernel/src/auth/invite.service.spec.ts` | 9 | InviteService (v0.2.2 Блок 3) |
 | `core-kernel/src/auth/login-identifier.spec.ts` | 4 | login-identifier (v0.2.2 D-13) |
+| `core-kernel/src/auth/pilot-auth-config.spec.ts` | 7 | пилотын GoTrue тохиргоо (deploy/pilot/supabase/config.toml) |
 | `core-kernel/src/auth/sign-in.service.spec.ts` | 14 | SignInService (v0.2.2 D-10) |
 | `core-kernel/src/auth/tenant-auth.guard.spec.ts` | 24 | TenantAuthGuard |
 | `core-kernel/src/auth/tenant-cache.service.spec.ts` | 19 | TenantCacheService · TenantCacheService.isMember() · Auth token cache (PERF-003) |
@@ -92,16 +93,16 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/camp/costs/tests/vat.test.ts` | 2 | VatCalculator (Шат 4.2) |
 | `core-kernel/src/modules/camp/maintenance/tests/camp-maintenance.service.test.ts` | 28 | maintenance-flow (Шат 4.4) · CampMaintenanceService — үүсгэх (Шат 4.4) · CampMaintenanceService — төлөв шилжилт (Шат 4.4) · CampMaintenanceService — сэлбэг (Шат 4.4) |
 | `core-kernel/src/modules/camp/master/tests/camp-master.services.test.ts` | 28 | CampsService (Шат 2.4) · CampFacilitiesService (Шат 2.4) · CoreOrganizationsService (Шат 2.4) · HrDepartmentsService (Шат 2.4) · HrCrewsService (Шат 2.4) · HrEmployeesService (Шат 2.4) |
-| `core-kernel/src/modules/camp/rbac/tests/camp-rbac.service.test.ts` | 23 | CampRbacService (Шат 2.2) · Эрхийн V1/V2 хүрээ (D8, 2026-10-09) · CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүлэх, шууд эрх) |
+| `core-kernel/src/modules/camp/rbac/tests/camp-rbac.service.test.ts` | 24 | CampRbacService (Шат 2.2) · Эрхийн V1/V2 хүрээ (D8, 2026-10-09) · CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүлэх, шууд эрх) |
 | `core-kernel/src/modules/camp/rbac/tests/template-diff.test.ts` | 2 | template-diff (v0.2.2 D-09) |
-| `core-kernel/src/modules/camp/rbac/tests/user-access-b4.test.ts` | 11 | user-list (цэвэр) · CampRbacService.listUsers (B4-Q3) · CampUserAccessService.setActive (B4-Q2) |
+| `core-kernel/src/modules/camp/rbac/tests/user-access-b4.test.ts` | 16 | user-list (цэвэр) · CampRbacService.listUsers (B4-Q3) · CampUserAccessService.setActive (B4-Q2) · SEC-009 (Блок 6б) — хэрэглэгч удирдах = зөвхөн системийн админ (OWNER / ADMIN) |
 | `core-kernel/src/modules/camp/settings/tests/camp-settings.service.test.ts` | 12 | CampSettingsService (Шат 2.3) |
 | `core-kernel/src/modules/event-bus/cloud-events.adapter.spec.ts` | 6 | CloudEventsAdapter |
 | `core-kernel/src/modules/event-bus/dlq.service.spec.ts` | 3 | DlqService |
 | `core-kernel/src/modules/event-bus/event-bus.service.spec.ts` | 2 | EventBusService.emit (Phase 5.1 [EVT-003]) |
 | `core-kernel/src/modules/event-bus/outbox-poller.service.spec.ts` | 10 | OutboxPollerService |
 | `core-kernel/src/modules/hr/attendance/tests/import.test.ts` | 15 | import-parser · import-planner |
-| `core-kernel/src/modules/hr/employees/tests/hr-employee-lifecycle.test.ts` | 18 | цэвэр функц · HrEmployeeLifecycleService · HrEmployeesService — ажлаас гарсан бүртгэл (v0.2.2 Блок 5) |
+| `core-kernel/src/modules/hr/employees/tests/hr-employee-lifecycle.test.ts` | 19 | цэвэр функц · HrEmployeeLifecycleService · HrEmployeesService — ажлаас гарсан бүртгэл (v0.2.2 Блок 5) |
 | `core-kernel/src/modules/hr/employees/tests/hr-employees-v021.test.ts` | 5 | v0.2.1 HrEmployeesService — албан тушаал, хоолны байршил, хоол авах |
 | `core-kernel/src/modules/hr/org/tests/shift-pattern.test.ts` | 7 | normalizeShiftPattern (Шат 2.4) |
 | `core-kernel/src/modules/hr/positions/tests/hr-positions.service.test.ts` | 4 | v0.2.1 каталог — normName / resolvePositionByName · HrPositionsService — албан тушаалын каталог (v0.2.1 C-01 → v0.2.2 H1) |
@@ -128,7 +129,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/scripts/pilot-admin.spec.ts` | 7 | validate* · onboard · ensureUser |
 | `core-kernel/src/scripts/test-user.spec.ts` | 9 | ensureTestUser · assertLocalUrl · parseDotenv / parseArgs |
 
-## Unit — web-shell — 17 файл, ~97 тест
+## Unit — web-shell — 17 файл, ~98 тест
 
 Команд: `pnpm --filter web-shell test`
 
@@ -138,7 +139,7 @@ tags: [codebase, testing, generated]
 | `web-shell/src/lib/tests/modules.test.ts` | 8 | parseModules · homePath · resolveSupabaseUrl |
 | `web-shell/src/lib/tests/mr-approval.test.ts` | 8 | approvalState [SEC-004] — backend approvalDenial-тэй ижил · stepViews |
 | `web-shell/src/lib/tests/password-change.test.ts` | 4 | password-change (v0.2.2 D-06) · displayLogin |
-| `web-shell/src/lib/tests/unauthorized.test.ts` | 3 | handleUnauthorized [FE-007] |
+| `web-shell/src/lib/tests/unauthorized.test.ts` | 4 | handleUnauthorized [FE-007] · isSessionRevoked (v0.2.2 Блок 6б, №3) |
 | `web-shell/src/modules/camp/lib/tests/camp-lib.test.ts` | 11 | shift-pattern · permissions · apiErrorMessage · dates |
 | `web-shell/src/modules/camp/lib/tests/camp-maint-lib.test.ts` | 8 | formatMoney (string → float-гүй) · maintenance.availableActions (backend maintenance-flow-тэй ижил) · permissions.canInAnyCamp |
 | `web-shell/src/modules/camp/lib/tests/camp-ops-lib.test.ts` | 8 | calendar.cellKind (ростер 14+14: 0 = ирэх, 15 = явах) · calendar.rangeProblem · presence.pivotPresence · meals.mealsPayload |
@@ -152,20 +153,21 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/inventory/lib/tests/quantity.test.ts` | 5 | inventory quantity (numeric(15,3), float-гүй) |
 | `web-shell/src/modules/report/lib/tests/report.test.ts` | 5 | report lib |
 
-## E2E (Playwright) — 13 файл, ~71 тест
+## E2E (Playwright) — 14 файл, ~75 тест
 
 Команд: `pnpm test:e2e`
 
 | Файл | Тест | describe |
 |---|---|---|
 | `e2e/tests/advanced-workflow.spec.ts` | 5 |  |
+| `e2e/tests/auth-session.spec.ts` | 3 |  |
 | `e2e/tests/auth.spec.ts` | 4 |  |
 | `e2e/tests/camp-assets.spec.ts` | 7 |  |
 | `e2e/tests/camp-ops.spec.ts` | 7 |  |
 | `e2e/tests/camp-v020.spec.ts` | 8 |  |
 | `e2e/tests/camp-v021.spec.ts` | 7 |  |
 | `e2e/tests/camp-v022-terminate.spec.ts` | 5 |  |
-| `e2e/tests/camp-v022-users.spec.ts` | 4 |  |
+| `e2e/tests/camp-v022-users.spec.ts` | 5 |  |
 | `e2e/tests/camp.spec.ts` | 6 |  |
 | `e2e/tests/modules-lite.spec.ts` | 8 |  |
 | `e2e/tests/multi-tenant.spec.ts` | 5 |  |

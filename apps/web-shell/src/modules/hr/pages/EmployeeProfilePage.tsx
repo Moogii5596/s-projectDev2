@@ -18,7 +18,7 @@ const dateTime = (iso: string) => new Date(iso).toLocaleString()
 /**
  * /hr/:campId/employees/:employeeId — v0.2.2 Блок 5 ажилтны профайл (C-09, PIL-03).
  * Нээх бүрт хувийн мэдээлэл үзсэн лог (backend, 15 мин-д 1). Ажлаас гаргах / дахин ажилд авах — `camp.employee.terminate`.
- * «Хэн үзсэн» — Кемп админ (`camp.roles.manage`). Хөрөнгийн таб v0.2.3-т (B5-Q1).
+ * «Хэн үзсэн» — системийн админ (SEC-009). Хөрөнгийн таб v0.2.3-т (B5-Q1).
  */
 export default function EmployeeProfilePage() {
   const { t } = useTranslation()

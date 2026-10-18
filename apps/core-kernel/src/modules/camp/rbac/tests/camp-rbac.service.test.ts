@@ -22,17 +22,19 @@ const role = (over: Record<string, unknown> = {}) => ({
 describe('CampRbacService (Шат 2.2)', () => {
   let s: ReturnType<typeof setup>;
   let svc: CampRbacService;
-  const asManager = () => setActor(s.tx, { roles: [{ campId: null, perms: [P.ROLES_MANAGE] }] });
+  const asManager = () => setActor(s.tx, { role: UserRole.ADMIN });
 
   beforeEach(() => {
     s = setup();
     svc = new CampRbacService(s.prisma as never, s.access, s.audit);
   });
 
-  it('roles.manage-гүй (кемпийн роль.manage ч хангалтгүй — tenant түвшин) → 403, юу ч бичихгүй', async () => {
+  it('SEC-009: системийн админ биш (Кемп админ — бүх кемпийн roles.manage ч) → 403, юу ч бичихгүй', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.ROLES_MANAGE, P.MASTER_MANAGE] }] });
     await expect(svc.listRoles('t1', 'a1')).rejects.toThrow(ForbiddenException);
-    await expect(svc.createRole('t1', 'a1', { name: 'X' })).rejects.toThrow(/camp\.roles\.manage эрх шаардлагатай/);
+    setActor(s.tx, { roles: [{ campId: null, perms: [P.ROLES_MANAGE, P.MASTER_MANAGE] }] });
+    await expect(svc.listRoles('t1', 'a1')).rejects.toThrow(ForbiddenException);
+    await expect(svc.createRole('t1', 'a1', { name: 'X' })).rejects.toThrow(/зөвхөн системийн админ/);
     expect(s.tx.campRole.create).not.toHaveBeenCalled();
     expect(s.cache.invalidateTenant).not.toHaveBeenCalled();
   });
@@ -117,19 +119,34 @@ describe('CampRbacService (Шат 2.2)', () => {
     expect(s.cache.invalidateTenant).not.toHaveBeenCalled();
   });
 
+  it('№7 (Блок 6б): албан тушаалын автомат олголт байхад гараар олговол 409 биш — гарын олголт болгоно (source_position_id = NULL)', async () => {
+    setActor(s.tx, { role: UserRole.ADMIN }, (a) => ('id' in a.where ? { id: 'u2', isActive: true, email: 'u@x', fullName: null } : null));
+    s.tx.campRole.findFirst.mockResolvedValueOnce({ id: 'r1', name: 'Ажилтан' });
+    s.tx.campUserRole.findFirst.mockResolvedValueOnce({ id: 'ur1', userId: 'u2', roleId: 'r1', campId: null, createdAt: new Date(), sourcePositionId: 'pos1' });
+    const res = await svc.assignUserRole('t1', 'a1', { userId: 'u2', roleId: 'r1' });
+    expect(s.tx.campUserRole.update).toHaveBeenCalledWith({ where: { id: 'ur1' }, data: { sourcePositionId: null } });
+    expect(s.tx.campUserRole.create).not.toHaveBeenCalled();
+    expect(res).toMatchObject({ id: 'ur1', roleId: 'r1' });
+    expect(s.tx.campAuditLog.create.mock.calls[0][0].data.summaryKey).toBe('audit.user_role.update');
+    // гараар олгосон давхардал → 409 хэвээр
+    s.tx.campRole.findFirst.mockResolvedValueOnce({ id: 'r1', name: 'Ажилтан' });
+    s.tx.campUserRole.findFirst.mockResolvedValueOnce({ id: 'ur2', userId: 'u2', roleId: 'r1', campId: null, createdAt: new Date(), sourcePositionId: null });
+    await expect(svc.assignUserRole('t1', 'a1', { userId: 'u2', roleId: 'r1' })).rejects.toThrow(ConflictException);
+  });
+
   describe('assignUserRole', () => {
     const okUser = { id: 'u2', isActive: true };
     const others = (u: unknown) => (args: { where: Record<string, unknown> }) => (args.where.id === 'u2' ? u : null);
 
     it('өөр tenant / байхгүй хэрэглэгч → 400; идэвхгүй → 400', async () => {
-      setActor(s.tx, { roles: [{ campId: null, perms: [P.ROLES_MANAGE] }] }, others(null));
+      setActor(s.tx, { role: UserRole.ADMIN }, others(null));
       await expect(svc.assignUserRole('t1', 'a1', { userId: 'u2', roleId: 'r1' })).rejects.toThrow(/Хэрэглэгч олдсонгүй/);
-      setActor(s.tx, { roles: [{ campId: null, perms: [P.ROLES_MANAGE] }] }, others({ id: 'u2', isActive: false }));
+      setActor(s.tx, { role: UserRole.ADMIN }, others({ id: 'u2', isActive: false }));
       await expect(svc.assignUserRole('t1', 'a1', { userId: 'u2', roleId: 'r1' })).rejects.toThrow(/Идэвхгүй хэрэглэгч/);
     });
 
     it('роль / кемп олдохгүй → 400', async () => {
-      setActor(s.tx, { roles: [{ campId: null, perms: [P.ROLES_MANAGE] }] }, others(okUser));
+      setActor(s.tx, { role: UserRole.ADMIN }, others(okUser));
       await expect(svc.assignUserRole('t1', 'a1', { userId: 'u2', roleId: 'r1' })).rejects.toThrow(/Роль олдсонгүй/);
       s.tx.campRole.findFirst.mockResolvedValue({ id: 'r1' });
       await expect(svc.assignUserRole('t1', 'a1', { userId: 'u2', roleId: 'r1', campId: 'c9' })).rejects.toThrow(/Кемп олдсонгүй/);
@@ -137,11 +154,11 @@ describe('CampRbacService (Шат 2.2)', () => {
     });
 
     it('давхардал (campId NULL-ийг ч тэнцүү гэж шалгана) → 409; амжилттай → campId null + cache', async () => {
-      setActor(s.tx, { roles: [{ campId: null, perms: [P.ROLES_MANAGE] }] }, others(okUser));
+      setActor(s.tx, { role: UserRole.ADMIN }, others(okUser));
       s.tx.campRole.findFirst.mockResolvedValue({ id: 'r1' });
       s.tx.campUserRole.findFirst.mockResolvedValueOnce({ id: 'dup' });
       await expect(svc.assignUserRole('t1', 'a1', { userId: 'u2', roleId: 'r1' })).rejects.toThrow(/аль хэдийн өгөгдсөн/);
-      expect(s.tx.campUserRole.findFirst).toHaveBeenCalledWith({ where: { tenantId: 't1', userId: 'u2', roleId: 'r1', campId: null }, select: { id: true } });
+      expect(s.tx.campUserRole.findFirst.mock.calls[0][0].where).toEqual({ tenantId: 't1', userId: 'u2', roleId: 'r1', campId: null });
       expect(s.cache.invalidateTenant).not.toHaveBeenCalled();
 
       await svc.assignUserRole('t1', 'a1', { userId: 'u2', roleId: 'r1', campId: null });
@@ -227,7 +244,7 @@ describe('CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүл
   beforeEach(() => {
     s = setup();
     svc = new CampRbacService(s.prisma as never, s.access, s.audit);
-    setActor(s.tx, { roles: [{ campId: null, perms: [P.ROLES_MANAGE] }] });
+    setActor(s.tx, { role: UserRole.ADMIN });
     s.tx.campRole.findFirst.mockResolvedValue({
       id: 'r1', name: 'Кемп админ', description: null, isSystem: true, systemCode: CampRoleCode.CAMP_ADMIN,
       createdAt: new Date(), updatedAt: new Date(), permissions: [], _count: { userRoles: 2 },
@@ -280,7 +297,7 @@ describe('CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүл
   it('grantDirectPermission: үл мэдэгдэх код → 400, давхардал → 409, амжилттай → DIRECT + createdBy', async () => {
     await expect(svc.grantDirectPermission('t1', 'a1', 'u1', { permissionCode: 'camp.fake.perm' })).rejects.toThrow(BadRequestException);
     s.tx.coreUser.findFirst.mockImplementation(async (a: { where: Record<string, unknown> }) =>
-      'authId' in a.where ? { id: 'cu-actor', role: UserRole.REQUESTER } : { id: 'u1', isActive: true, email: 'u@x', fullName: null });
+      'authId' in a.where ? { id: 'cu-actor', role: UserRole.ADMIN } : { id: 'u1', isActive: true, email: 'u@x', fullName: null });
     s.tx.campUserPermission.findFirst.mockResolvedValueOnce({ id: 'dup' });
     await expect(svc.grantDirectPermission('t1', 'a1', 'u1', { permissionCode: P.REPORT_VIEW })).rejects.toThrow(ConflictException);
     s.tx.campUserPermission.create.mockResolvedValueOnce({ id: 'p1', userId: 'u1', permissionCode: P.REPORT_VIEW, campId: null, source: 'DIRECT', createdAt: new Date() });
