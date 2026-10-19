@@ -2,7 +2,7 @@
 title: "Эрхийн каталог (Кемп RBAC)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-18
+last_updated: 2026-10-19
 tags: [codebase, auth, camp, generated]
 ---
 
@@ -20,13 +20,13 @@ tags: [codebase, auth, camp, generated]
 |---|---|---|---|---|---|---|---|
 | `camp.settings.manage` | Кемпийн тохиргоо (НӨАТ, ростер, хоол идэх байршил) | V1 | ✅ |  |  |  | `camp-settings.service.ts` |
 | `camp.roles.manage` | Роль, эрхийн тохиргоо | V1 | ✅ |  |  |  | — |
-| `camp.master.manage` | Мастер өгөгдөл (кемп, байр, өрөө, хэлтэс, баг, байгууллага) | V1 | ✅ |  |  |  | `camp-catalog.service.ts` `camp-facilities.service.ts` `camps.service.ts` `core-organizations.service.ts` `departments.handler.ts` `hr-crews.service.ts` `hr-departments.service.ts` `hr-positions.service.ts` |
+| `camp.master.manage` | Мастер өгөгдөл (кемп, байр, өрөө, хэлтэс, баг, байгууллага) | V1 | ✅ |  |  |  | `camp-catalog.service.ts` `facilities.handlers.ts` `camp-facilities.service.ts` `camps.service.ts` `core-organizations.service.ts` `departments.handler.ts` `positions.handler.ts` `hr-crews.service.ts` `hr-departments.service.ts` `hr-positions.service.ts` |
 | `camp.contract.manage` | Гэрээ, ажил, үнэ | V2 | ✅ |  |  |  | — |
 | `camp.employee.manage` | Ажилтан бүртгэл | V1 | ✅ |  | ✅ |  | `hr-employees.service.ts` `employees.handler.ts` |
-| `camp.employee.terminate` | Ажлаас гаргах, дахин ажилд авах | V1 | ✅ |  |  |  | `hr-employee-lifecycle.service.ts` `camp-snapshot.ts` |
+| `camp.employee.terminate` | Ажлаас гаргах, дахин ажилд авах | V1 | ✅ |  |  |  | `hr-employee-lifecycle.service.ts` `former-employees.handler.ts` `camp-snapshot.ts` |
 | `camp.movement.import` | Ирц (xlsx) импорт | V1 | ✅ | ✅ |  |  | `hr-attendance.service.ts` |
 | `camp.shift.adjust` | Ээлжийн зохицуулалт | V1 | ✅ | ✅ |  |  | `hr-shifts.service.ts` |
-| `camp.room.manage` | Өрөө хуваарилалт | V1 | ✅ |  | ✅ |  | `camp-rooms.service.ts` `camp-facilities.service.ts` |
+| `camp.room.manage` | Өрөө хуваарилалт | V1 | ✅ |  | ✅ |  | `camp-rooms.service.ts` `facilities.handlers.ts` `room-allocations.handler.ts` `camp-facilities.service.ts` |
 | `camp.asset.manage` | Үндсэн хөрөнгө | V1 | ✅ |  | ✅ |  | `camp-assets.service.ts` |
 | `camp.maintenance.create` | Засварын хүсэлт үүсгэх | V1 | ✅ | ✅ | ✅ | ✅ | `camp-maintenance.service.ts` |
 | `camp.maintenance.parts` | Засварын сэлбэг бүртгэх | V1 | ✅ |  | ✅ |  | `camp-maintenance.service.ts` `maintenance-flow.ts` `camp-snapshot.ts` |

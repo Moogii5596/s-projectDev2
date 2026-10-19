@@ -127,11 +127,15 @@ function InfoTab({ p }: { p: EmployeeProfile }) {
   return (
     <Card>
       <dl>
+        <Row label={t('camp.emp.col.last_name')}>{p.lastName}</Row>
+        <Row label={t('camp.emp.col.first_name')}>{p.firstName ?? p.fullName}</Row>
+        <Row label={t('camp.emp.col.family_name')}>{p.familyName}</Row>
         <Row label={t('camp.emp.col.position')}>{p.positionRef?.name ?? p.position}</Row>
         <Row label={t('camp.emp.department')}>{`${p.department.code} · ${p.department.name}`}</Row>
         <Row label={t('camp.emp.crew')}>{p.crew?.code ?? t('camp.emp.no_crew')}</Row>
         <Row label={t('camp.emp.organization')}>{p.organization.name}</Row>
         <Row label={t('camp.emp.col.phone')}>{p.phone}</Row>
+        <Row label={t('camp.emp.col.extra_phones')}>{p.extraPhones?.length ? p.extraPhones.join(', ') : null}</Row>
         <Row label={t('camp.emp.col.email')}>{p.email}</Row>
         <Row label={t('hr.profile.login')}>
           {p.user ? (

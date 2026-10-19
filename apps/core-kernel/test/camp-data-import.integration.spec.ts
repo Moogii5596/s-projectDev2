@@ -62,9 +62,9 @@ describe('📥 Загвар', () => {
   });
 
   it('буруу төрөл → 400 код + орчуулсан мессеж (en)', async () => {
-    const res = await it_.api().get(DI('/rooms/template')).set(it_.as('admin', { 'Accept-Language': 'en' }));
+    const res = await it_.api().get(DI('/nope/template')).set(it_.as('admin', { 'Accept-Language': 'en' }));
     expect(res.status).toBe(400);
-    expect(res.body).toMatchObject({ code: 'import.unknown_type', params: { type: 'rooms' }, message: 'Unknown import type: rooms' });
+    expect(res.body).toMatchObject({ code: 'import.unknown_type', params: { type: 'nope' }, message: 'Unknown import type: nope' });
   });
 });
 

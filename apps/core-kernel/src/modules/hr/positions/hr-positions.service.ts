@@ -8,7 +8,7 @@ import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../../camp/common/common.dto';
 
 const P = CAMP_PERMISSIONS;
-const ITEM = { id: true, name: true, isActive: true, createdAt: true, updatedAt: true } as const;
+const ITEM = { id: true, name: true, code: true, isActive: true, createdAt: true, updatedAt: true } as const;
 
 /** Нэрийг харьцуулах хэлбэр: илүү зай, том/жижиг үсэг үл хамаарна (DB-ийн uq_*_name индекстэй ижил) */
 export const normName = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();

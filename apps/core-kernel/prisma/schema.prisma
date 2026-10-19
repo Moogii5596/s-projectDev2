@@ -44,6 +44,7 @@ model Tenant {
   budgetPeriods        BudgetPeriod[]       // Phase 4.1
   budgetAllocations    BudgetAllocation[]   // Phase 4.1
   budgetCommitments    BudgetCommitment[]   // Phase 4.1
+  campEmployeePhones          HrEmployeePhone[]
   inventoryItems       InventoryItem[]      // Phase 4.2
   vendors              Vendor[]             // Phase 4.3
   // Camp Module (20261009001..006)
@@ -731,6 +732,13 @@ enum CampAuditAction {
 enum CampDataImportType {
   EMPLOYEES
   DEPARTMENTS
+  /// v0.2.3 Блок D (20261019001)
+  POSITIONS
+  FORMER_EMPLOYEES
+  BUILDING_TYPES
+  BUILDINGS
+  ROOMS
+  ROOM_ALLOCATIONS
 }
 
 enum CampDataImportStatus {
@@ -1108,7 +1116,14 @@ model HrEmployee {
   /// NULL = ростергүй (ээлжийн бус)
   crewId         String?            @map("crew_id") @db.Uuid
   employeeCode   String             @map("employee_code")
+  /// v0.2.3 Блок D (20261019002): trigger `trg_camp_employees_names` = «овог нэр» (last_name + first_name). Шууд бичихгүй — овог/нэрийг бич.
   fullName       String             @map("full_name")
+  /// Ургийн овог
+  familyName     String?            @map("family_name")
+  /// Овог (эцэг/эхийн нэр)
+  lastName       String?            @map("last_name")
+  /// Нэр. DB-д NOT NULL — өгөөгүй бол trigger `full_name`-ээс салгаж бөглөнө (тиймээс Prisma-д optional)
+  firstName      String?            @map("first_name")
   position       String?
   phone          String?
   /// v0.2.0 (20261011003) — ADR-003 нэвтрэх нэрийн бэлтгэл
@@ -1144,6 +1159,8 @@ model HrEmployee {
   rehiredFrom       HrEmployee?            @relation("HrEmployeeRehire", fields: [tenantId, rehiredFromId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_rehired_from")
   rehiredAs         HrEmployee[]           @relation("HrEmployeeRehire")
   piiAccessLogs     CampPiiAccessLog[]
+  /// v0.2.3 Блок D: нэмэлт утас (үндсэн = `phone`)
+  extraPhones       HrEmployeePhone[]
   positionRef      HrPosition?         @relation(fields: [tenantId, positionId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_position")
   workMealLocation CampMealLocation?     @relation("CampEmployeeWorkMealLocation", fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_meal_location")
 
@@ -1732,6 +1749,8 @@ model HrPosition {
   id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
   name      String
+  /// v0.2.3 Блок D (20261019002): ажлын байрны индекс (жнь 1322-11) — давхардаж болно
+  code      String?
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
@@ -1845,4 +1864,22 @@ model CampPiiAccessLog {
   @@index([tenantId, employeeId, viewedAt(sort: Desc)], map: "idx_camp_pii_access_employee")
   @@index([tenantId, viewerUserId, employeeId, viewedAt(sort: Desc)], map: "idx_camp_pii_access_viewer")
   @@map("camp_pii_access_log")
+}
+
+/// v0.2.3 Блок D (20261019002) — ажилтны НЭМЭЛТ утас (үндсэн дугаар = camp_employees.phone)
+model HrEmployeePhone {
+  id         String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  phone      String
+  sortOrder  Int      @default(0) @map("sort_order") @db.SmallInt
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employee HrEmployee @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "camp_employee_phones_tenant_id_employee_id_fkey")
+
+  @@unique([tenantId, employeeId, phone], map: "uq_camp_employee_phones")
+  @@index([tenantId, employeeId, sortOrder], map: "idx_camp_employee_phones_employee")
+  @@map("camp_employee_phones")
 }

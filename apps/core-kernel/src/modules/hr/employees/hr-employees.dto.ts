@@ -2,6 +2,9 @@ import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEmail, I
 import { Transform, Type } from 'class-transformer';
 import { CampEmployeeStatus, CampTerminationReason } from '@prisma/client';
 import { toBool, trim, trimOrNull } from '../../camp/common/camp-dto.util';
+import { compactPhone, EXTRA_PHONES_MAX, PHONE_RE } from './employee-names';
+
+const compactPhones = ({ value }: { value: unknown }) => (Array.isArray(value) ? value.map((v) => (typeof v === 'string' ? compactPhone(v) : v)) : value);
 
 // ── Ажилтан ──────────────────────────────────────────────────
 export class CreateEmployeeDto {
@@ -17,14 +20,30 @@ export class CreateEmployeeDto {
   @Transform(trim) @IsString() @IsNotEmpty({ message: 'employeeCode шаардлагатай' }) @MaxLength(50)
   employeeCode!: string;
 
-  @Transform(trim) @IsString() @IsNotEmpty({ message: 'fullName шаардлагатай' }) @MaxLength(200)
-  fullName!: string;
+  @Transform(trim) @ValidateIf((o: { firstName?: string }) => o.firstName === undefined) @IsString() @IsNotEmpty({ message: 'firstName эсвэл fullName шаардлагатай' }) @MaxLength(200)
+  fullName?: string;
+
+  /** v0.2.3 Блок D (S1): ургийн овог */
+  @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(100)
+  familyName?: string | null;
+
+  /** v0.2.3 Блок D (S1): овог (эцэг/эхийн нэр) */
+  @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(100)
+  lastName?: string | null;
+
+  /** v0.2.3 Блок D (S1): нэр. Өгвөл `fullName`-ийг үл тооно (full_name = «овог нэр») */
+  @IsOptional() @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(100)
+  firstName?: string;
 
   @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(100)
   position?: string | null;
 
   @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(50)
   phone?: string | null;
+
+  /** v0.2.3 Блок D (S2): НЭМЭЛТ дугаарууд (үндсэн = phone). Өгвөл бүхэлд нь солино; [] = хасах */
+  @IsOptional() @Transform(compactPhones) @IsArray() @ArrayMaxSize(EXTRA_PHONES_MAX) @IsString({ each: true }) @Matches(PHONE_RE, { each: true, message: 'extraPhones: 8 орон эсвэл +олон улсын дугаар' })
+  extraPhones?: string[];
 
   /** v0.2.0 — ADR-003-ын бэлтгэл (заавал биш) */
   @IsOptional() @Transform(trimOrNull) @IsEmail({}, { message: 'email буруу байна' }) @MaxLength(254)
@@ -61,10 +80,23 @@ export class UpdateEmployeeDto {
   fullName?: string;
 
   @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(100)
+  familyName?: string | null;
+
+  @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(100)
+  lastName?: string | null;
+
+  @IsOptional() @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(100)
+  firstName?: string;
+
+  @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(100)
   position?: string | null;
 
   @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(50)
   phone?: string | null;
+
+  /** v0.2.3 Блок D (S2): НЭМЭЛТ дугаарууд (үндсэн = phone). Өгвөл бүхэлд нь солино; [] = хасах */
+  @IsOptional() @Transform(compactPhones) @IsArray() @ArrayMaxSize(EXTRA_PHONES_MAX) @IsString({ each: true }) @Matches(PHONE_RE, { each: true, message: 'extraPhones: 8 орон эсвэл +олон улсын дугаар' })
+  extraPhones?: string[];
 
   @IsOptional() @Transform(trimOrNull) @IsEmail({}, { message: 'email буруу байна' }) @MaxLength(254)
   email?: string | null;

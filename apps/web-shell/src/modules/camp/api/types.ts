@@ -237,7 +237,14 @@ export type DayPresence = 'ARRIVAL' | 'DEPARTURE' | 'FULL_DAY'
 export interface Employee {
   id: string
   employeeCode: string
+  /** «Овог Нэр» — backend бүрдүүлнэ (v0.2.3 Блок D) */
   fullName: string
+  /** v0.2.3 Блок D (S1): ургийн овог, овог, нэр */
+  familyName?: string | null
+  lastName?: string | null
+  firstName?: string | null
+  /** v0.2.3 Блок D (S2): нэмэлт дугаарууд (үндсэн = phone) */
+  extraPhones?: string[]
   position: string | null
   phone: string | null
   /** v0.2.0 — ADR-003-ын бэлтгэл */
@@ -271,6 +278,10 @@ export interface EmployeeProfile {
   campId: string
   employeeCode: string
   fullName: string
+  familyName: string | null
+  lastName: string | null
+  firstName: string | null
+  extraPhones: string[]
   position: string | null
   phone: string | null
   email: string | null
@@ -354,6 +365,8 @@ export interface EmployeeEffective {
 export interface CatalogItem {
   id: string
   name: string
+  /** албан тушаал: ажлын байрны индекс (v0.2.3 Блок D, импортоор) */
+  code?: string | null
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -649,8 +662,17 @@ export interface MaintenanceMutationResult extends MaintenanceDetail {
 }
 
 // ── v0.2.0 §0.5 — Мастер өгөгдлийн импорт/экспорт ─────────────
-export type DataImportType = 'employees' | 'departments'
-export type ExportType = DataImportType | 'rooms'
+/** v0.2.3 Блок D: + албан тушаал, гарсан ажилтан, өрөөний тохиргоо, байрлуулалт (backend `registerHandler`) */
+export type DataImportType =
+  | 'employees'
+  | 'former-employees'
+  | 'departments'
+  | 'positions'
+  | 'building-types'
+  | 'buildings'
+  | 'rooms'
+  | 'room-allocations'
+export type ExportType = DataImportType
 export type DataRowOp = 'create' | 'update' | 'unchanged' | 'error'
 export interface DataRowError {
   column?: string
@@ -666,9 +688,19 @@ export interface DataImportRow {
   changes: Record<string, { from: unknown; to: unknown }>
   errors: DataRowError[]
 }
+export type DataImportEnum =
+  | 'EMPLOYEES'
+  | 'FORMER_EMPLOYEES'
+  | 'DEPARTMENTS'
+  | 'POSITIONS'
+  | 'BUILDING_TYPES'
+  | 'BUILDINGS'
+  | 'ROOMS'
+  | 'ROOM_ALLOCATIONS'
+
 export interface DataImportHeader {
   id: string
-  type: 'EMPLOYEES' | 'DEPARTMENTS'
+  type: DataImportEnum
   source: 'XLSX' | 'GRID'
   fileName: string | null
   status: ImportStatus

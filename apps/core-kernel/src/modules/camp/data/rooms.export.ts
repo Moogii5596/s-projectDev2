@@ -2,7 +2,7 @@ import { TableSpec } from '../../../common/xlsx/table-spec';
 import { ImportCtx } from '../../hr/import/import-types';
 import { Tx } from '../common/camp-tx';
 
-/** §2.4 — Өрөөний экспорт (импорт нь "+ Олон өрөө" маягтаар, FB-07). Формат ирээдүйн импорттой ижил. */
+/** §2.4 — Өрөөний экспорт; v0.2.3 Блок D-оос импорт ч мөн энэ форматаар (`facilities.handlers.ts`). */
 export const ROOMS_SPEC: TableSpec = {
   type: 'rooms',
   title: 'table.rooms',

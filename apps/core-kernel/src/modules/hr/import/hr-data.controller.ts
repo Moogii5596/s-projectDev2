@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Req, Res } from '@nestjs/common';
-import { IsBoolean, IsIn, IsOptional } from 'class-validator';
+import { IsBoolean, IsOptional, Matches } from 'class-validator';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { badRequest, payloadTooLarge } from '../../../common/i18n/app-error';
 import { TABLE_MAX_ROWS } from '../../../common/xlsx/table-spec';
@@ -8,14 +8,14 @@ import { HrDataImportService, ImportInput } from './hr-data-import.service';
 
 const uuid = () => new ParseUUIDPipe();
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-const TYPES = ['employees', 'departments'] as const;
 
 export class ConfirmImportDto {
   @IsOptional() @IsBoolean() skipErrors?: boolean;
 }
 
 export class ListImportsDto {
-  @IsOptional() @IsIn(TYPES) type?: string;
+  /** Бүртгэлтэй төрөл эсэхийг service шалгана (модулиуд `registerHandler`-ээр нэмдэг, v0.2.3 Блок D) */
+  @IsOptional() @Matches(/^[a-z][a-z-]{1,39}$/) type?: string;
 }
 
 type MultipartFile = { filename: string; toBuffer: () => Promise<Buffer> };

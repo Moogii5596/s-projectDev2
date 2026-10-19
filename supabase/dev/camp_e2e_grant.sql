@@ -4,7 +4,7 @@
 -- Production-д ХЭРЭГЛЭХГҮЙ.
 --
 -- Windows (ENV-009 — PowerShell pipe кирилл эвддэг тул файлаар):
---   $db = docker ps --filter "name=supabase_db" --format "{{.Names}}"
+--   $db = docker ps --filter "name=^supabase_db_s-project$" --format "{{.Names}}"
 --   docker cp supabase/dev/camp_e2e_grant.sql "${db}:/tmp/camp_e2e_grant.sql"
 --   docker exec -e PGPASSWORD=postgres $db psql -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f /tmp/camp_e2e_grant.sql
 -- Эрхийн cache 5 минут (Redis) — өмнө нь /camp нээсэн бол core-kernel-ийг дахин асаах эсвэл 5 мин хүлээнэ.

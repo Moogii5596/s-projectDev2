@@ -2,7 +2,7 @@
 title: "Frontend зураглал (web-shell)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-17
+last_updated: 2026-10-19
 tags: [codebase, frontend, camp, i18n]
 ---
 
@@ -40,9 +40,9 @@ tags: [codebase, frontend, camp, i18n]
 - `HrRoutes.tsx` — `/hr` (сүүлийн / ганц ажлын байр → шууд, эс бөгөөс жагсаалт), `/hr/positions`, `/hr/:campId/{employees,employees/:employeeId,departments,crews,shifts,attendance,import,positions,users}`. `campId` = «үндсэн ажлын байр» (одоогоор кемп).
 - `components/HrLayout.tsx` — ажлын байр сонгогч (солиход ижил хэсэгт үлдэнэ) + цэс · `components/LegacyHrRedirect.tsx` — Кемпийн хуучин хаяг → HR.
 - `api/hr-api.ts` — **`hrApi`** (`/api/v1/hr/sites/:campId/...`): хэлтэс, бригад, ажилтан, ирц (`movements`, `movement-imports`), ээлж (`shift-calendar`, `shift-adjustments`), мастер импорт/экспорт (`data-imports`, `export/:type` — `rooms` ч), `dataImports` түүх. Query/Input type (`EmployeeQuery`, `MovementQuery`, `EmployeeInput`). DTO type `camp/api/types.ts`-д (RULE-20).
-- `pages/` — `Employees` (засах цонхонд `EmployeeAccess`; нэр → профайл; «Ажлаас гарсан» шүүлт, гарсан мөрийг засах/сонгохгүй), `EmployeeProfile` (Блок 5: мэдээлэл, ирц, өрөө, түүх, «Хэн үзсэн» табууд; «Ажлаас гаргах» / «Дахин ажилд авах» цонх — `camp.employee.terminate`; профайл нээх = PII лог тул `refetchOnWindowFocus: false`), `Departments`, `Crews`, `Shifts`, `Attendance` (Кемпээс зөөсөн; «Ирц» нь Кемпийн `stays`-ыг харуулна), `HrHomePage`, `HrImportPage`, `HrUsersPage` (Блок 4), `HrPositionsPage` (`CatalogPage` + `rowAction` «Эрхийн загвар»).
+- `pages/` — `Employees` (засах цонхонд овог/нэр/ургийн овог, нэмэлт утас — v0.2.3; `EmployeeAccess`; нэр → профайл; «Ажлаас гарсан» шүүлт, гарсан мөрийг засах/сонгохгүй), `EmployeeProfile` (Блок 5: мэдээлэл, ирц, өрөө, түүх, «Хэн үзсэн» табууд; «Ажлаас гаргах» / «Дахин ажилд авах» цонх — `camp.employee.terminate`; профайл нээх = PII лог тул `refetchOnWindowFocus: false`), `Departments`, `Crews`, `Shifts`, `Attendance` (Кемпээс зөөсөн; «Ирц» нь Кемпийн `stays`-ыг харуулна), `HrHomePage`, `HrImportPage` (v0.2.3 Блок D: 2 бүлэг — Хүний нөөц / Өрөөний тохиргоо, дарааллын дугаартай; түүхэнд төрөл `hr.import.kind.*`), `HrUsersPage` (Блок 4), `HrPositionsPage` (`CatalogPage` + `rowAction` «Эрхийн загвар»).
 - `components/` (Блок 4) — `EmployeeAccess` (нэвтрэх эрх үүсгэх), `InviteActions` (линк / имэйл), `UserPermissionsModal` (загвар/шууд эрх), `PositionTemplatesModal`. API — `campApi` (`users`, `setUserActive`, `createEmployeeUser`, `inviteUser`, `inviteOptions`, `userPermissions`, `grantDirect`, `revokeDirect`, `positionTemplates`, `setPositionTemplates`, `applyPositionTemplates`).
-- `lib/` — `hr-sections` (хэсэг, зам, хуучин хаягийн зураглал), `user-access` (урилгын линк, нэвтрэх нэр, төлөв, шүүлт, эрхийн бүлэглэл), `import-columns` (ажилтан/хэлтсийн импортын багана), `termination` (Блок 5: маягтын шалгалт, товч, үр дагаврын мөр); тест `lib/tests`. API `hrApi.{employeeProfile,piiViews,terminateEmployee,rehireEmployee}`, query key `campKeys.{employeeProfile,piiViews}` (`employees`-ийн доор).
+- `lib/` — `hr-sections` (хэсэг, зам, хуучин хаягийн зураглал), `user-access` (урилгын линк, нэвтрэх нэр, төлөв, шүүлт, эрхийн бүлэглэл), `import-columns` (импортын багана: ажилтан, гарсан ажилтан, хэлтэс, албан тушаал, байрны төрөл, байр, өрөө, байрлуулалт — v0.2.3 Блок D), `phones` (нэмэлт утас задлах), `termination` (Блок 5: маягтын шалгалт, товч, үр дагаврын мөр); тест `lib/tests`. API `hrApi.{employeeProfile,piiViews,terminateEmployee,rehireEmployee}`, query key `campKeys.{employeeProfile,piiViews}` (`employees`-ийн доор).
 - **Хамаарал:** `ui.tsx`, `useCampMutation`, `campKeys`, `ImportDialog`, `EmployeePicker`, `ShiftPattern`, `CatalogPage`, `camp/lib/*` — Кемпээс import (shared руу салгах — QA-10, v0.3). Шинэ HR хуудас: `hrApi` → `campKeys` → `HrRoutes` + `HR_SECTIONS` → `hr.section.*` i18n.
 
 ## 3. Бусад модуль

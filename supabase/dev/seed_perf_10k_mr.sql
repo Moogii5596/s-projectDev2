@@ -5,7 +5,7 @@
 -- Ажиллуулах (repo root, local Supabase):
 --   psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/dev/seed_perf_10k_mr.sql
 -- psql байхгүй бол (PowerShell):
---   $db = docker ps --filter "name=supabase_db" --format "{{.Names}}"
+--   $db = docker ps --filter "name=^supabase_db_s-project$" --format "{{.Names}}"
 --   Get-Content supabase/dev/seed_perf_10k_mr.sql -Raw | docker exec -i $db psql -U postgres -d postgres -v ON_ERROR_STOP=1
 -- Устгах:
 --   DELETE FROM mr_headers WHERE mr_number LIKE 'PERF-%';

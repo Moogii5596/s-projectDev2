@@ -21,11 +21,20 @@ import { inTenantTx, Tx } from '../../camp/common/camp-tx';
 import { withCampErrors } from '../../camp/common/camp-errors';
 import { departmentsHandler } from './departments.handler';
 import { employeesHandler } from './employees.handler';
+import { formerEmployeesHandler } from './former-employees.handler';
+import { positionsHandler } from './positions.handler';
 import { DataImportHandler, ImportCtx, PlannedRow } from './import-types';
 
-/** URL-ийн төрөл → handler */
-const HANDLERS: Record<string, DataImportHandler> = { employees: employeesHandler, departments: departmentsHandler };
-const BY_ENUM: Record<CampDataImportType, DataImportHandler> = { EMPLOYEES: employeesHandler, DEPARTMENTS: departmentsHandler };
+/**
+ * URL-ийн төрөл → handler. HR-ийн өөрийнх энд; бусад модуль `registerHandler`-ээр нэмнэ
+ * (v0.2.3 Блок D: Кемп — building-types, buildings, rooms, room-allocations, `CampHrBridge`).
+ */
+const BUILT_IN: Record<string, DataImportHandler> = {
+  employees: employeesHandler,
+  'former-employees': formerEmployeesHandler,
+  departments: departmentsHandler,
+  positions: positionsHandler,
+};
 /** Экспортын нэмэлт төрөл (HR-ийн импортын handler-гүй) — бусад модуль бүртгэнэ (жишээ нь Кемпийн `rooms`, v0.2.2 H1) */
 export interface ExtraExport {
   spec: TableSpec;
@@ -38,12 +47,6 @@ const IMPORT_SELECT = {
 } as const;
 
 export type ImportInput = { kind: 'xlsx'; fileName: string; buffer: Buffer } | { kind: 'rows'; rows: Record<string, unknown>[] };
-
-function handlerFor(type: string): DataImportHandler {
-  const h = HANDLERS[type];
-  if (!h) throw badRequest('import.unknown_type', { type });
-  return h;
-}
 
 function counts(plan: PlannedRow[]) {
   const n = (op: PlannedRow['op']) => plan.filter((r) => r.op === op).length;
@@ -81,6 +84,31 @@ export class HrDataImportService {
   ) {}
 
   private readonly extraExports = new Map<string, ExtraExport>();
+  private readonly handlers = new Map<string, DataImportHandler>(Object.entries(BUILT_IN));
+  private readonly byEnum = new Map<CampDataImportType, DataImportHandler>(Object.values(BUILT_IN).map((h) => [h.type, h]));
+
+  /** Импортын нэмэлт төрөл бүртгэх (Кемп: өрөөний тохиргоо, байрлуулалт) — `CampHrBridge.onModuleInit` */
+  registerHandler(type: string, handler: DataImportHandler): void {
+    this.handlers.set(type, handler);
+    this.byEnum.set(handler.type, handler);
+  }
+
+  /** Бүртгэлтэй импортын төрлүүд (URL) */
+  types(): string[] {
+    return [...this.handlers.keys()];
+  }
+
+  private handlerFor(type: string): DataImportHandler {
+    const h = this.handlers.get(type);
+    if (!h) throw badRequest('import.unknown_type', { type });
+    return h;
+  }
+
+  private handlerOf(type: CampDataImportType): DataImportHandler {
+    const h = this.byEnum.get(type);
+    if (!h) throw badRequest('import.unknown_type', { type });
+    return h;
+  }
 
   /** Нэмэлт экспорт бүртгэх (Кемп: `rooms`) — `CampHrBridge.onModuleInit` */
   registerExport(type: string, exporter: ExtraExport): void {
@@ -88,11 +116,11 @@ export class HrDataImportService {
   }
 
   template(type: string): Promise<Buffer> {
-    return buildTemplate(handlerFor(type).spec, currentLang());
+    return buildTemplate(this.handlerFor(type).spec, currentLang());
   }
 
   async preview(tenantId: string, authId: string, campId: string, type: string, input: ImportInput) {
-    const h = handlerFor(type);
+    const h = this.handlerFor(type);
     const parsed = input.kind === 'xlsx' ? await parseTableXlsx(input.buffer, h.spec) : parseTableRows(input.rows, h.spec);
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
@@ -116,7 +144,7 @@ export class HrDataImportService {
   }
 
   async list(tenantId: string, authId: string, campId: string, type?: string) {
-    const h = type ? handlerFor(type) : null;
+    const h = type ? this.handlerFor(type) : null;
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       return tx.campDataImport.findMany({
@@ -132,7 +160,7 @@ export class HrDataImportService {
   async get(tenantId: string, authId: string, campId: string, id: string) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       const imp = await this.load(tx, tenantId, campId, id);
-      const h = BY_ENUM[imp.type];
+      const h = this.handlerOf(imp.type);
       await this.access.require(tx, tenantId, authId, campId, h.permission);
       const plan = await h.plan(tx, { tenantId, campId }, imp.parsedRows as unknown as ParsedTableRow[]);
       const { parsedRows: _omit, ...rest } = imp;
@@ -153,7 +181,7 @@ export class HrDataImportService {
         tenantId,
         async (tx) => {
           const peek = await this.load(tx, tenantId, campId, id);
-          const h = BY_ENUM[peek.type];
+          const h = this.handlerOf(peek.type);
           const actorUserId = await this.access.require(tx, tenantId, authId, campId, h.permission);
           // Нэг кемпийн мастер өгөгдлийн импорт дараалан (зэрэгцээ confirm / давхар дарах)
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`camp-data-import:${campId}`}))`;
@@ -184,7 +212,7 @@ export class HrDataImportService {
   async cancel(tenantId: string, authId: string, campId: string, id: string) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       const imp = await this.load(tx, tenantId, campId, id);
-      await this.access.require(tx, tenantId, authId, campId, BY_ENUM[imp.type].permission);
+      await this.access.require(tx, tenantId, authId, campId, this.handlerOf(imp.type).permission);
       const res = await tx.campDataImport.updateMany({ where: { id, tenantId, campId, status: CampDataImportStatus.PREVIEW }, data: { status: CampDataImportStatus.CANCELLED } });
       if (res.count !== 1) throw conflict('import.not_preview', { status: imp.status });
       return { status: CampDataImportStatus.CANCELLED };
@@ -194,14 +222,14 @@ export class HrDataImportService {
   /** Экспорт = импортын формат (хэрэглэгчийн хэлээр) */
   async export(tenantId: string, authId: string, campId: string, type: string): Promise<{ buffer: Buffer; fileName: string }> {
     const extra = this.extraExports.get(type);
-    if (!extra && !HANDLERS[type]) throw badRequest('import.unknown_type', { type });
+    if (!extra && !this.handlers.has(type)) throw badRequest('import.unknown_type', { type });
     const lang = currentLang();
     const { spec, rows, campCode } = await inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       const camp = await getCampOr404(tx, tenantId, campId);
       const ctx = { tenantId, campId };
       if (extra) return { spec: extra.spec, rows: await extra.rows(tx, ctx), campCode: camp.code };
-      const h = handlerFor(type);
+      const h = this.handlerFor(type);
       return { spec: h.spec, rows: await h.exportRows(tx, ctx), campCode: camp.code };
     });
     const date = new Date().toISOString().slice(0, 10);

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { invalidPhones, joinPhones, splitPhones } from '../lib/phones'
 import { Link, useParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { campApi } from '../../camp/api/camp-api'
@@ -239,7 +240,10 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
   const locations = useQuery({ queryKey: campKeys.mealLocations(campId), queryFn: () => campApi.mealLocations(campId) })
   const [f, setF] = useState({
     employeeCode: emp?.employeeCode ?? '',
-    fullName: emp?.fullName ?? '',
+    lastName: emp ? (emp.lastName ?? '') : '',
+    firstName: emp ? (emp.firstName ?? emp.fullName) : '',
+    familyName: emp?.familyName ?? '',
+    extraPhones: joinPhones(emp?.extraPhones),
     positionId: emp?.positionId ?? '',
     mealLocationId: emp?.mealLocationId ?? '',
     mealsIncluded: fromTri(emp?.mealsIncluded),
@@ -253,7 +257,10 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }))
   const body = () => ({
     employeeCode: f.employeeCode.trim(),
-    fullName: f.fullName.trim(),
+    lastName: f.lastName.trim() || null,
+    firstName: f.firstName.trim(),
+    familyName: f.familyName.trim() || null,
+    extraPhones: splitPhones(f.extraPhones),
     positionId: f.positionId || null,
     mealLocationId: f.mealLocationId || null,
     mealsIncluded: toTri(f.mealsIncluded),
@@ -274,7 +281,8 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
   const usableLocations = (locations.data ?? []).filter((l) => l.isActive || l.id === f.mealLocationId)
   const inh = inherited(f.positionId, posSettings.data, locations.data?.find((l) => l.id === settings.data?.defaultMealLocationId))
   const inhFrom = t(`camp.emp.source.${inh.from}`)
-  const ready = f.employeeCode.trim() && f.fullName.trim() && f.organizationId && f.departmentId
+  const badPhones = invalidPhones(splitPhones(f.extraPhones))
+  const ready = f.employeeCode.trim() && f.firstName.trim() && f.organizationId && f.departmentId && badPhones.length === 0
 
   return (
     <Modal
@@ -295,10 +303,10 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
         <Field label={t('camp.emp.col.code')} hint={t('camp.emp.code_hint')}>
           {(id) => <input id={id} className={inputCls} value={f.employeeCode} onChange={(e) => set('employeeCode', e.target.value)} maxLength={50} />}
         </Field>
-        <div className="col-span-2">
-          <Field label={t('camp.emp.col.full_name')}>{(id) => <input id={id} className={inputCls} value={f.fullName} onChange={(e) => set('fullName', e.target.value)} maxLength={200} />}</Field>
-        </div>
+        <Field label={t('camp.emp.col.last_name')}>{(id) => <input id={id} className={inputCls} value={f.lastName} onChange={(e) => set('lastName', e.target.value)} maxLength={100} />}</Field>
+        <Field label={t('camp.emp.col.first_name')}>{(id) => <input id={id} className={inputCls} value={f.firstName} onChange={(e) => set('firstName', e.target.value)} maxLength={100} />}</Field>
       </div>
+      <Field label={t('camp.emp.col.family_name')}>{(id) => <input id={id} className={inputCls} value={f.familyName} onChange={(e) => set('familyName', e.target.value)} maxLength={100} />}</Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label={t('camp.emp.col.position')} hint={t('camp.emp.position_hint')}>
           {(id) => (
@@ -315,6 +323,12 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
         </Field>
         <Field label={t('camp.emp.col.phone')}>{(id) => <input id={id} className={inputCls} value={f.phone} onChange={(e) => set('phone', e.target.value)} maxLength={50} />}</Field>
       </div>
+      <Field
+        label={t('camp.emp.col.extra_phones')}
+        hint={badPhones.length ? t('camp.emp.extra_phones_bad', { values: badPhones.join(', ') }) : t('camp.emp.extra_phones_hint')}
+      >
+        {(id) => <input id={id} className={inputCls} value={f.extraPhones} onChange={(e) => set('extraPhones', e.target.value)} maxLength={300} />}
+      </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label={t('camp.emp.col.meal_location')} hint={t('camp.emp.meal_location_hint')}>
           {(id) => (

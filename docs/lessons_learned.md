@@ -2,7 +2,7 @@
 title: "Lessons Learned — индекс (ID → дүрэм)"
 type: "Log"
 status: "Active"
-last_updated: 2026-10-18
+last_updated: 2026-10-19
 tags: [lessons, index, generated]
 ---
 
@@ -13,7 +13,7 @@ tags: [lessons, index, generated]
 > **Шинэ алдаа:** тохирох `lessons/LL-*.md`-д `### [TAG-NNN] Гарчиг` + **Тохиолдсон / Шалтгаан / Дүрэм** → [[LL-99_Changelog]]-д мөр → `pnpm docs:gen`. Давтагдвал шинэ ID биш — `### [ID] (давтагдсан, огноо) …`.
 > Файл: [[LL-01_Backend_DB]] · [[LL-02_Test_CI]] · [[LL-03_Env_Ops_Pilot]] · [[LL-04_Architecture_RLS]] · [[LL-05_Frontend]] · [[LL-06_Camp_v02]] · [[LL-07_Docs]] · Хуучин нэгтгэсэн файл (архив): [[lessons_learned_MVP]]
 
-Нийт **169** сургамж.
+Нийт **172** сургамж.
 
 ## DB, Prisma, RLS, migration
 
@@ -24,6 +24,7 @@ tags: [lessons, index, generated]
 | CONC-002 | "max+1" дугаарлалт бүр advisory lock эсвэл sequence-тэй байна; Prisma алдааны `meta`-д (target, modelName) найдахгүй —… | LL-05 §19 |
 | CURSOR-001 | Хэрэглэгчээс ирсэн утга DB-д cast (`::uuid`, `::timestamptz`) болж орох бол cast-ын өмнө форматыг шалгаж 400 буцаана. | LL-04 §16 |
 | DATA-001 | Backfill-ийг бодит төстэй өгөгдлөөр (үсэг/зайн хувилбартай) A = B шалгаж, үүссэн нэрсийг нүдээр харна. Кирилл `lower()`… | LL-06 §22 |
+| DATA-002 | Байгууллагын Excel-ийг шууд импортлохгүй — хөрвүүлэх скрипт + толь + тайлан (хасагдсан мөр бүр шалтгаантай), хоосон… | LL-06 §24 |
 | ENUM-001 | `tier: TierType.TIER1` + `import { TierType } from '@prisma/client'` | LL-01 §2 |
 | ENUM-002 | `UserRole.REQUESTER`, `MrStatus.DRAFT`, `MrStatus.PENDING_APPROVAL` | LL-01 §2 |
 | MIG-001 | `supabase/migrations/*.sql` → `pnpm exec supabase migration up` (auth хэрэглэгчийг устгахгүй) → `pnpm db:generate`. | LL-04 §14 |
@@ -150,6 +151,7 @@ tags: [lessons, index, generated]
 | TEST-026 | Хуваалцсан хэрэглэгчийн төлөвийг (хэл, эрх, нууц үг) өөрчилдөг e2e тест **тусдаа хэрэглэгч**ээр (fixture). Tenant даяар… | LL-06 §24 |
 | TEST-027 | Хэрэглэгчийн хуваалцсан төлөвийг (профайлын хэл, эрх, нууц үг, идэвхтэй эсэх) өөрчилдөг e2e тест бүр **өөрийн** fixture… | LL-06 §24 |
 | TEST-028 | Улаан тестийг «мэдэгдэж буй» гэж хойшлуулахгүй — тухайн блокт засна (эсвэл `it.skip` + шалтгаан + ID). Release-ийн… | LL-06 §24 |
+| TEST-029 | Нэг transaction / нэг statement-ийн мөрүүдийн дарааллыг `created_at`-аар шалгахгүй — олонлог эсвэл тодорхой хоёр дахь… | LL-06 §24 |
 | VITEST-001 | `vitest.integration.config.ts`-д: | LL-02 §5 |
 
 ## Frontend
@@ -185,6 +187,7 @@ tags: [lessons, index, generated]
 | OPS-002 | Пилот/production-д `stop` (data volume хадгална) л; `--no-backup`, `db reset`-ийг зөвхөн restore урсгал (нөөцийг тулгасны… | LL-03 §20 |
 | OPS-003 | Тохиргооны түлхүүрийн нэрээр утгыг нь бүү таамагла — баримтаас (эсвэл бодит орчинд нэвтэрч) шалгана. Mock/fake-аар… | LL-03 §20 |
 | OPS-004 | Автомат дахин асаагчтай (watchdog, Task, service) системд урт засвар хийхдээ асаагчийг өөрийг нь түр унтраана. | LL-06 §21 |
+| OPS-010 | Нэг машинд dev/staging/пилот зэрэгцэх тул контейнерийг **яг нэрээр** (`^…$`) сонгоно; DB-д бичих dev команд бүр… | LL-03 §20 |
 | PS-001 | Windows PowerShell 5.1-д ажиллах скрипт бичих | LL-03 §20 |
 | PS-002 | Процессын нэр шалгадаг кодыг тестлэх shim нь жинхэнэ нэртэй байх (жижиг C wrapper, хүүхэд процесс `PR_SET_PDEATHSIG`-тэй). | LL-06 §21 |
 | PS-003 | Урт амьдрах процесс асаадаг командыг pipe-аар бүү дууд. Windows-ийн процесс/handle-ийн зан төлөвийг Linux shim тестээр… | LL-06 §21 |

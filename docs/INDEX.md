@@ -46,13 +46,14 @@ tags: [index, moc]
 ## 🗺 Төлөвлөгөө
 - [[01_Development_Roadmap]] — **хувилбарын ганц жагсаалт** + шийдвэрийн бүртгэл
 - [[00_rules_and_context]] — RULE-01~21 бүтэн текст
-- `v0.2.x` 🔄: [[03_v0.2_full_plan]] · [[00_backlog_and_tech_debt]] (ID + төлөв) · [[07_v0.2.2_tech_plan]] · [[08_v0.2.2_progress]] · **[[11_v0.2_completion_master_plan]]** (v0.2.4…v0.2.9) · **[[09_v0.2.3_tech_plan]]** · [[10_v0.2.4_tech_plan]]
+- `v0.2.x` 🔄: [[03_v0.2_full_plan]] · [[00_backlog_and_tech_debt]] (ID + төлөв) · [[07_v0.2.2_tech_plan]] · [[08_v0.2.2_progress]] · **[[11_v0.2_completion_master_plan]]** (v0.2.4…v0.2.9) · **[[09_v0.2.3_tech_plan]]** · **[[12_v0.2.3_data_import]]** (Блок D — Sino өгөгдөл импорт) · [[10_v0.2.4_tech_plan]]
   - Архив: [[01_plan_draft]] (Deprecated) · [[02_v0.2.0_tech_plan]] · [[04_v0.2.1_tech_plan]] · [[05_v0.2.1_progress]] · [[06_v0.2.1_PIL-07_report]]
 - `v0.3` 📝: [[00_plan_draft]] (дотоод Feed)
 - Кемп модуль: [[01_plan_and_erd]] (ERD v4, V1 ✅, V2 📋) · архив [[01_plan_and_erd.v1]] · [[01_plan_and_erd.v2]] · [[01_plan_and_erd.v3]]
 - UI концепц: [[08_Roadmap/_design_mockups/README|_design_mockups]]
 
 ## 🏕 Пилот (Sino Hydro)
+- [[12_v0.2.3_data_import]] — Sino-гийн Excel → импортын файл (`scripts/data-migration/sino`), дараалал, дүрэм
 - [[pilot-test-guide]] — өгөгдөл оруулах, туршилт, дуусах шалгуур · [[pilot-feedback]] — санал · [[i18n-review]] — орчуулга, нэр томьёо
 
 ## 📒 Бүртгэл

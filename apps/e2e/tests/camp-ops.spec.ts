@@ -197,7 +197,8 @@ test.describe.serial('Кемп — өдөр тутмын ажиллагаа', ()
     await page.getByRole('button', { name: '+ Ажилтан' }).click();
     const dlg = page.getByRole('dialog');
     await dlg.getByLabel('Ажилтны код').fill(ec(4));
-    await dlg.getByLabel('Овог нэр').fill('Шинэ ажилтан');
+    await dlg.getByLabel('Овог', { exact: true }).fill('Шинэ');
+    await dlg.getByLabel('Нэр', { exact: true }).fill('ажилтан');
     await dlg.getByLabel('Байгууллага').selectOption({ label: `Уурхай ${STAMP}` });
     await dlg.getByLabel('Хэлтэс').selectOption({ index: 1 });
     await dlg.getByRole('button', { name: 'Хадгалах' }).click();

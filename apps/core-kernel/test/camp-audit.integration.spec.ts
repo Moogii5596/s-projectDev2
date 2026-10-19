@@ -40,7 +40,8 @@ describe('📜 camp_audit_log', () => {
     expect((await it_.api().patch(it_.camp(`/employees/${id}`)).set(it_.as('admin')).send({ status: 'INACTIVE' })).status).toBe(200);
     const list = await rows('employee', id);
     expect(list.map((r) => r.action)).toEqual(['CREATE', 'UPDATE', 'DEACTIVATE']);
-    expect(list[1].diff).toEqual({ fullName: { from: 'Бат', to: 'Бат-Эрдэнэ' } });
+    // v0.2.3 Блок D (S1): нэрийн хэсгүүд ч түүхэд (fullName = «овог нэр»)
+    expect(list[1].diff).toEqual({ fullName: { from: 'Бат', to: 'Бат-Эрдэнэ' }, firstName: { from: 'Бат', to: 'Бат-Эрдэнэ' } });
     expect(list[1].summaryParams).toEqual({ code: 'E100', name: 'Бат-Эрдэнэ' });
     expect(list[2].summaryKey).toBe('audit.employee.deactivate');
     it_.ids.emp = id;

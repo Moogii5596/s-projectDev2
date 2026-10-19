@@ -7,7 +7,9 @@ dist/
 build/
 .next/
 .turbo/
-
+docs/source/
+# v0.2.3 Блок D: импортын гаралт (хувийн мэдээлэлтэй)
+_data/
 # Environment files
 .env
 .env.staging

@@ -157,7 +157,13 @@ export interface EmployeeInput {
   departmentId: string
   crewId?: string | null
   employeeCode: string
-  fullName: string
+  /** v0.2.3 Блок D (S1): овог / нэр тусдаа (fullName = хуучин клиент) */
+  fullName?: string
+  familyName?: string | null
+  lastName?: string | null
+  firstName?: string
+  /** S2: нэмэлт дугаарууд (үндсэн = phone); өгвөл бүхэлд нь солино */
+  extraPhones?: string[]
   position?: string | null
   /** v0.2.1 */
   positionId?: string | null

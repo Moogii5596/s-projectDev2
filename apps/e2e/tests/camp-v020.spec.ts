@@ -90,7 +90,7 @@ test.describe.serial('Кемп v0.2.0', () => {
     ];
     for (const [i, [code, name, pos, dept, crew]] of rows.entries()) {
       await dlg.getByLabel(`Ажилтны код ${i + 1}`).fill(code);
-      await dlg.getByLabel(`Овог нэр ${i + 1}`).fill(name);
+      await dlg.getByLabel(`Нэр ${i + 1}`, { exact: true }).fill(name);
       await dlg.getByLabel(`Албан тушаал ${i + 1}`).fill(pos);
       await dlg.getByLabel(`Байгууллага (регистр эсвэл нэр) ${i + 1}`).fill(`R${STAMP}`);
       await dlg.getByLabel(`Хэлтсийн код ${i + 1}`).fill(dept);

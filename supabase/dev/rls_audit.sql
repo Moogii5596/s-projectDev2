@@ -2,7 +2,7 @@
 -- Phase 4.8.1 — RLS аудит (ЗӨВХӨН УНШИНА, юу ч өөрчлөхгүй) — 2026-10-10
 -- ============================================================
 -- Ажиллуулах (PowerShell, [ENV-009] — pipe ХЭРЭГЛЭХГҮЙ):
---   $db = docker ps --filter "name=supabase_db" --format "{{.Names}}"
+--   $db = docker ps --filter "name=^supabase_db_s-project$" --format "{{.Names}}"
 --   docker cp supabase/dev/rls_audit.sql "${db}:/tmp/rls_audit.sql"
 --   docker exec -e PGPASSWORD=postgres $db psql -h 127.0.0.1 -U supabase_admin -d postgres -f /tmp/rls_audit.sql > rls_audit.txt
 -- Үр дүнгийн rls_audit.txt файлыг илгээнэ үү.

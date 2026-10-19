@@ -4,6 +4,7 @@ import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
 import { Tx } from '../../camp/common/camp-tx';
 import { EMPLOYEE_AUDIT_FIELDS } from '../employees/hr-employees.service';
 import { normName, resolvePositionByName } from '../positions/hr-positions.service';
+import { EXTRA_PHONES_MAX, normalizeExtraPhones, PHONE_RE, phonesOut, replaceExtraPhones, resolveNames, splitPhones, type EmployeeNames } from '../employees/employee-names';
 import { ApplyCtx, DataImportHandler, has, ImportCtx, PlannedRow, upper } from './import-types';
 
 /**
@@ -19,11 +20,17 @@ export const EMPLOYEES_SPEC: TableSpec = {
   keyColumn: 'employeeCode',
   columns: [
     { key: 'employeeCode', label: 'col.employee.code', type: 'text', required: true, maxLength: 50, aliases: ['employee_code', 'code', 'код', 'ажилтны код'], examples: ['E-1041', 'E-1042'], width: 16 },
-    { key: 'fullName', label: 'col.employee.full_name', type: 'text', required: true, maxLength: 200, aliases: ['full_name', 'name', 'нэр', 'овог нэр'], examples: ['Бат-Эрдэнэ Ганболд', 'Li Wei'], width: 26 },
+    // v0.2.3 Блок D (S1): овог, нэр тусдаа. Хуучин файлын «Овог нэр» (fullName) — нэр өгөөгүй бол эхний зайгаар салгана
+    { key: 'lastName', label: 'col.employee.last_name', type: 'text', maxLength: 100, aliases: ['last_name', 'овог', 'эцэг/эхийн нэр'], examples: ['Ганболд', null], width: 18 },
+    { key: 'firstName', label: 'col.employee.first_name', type: 'text', maxLength: 100, aliases: ['first_name', 'нэр'], examples: ['Бат-Эрдэнэ', 'Li Wei'], width: 18 },
+    { key: 'familyName', label: 'col.employee.family_name', type: 'text', maxLength: 100, aliases: ['family_name', 'ургийн овог'], examples: ['Боржигон', null], width: 16 },
+    { key: 'fullName', label: 'col.employee.full_name', type: 'text', maxLength: 200, aliases: ['full_name', 'name', 'овог нэр'], examples: [null, null], width: 26 },
     { key: 'position', label: 'col.employee.position', type: 'text', maxLength: 100, aliases: ['position', 'албан тушаал'], examples: ['Тогооч', 'Инженер'] },
     { key: 'mealLocation', label: 'col.employee.meal_location', type: 'text', maxLength: 200, aliases: ['meal_location', 'work_meal_location', 'хоолны байршил', 'ажлын хоолны байршил'], examples: [null, 'Уулын хэсэг'], width: 20 },
     { key: 'mealsIncluded', label: 'col.employee.meals_included', type: 'bool', aliases: ['meals_included', 'meals', 'хоол авах', 'хоолтой'], examples: [null, true] },
-    { key: 'phone', label: 'col.employee.phone', type: 'phone', aliases: ['phone', 'утас', 'утасны дугаар'], examples: ['99112233', '+8613800138000'], width: 16 },
+    { key: 'phone', label: 'col.employee.phone', type: 'phone', aliases: ['phone', 'утас', 'утасны дугаар', 'үндсэн утас'], examples: ['99112233', '+8613800138000'], width: 16 },
+    // v0.2.3 Блок D (S2): нэмэлт дугаарууд — таслал / мөр шилжилтээр
+    { key: 'extraPhones', label: 'col.employee.extra_phones', type: 'text', maxLength: 300, aliases: ['extra_phones', 'нэмэлт утас', 'бусад утас'], examples: ['88123354, 99435600', null], width: 22 },
     { key: 'email', label: 'col.employee.email', type: 'email', maxLength: 254, aliases: ['email', 'e-mail', 'имэйл', 'и-мэйл'], examples: ['ganbold@mail.mn', null], width: 24 },
     { key: 'organization', label: 'col.employee.organization', type: 'text', required: true, maxLength: 200, aliases: ['organization', 'org', 'байгууллага', 'регистр'], examples: ['2001234', '2001234'], width: 24 },
     { key: 'department', label: 'col.employee.department', type: 'text', required: true, maxLength: 30, aliases: ['department', 'dept', 'хэлтэс'], examples: ['KITCHEN', 'ENG'] },
@@ -37,17 +44,22 @@ export const EMPLOYEES_SPEC: TableSpec = {
 };
 
 type Current = {
-  id: string; campId: string; employeeCode: string; fullName: string; position: string | null; phone: string | null; email: string | null;
+  id: string; campId: string; employeeCode: string; fullName: string; familyName: string | null; lastName: string | null; firstName: string | null;
+  extraPhones: { phone: string }[]; position: string | null; phone: string | null; email: string | null;
   status: CampEmployeeStatus; organizationId: string; departmentId: string; crewId: string | null;
   positionId: string | null; mealLocationId: string | null; mealsIncluded: boolean | null;
 };
-type Resolved = { organizationId?: string; departmentId?: string; crewId?: string | null; mealLocationId?: string | null; position?: string | null };
+type Resolved = {
+  organizationId?: string; departmentId?: string; crewId?: string | null; mealLocationId?: string | null; position?: string | null;
+  names?: EmployeeNames; extraPhones?: string[];
+};
 
 const RESOLVED = Symbol('resolved');
 type WithResolved = PlannedRow & { [RESOLVED]?: Resolved };
 
 const EMP_SELECT = {
-  id: true, campId: true, employeeCode: true, fullName: true, position: true, phone: true, email: true, status: true,
+  id: true, campId: true, employeeCode: true, fullName: true, familyName: true, lastName: true, firstName: true,
+  extraPhones: { select: { phone: true }, orderBy: { sortOrder: 'asc' } }, position: true, phone: true, email: true, status: true,
   organizationId: true, departmentId: true, crewId: true, positionId: true, mealLocationId: true, mealsIncluded: true,
 } as const;
 
@@ -145,6 +157,26 @@ export const employeesHandler: DataImportHandler = {
           else resolved.mealLocationId = l.id;
         }
       }
+      // Нэр: овог/нэр (эсвэл хуучин «Овог нэр»)
+      const nameInput = {
+        ...(has(r, 'lastName') ? { lastName: (v.lastName as string | null) ?? null } : {}),
+        ...(has(r, 'firstName') && v.firstName ? { firstName: String(v.firstName) } : {}),
+        ...(has(r, 'familyName') ? { familyName: (v.familyName as string | null) ?? null } : {}),
+        ...(has(r, 'fullName') && v.fullName && !(has(r, 'firstName') && v.firstName) ? { fullName: String(v.fullName) } : {}),
+      };
+      const names = resolveNames(nameInput, cur ? { familyName: cur.familyName, lastName: cur.lastName, firstName: cur.firstName ?? '', fullName: cur.fullName } : null);
+      if (!cur && (!names || !names.firstName)) errors.push({ column: 'firstName', code: 'row.required' });
+      else if (names) {
+        if (!names.firstName) errors.push({ column: 'firstName', code: 'row.required' });
+        else resolved.names = names;
+      }
+      if (has(r, 'extraPhones')) {
+        const list = splitPhones(v.extraPhones as string | null);
+        const bad = list.filter((p) => !PHONE_RE.test(p));
+        if (bad.length > 0) errors.push({ column: 'extraPhones', code: 'row.bad_phone', params: { value: bad.join(', ').slice(0, 60) } });
+        else if (list.length > EXTRA_PHONES_MAX) errors.push({ column: 'extraPhones', code: 'row.out_of_range', params: { value: list.length, min: 0, max: EXTRA_PHONES_MAX } });
+        else resolved.extraPhones = normalizeExtraPhones(list, has(r, 'phone') ? (v.phone as string | null) : cur?.phone);
+      }
       if (errors.length > 0) return { ...r, errors, op: 'error' };
       if (!cur) return { ...r, errors, op: 'create', [RESOLVED]: resolved };
 
@@ -154,7 +186,13 @@ export const employeesHandler: DataImportHandler = {
         if ((from ?? null) !== (to ?? null)) changes[key] = { from: from ?? null, to: to ?? null };
       };
       if (has(r, 'employeeCode') && cur.employeeCode !== v.employeeCode) cmp('employeeCode', cur.employeeCode, v.employeeCode);
-      for (const k of ['fullName', 'phone', 'email', 'status'] as const) if (has(r, k)) cmp(k, cur[k], v[k] ?? (k === 'status' ? cur.status : null));
+      for (const k of ['phone', 'email', 'status'] as const) if (has(r, k)) cmp(k, cur[k], v[k] ?? (k === 'status' ? cur.status : null));
+      if (resolved.names) {
+        for (const k of ['lastName', 'firstName', 'familyName'] as const) cmp(k, cur[k], resolved.names[k]);
+      }
+      if (resolved.extraPhones && resolved.extraPhones.join(', ') !== phonesOut(cur.extraPhones).join(', ')) {
+        cmp('extraPhones', phonesOut(cur.extraPhones).join(', ') || null, resolved.extraPhones.join(', ') || null);
+      }
       if (resolved.position !== undefined && normName(cur.position ?? '') !== normName(resolved.position ?? '')) cmp('position', cur.position, resolved.position);
       if (resolved.mealLocationId !== undefined && resolved.mealLocationId !== cur.mealLocationId) {
         cmp('mealLocation', cur.mealLocationId ? (refs.locById.get(cur.mealLocationId) ?? null) : null, resolved.mealLocationId ? (refs.locById.get(resolved.mealLocationId) ?? null) : null);
@@ -183,21 +221,24 @@ export const employeesHandler: DataImportHandler = {
           data: {
             tenantId: ctx.tenantId, campId: ctx.campId,
             organizationId: res.organizationId!, departmentId: res.departmentId!, crewId: res.crewId ?? null,
-            employeeCode: String(v.employeeCode), fullName: String(v.fullName),
+            employeeCode: String(v.employeeCode), ...res.names!,
             position: pos?.name ?? null, positionId: pos?.id ?? null,
             mealLocationId: res.mealLocationId ?? null, mealsIncluded: (v.mealsIncluded as boolean | null) ?? null,
             phone: (v.phone as string | null) ?? null, email: (v.email as string | null) ?? null,
             status: (v.status as CampEmployeeStatus | null) ?? CampEmployeeStatus.ACTIVE,
           },
-          select: EMP_SELECT,
+          select: { id: true },
         });
+        if (res.extraPhones?.length) await replaceExtraPhones(tx, ctx.tenantId, e.id, res.extraPhones);
         created++;
-        audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'employee', entityId: e.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before: null, after: e, summaryParams: { code: e.employeeCode, name: e.fullName } });
+        const after = await tx.hrEmployee.findFirstOrThrow({ where: { id: e.id, tenantId: ctx.tenantId }, select: EMP_SELECT });
+        audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'employee', entityId: e.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before: null, after, summaryParams: { code: after.employeeCode, name: after.fullName } });
       } else if (row.op === 'update' && row.targetId) {
         const before = await tx.hrEmployee.findFirst({ where: { id: row.targetId, tenantId: ctx.tenantId, campId: ctx.campId }, select: EMP_SELECT });
         if (!before) continue;
         const data: Record<string, unknown> = {};
-        for (const k of ['employeeCode', 'fullName', 'phone', 'email'] as const) if (has(row, k)) data[k] = v[k] ?? null;
+        for (const k of ['employeeCode', 'phone', 'email'] as const) if (has(row, k)) data[k] = v[k] ?? null;
+        if (res.names) Object.assign(data, res.names);
         if (pos !== undefined) { data.position = pos?.name ?? null; data.positionId = pos?.id ?? null; }
         if (res.mealLocationId !== undefined) data.mealLocationId = res.mealLocationId;
         if (has(row, 'mealsIncluded')) data.mealsIncluded = (v.mealsIncluded as boolean | null) ?? null;
@@ -205,7 +246,9 @@ export const employeesHandler: DataImportHandler = {
         if (res.organizationId) data.organizationId = res.organizationId;
         if (res.departmentId) data.departmentId = res.departmentId;
         if (res.crewId !== undefined) data.crewId = res.crewId;
-        const after = await tx.hrEmployee.update({ where: { id: row.targetId }, data, select: EMP_SELECT });
+        await tx.hrEmployee.update({ where: { id: row.targetId }, data, select: { id: true } });
+        if (res.extraPhones) await replaceExtraPhones(tx, ctx.tenantId, row.targetId, res.extraPhones);
+        const after = await tx.hrEmployee.findFirstOrThrow({ where: { id: row.targetId, tenantId: ctx.tenantId }, select: EMP_SELECT });
         updated++;
         audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'employee', entityId: after.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before, after, summaryParams: { code: after.employeeCode, name: after.fullName } });
       }
@@ -218,15 +261,16 @@ export const employeesHandler: DataImportHandler = {
     const rows = await tx.hrEmployee.findMany({
       where: { tenantId: ctx.tenantId, campId: ctx.campId, status: { not: CampEmployeeStatus.TERMINATED } },
       select: {
-        employeeCode: true, fullName: true, position: true, phone: true, email: true, status: true, mealsIncluded: true,
+        employeeCode: true, lastName: true, firstName: true, familyName: true, position: true, phone: true, email: true, status: true, mealsIncluded: true,
+        extraPhones: { select: { phone: true }, orderBy: { sortOrder: 'asc' } },
         positionRef: { select: { name: true } }, workMealLocation: { select: { name: true } },
         organization: { select: { name: true, regNumber: true } }, department: { select: { code: true } }, crew: { select: { code: true } },
       },
       orderBy: { employeeCode: 'asc' },
     });
     return rows.map((e) => ({
-      employeeCode: e.employeeCode, fullName: e.fullName, position: e.positionRef?.name ?? e.position,
-      mealLocation: e.workMealLocation?.name ?? null, mealsIncluded: e.mealsIncluded, phone: e.phone, email: e.email,
+      employeeCode: e.employeeCode, lastName: e.lastName, firstName: e.firstName, familyName: e.familyName, position: e.positionRef?.name ?? e.position,
+      mealLocation: e.workMealLocation?.name ?? null, mealsIncluded: e.mealsIncluded, phone: e.phone, extraPhones: phonesOut(e.extraPhones).join(', ') || null, email: e.email,
       organization: e.organization.regNumber || e.organization.name, department: e.department.code, crew: e.crew?.code ?? null, status: e.status,
     }));
   },

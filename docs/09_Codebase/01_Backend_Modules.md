@@ -2,7 +2,7 @@
 title: "Backend модулиуд (core-kernel)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-17
+last_updated: 2026-10-19
 tags: [codebase, backend, camp, hr, auth]
 ---
 
@@ -76,6 +76,7 @@ tags: [codebase, backend, camp, hr, auth]
 - **Эрх:** `camp.employee.manage`, `camp.master.manage`. Нэвтрэх эрх / урилга (Блок 2–3) — [[#camp/rbac]]-д үлдсэн (`/camp/camps/:campId/employees/:id/{user,create-user}`).
 - **Амьдралын мөчлөг (v0.2.2 Блок 5, [[07_v0.2.2_tech_plan]] §13):** `employees/hr-employee-lifecycle.service.ts` — `terminate` (D-07: нэг tx — кемпэд байвал явалт ирцийн planner-ээр, өрөө чөлөөлөх порт, `TERMINATED` + огноо/шалтгаан, хэрэглэгч идэвхгүй + урилга хүчингүй, аудит `TERMINATE`; GoTrue ban tx-ээс өмнө, алдаа гарвал буцаана; огнооноос хойш ирц → 409), `rehire` (шинэ бүртгэл `rehired_from_id`, ижил код — partial unique; хэрэглэгч шилжинэ: бүх роль/шууд эрх устаж DB trigger загвараас дахин олгоно; ban арилна), `profile` (мэдээлэл, нэвтрэх эрх, ирц 20, кемпэд эсэх, өрөөний түүх, аудит — `summary` орчуулсан; PII лог атом `INSERT … WHERE NOT EXISTS` 15 мин), `piiViews` (тухайн кемпийн `camp.roles.manage`). Цэвэр: `terminationDateError`, `terminationUserBlocker`.
 - **Порт:** `employees/employee-hooks.ts` — `EmployeeSitePort` (`releaseOnTermination`, `roomHistory`) + `HrEmployeeHooks`; хэрэгжүүлэлт `camp/attendance/camp-employee-site.ts`, бүртгэл `CampHrBridge`. API: `GET employees/:id/{profile,pii-views}`, `POST employees/:id/{terminate,rehire}` (эрх `camp.employee.terminate`). Хүснэгт `camp_pii_access_log` (app_user: SELECT, INSERT л).
+- **Нэр, утас (v0.2.3 Блок D, S1–S2):** `employees/employee-names.ts` — `family_name` (ургийн овог), `last_name` (овог), `first_name` (нэр); `full_name` = DB trigger `trg_camp_employees_names` («овог нэр», шууд бичихгүй). Хуучин клиент `fullName` л өгвөл эхний зайгаар салгана (`resolveNames`). Нэмэлт утас `camp_employee_phones` (үндсэн = `phone`), DTO/хариу `extraPhones: string[]` (өгвөл бүхэлд нь солино, үндсэнтэй давхардсаныг хасна). Prisma-д `firstName` optional (DB NOT NULL — trigger бөглөнө).
 - **TERMINATED-ийн дүрэм:** жагсаалт анхдагчаар хасна (`status=TERMINATED` шүүлтээр), засах/бөөнөөр → 409, `assertCodeUnique`/импорт/ирцийн planner кодоор TERMINATED биш бүртгэлийг сонгоно (импорт: зөвхөн гарсан кодтой мөр → `row.code_terminated`), экспорт хасна. Тест: `hr-employee-lifecycle.test`, `camp-v022-terminate` integration.
 
 ## hr/attendance
@@ -84,7 +85,9 @@ tags: [codebase, backend, camp, hr, auth]
 - **Хүснэгт:** `camp_movements`, `camp_movement_imports`, `camp_shift_adjustments`. **Эрх:** `camp.movement.import`, `camp.shift.adjust`. Тест: `import.test`, `attendance-services.test` (Кемптэй хамт), `camp-attendance` integration + golden.
 
 ## hr/import
-- `hr-data-import.service.ts` — хүснэгтээр оруулах/экспорт (`employees`, `departments` handler). Нэмэлт экспорт `registerExport(type, …)` — Кемп `rooms` бүртгэнэ. Хүснэгт: `camp_data_imports`. Тест: `camp-data-import` integration.
+- `hr-data-import.service.ts` — хүснэгтээр оруулах/экспорт, урсгал PREVIEW → CONFIRM (дахин шалгана). Handler-ийн **бүртгэл** (v0.2.3 Блок D): HR-ийнх `employees`, `former-employees`, `departments`, `positions`; бусад модуль `registerHandler(urlType, handler)` (Кемп: `building-types`, `buildings`, `rooms`, `room-allocations` — `CampHrBridge`). `registerExport` — handler-гүй экспорт. Хүснэгт: `camp_data_imports` (`CampDataImportType` 8 утга).
+- **Handler-ууд:** `employees.handler.ts` (овог/нэр/ургийн овог, хуучин «Овог нэр» = салгана; «Нэмэлт утас» таслал/мөрөөр), `former-employees.handler.ts` (S7: зөвхөн ШИНЭ `TERMINATED` бүртгэл, түлхүүр = код + гарсан огноо, `linkRehireChains` — ижил кодыг огноогоор гинжлэнэ, идэвхтэй нь сүүлд; эрх `camp.employee.terminate`), `departments.handler.ts`, `positions.handler.ts` (нэрээр, `code` = ажлын байрны индекс).
+- **Дараалал:** хэлтэс → албан тушаал → ажилтан → гарсан ажилтан; байрны төрөл → байр → өрөө → байрлуулалт ([[12_v0.2.3_data_import]]). Тест: `camp-data-import`, `camp-v023-data-import` integration.
 
 ## core/organizations
 - `core.module.ts` — `CoreOrganizationsService` (байгууллагууд — гэрээт г.м.), `/api/v1/core/organizations`. Хүснэгт `camp_organizations` (model `CoreOrganization`). Эрх: `camp.master.manage`.
@@ -125,7 +128,7 @@ tags: [codebase, backend, camp, hr, auth]
 - **Хүснэгт:** `camp_maintenance_requests`, `camp_maintenance_parts`. Эрх: `camp.maintenance.{create,parts,close}`.
 
 ## camp/data
-- `rooms.export.ts` — өрөөний экспорт (HR-ийн экспортод `CampHrBridge`-ээр бүртгэгдэнэ). Импорт/экспортын үндсэн хэсэг → [[#hr/import]].
+- `rooms.export.ts` — өрөөний spec + экспорт. `facilities.handlers.ts` (v0.2.3 Блок D, S5) — байрны төрөл (нэрээр, tenant), байр (кодоор; идэвхтэй өрөөтэйг идэвхгүй ✖), өрөө (байр + дугаар; одоо хүнтэйг INACTIVE ✖). `room-allocations.handler.ts` (S6) — өрөөнд байрлуулалт **түүхтэй** (мөр = хугацаа; дуусаагүй = одоо): ижил ажилтны давхцал ✖, DB-тэй ижил өрөө → нэгтгэх (update), өөр өрөө → алдаа; багтаамж зөвхөн дуусаагүй мөрөнд (`firstOverCapacityNight`, 28 шөнө); TERMINATED ажилтны хугацаа гарсан өдрөөс хэтрэхгүй. Бүгд `CampHrBridge`-ээр HR-ийн импортод бүртгэгдэнэ → [[#hr/import]].
 
 ## camp/costs, camp/audit
 - `costs/cost-entry-writer.ts` — **нэгдсэн зардлын бичигч** (`camp_cost_entries` — тайлангийн ганц эх сурвалж, snapshot) · `vat.ts` (2 оронтой, ROUND_HALF_UP).

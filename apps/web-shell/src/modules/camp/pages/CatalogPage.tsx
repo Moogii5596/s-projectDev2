@@ -46,7 +46,11 @@ export default function CatalogPage({ kind, rowAction }: { kind: CatalogKind; ro
                   {editing?.id === c.id ? (
                     <input aria-label={t('camp.common.name')} className={inputCls} value={editing.name} onChange={(e) => setEditing({ id: c.id, name: e.target.value })} maxLength={100} autoFocus />
                   ) : (
-                    c.name
+                    <>
+                      {c.name}
+                      {/* v0.2.3 Блок D (S4): албан тушаалын индекс (импортоор) */}
+                      {c.code && <span className="ml-2 font-mono text-xs text-gray-500">{c.code}</span>}
+                    </>
                   )}
                 </td>
                 <td className={td}>{usage(c)}</td>

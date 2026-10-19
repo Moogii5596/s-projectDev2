@@ -137,7 +137,8 @@ describe('v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд
     expect((await admin.coreUser.findUniqueOrThrow({ where: { id: user.emp } })).isActive).toBe(false);
     expect((await admin.coreUserInvite.findFirstOrThrow({ where: { userId: user.emp } })).revokedAt).not.toBeNull();
     const trail = await admin.campAuditLog.findMany({ where: { tenantId: tA, entityId: { in: [e1, user.emp] } }, orderBy: { createdAt: 'asc' } });
-    expect(trail.map((t) => `${t.entityType}:${t.action}`)).toEqual(['employee:TERMINATE', 'user_account:DEACTIVATE']);
+    // Нэг createMany → created_at ижил байж болно: дарааллыг биш олонлогийг шалгана (TEST-flaky, 2026-10-19)
+    expect(trail.map((t) => `${t.entityType}:${t.action}`).sort()).toEqual(['employee:TERMINATE', 'user_account:DEACTIVATE']);
 
     await expect(svc.terminate(tA, auth.campAdmin, c1, e1, { date: D, reason: 'RESIGNED' })).rejects.toThrow(ConflictException);
     await expect(employees.update(tA, auth.campAdmin, c1, e1, { fullName: 'X' })).rejects.toThrow(ConflictException);

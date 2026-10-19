@@ -12,12 +12,17 @@ import { effectiveEmployee, loadPositionDefaults } from '../../camp/common/posit
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
 import { BulkEmployeesDto, CreateEmployeeDto, QueryEmployeesDto, UpdateEmployeeDto } from './hr-employees.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
+import { normalizeExtraPhones, phonesOut, replaceExtraPhones, resolveNames } from './employee-names';
 
 const P = CAMP_PERMISSIONS;
 const EMPLOYEE_SELECT = {
   id: true,
   employeeCode: true,
   fullName: true,
+  /** v0.2.3 Блок D (S1) */
+  familyName: true,
+  lastName: true,
+  firstName: true,
   position: true,
   phone: true,
   email: true,
@@ -40,10 +45,16 @@ const EMPLOYEE_SELECT = {
   crew: { select: { code: true } },
   positionRef: { select: { name: true } },
   workMealLocation: { select: { name: true } },
+  /** v0.2.3 Блок D (S2): нэмэлт утас — хариунд `string[]` */
+  extraPhones: { select: { phone: true }, orderBy: { sortOrder: 'asc' } },
 } as const;
 
+type EmployeeRow = Prisma.HrEmployeeGetPayload<{ select: typeof EMPLOYEE_SELECT }>;
+/** Хариу: `extraPhones` → `string[]` */
+export const employeeOut = <T extends Pick<EmployeeRow, 'extraPhones'>>(e: T) => ({ ...e, extraPhones: phonesOut(e.extraPhones) });
+
 /** Түүхэд харьцуулах талбарууд (§0.4) */
-export const EMPLOYEE_AUDIT_FIELDS = ['employeeCode', 'fullName', 'position', 'phone', 'email', 'status', 'organizationId', 'departmentId', 'crewId', 'positionId', 'mealLocationId', 'mealsIncluded'] as const;
+export const EMPLOYEE_AUDIT_FIELDS = ['employeeCode', 'fullName', 'familyName', 'lastName', 'firstName', 'position', 'phone', 'email', 'status', 'organizationId', 'departmentId', 'crewId', 'positionId', 'mealLocationId', 'mealsIncluded'] as const;
 const EMPLOYEE_AUDIT_SELECT = { id: true, ...Object.fromEntries(EMPLOYEE_AUDIT_FIELDS.map((f) => [f, true])) } as Record<string, true>;
 
 /**
@@ -147,7 +158,7 @@ export class HrEmployeesService {
         take: limit + 1,
       });
       const hasMore = rows.length > limit;
-      const data = await this.withEffective(tx, tenantId, campId, rows.slice(0, limit));
+      const data = (await this.withEffective(tx, tenantId, campId, rows.slice(0, limit))).map(employeeOut);
       const last = data[data.length - 1];
       return { data, nextCursor: hasMore && last ? encodeCursor(last.id, last.createdAt) : null, hasMore };
     });
@@ -158,7 +169,7 @@ export class HrEmployeesService {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       const e = await tx.hrEmployee.findFirst({ where: { id, tenantId, campId }, select: EMPLOYEE_SELECT });
       if (!e) throw notFound('camp.err.employees.8');
-      return (await this.withEffective(tx, tenantId, campId, [e]))[0];
+      return employeeOut((await this.withEffective(tx, tenantId, campId, [e]))[0]);
     });
   }
 
@@ -170,6 +181,8 @@ export class HrEmployeesService {
         await this.assertRefs(tx, tenantId, campId, { organizationId: dto.organizationId, departmentId: dto.departmentId, crewId: dto.crewId ?? null, mealLocationId: dto.mealLocationId });
         await this.assertCodeUnique(tx, tenantId, dto.employeeCode);
         const pos = await this.resolvePosition(tx, tenantId, dto);
+        const names = resolveNames(dto);
+        if (!names || !names.firstName) throw badRequest('camp.err.employees.name_required');
         const created = await tx.hrEmployee.create({
           data: {
             tenantId,
@@ -178,7 +191,7 @@ export class HrEmployeesService {
             departmentId: dto.departmentId,
             crewId: dto.crewId ?? null,
             employeeCode: dto.employeeCode,
-            fullName: dto.fullName,
+            ...names,
             position: pos.position ?? null,
             positionId: pos.positionId ?? null,
             mealLocationId: dto.mealLocationId ?? null,
@@ -188,12 +201,15 @@ export class HrEmployeesService {
           },
           select: EMPLOYEE_SELECT,
         });
+        const extra = normalizeExtraPhones(dto.extraPhones ?? [], dto.phone);
+        if (extra.length > 0) await replaceExtraPhones(tx, tenantId, created.id, extra);
+        const out = extra.length > 0 ? { ...created, extraPhones: extra.map((phone) => ({ phone })) } : created;
         await this.audit.record(tx, {
-          tenantId, campId, entityType: 'employee', entityId: created.id, action: 'CREATE', actorUserId,
-          fields: EMPLOYEE_AUDIT_FIELDS, before: null, after: created,
-          summaryParams: { code: created.employeeCode, name: created.fullName },
+          tenantId, campId, entityType: 'employee', entityId: out.id, action: 'CREATE', actorUserId,
+          fields: EMPLOYEE_AUDIT_FIELDS, before: null, after: out,
+          summaryParams: { code: out.employeeCode, name: out.fullName },
         });
-        return created;
+        return employeeOut(out);
       }),
     );
   }
@@ -208,18 +224,27 @@ export class HrEmployeesService {
         if ((e as { status?: unknown }).status === CampEmployeeStatus.TERMINATED) throw conflict('camp.err.employees.terminated');
         await this.assertRefs(tx, tenantId, campId, { organizationId: dto.organizationId, departmentId: dto.departmentId, crewId: dto.crewId, mealLocationId: dto.mealLocationId }, e as { mealLocationId?: string | null });
         if (dto.employeeCode !== undefined) await this.assertCodeUnique(tx, tenantId, dto.employeeCode, id);
-        const fields = ['organizationId', 'departmentId', 'crewId', 'employeeCode', 'fullName', 'phone', 'email', 'status', 'mealLocationId', 'mealsIncluded'] as const;
+        const fields = ['organizationId', 'departmentId', 'crewId', 'employeeCode', 'phone', 'email', 'status', 'mealLocationId', 'mealsIncluded'] as const;
+        const names = resolveNames(dto, e as unknown as Parameters<typeof resolveNames>[1]);
+        if (names && !names.firstName) throw badRequest('camp.err.employees.name_required');
         const data = {
           ...Object.fromEntries(fields.filter((f) => dto[f] !== undefined).map((f) => [f, f === 'email' && dto.email ? dto.email.toLowerCase() : dto[f]])),
+          ...(names ?? {}),
           ...(await this.resolvePosition(tx, tenantId, dto, (e as { positionId?: string | null }).positionId)),
         };
-        const updated = await tx.hrEmployee.update({ where: { id }, data: data as Prisma.HrEmployeeUncheckedUpdateInput, select: EMPLOYEE_SELECT });
+        let updated = await tx.hrEmployee.update({ where: { id }, data: data as Prisma.HrEmployeeUncheckedUpdateInput, select: EMPLOYEE_SELECT });
+        if (dto.extraPhones !== undefined || (dto.phone !== undefined && (updated.extraPhones?.length ?? 0) > 0)) {
+          // Нэмэлт утсыг солих; үндсэн дугаар өөрчлөгдвөл түүнтэй давхцсаныг хасна
+          const extra = normalizeExtraPhones(dto.extraPhones ?? phonesOut(updated.extraPhones), updated.phone);
+          await replaceExtraPhones(tx, tenantId, id, extra);
+          updated = { ...updated, extraPhones: extra.map((phone) => ({ phone })) };
+        }
         await this.audit.record(tx, {
           tenantId, campId, entityType: 'employee', entityId: id, action: 'UPDATE', actorUserId,
           fields: EMPLOYEE_AUDIT_FIELDS, before: e, after: updated,
           summaryParams: { code: updated.employeeCode, name: updated.fullName },
         });
-        return updated;
+        return employeeOut(updated);
       }),
     );
   }

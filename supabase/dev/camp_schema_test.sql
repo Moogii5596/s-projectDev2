@@ -3,7 +3,7 @@
 -- ============================================================
 -- Цэвэр/local DB дээр (migration up хийсний дараа) ажиллуулна. Өөрийн 2 tenant үүсгээд төгсгөлд устгана (дахин ажиллуулж болно).
 -- Windows (PowerShell) — файлыг контейнер руу ХУУЛЖ ажиллуулна (pipe БИШ) [ENV-009], superuser-ээр (SET ROLE app_user) [TEST-007]:
---   $db = docker ps --filter "name=supabase_db" --format "{{.Names}}"
+--   $db = docker ps --filter "name=^supabase_db_s-project$" --format "{{.Names}}"
 --   docker cp supabase\dev\camp_schema_test.sql "${db}:/tmp/camp_schema_test.sql"
 --   docker exec -e PGPASSWORD=postgres $db psql -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f /tmp/camp_schema_test.sql
 --   (Монгол NOTICE уншигдахгүй бол урьдчилан: [Console]::OutputEncoding = [Text.UTF8Encoding]::new())

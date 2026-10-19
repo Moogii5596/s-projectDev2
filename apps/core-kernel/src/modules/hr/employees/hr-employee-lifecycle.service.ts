@@ -18,6 +18,7 @@ import { planImport } from '../attendance/import-planner';
 import type { ParsedRow } from '../attendance/import-parser';
 import { HrEmployeeHooks } from './employee-hooks';
 import { EMPLOYEE_AUDIT_FIELDS, HrEmployeesService } from './hr-employees.service';
+import { normalizeExtraPhones, phonesOut, replaceExtraPhones, resolveNames } from './employee-names';
 import { QueryPiiViewsDto, RehireEmployeeDto, TerminateEmployeeDto } from './hr-employees.dto';
 
 const P = CAMP_PERMISSIONS;
@@ -232,6 +233,7 @@ export class HrEmployeeLifecycleService {
       include: {
         user: { select: { id: true, authId: true, isActive: true, fullName: true, email: true, role: true } },
         rehiredAs: { select: { employeeCode: true } },
+        extraPhones: { select: { phone: true }, orderBy: { sortOrder: 'asc' } },
       },
     });
     if (!old) throw notFound('camp.err.employees.8');
@@ -258,6 +260,11 @@ export class HrEmployeeLifecycleService {
         ? await this.employees.resolvePosition(tx, tenantId, { positionId: old.positionId })
         : { positionId: null, position: old.position };
 
+    // v0.2.3 Блок D (S1): нэр — өгсөн талбар, үлдсэнийг хуучнаас
+    const names = resolveNames(dto, { familyName: old.familyName, lastName: old.lastName, firstName: old.firstName ?? '', fullName: old.fullName })
+      ?? { familyName: old.familyName, lastName: old.lastName, firstName: old.firstName ?? old.fullName, fullName: old.fullName };
+    if (!names.firstName) throw badRequest('camp.err.employees.name_required');
+
     const user = transfer ? old.user : null;
     if (user) {
       // Q-C (1): эрх загвараас дахин — хуучин бүх олголт/шууд эрхийг цэвэрлээд (TEMPLATE мөр CASCADE), холбоосыг шилжүүлнэ
@@ -273,7 +280,7 @@ export class HrEmployeeLifecycleService {
         departmentId: refs.departmentId,
         crewId: refs.crewId,
         employeeCode: code,
-        fullName: dto.fullName ?? old.fullName,
+        ...names,
         position: pos.position ?? null,
         positionId: pos.positionId ?? null,
         mealLocationId: refs.mealLocationId,
@@ -286,6 +293,10 @@ export class HrEmployeeLifecycleService {
       },
       select: { id: true, employeeCode: true, fullName: true, status: true, userId: true, rehiredFromId: true, ...Object.fromEntries(EMPLOYEE_AUDIT_FIELDS.map((f) => [f, true])) },
     });
+    // S2: нэмэлт утас — өгсөн бол түүгээр, эс бөгөөс хуучнаас
+    const primary = dto.phone !== undefined ? dto.phone : old.phone;
+    const extra = normalizeExtraPhones(dto.extraPhones ?? phonesOut(old.extraPhones), primary);
+    if (extra.length > 0) await replaceExtraPhones(tx, tenantId, created.id, extra);
     if (user && !user.isActive) {
       await tx.coreUser.updateMany({ where: { id: user.id, tenantId }, data: { isActive: true } });
     }
@@ -319,7 +330,8 @@ export class HrEmployeeLifecycleService {
       const e = await tx.hrEmployee.findFirst({
         where: { id, tenantId, campId },
         select: {
-          id: true, campId: true, employeeCode: true, fullName: true, position: true, phone: true, email: true, status: true,
+          id: true, campId: true, employeeCode: true, fullName: true, familyName: true, lastName: true, firstName: true, position: true, phone: true, email: true, status: true,
+          extraPhones: { select: { phone: true }, orderBy: { sortOrder: 'asc' } },
           organizationId: true, departmentId: true, crewId: true, positionId: true, mealLocationId: true, mealsIncluded: true,
           terminatedAt: true, terminationReason: true, terminationNote: true, createdAt: true, updatedAt: true, userId: true,
           organization: { select: { name: true } },
@@ -343,13 +355,14 @@ export class HrEmployeeLifecycleService {
           take: 20,
         }),
         this.attendanceHooks.stays.findForPlanner(tx, tenantId, [id], toDbDate(today)),
-        this.hooks.site.roomHistory(tx, tenantId, id, 10),
+        this.hooks.site.roomHistory(tx, tenantId, id, 50),
         this.history(tx, tenantId, [id, ...(e.userId ? [e.userId] : [])]),
       ]);
       const open = stays.find((s) => s.endDate === null);
-      const { user, rehiredAs, ...rest } = e;
+      const { user, rehiredAs, extraPhones, ...rest } = e;
       return {
         ...rest,
+        extraPhones: phonesOut(extraPhones),
         terminatedAt: e.terminatedAt ? fromDbDate(e.terminatedAt) : null,
         user: user ? { id: user.id, isActive: user.isActive, phone: user.phone, username: user.username, hasEmail: !isInternalEmail(user.email) } : null,
         rehiredFrom: e.rehiredFrom ? { ...e.rehiredFrom, terminatedAt: e.rehiredFrom.terminatedAt ? fromDbDate(e.rehiredFrom.terminatedAt) : null } : null,
