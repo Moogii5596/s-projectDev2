@@ -46,6 +46,8 @@ tags: [codebase, frontend, camp, i18n]
 - **Хамаарал:** `ui.tsx`, `useCampMutation`, `campKeys`, `ImportDialog`, `EmployeePicker`, `ShiftPattern`, `CatalogPage`, `camp/lib/*` — Кемпээс import (shared руу салгах — QA-10, v0.3). Шинэ HR хуудас: `hrApi` → `campKeys` → `HrRoutes` + `HR_SECTIONS` → `hr.section.*` i18n.
 
 ## 3. Бусад модуль
+- `modules/feedback/` (v0.2.3 Блок F) — `FeedbackPage` (`/feedback`: жагсаалт, шүүлтүүр, «+1», илгээх/засах, админ «Төлөв / хариу», Excel), `WhatsNewPage` (`/whats-new`: хувилбар бүрийн тэмдэглэл + тухайн хувилбарт хэрэгжсэн санал), `api.ts` (`feedbackApi`, DTO = backend — RULE-20), `lib.ts` (+ `tests`). Модулиас (`VITE_MODULES`) үл хамаарна. `Layout`: цэс «Санал хүсэлт», «Шинэчлэлийн түүх» (+ «Шинэ» тэмдэг — `localStorage` `s-project.whats-new.seen`), хуудас бүрийн баруун доод «Санал илгээх» товч (`/feedback`, state `{ compose, from }`).
+- `release-notes/` — **`notes.ts`** (хэрэглэгчид зориулсан шинэчлэлийн тэмдэглэл, монгол + 中文; release бүрт ЭХЭНД нэмж `date` бөглөнө — [[pilot-test-guide]] «Release»), `release-notes.ts` (цэвэр функц: эрэмбэ, сүүлийн хувилбар, «Шинэ» тэмдэг), тест `tests/` (өгөгдлийн бүрэн бүтэн байдал ч).
 - `modules/inventory/`, `modules/vendor/`, `modules/report/` — `api.ts` + нэг хуудас (`VITE_MODULES`-д `inventory`, `vendors`, `reports`).
 - MR — `pages/MR*` + `hooks/useMR*`; MFE remote — `apps/mfe-requisitions` (`/mfe/*`, `MfeDisabled` fallback).
 

@@ -14,25 +14,27 @@ tags: [codebase, frontend, generated]
 
 | Зам | Компонент | Нөхцөл | Файл |
 |---|---|---|---|
-| `/login` | `LoginPage` |  | `App.tsx:36` |
-| `/invite/:token` | `SetPasswordPage` |  | `App.tsx:38` |
-| `/reset/:token` | `SetPasswordPage` |  | `App.tsx:39` |
-| `/forgot` | `ForgotPasswordPage` |  | `App.tsx:40` |
-| `/change-password` | `ChangePasswordPage` |  | `App.tsx:45` |
-| `/` | `Navigate` |  | `App.tsx:48` |
-| `/requisitions` | `MRListPage` |  | `App.tsx:51` |
-| `/requisitions/new` | `MRCreatePage` |  | `App.tsx:52` |
-| `/requisitions/:id` | `MRDetailPage` |  | `App.tsx:53` |
-| `/admin/approval-sla` | `ApprovalSlaPage` |  | `App.tsx:54` |
-| `/admin/workflow-definitions` | `WorkflowDefinitionPage` |  | `App.tsx:55` |
-| `/admin/delegations` | `DelegationPage` |  | `App.tsx:56` |
-| `/inventory` | `InventoryPage` | модуль `inventory` | `App.tsx:61` |
-| `/vendors` | `VendorsPage` | модуль `vendors` | `App.tsx:62` |
-| `/reports` | `ReportPage` | модуль `reports` | `App.tsx:63` |
-| `/camp/*` | `CampRoutes` | модуль `camp` | `App.tsx:66` |
-| `/hr/*` | `HrRoutes` | модуль `hr` | `App.tsx:68` |
-| `/mfe/*` | `Suspense` |  | `App.tsx:72` |
-| `*` | `Navigate` |  | `App.tsx:85` |
+| `/login` | `LoginPage` |  | `App.tsx:39` |
+| `/invite/:token` | `SetPasswordPage` |  | `App.tsx:41` |
+| `/reset/:token` | `SetPasswordPage` |  | `App.tsx:42` |
+| `/forgot` | `ForgotPasswordPage` |  | `App.tsx:43` |
+| `/change-password` | `ChangePasswordPage` |  | `App.tsx:48` |
+| `/` | `Navigate` |  | `App.tsx:51` |
+| `/feedback` | `FeedbackPage` |  | `App.tsx:52` |
+| `/whats-new` | `WhatsNewPage` |  | `App.tsx:53` |
+| `/requisitions` | `MRListPage` |  | `App.tsx:56` |
+| `/requisitions/new` | `MRCreatePage` |  | `App.tsx:57` |
+| `/requisitions/:id` | `MRDetailPage` |  | `App.tsx:58` |
+| `/admin/approval-sla` | `ApprovalSlaPage` |  | `App.tsx:59` |
+| `/admin/workflow-definitions` | `WorkflowDefinitionPage` |  | `App.tsx:60` |
+| `/admin/delegations` | `DelegationPage` |  | `App.tsx:61` |
+| `/inventory` | `InventoryPage` | модуль `inventory` | `App.tsx:66` |
+| `/vendors` | `VendorsPage` | модуль `vendors` | `App.tsx:67` |
+| `/reports` | `ReportPage` | модуль `reports` | `App.tsx:68` |
+| `/camp/*` | `CampRoutes` | модуль `camp` | `App.tsx:71` |
+| `/hr/*` | `HrRoutes` | модуль `hr` | `App.tsx:73` |
+| `/mfe/*` | `Suspense` |  | `App.tsx:77` |
+| `*` | `Navigate` |  | `App.tsx:90` |
 | `/camp (index)` | `CampHomePage` |  | `modules/camp/CampRoutes.tsx:24` |
 | `/camp/system` | `Navigate` |  | `modules/camp/CampRoutes.tsx:26` |
 | `/camp/system/positions` | `Navigate` |  | `modules/camp/CampRoutes.tsx:27` |
@@ -79,6 +81,6 @@ tags: [codebase, frontend, generated]
 
 | Файл | Түлхүүр |
 |---|---|
-| `web.en.json` | 925 |
-| `web.mn.json` | 925 |
-| `web.zh.json` | 925 |
+| `web.en.json` | 978 |
+| `web.mn.json` | 978 |
+| `web.zh.json` | 978 |

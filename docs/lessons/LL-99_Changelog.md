@@ -14,6 +14,7 @@ tags: [lessons, changelog]
 
 | Огноо | Нэмэгдсэн зүйл |
 |-------|----------------|
+| 2026-10-19 | v0.2.3 Блок F: TEST-030 (глобал «Санал илгээх» товч ↔ e2e regex `/илгээх/`), OPS-012 (cloud Prisma engine — wasm shim) |
 | 2026-10-18 | TEST-028 (CI integration хуучирсан хүлээлт — camp-master, route-probe) |
 | 2026-10-18 | TEST-027 (devAdmin-ийн хэл — modules-lite хятад шошго) |
 | 2026-10-18 | v0.2.2 Блок 6б: PROC-020 (e2e нөлөөг дутуу хайсан — 3 тест) |

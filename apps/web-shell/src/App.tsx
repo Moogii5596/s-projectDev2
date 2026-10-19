@@ -21,6 +21,9 @@ const HrRoutes = lazy(() => import('./modules/hr/HrRoutes'));
 const InventoryPage = lazy(() => import('./modules/inventory/InventoryPage'));
 const VendorsPage = lazy(() => import('./modules/vendor/VendorsPage'));
 const ReportPage = lazy(() => import('./modules/report/ReportPage'));
+// v0.2.3 Блок F — санал хүсэлт, шинэчлэлийн түүх (модулиас үл хамаарна)
+const FeedbackPage = lazy(() => import('./modules/feedback/FeedbackPage'));
+const WhatsNewPage = lazy(() => import('./modules/feedback/WhatsNewPage'));
 import { HOME_PATH, isEnabled } from './config/enabled-modules';
 
 // Sprint 4: Module Federation — React.lazy + dynamic import
@@ -46,6 +49,8 @@ export default function App() {
         <Route element={<Layout />}>
           {/* v0.1.6: VITE_MODULES-оор шүүнэ (пилот = зөвхөн camp → нүүр /camp) */}
           <Route path="/" element={<Navigate to={HOME_PATH} replace />} />
+          <Route path="/feedback" element={<FeedbackPage />} />
+          <Route path="/whats-new" element={<WhatsNewPage />} />
           {isEnabled('mr') && (
             <>
               <Route path="/requisitions" element={<MRListPage />} />

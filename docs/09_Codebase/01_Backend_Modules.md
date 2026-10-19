@@ -14,7 +14,7 @@ tags: [codebase, backend, camp, hr, auth]
 ## Агуулга
 - Суурь: [[#auth]] · [[#db]] · [[#common]] · [[#config, cache, gateway]] · [[#scripts]]
 - Бизнес: [[#MR + workflow]] · [[#budget, inventory, vendor, report (lite)]] · [[#event-bus]] · [[#tenant-admin, route-ingress, health]]
-- HR / Core (v0.2.2 H1, [[ADR-006_HR_Core_Module]]): [[#hr — нийтлэг]] · [[#hr/employees, hr/org, hr/positions]] · [[#hr/attendance]] · [[#hr/import]] · [[#core/organizations]]
+- HR / Core (v0.2.2 H1, [[ADR-006_HR_Core_Module]]): [[#hr — нийтлэг]] · [[#hr/employees, hr/org, hr/positions]] · [[#hr/attendance]] · [[#hr/import]] · [[#core/organizations]] · [[#core/feedback]]
 - Кемп: [[#camp — нийтлэг]] · [[#camp/rbac]] · [[#camp/master]] · [[#camp/catalog]] · [[#camp/settings]] · [[#camp/attendance]] · [[#camp/assets]] · [[#camp/maintenance]] · [[#camp/data]] · [[#camp/costs, camp/audit]] · [[#camp — V2 (кодгүй)]]
 
 ---
@@ -92,6 +92,9 @@ tags: [codebase, backend, camp, hr, auth]
 
 ## core/organizations
 - `core.module.ts` — `CoreOrganizationsService` (байгууллагууд — гэрээт г.м.), `/api/v1/core/organizations`. Хүснэгт `camp_organizations` (model `CoreOrganization`). Эрх: `camp.master.manage`.
+
+## core/feedback
+- `feedback/` (v0.2.3 Блок F, FB-SYS-01a) — `CoreFeedbackService` (санал хүсэлт: илгээх, бүгдийг харах, «+1», зохиогч «Шинэ» үед засах/устгах; OWNER/ADMIN — төлөв, хариу, `doneVersion`, Excel), `/api/v1/core/feedback`. Хүснэгт `core_feedback`, `core_feedback_votes` (`vote_count` нэг tx-д тоолно). Эрх: кемпийн эрхгүй — tenant-ийн идэвхтэй хэрэглэгч бүр; админ = `core_users.role` (ADR-007-ийн дараа системийн эрх рүү). Цэвэр дүрэм `feedback-rules.ts` (unit).
 
 ## camp — нийтлэг
 - `camp.module.ts` — бүх дэд модулийг бүртгэнэ; `HrModule`, `CoreModule`-ийг import хийнэ (Кемп → HR, эсрэгээрээ үгүй). `camp-hr.bridge.ts` — HR-д байрлалтын порт, ажилтны мөчлөгийн порт (`CampEmployeeSite` — Блок 5), `rooms` экспорт бүртгэнэ. `common/camp-common.module.ts` — `CampAccessService`, `CampAuditService` (HR/Core хуваалцана). Кемп = уурхайн кемпийн катеринг үйлчилгээ ([[01_plan_and_erd]]).

@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 28 файл, ~256 тест
+## Integration (бодит PG + RLS) — 29 файл, ~264 тест
 
 Команд: `pnpm test:integration`
 
@@ -34,6 +34,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/camp-v022-terminate.integration.spec.ts` | 7 | v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд авах, PII лог (integration) |
 | `core-kernel/test/camp-v022-users.integration.spec.ts` | 3 | v0.2.2 Блок 4 — хэрэглэгч удирдах (integration) |
 | `core-kernel/test/camp-v023-data-import.integration.spec.ts` | 12 | S1 + S2 — нэр, нэмэлт утас · S4 — албан тушаал · S5 — өрөөний тохиргоо · S6 — өрөөнд байрлуулалт (түүх) · S7 — ажлаас гарсан ажилтан · S9 — «Мэдээлэл дутуу» (буруу имэйл / утас) · S11 — гарсан огноо т |
+| `core-kernel/test/core-feedback.integration.spec.ts` | 8 | v0.2.3 Блок F — санал хүсэлт (integration) |
 | `core-kernel/test/event-bus.integration.spec.ts` | 5 | 🔗 5.2 Гинж: MR → Workflow → Budget → Outbox → Redis · 🔒 5.0 Зэрэгцээ poller — event бүр яг нэг удаа [EVT-001] · ♻️ 5.3 Retry + DLQ |
 | `core-kernel/test/hr-routes.integration.spec.ts` | 7 | 👥 HR ажилтан, бүтэц — шинэ ба хуучин зам ижил · 🗓 HR ирц → Кемпийн байрлалт (H-Q2) · 📥 HR импорт / экспорт · 🔒 RLS (app_user) — HR model нэр солигдсон ч DB хүснэгт хэвээр |
 | `core-kernel/test/i18n-overrides.integration.spec.ts` | 7 | 🌐 Орчуулгын Excel · 🗣 Хэрэглэгчийн хэл · 🌐 Кемпийн алдаа 3 хэлээр (code + params + message) |
@@ -47,7 +48,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 78 файл, ~604 тест
+## Unit — core-kernel — 79 файл, ~609 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -98,6 +99,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/camp/rbac/tests/template-diff.test.ts` | 2 | template-diff (v0.2.2 D-09) |
 | `core-kernel/src/modules/camp/rbac/tests/user-access-b4.test.ts` | 16 | user-list (цэвэр) · CampRbacService.listUsers (B4-Q3) · CampUserAccessService.setActive (B4-Q2) · SEC-009 (Блок 6б) — хэрэглэгч удирдах = зөвхөн системийн админ (OWNER / ADMIN) |
 | `core-kernel/src/modules/camp/settings/tests/camp-settings.service.test.ts` | 12 | CampSettingsService (Шат 2.3) |
+| `core-kernel/src/modules/core/feedback/tests/feedback-rules.test.ts` | 5 | v0.2.3 Блок F — санал хүсэлтийн дүрэм |
 | `core-kernel/src/modules/event-bus/cloud-events.adapter.spec.ts` | 6 | CloudEventsAdapter |
 | `core-kernel/src/modules/event-bus/dlq.service.spec.ts` | 3 | DlqService |
 | `core-kernel/src/modules/event-bus/event-bus.service.spec.ts` | 2 | EventBusService.emit (Phase 5.1 [EVT-003]) |
@@ -132,7 +134,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/scripts/pilot-admin.spec.ts` | 7 | validate* · onboard · ensureUser |
 | `core-kernel/src/scripts/test-user.spec.ts` | 9 | ensureTestUser · assertLocalUrl · parseDotenv / parseArgs |
 
-## Unit — web-shell — 18 файл, ~99 тест
+## Unit — web-shell — 20 файл, ~109 тест
 
 Команд: `pnpm --filter web-shell test`
 
@@ -150,14 +152,16 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/camp/lib/tests/grid.test.ts` | 5 | grid (хүснэгтээр оруулах) · room-range (FB-07) |
 | `web-shell/src/modules/camp/lib/tests/last-camp.test.ts` | 3 | last-camp (FB-11) |
 | `web-shell/src/modules/camp/lib/tests/permission-label.test.ts` | 3 | permissionLabel |
+| `web-shell/src/modules/feedback/tests/feedback-lib.test.ts` | 3 | feedback lib |
 | `web-shell/src/modules/hr/lib/tests/hr-sections.test.ts` | 4 | hr-sections |
 | `web-shell/src/modules/hr/lib/tests/phones.test.ts` | 1 | phones (v0.2.3 Блок D) |
 | `web-shell/src/modules/hr/lib/tests/termination.test.ts` | 8 | terminationFormError · lifecycleActions · terminationEffects · орчуулга (mn/en/zh) |
 | `web-shell/src/modules/hr/lib/tests/user-access.test.ts` | 6 | inviteLink · loginName · userState · permissionView |
 | `web-shell/src/modules/inventory/lib/tests/quantity.test.ts` | 5 | inventory quantity (numeric(15,3), float-гүй) |
 | `web-shell/src/modules/report/lib/tests/report.test.ts` | 5 | report lib |
+| `web-shell/src/release-notes/tests/release-notes.test.ts` | 7 | release notes — функц · release notes — өгөгдөл (notes.ts) |
 
-## E2E (Playwright) — 14 файл, ~75 тест
+## E2E (Playwright) — 15 файл, ~76 тест
 
 Команд: `pnpm test:e2e`
 
@@ -173,6 +177,7 @@ tags: [codebase, testing, generated]
 | `e2e/tests/camp-v022-terminate.spec.ts` | 5 |  |
 | `e2e/tests/camp-v022-users.spec.ts` | 5 |  |
 | `e2e/tests/camp.spec.ts` | 6 |  |
+| `e2e/tests/core-v023-feedback.spec.ts` | 1 |  |
 | `e2e/tests/modules-lite.spec.ts` | 8 |  |
 | `e2e/tests/multi-tenant.spec.ts` | 5 |  |
 | `e2e/tests/requisition-flow.spec.ts` | 3 |  |

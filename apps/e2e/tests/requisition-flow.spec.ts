@@ -24,7 +24,7 @@ async function createAndSubmit(page: Page, title: string): Promise<string> {
   await page.waitForURL(/.*requisitions\/[a-f0-9-]{36}.*/);
   await expect(page.getByText(/ноорог/i)).toBeVisible();
 
-  await page.getByRole('button', { name: /submit|илгээх/i }).click();
+  await page.getByRole('button', { name: /батлуулахаар илгээх|submit/i }).click();
   await expect(page.getByText(/батлуулж байна/i)).toBeVisible({ timeout: 5_000 });
   // Үүсгэгчид батлах/татгалзах товч алга
   await expect(page.getByText('Таны үүсгэсэн MR — батлагчийг хүлээж байна')).toBeVisible();

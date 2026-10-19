@@ -10,7 +10,7 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (50 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **66** хүснэгт, 36 enum, 25 функц, 55 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (51 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **68** хүснэгт, 38 enum, 25 функц, 57 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
@@ -20,7 +20,7 @@ tags: [codebase, database, rls, generated]
 
 **Кемп (`camp_*`):** [[#camp_asset_categories]] · [[#camp_asset_movements]] · [[#camp_assets]] · [[#camp_audit_log]] · [[#camp_building_types]] · [[#camp_buildings]] · [[#camp_contract_item_prices]] · [[#camp_contract_items]] · [[#camp_contracts]] · [[#camp_cost_entries]] · [[#camp_crews]] · [[#camp_data_imports]] · [[#camp_department_shift_patterns]] · [[#camp_departments]] · [[#camp_employee_phones]] · [[#camp_employees]] · [[#camp_haul_records]] · [[#camp_maintenance_parts]] · [[#camp_maintenance_requests]] · [[#camp_meal_locations]] · [[#camp_meal_order_lines]] · [[#camp_meal_orders]] · [[#camp_movement_imports]] · [[#camp_movements]] · [[#camp_organizations]] · [[#camp_permissions]] · [[#camp_pii_access_log]] · [[#camp_position_role_templates]] · [[#camp_position_settings]] · [[#camp_position_shift_patterns]] · [[#camp_positions]] · [[#camp_role_permissions]] · [[#camp_roles]] · [[#camp_room_allocations]] · [[#camp_rooms]] · [[#camp_settings]] · [[#camp_shift_adjustments]] · [[#camp_stays]] · [[#camp_user_permissions]] · [[#camp_user_roles]] · [[#camps]]
 
-**Үндсэн (`core_*`):** [[#core_user_invites]] · [[#core_users]]
+**Үндсэн (`core_*`):** [[#core_feedback]] · [[#core_feedback_votes]] · [[#core_user_invites]] · [[#core_users]]
 
 ## Бусад (tenant, MR, workflow, event bus, модулиуд)
 
@@ -1441,6 +1441,54 @@ Trigger: `trg_camps_updated_at`
 
 ## Үндсэн (`core_*`)
 
+### core_feedback
+
+🔒🔒 · үүсгэсэн `20261019004_core_feedback.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK NN |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| author_id | UUID | NN |  |
+| kind | "CoreFeedbackKind" | NN |  |
+| title | TEXT | NN |  |
+| body | TEXT | NN |  |
+| page_path | TEXT |  |  |
+| app_version | TEXT |  |  |
+| status | "CoreFeedbackStatus" | NN |  |
+| admin_reply | TEXT |  |  |
+| replied_by | UUID |  |  |
+| replied_at | TIMESTAMPTZ |  |  |
+| done_version | TEXT |  |  |
+| vote_count | INTEGER | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `UNIQUE (tenant_id, id)` · `FOREIGN KEY (tenant_id, author_id) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, replied_by) REFERENCES core_users (tenant_id, id) ON DELETE SET NULL (replied_by)` · `CHECK (length(btrim(title)) BETWEEN 1 AND 200)` · `CHECK (length(body) <= 5000)` · `CHECK (admin_reply IS NULL OR length(admin_reply) <= 5000)` · `CHECK (vote_count >= 0)` · `CHECK (done_version IS NULL OR done_version ~ '^v?[0-9]+(\.[0-9]+){1,3}$')`
+
+Policy: `tenant_isolation_core_feedback` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_core_feedback_updated_at`
+
+### core_feedback_votes
+
+🔒🔒 · үүсгэсэн `20261019004_core_feedback.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK NN |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| feedback_id | UUID | NN |  |
+| user_id | UUID | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `UNIQUE (feedback_id, user_id)` · `FOREIGN KEY (tenant_id, feedback_id) REFERENCES core_feedback (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, user_id) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE`
+
+Policy: `tenant_isolation_core_feedback_votes` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_core_feedback_votes_updated_at`
+
 ### core_user_invites
 
 🔒🔒 · үүсгэсэн `20261013005_core_user_invites.sql`
@@ -1526,6 +1574,8 @@ Trigger: `update_core_users_updated_at`
 | CampTemplateScope | ALL_CAMPS, EMPLOYEE_CAMP | `20261013002_camp_position_role_templates.sql` |
 | CampTerminationReason | RESIGNED, DISMISSED, CONTRACT_END, OTHER | `20261017002_camp_employees_termination.sql` |
 | CampVolumeUnit | M3, TON | `20261009006_camp_operations.sql` |
+| CoreFeedbackKind | BUG, IDEA, REQUEST | `20261019004_core_feedback.sql` |
+| CoreFeedbackStatus | NEW, ACCEPTED, PLANNED, DONE, REJECTED | `20261019004_core_feedback.sql` |
 | CoreInviteChannel | LINK, EMAIL | `20261013005_core_user_invites.sql` |
 | CoreInvitePurpose | INVITE, RESET | `20261013005_core_user_invites.sql` |
 | MrStatus | DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, CANCELLED, PROVISIONALLY_APPROVED | `0004_add_native_enums.sql` |

@@ -2,7 +2,7 @@
 title: "API каталог (core-kernel)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-18
+last_updated: 2026-10-19
 tags: [codebase, api, generated]
 ---
 
@@ -10,7 +10,7 @@ tags: [codebase, api, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Нийт **210** endpoint, 29 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
+Нийт **218** endpoint, 30 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
 
 **Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). **OWNER·ADMIN** = зөвхөн системийн роль (`requireTenantAdmin` — хэрэглэгч / роль удирдах, SEC-009), `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].
 
@@ -28,6 +28,7 @@ tags: [codebase, api, generated]
 - [[#modules/camp/master]] — 11
 - [[#modules/camp/rbac]] — 25
 - [[#modules/camp/settings]] — 5
+- [[#modules/core/feedback]] — 8
 - [[#modules/core/organizations]] — 3
 - [[#modules/health]] — 1
 - [[#modules/hr/attendance]] — 14
@@ -200,6 +201,19 @@ tags: [codebase, api, generated]
 | GET | `/api/v1/camp/camps/:campId/meal-locations` | `CampSettingsController.listLocations` → `CampSettingsService.listMealLocations` | гишүүн | `camp-settings.controller.ts:25` |
 | POST | `/api/v1/camp/camps/:campId/meal-locations` | `CampSettingsController.createLocation` → `CampSettingsService.createMealLocation` | `camp.settings.manage` | `camp-settings.controller.ts:32` |
 | PATCH | `/api/v1/camp/camps/:campId/meal-locations/:id` | `CampSettingsController.updateLocation` → `CampSettingsService.updateMealLocation` | `camp.settings.manage` | `camp-settings.controller.ts:38` |
+
+## modules/core/feedback
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/core/feedback` | `CoreFeedbackController.list` → `CoreFeedbackService.list` | — | `core-feedback.controller.ts:16` |
+| GET | `/api/v1/core/feedback/export` | `CoreFeedbackController.export` → `CoreFeedbackService.exportXlsx` | — | `core-feedback.controller.ts:23` |
+| POST | `/api/v1/core/feedback` | `CoreFeedbackController.create` → `CoreFeedbackService.create` | — | `core-feedback.controller.ts:32` |
+| PATCH | `/api/v1/core/feedback/:id` | `CoreFeedbackController.update` → `CoreFeedbackService.update` | — | `core-feedback.controller.ts:38` |
+| PATCH | `/api/v1/core/feedback/:id/status` | `CoreFeedbackController.setStatus` → `CoreFeedbackService.setStatus` | — | `core-feedback.controller.ts:44` |
+| DELETE | `/api/v1/core/feedback/:id` | `CoreFeedbackController.remove` → `CoreFeedbackService.remove` | — | `core-feedback.controller.ts:50` |
+| POST | `/api/v1/core/feedback/:id/vote` | `CoreFeedbackController.vote` → `CoreFeedbackService.vote` | — | `core-feedback.controller.ts:57` |
+| DELETE | `/api/v1/core/feedback/:id/vote` | `CoreFeedbackController.unvote` → `CoreFeedbackService.vote` | — | `core-feedback.controller.ts:63` |
 
 ## modules/core/organizations
 

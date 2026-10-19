@@ -9,6 +9,8 @@ import { useI18nSync } from '../hooks/useI18nSync'
 import { useMe } from '../hooks/useMe'
 import { CHANGE_PASSWORD_PATH, displayLogin } from '../lib/password-change'
 import PageSuspense from './PageSuspense'
+import { useEffect, useState } from 'react'
+import { hasUnseen, readSeen } from '../release-notes/release-notes'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -23,6 +25,14 @@ export default function Layout() {
   // Phase 6.0: идэвхтэй цэсийг тодруулна
   const navCls = (prefix: string) =>
     `text-sm hover:text-blue-600 ${pathname.startsWith(prefix) ? 'text-blue-600 font-medium' : 'text-gray-600'}`
+
+  // v0.2.3 Блок F: шинэ хувилбар суусны дараа «Шинэчлэлийн түүх»-ийг үзээгүй бол «Шинэ» тэмдэг
+  const [unseen, setUnseen] = useState(() => hasUnseen(readSeen()))
+  useEffect(() => {
+    const onSeen = () => setUnseen(hasUnseen(readSeen()))
+    window.addEventListener('whats-new-seen', onSeen)
+    return () => window.removeEventListener('whats-new-seen', onSeen)
+  }, [])
 
   const handleSignOut = async () => {
     await signOut()
@@ -54,6 +64,16 @@ export default function Layout() {
               <button onClick={() => navigate('/admin/delegations')} className="text-sm text-gray-600 hover:text-blue-600">Delegation</button>
             </>
           )}
+          {/* v0.2.3 Блок F — модулиас үл хамаарна (бүх хэрэглэгч) */}
+          <button onClick={() => navigate('/feedback')} className={navCls('/feedback')}>{t('nav.feedback')}</button>
+          <button onClick={() => navigate('/whats-new')} className={`relative ${navCls('/whats-new')}`}>
+            {t('nav.whats_new')}
+            {unseen && (
+              <span className="ml-1 inline-block rounded-full bg-red-500 px-1.5 text-[10px] font-semibold leading-4 text-white align-middle">
+                {t('nav.whats_new_badge')}
+              </span>
+            )}
+          </button>
           <LanguageSwitcher persist />
           {/* v0.2.2: нэвтрэх нэр (дотоод .login.invalid имэйлийг харуулахгүй) + нууц үг солих */}
           <button
@@ -73,9 +93,20 @@ export default function Layout() {
       </nav>
 
       {/* Content */}
-      <main className={`${wide ? 'max-w-7xl' : 'max-w-5xl'} mx-auto px-4 sm:px-6 py-8`}>
+      <main className={`${wide ? 'max-w-7xl' : 'max-w-5xl'} mx-auto px-4 sm:px-6 pt-8 pb-20`}>
         <PageSuspense><Outlet /></PageSuspense>
       </main>
+
+      {/* v0.2.3 Блок F — хуудас бүрээс «Санал илгээх» (тухайн хуудсыг автоматаар тэмдэглэнэ) */}
+      {!pathname.startsWith('/feedback') && (
+        <button
+          type="button"
+          onClick={() => navigate('/feedback', { state: { compose: true, from: pathname } })}
+          className="fixed bottom-4 right-4 z-30 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-blue-700"
+        >
+          {t('feedback.fab')}
+        </button>
+      )}
     </div>
   )
 }

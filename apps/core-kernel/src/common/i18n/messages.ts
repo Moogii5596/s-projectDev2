@@ -423,6 +423,11 @@ export const MESSAGES = {
   'row.over_capacity': { mn: '{room} өрөө {date}-ны шөнө {count}/{capacity} болно ({codes})', en: 'Room {room} would have {count}/{capacity} on the night of {date} ({codes})', zh: '房间 {room} 在 {date} 晚将有 {count}/{capacity} 人（{codes}）' },
   'row.date_missing': { mn: 'Огноо тодорхойгүй — «Мэдээлэл дутуу» гэж тэмдэглэнэ', en: 'Date unknown — will be flagged as incomplete data', zh: '日期未知 — 将标记为资料不完整' },
   'camp.err.employees.name_required': { mn: 'Ажилтны нэр заавал', en: 'Employee first name is required', zh: '员工名字为必填' },
+  // ── v0.2.3 Блок F — санал хүсэлт (FB-SYS-01a) ──
+  'core.err.feedback.not_found': { mn: 'Санал олдсонгүй', en: 'Feedback not found', zh: '未找到该反馈' },
+  'core.err.feedback.edit_locked': { mn: 'Зөвхөн өөрийн, «Шинэ» төлөвтэй саналаа засах / устгах боломжтой', en: 'You can only edit or delete your own feedback while it is "New"', zh: '只能在"新建"状态下编辑或删除自己的反馈' },
+  'core.err.feedback.admin_only': { mn: 'Төлөв, хариуг зөвхөн системийн админ өөрчилнө', en: 'Only a system administrator can change the status or reply', zh: '只有系统管理员可以更改状态或回复' },
+  'core.err.feedback.done_version': { mn: '«Хийгдсэн» төлөвт хэрэгжсэн хувилбарыг (жнь v0.2.3) заавал оруулна', en: 'Enter the version in which it was delivered (e.g. v0.2.3) for "Done"', zh: '"已完成"时必须填写实现版本（如 v0.2.3）' },
 } satisfies Record<string, Entry>;
 
 export type MessageCode = keyof typeof MESSAGES;
