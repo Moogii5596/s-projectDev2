@@ -1,9 +1,10 @@
-import { CampDataImportType, CampEmployeeStatus } from '@prisma/client';
+import { CampDataImportType, CampEmployeeStatus, Prisma } from '@prisma/client';
 import { CellValue, ParsedTableRow, TableSpec } from '../../../common/xlsx/table-spec';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
 import { Tx } from '../../camp/common/camp-tx';
 import { EMPLOYEE_AUDIT_FIELDS } from '../employees/hr-employees.service';
 import { normName, resolvePositionByName } from '../positions/hr-positions.service';
+import { applyIssues, issueFromRow, readIssues, sameIssues, toJson, type IssueUpdate } from '../employees/data-issues';
 import { EXTRA_PHONES_MAX, normalizeExtraPhones, PHONE_RE, phonesOut, replaceExtraPhones, resolveNames, splitPhones, type EmployeeNames } from '../employees/employee-names';
 import { ApplyCtx, DataImportHandler, has, ImportCtx, PlannedRow, upper } from './import-types';
 
@@ -28,10 +29,10 @@ export const EMPLOYEES_SPEC: TableSpec = {
     { key: 'position', label: 'col.employee.position', type: 'text', maxLength: 100, aliases: ['position', 'албан тушаал'], examples: ['Тогооч', 'Инженер'] },
     { key: 'mealLocation', label: 'col.employee.meal_location', type: 'text', maxLength: 200, aliases: ['meal_location', 'work_meal_location', 'хоолны байршил', 'ажлын хоолны байршил'], examples: [null, 'Уулын хэсэг'], width: 20 },
     { key: 'mealsIncluded', label: 'col.employee.meals_included', type: 'bool', aliases: ['meals_included', 'meals', 'хоол авах', 'хоолтой'], examples: [null, true] },
-    { key: 'phone', label: 'col.employee.phone', type: 'phone', aliases: ['phone', 'утас', 'утасны дугаар', 'үндсэн утас'], examples: ['99112233', '+8613800138000'], width: 16 },
+    { key: 'phone', label: 'col.employee.phone', type: 'phone', soft: true, aliases: ['phone', 'утас', 'утасны дугаар', 'үндсэн утас'], examples: ['99112233', '+8613800138000'], width: 16 },
     // v0.2.3 Блок D (S2): нэмэлт дугаарууд — таслал / мөр шилжилтээр
     { key: 'extraPhones', label: 'col.employee.extra_phones', type: 'text', maxLength: 300, aliases: ['extra_phones', 'нэмэлт утас', 'бусад утас'], examples: ['88123354, 99435600', null], width: 22 },
-    { key: 'email', label: 'col.employee.email', type: 'email', maxLength: 254, aliases: ['email', 'e-mail', 'имэйл', 'и-мэйл'], examples: ['ganbold@mail.mn', null], width: 24 },
+    { key: 'email', label: 'col.employee.email', type: 'email', soft: true, maxLength: 254, aliases: ['email', 'e-mail', 'имэйл', 'и-мэйл'], examples: ['ganbold@mail.mn', null], width: 24 },
     { key: 'organization', label: 'col.employee.organization', type: 'text', required: true, maxLength: 200, aliases: ['organization', 'org', 'байгууллага', 'регистр'], examples: ['2001234', '2001234'], width: 24 },
     { key: 'department', label: 'col.employee.department', type: 'text', required: true, maxLength: 30, aliases: ['department', 'dept', 'хэлтэс'], examples: ['KITCHEN', 'ENG'] },
     { key: 'crew', label: 'col.employee.crew', type: 'text', maxLength: 30, aliases: ['crew', 'roster', 'ростер', 'баг'], examples: ['A', null] },
@@ -45,13 +46,15 @@ export const EMPLOYEES_SPEC: TableSpec = {
 
 type Current = {
   id: string; campId: string; employeeCode: string; fullName: string; familyName: string | null; lastName: string | null; firstName: string | null;
-  extraPhones: { phone: string }[]; position: string | null; phone: string | null; email: string | null;
+  extraPhones: { phone: string }[]; dataIssues: Prisma.JsonValue; position: string | null; phone: string | null; email: string | null;
   status: CampEmployeeStatus; organizationId: string; departmentId: string; crewId: string | null;
   positionId: string | null; mealLocationId: string | null; mealsIncluded: boolean | null;
 };
 type Resolved = {
   organizationId?: string; departmentId?: string; crewId?: string | null; mealLocationId?: string | null; position?: string | null;
   names?: EmployeeNames; extraPhones?: string[];
+  /** S9: «Мэдээлэл дутуу»-гийн шинэчлэл (буруу утга → асуудал, зөв → арилгах) */
+  issues?: IssueUpdate;
 };
 
 const RESOLVED = Symbol('resolved');
@@ -59,7 +62,7 @@ type WithResolved = PlannedRow & { [RESOLVED]?: Resolved };
 
 const EMP_SELECT = {
   id: true, campId: true, employeeCode: true, fullName: true, familyName: true, lastName: true, firstName: true,
-  extraPhones: { select: { phone: true }, orderBy: { sortOrder: 'asc' } }, position: true, phone: true, email: true, status: true,
+  extraPhones: { select: { phone: true }, orderBy: { sortOrder: 'asc' } }, dataIssues: true, position: true, phone: true, email: true, status: true,
   organizationId: true, departmentId: true, crewId: true, positionId: true, mealLocationId: true, mealsIncluded: true,
 } as const;
 
@@ -103,7 +106,8 @@ export const employeesHandler: DataImportHandler = {
     const codes = rows.map((r) => r.values.employeeCode).filter((c): c is string => typeof c === 'string' && c !== '');
     const refs = await loadRefs(tx, ctx, codes);
 
-    return rows.map((r): WithResolved => {
+    return rows.map((r0): WithResolved => {
+      let r = r0;
       const errors = [...r.errors];
       const v = r.values;
       const resolved: Resolved = {};
@@ -170,13 +174,26 @@ export const employeesHandler: DataImportHandler = {
         if (!names.firstName) errors.push({ column: 'firstName', code: 'row.required' });
         else resolved.names = names;
       }
+      // S9: буруу имэйл / утас мөрийг алдаатай болгохгүй — «Мэдээлэл дутуу» (эх утгатай), талбар хөндөгдөхгүй
+      const issues: IssueUpdate = {};
+      const rowIssues = [...(r.issues ?? [])];
+      // Хоосон нүд асуудлыг арилгахгүй (экспорт → импорт өөрчлөлтгүй); зөв утга арилгана, буруу утга солино
+      for (const f of ['email', 'phone'] as const) {
+        if (!has(r, f)) continue;
+        const iss = issueFromRow(f, rowIssues.find((i) => i.column === f));
+        if (iss || v[f] != null) issues[f] = iss;
+      }
       if (has(r, 'extraPhones')) {
         const list = splitPhones(v.extraPhones as string | null);
         const bad = list.filter((p) => !PHONE_RE.test(p));
-        if (bad.length > 0) errors.push({ column: 'extraPhones', code: 'row.bad_phone', params: { value: bad.join(', ').slice(0, 60) } });
-        else if (list.length > EXTRA_PHONES_MAX) errors.push({ column: 'extraPhones', code: 'row.out_of_range', params: { value: list.length, min: 0, max: EXTRA_PHONES_MAX } });
-        else resolved.extraPhones = normalizeExtraPhones(list, has(r, 'phone') ? (v.phone as string | null) : cur?.phone);
+        const good = list.filter((p) => PHONE_RE.test(p));
+        if (good.length > EXTRA_PHONES_MAX) errors.push({ column: 'extraPhones', code: 'row.out_of_range', params: { value: good.length, min: 0, max: EXTRA_PHONES_MAX } });
+        else resolved.extraPhones = normalizeExtraPhones(good, has(r, 'phone') && !issues.phone ? (v.phone as string | null) : cur?.phone);
+        if (list.length) issues.extraPhones = bad.length ? { field: 'extraPhones', code: 'row.bad_phone', value: bad.join(', ').slice(0, 200) } : null;
+        if (bad.length) rowIssues.push({ column: 'extraPhones', code: 'row.bad_phone', params: { value: bad.join(', ').slice(0, 60) } });
       }
+      resolved.issues = issues;
+      if (rowIssues.length) r = { ...r, issues: rowIssues };
       if (errors.length > 0) return { ...r, errors, op: 'error' };
       if (!cur) return { ...r, errors, op: 'create', [RESOLVED]: resolved };
 
@@ -186,7 +203,11 @@ export const employeesHandler: DataImportHandler = {
         if ((from ?? null) !== (to ?? null)) changes[key] = { from: from ?? null, to: to ?? null };
       };
       if (has(r, 'employeeCode') && cur.employeeCode !== v.employeeCode) cmp('employeeCode', cur.employeeCode, v.employeeCode);
-      for (const k of ['phone', 'email', 'status'] as const) if (has(r, k)) cmp(k, cur[k], v[k] ?? (k === 'status' ? cur.status : null));
+      // S9: буруу (асуудал болсон) утга одоогийн утгыг дарж бичихгүй
+      for (const k of ['phone', 'email', 'status'] as const) if (has(r, k) && !(k !== 'status' && issues[k])) cmp(k, cur[k], v[k] ?? (k === 'status' ? cur.status : null));
+      const curIssues = readIssues(cur.dataIssues);
+      const nextIssues = applyIssues(curIssues, issues);
+      if (!sameIssues(curIssues, nextIssues)) cmp('dataIssues', curIssues.map((i) => i.field).join(', ') || null, nextIssues.map((i) => i.field).join(', ') || null);
       if (resolved.names) {
         for (const k of ['lastName', 'firstName', 'familyName'] as const) cmp(k, cur[k], resolved.names[k]);
       }
@@ -226,6 +247,7 @@ export const employeesHandler: DataImportHandler = {
             mealLocationId: res.mealLocationId ?? null, mealsIncluded: (v.mealsIncluded as boolean | null) ?? null,
             phone: (v.phone as string | null) ?? null, email: (v.email as string | null) ?? null,
             status: (v.status as CampEmployeeStatus | null) ?? CampEmployeeStatus.ACTIVE,
+            dataIssues: toJson(applyIssues([], res.issues ?? {})),
           },
           select: { id: true },
         });
@@ -237,7 +259,11 @@ export const employeesHandler: DataImportHandler = {
         const before = await tx.hrEmployee.findFirst({ where: { id: row.targetId, tenantId: ctx.tenantId, campId: ctx.campId }, select: EMP_SELECT });
         if (!before) continue;
         const data: Record<string, unknown> = {};
-        for (const k of ['employeeCode', 'phone', 'email'] as const) if (has(row, k)) data[k] = v[k] ?? null;
+        for (const k of ['employeeCode', 'phone', 'email'] as const) if (has(row, k) && !(k !== 'employeeCode' && res.issues?.[k])) data[k] = v[k] ?? null;
+        if (res.issues) {
+          const next = applyIssues(readIssues(before.dataIssues), res.issues);
+          if (!sameIssues(readIssues(before.dataIssues), next)) data.dataIssues = toJson(next);
+        }
         if (res.names) Object.assign(data, res.names);
         if (pos !== undefined) { data.position = pos?.name ?? null; data.positionId = pos?.id ?? null; }
         if (res.mealLocationId !== undefined) data.mealLocationId = res.mealLocationId;

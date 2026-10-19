@@ -245,6 +245,8 @@ export interface Employee {
   firstName?: string | null
   /** v0.2.3 Блок D (S2): нэмэлт дугаарууд (үндсэн = phone) */
   extraPhones?: string[]
+  /** v0.2.3 Блок D (S9): «Мэдээлэл дутуу» */
+  dataIssues?: DataIssue[]
   position: string | null
   phone: string | null
   /** v0.2.0 — ADR-003-ын бэлтгэл */
@@ -282,6 +284,7 @@ export interface EmployeeProfile {
   lastName: string | null
   firstName: string | null
   extraPhones: string[]
+  dataIssues: DataIssue[]
   position: string | null
   phone: string | null
   email: string | null
@@ -687,6 +690,14 @@ export interface DataImportRow {
   values: Record<string, string | number | boolean | null>
   changes: Record<string, { from: unknown; to: unknown }>
   errors: DataRowError[]
+  /** v0.2.3 Блок D (S9): «Мэдээлэл дутуу» — оруулахад саад болохгүй */
+  warnings?: DataRowError[]
+}
+/** v0.2.3 Блок D (S9): ажилтны «Мэдээлэл дутуу» (буруу эх утга) */
+export interface DataIssue {
+  field: 'email' | 'phone' | 'extraPhones' | 'terminatedAt'
+  code: string
+  value: string
 }
 export type DataImportEnum =
   | 'EMPLOYEES'

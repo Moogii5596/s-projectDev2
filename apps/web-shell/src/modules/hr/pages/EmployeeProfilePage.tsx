@@ -126,6 +126,25 @@ function InfoTab({ p }: { p: EmployeeProfile }) {
   const { t } = useTranslation()
   return (
     <Card>
+      {/* v0.2.3 Блок D (S9): «Мэдээлэл дутуу» — импортын буруу эх утга; талбарыг засахад арилна */}
+      {(p.dataIssues?.length ?? 0) > 0 && (
+        <div role="note" className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <div className="font-medium mb-1">{t('hr.issue.title')}</div>
+          <ul className="list-disc pl-5 space-y-0.5">
+            {p.dataIssues.map((i) => (
+              <li key={i.field}>
+                {t(`hr.issue.field.${i.field}`)}
+                {i.value ? (
+                  <>
+                    : <span className="font-mono">{i.value}</span>
+                  </>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-1 text-xs text-amber-800">{t('hr.issue.hint')}</div>
+        </div>
+      )}
       <dl>
         <Row label={t('camp.emp.col.last_name')}>{p.lastName}</Row>
         <Row label={t('camp.emp.col.first_name')}>{p.firstName ?? p.fullName}</Row>

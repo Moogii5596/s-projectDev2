@@ -77,9 +77,10 @@ describe('S1 + S2 — нэр, нэмэлт утас', () => {
       { employeeCode: 'I-3', lastName: 'Овоггүй', organization: it_.ids.orgReg, department: 'ADM' },
       { employeeCode: 'I-4', firstName: 'Утас', extraPhones: '123', organization: it_.ids.orgReg, department: 'ADM' },
     ]);
-    expect(p.rows.map((r) => r.op)).toEqual(['create', 'create', 'error', 'error']);
+    // S9: буруу нэмэлт утас мөрийг алдаатай болгохгүй — анхааруулга («Мэдээлэл дутуу»)
+    expect(p.rows.map((r) => r.op)).toEqual(['create', 'create', 'error', 'create']);
     expect(p.rows[2].errors).toEqual([expect.objectContaining({ column: 'firstName', code: 'row.required' })]);
-    expect(p.rows[3].errors).toEqual([expect.objectContaining({ column: 'extraPhones', code: 'row.bad_phone' })]);
+    expect((p.rows[3] as unknown as { warnings: unknown[] }).warnings).toEqual([expect.objectContaining({ column: 'extraPhones', code: 'row.bad_phone' })]);
     expect((await confirm('employees', p.import.id, true)).status).toBe(200);
     const [e1] = await employee('I-1');
     expect(e1).toMatchObject({ fullName: 'Лхам-Осоржин Бямбадорж', familyName: 'Хөх чоносууд', extraPhones: [{ phone: '88252432' }, { phone: '99717768' }] });
@@ -229,9 +230,65 @@ describe('S7 — ажлаас гарсан ажилтан', () => {
   });
 });
 
+
+describe('S9 — «Мэдээлэл дутуу» (буруу имэйл / утас)', () => {
+  it('буруу утга мөрийг алдаатай болгохгүй: талбарт орохгүй, эх утга data_issues-д; шинэчлэхэд одоогийн зөв утгыг дарахгүй; API засвар → арилна; шүүлтүүр', async () => {
+    const p = await preview('employees', [
+      { employeeCode: 'Q-1', firstName: 'Дутуу', phone: '9909', email: 'abc6gmail.com', extraPhones: '88123354, 123', organization: it_.ids.orgReg, department: 'ADM' },
+    ]);
+    expect(p.rows[0].op).toBe('create');
+    const w = (p.rows[0] as unknown as { warnings: { column: string }[] }).warnings.map((x) => x.column).sort();
+    expect(w).toEqual(['email', 'extraPhones', 'phone']);
+    expect((await confirm('employees', p.import.id)).status).toBe(200);
+    const [e] = await employee('Q-1');
+    expect(e).toMatchObject({ phone: null, extraPhones: [{ phone: '88123354' }] });
+    const got = await it_.api().get(HR(`/employees/${e.id}`)).set(it_.as('admin'));
+    expect(got.body.email).toBeNull();
+    expect(got.body.dataIssues.map((i: { field: string; value: string }) => `${i.field}=${i.value}`).sort()).toEqual(['email=abc6gmail.com', 'extraPhones=123', 'phone=9909']);
+
+    const flt = await it_.api().get(HR('/employees')).query({ dataIssues: 'true' }).set(it_.as('admin'));
+    expect(flt.body.data.map((x: { employeeCode: string }) => x.employeeCode).sort()).toEqual(['I-4', 'Q-1']);
+
+    // Зөв имэйлтэй болгоод, дараа нь файлд буруу имэйл ирвэл зөв утга хэвээр, асуудал нэмэгдэнэ
+    const fix = await it_.api().patch(HR(`/employees/${e.id}`)).set(it_.as('admin')).send({ email: 'ok@mail.mn', phone: '99112233' });
+    expect(fix.body.dataIssues.map((i: { field: string }) => i.field)).toEqual(['extraPhones']);
+    const p2 = await preview('employees', [{ employeeCode: 'Q-1', email: 'bad@', organization: it_.ids.orgReg, department: 'ADM' }]);
+    expect(p2.rows[0].op).toBe('update');
+    expect(p2.rows[0].changes.email).toBeUndefined();
+    expect(p2.rows[0].changes.dataIssues).toEqual({ from: 'extraPhones', to: 'extraPhones, email' });
+  });
+});
+
+describe('S11 — гарсан огноо тодорхойгүй', () => {
+  it('огноогүй → TERMINATED + «Мэдээлэл дутуу»; дахин огноогүй → өөрчлөлтгүй; огноотой ирвэл тэр бүртгэлийг шинэчилнэ (давхар үүсэхгүй)', async () => {
+    const row = { employeeCode: 'U-1', firstName: 'Огноогүй', organization: it_.ids.orgReg, department: 'ADM', terminationReason: 'OTHER', terminationNote: 'Эх файлд шалтгаан тэмдэглээгүй' };
+    const p = await preview('former-employees', [row]);
+    expect(p.rows[0].op).toBe('create');
+    expect((await confirm('former-employees', p.import.id)).status).toBe(200);
+    let [u] = await employee('U-1');
+    expect(u).toMatchObject({ status: 'TERMINATED', terminatedAt: null });
+    expect((await preview('former-employees', [row])).rows[0].op).toBe('unchanged');
+
+    const p3 = await preview('former-employees', [{ ...row, terminatedAt: '2024-03-01' }]);
+    expect(p3.rows[0].op).toBe('update');
+    expect((await confirm('former-employees', p3.import.id)).status).toBe(200);
+    const all = await employee('U-1');
+    expect(all).toHaveLength(1);
+    [u] = all;
+    expect(u.terminatedAt?.toISOString().slice(0, 10)).toBe('2024-03-01');
+    const prof = await it_.api().get(HR(`/employees/${u.id}/profile`)).set(it_.as('admin'));
+    expect(prof.body.dataIssues).toEqual([]);
+  });
+
+  it('DB: огноогүй TERMINATED нь «Мэдээлэл дутуу»-гүй бол хориотой (ck_camp_employees_terminated)', async () => {
+    const [u] = await employee('U-1');
+    await expect(it_.prismaAdmin.hrEmployee.update({ where: { id: u.id }, data: { terminatedAt: null } })).rejects.toThrow();
+  });
+});
+
 describe('🔒 RLS — camp_employee_phones', () => {
   it('өөр tenant-ийн контекстод 0 мөр', async () => {
-    const other = await asTenant(it_.prismaRls, '00000000-0000-0000-0000-000000000003', (tx) => tx.hrEmployeePhone.count());
+    const other = await asTenant(it_.prismaRls, '00000000-0000-0000-0000-0000000000ff', (tx) => tx.hrEmployeePhone.count());
     expect(other).toBe(0);
     const mine = await asTenant(it_.prismaRls, it_.tenantId, (tx) => tx.hrEmployeePhone.count());
     expect(mine).toBeGreaterThan(0);

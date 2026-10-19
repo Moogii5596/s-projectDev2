@@ -214,10 +214,15 @@ export default function ImportDialog({
                     </td>
                     {columns.map((c) => {
                       const err = r.errors.find((e) => e.column === c.key)
+                      const warn = r.warnings?.find((e) => e.column === c.key)
                       const ch = r.changes[c.key]
                       const v = r.values[c.key]
                       return (
-                        <td key={c.key} className={`px-2 py-1 whitespace-nowrap ${err ? 'outline outline-2 -outline-offset-2 outline-red-400' : ''}`} title={err?.message}>
+                        <td
+                          key={c.key}
+                          className={`px-2 py-1 whitespace-nowrap ${err ? 'outline outline-2 -outline-offset-2 outline-red-400' : warn ? 'outline outline-2 -outline-offset-2 outline-amber-400' : ''}`}
+                          title={err?.message ?? warn?.message}
+                        >
                           {ch ? (
                             <>
                               <s className="text-gray-400">{String(ch.from ?? '—')}</s> {String(ch.to ?? '—')}
@@ -242,6 +247,19 @@ export default function ImportDialog({
                 .map((r) => (
                   <div key={r.row}>
                     <b>{t('camp.i18n.row', { row: r.row })}:</b> {r.errors.map((e) => (e.columnLabel ? `${e.columnLabel} — ${e.message}` : e.message)).join(' · ')}
+                  </div>
+                ))}
+            </div>
+          )}
+          {/* v0.2.3 Блок D (S9): «Мэдээлэл дутуу» — оруулна, дараа засна */}
+          {preview.rows.some((r) => (r.warnings?.length ?? 0) > 0) && (
+            <div role="note" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 space-y-0.5 max-h-40 overflow-auto">
+              <div className="font-medium">{t('camp.import.warnings_title')}</div>
+              {preview.rows
+                .filter((r) => (r.warnings?.length ?? 0) > 0)
+                .map((r) => (
+                  <div key={r.row}>
+                    <b>{t('camp.i18n.row', { row: r.row })}:</b> {r.warnings!.map((e) => (e.columnLabel ? `${e.columnLabel} — ${e.message}` : e.message)).join(' · ')}
                   </div>
                 ))}
             </div>

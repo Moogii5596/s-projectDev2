@@ -1161,6 +1161,8 @@ model HrEmployee {
   piiAccessLogs     CampPiiAccessLog[]
   /// v0.2.3 Блок D: нэмэлт утас (үндсэн = `phone`)
   extraPhones       HrEmployeePhone[]
+  /// v0.2.3 Блок D (S9, 20261019003): «Мэдээлэл дутуу» — [{ field, code, value }] (импортын буруу утга; талбарыг засахад арилна)
+  dataIssues        Json                   @default("[]") @map("data_issues")
   positionRef      HrPosition?         @relation(fields: [tenantId, positionId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_position")
   workMealLocation CampMealLocation?     @relation("CampEmployeeWorkMealLocation", fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_meal_location")
 

@@ -63,11 +63,13 @@ function viewRows(h: DataImportHandler, plan: PlannedRow[]) {
     values: r.values,
     changes: r.changes ?? {},
     errors: localizeRowErrors(r.errors, h.spec, lang),
+    /** v0.2.3 Блок D (S9): «Мэдээлэл дутуу» — оруулахад саад болохгүй */
+    warnings: localizeRowErrors(r.issues ?? [], h.spec, lang),
   }));
 }
 
 /** Хадгалах: зөвхөн задлагдсан мөр (DB-ийн шалгалтыг confirm дахин хийнэ) */
-const storable = (rows: ParsedTableRow[]) => rows.map(({ row, values, errors }) => ({ row, values, errors })) as unknown as Prisma.InputJsonValue;
+const storable = (rows: ParsedTableRow[]) => rows.map(({ row, values, errors, issues }) => ({ row, values, errors, ...(issues ? { issues } : {}) })) as unknown as Prisma.InputJsonValue;
 
 /**
  * v0.2.0 §0.5 — Мастер өгөгдлийн импорт (ажилтан FB-08, хэлтэс FB-02) ба экспорт (+ өрөө §2.4).

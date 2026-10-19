@@ -130,6 +130,8 @@ export class QueryEmployeesDto {
   @IsOptional() @Matches(/^(none|[0-9a-fA-F-]{36})$/, { message: 'positionId UUID эсвэл none' }) positionId?: string;
   /** v0.2.1: хоол авах эсэх (эффектив биш — ажилтан дээр тохируулсан утга) */
   @IsOptional() @Transform(toBool) @IsBoolean() mealsIncluded?: boolean;
+  /** v0.2.3 Блок D (S9): true = «Мэдээлэл дутуу» ажилтан л, false = дутуугүй */
+  @IsOptional() @Transform(toBool) @IsBoolean() dataIssues?: boolean;
   /** Код эсвэл нэрээр хайх (хэсэгчилсэн, том жижиг үсэг үл хамаарна) */
   @IsOptional() @Transform(trim) @IsString() @MaxLength(100) q?: string;
 }

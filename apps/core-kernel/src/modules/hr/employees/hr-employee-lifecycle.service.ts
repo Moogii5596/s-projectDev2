@@ -19,6 +19,7 @@ import type { ParsedRow } from '../attendance/import-parser';
 import { HrEmployeeHooks } from './employee-hooks';
 import { EMPLOYEE_AUDIT_FIELDS, HrEmployeesService } from './hr-employees.service';
 import { normalizeExtraPhones, phonesOut, replaceExtraPhones, resolveNames } from './employee-names';
+import { applyIssues, clearedBy, readIssues, toJson } from './data-issues';
 import { QueryPiiViewsDto, RehireEmployeeDto, TerminateEmployeeDto } from './hr-employees.dto';
 
 const P = CAMP_PERMISSIONS;
@@ -288,6 +289,8 @@ export class HrEmployeeLifecycleService {
         phone: dto.phone !== undefined ? dto.phone : old.phone,
         email: dto.email !== undefined ? (dto.email ? dto.email.toLowerCase() : null) : old.email,
         rehiredFromId: old.id,
+        // S9: хуучин бүртгэлийн «Мэдээлэл дутуу» (гарсан огноогоос бусад) шинэ бүртгэлд үлдэнэ; зассан талбар арилна
+        dataIssues: toJson(applyIssues(readIssues(old.dataIssues), { terminatedAt: null, ...clearedBy(dto) })),
         // trigger trg_camp_employees_position_roles: user_id + position_id → албан тушаалын загварын роль
         userId: user?.id ?? null,
       },
@@ -332,6 +335,7 @@ export class HrEmployeeLifecycleService {
         select: {
           id: true, campId: true, employeeCode: true, fullName: true, familyName: true, lastName: true, firstName: true, position: true, phone: true, email: true, status: true,
           extraPhones: { select: { phone: true }, orderBy: { sortOrder: 'asc' } },
+          dataIssues: true,
           organizationId: true, departmentId: true, crewId: true, positionId: true, mealLocationId: true, mealsIncluded: true,
           terminatedAt: true, terminationReason: true, terminationNote: true, createdAt: true, updatedAt: true, userId: true,
           organization: { select: { name: true } },
@@ -363,6 +367,7 @@ export class HrEmployeeLifecycleService {
       return {
         ...rest,
         extraPhones: phonesOut(extraPhones),
+        dataIssues: readIssues(rest.dataIssues),
         terminatedAt: e.terminatedAt ? fromDbDate(e.terminatedAt) : null,
         user: user ? { id: user.id, isActive: user.isActive, phone: user.phone, username: user.username, hasEmail: !isInternalEmail(user.email) } : null,
         rehiredFrom: e.rehiredFrom ? { ...e.rehiredFrom, terminatedAt: e.rehiredFrom.terminatedAt ? fromDbDate(e.rehiredFrom.terminatedAt) : null } : null,

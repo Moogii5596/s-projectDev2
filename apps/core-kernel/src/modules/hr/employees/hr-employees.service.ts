@@ -13,6 +13,7 @@ import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
 import { BulkEmployeesDto, CreateEmployeeDto, QueryEmployeesDto, UpdateEmployeeDto } from './hr-employees.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { normalizeExtraPhones, phonesOut, replaceExtraPhones, resolveNames } from './employee-names';
+import { applyIssues, clearedBy, readIssues, toJson } from './data-issues';
 
 const P = CAMP_PERMISSIONS;
 const EMPLOYEE_SELECT = {
@@ -47,11 +48,17 @@ const EMPLOYEE_SELECT = {
   workMealLocation: { select: { name: true } },
   /** v0.2.3 Блок D (S2): нэмэлт утас — хариунд `string[]` */
   extraPhones: { select: { phone: true }, orderBy: { sortOrder: 'asc' } },
+  /** v0.2.3 Блок D (S9): «Мэдээлэл дутуу» */
+  dataIssues: true,
 } as const;
 
 type EmployeeRow = Prisma.HrEmployeeGetPayload<{ select: typeof EMPLOYEE_SELECT }>;
 /** Хариу: `extraPhones` → `string[]` */
-export const employeeOut = <T extends Pick<EmployeeRow, 'extraPhones'>>(e: T) => ({ ...e, extraPhones: phonesOut(e.extraPhones) });
+export const employeeOut = <T extends Pick<EmployeeRow, 'extraPhones'> & { dataIssues?: Prisma.JsonValue }>(e: T) => ({
+  ...e,
+  extraPhones: phonesOut(e.extraPhones),
+  dataIssues: readIssues(e.dataIssues),
+});
 
 /** Түүхэд харьцуулах талбарууд (§0.4) */
 export const EMPLOYEE_AUDIT_FIELDS = ['employeeCode', 'fullName', 'familyName', 'lastName', 'firstName', 'position', 'phone', 'email', 'status', 'organizationId', 'departmentId', 'crewId', 'positionId', 'mealLocationId', 'mealsIncluded'] as const;
@@ -143,6 +150,8 @@ export class HrEmployeesService {
         ...(q.status ? { status: q.status } : { status: { not: CampEmployeeStatus.TERMINATED } }),
         ...(q.positionId ? { positionId: q.positionId === 'none' ? null : q.positionId } : {}),
         ...(q.mealsIncluded !== undefined ? { mealsIncluded: q.mealsIncluded } : {}),
+        // v0.2.3 Блок D (S9): «Мэдээлэл дутуу» шүүлтүүр
+        ...(q.dataIssues === true ? { NOT: { dataIssues: { equals: [] } } } : q.dataIssues === false ? { dataIssues: { equals: [] } } : {}),
         ...(q.q
           ? { OR: [{ employeeCode: { contains: q.q, mode: 'insensitive' } }, { fullName: { contains: q.q, mode: 'insensitive' } }] }
           : {}),
@@ -227,9 +236,16 @@ export class HrEmployeesService {
         const fields = ['organizationId', 'departmentId', 'crewId', 'employeeCode', 'phone', 'email', 'status', 'mealLocationId', 'mealsIncluded'] as const;
         const names = resolveNames(dto, e as unknown as Parameters<typeof resolveNames>[1]);
         if (names && !names.firstName) throw badRequest('camp.err.employees.name_required');
+        // S9: зассан талбарын «Мэдээлэл дутуу»-г арилгана (DTO = зөв утга)
+        const cleared = clearedBy(dto);
+        const issuesBefore = Object.keys(cleared).length
+          ? readIssues((await tx.hrEmployee.findFirst({ where: { id, tenantId }, select: { dataIssues: true } }))?.dataIssues)
+          : [];
+        const issuesAfter = applyIssues(issuesBefore, cleared);
         const data = {
           ...Object.fromEntries(fields.filter((f) => dto[f] !== undefined).map((f) => [f, f === 'email' && dto.email ? dto.email.toLowerCase() : dto[f]])),
           ...(names ?? {}),
+          ...(issuesAfter.length !== issuesBefore.length ? { dataIssues: toJson(issuesAfter) } : {}),
           ...(await this.resolvePosition(tx, tenantId, dto, (e as { positionId?: string | null }).positionId)),
         };
         let updated = await tx.hrEmployee.update({ where: { id }, data: data as Prisma.HrEmployeeUncheckedUpdateInput, select: EMPLOYEE_SELECT });

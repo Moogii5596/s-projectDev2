@@ -421,6 +421,7 @@ export const MESSAGES = {
   'row.alloc_employee_inactive': { mn: 'Ажилтан идэвхтэй биш — одоогийн (дуусаагүй) байрлуулалт хийх боломжгүй', en: 'The employee is not active — an open allocation is not allowed', zh: '该员工非在职，不能有未结束的分配' },
   'row.room_not_active': { mn: '{room} өрөө {status} төлөвтэй — одоогийн байрлуулалт хийх боломжгүй', en: 'Room {room} is {status} — an open allocation is not allowed', zh: '房间 {room} 状态为 {status}，不能有未结束的分配' },
   'row.over_capacity': { mn: '{room} өрөө {date}-ны шөнө {count}/{capacity} болно ({codes})', en: 'Room {room} would have {count}/{capacity} on the night of {date} ({codes})', zh: '房间 {room} 在 {date} 晚将有 {count}/{capacity} 人（{codes}）' },
+  'row.date_missing': { mn: 'Огноо тодорхойгүй — «Мэдээлэл дутуу» гэж тэмдэглэнэ', en: 'Date unknown — will be flagged as incomplete data', zh: '日期未知 — 将标记为资料不完整' },
   'camp.err.employees.name_required': { mn: 'Ажилтны нэр заавал', en: 'Employee first name is required', zh: '员工名字为必填' },
 } satisfies Record<string, Entry>;
 

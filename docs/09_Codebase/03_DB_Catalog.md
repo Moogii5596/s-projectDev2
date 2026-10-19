@@ -10,7 +10,7 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (49 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **66** хүснэгт, 36 enum, 25 функц, 55 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (50 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **66** хүснэгт, 36 enum, 25 функц, 55 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
@@ -830,7 +830,7 @@ Trigger: `trg_camp_employee_phones_updated_at`
 
 ### camp_employees
 
-🔒🔒 · үүсгэсэн `20261009002_camp_master.sql` · өөрчлөлт: +email (`20261011003_camp_employees_email.sql`), +position_id (`20261012003_camp_employees_position_meals.sql`), +meal_location_id (`20261012003_camp_employees_position_meals.sql`), +meals_included (`20261012003_camp_employees_position_meals.sql`), +user_id (`20261013004_core_users_login.sql`), +terminated_at (`20261017002_camp_employees_termination.sql`), +termination_reason (`20261017002_camp_employees_termination.sql`), +termination_note (`20261017002_camp_employees_termination.sql`), +rehired_from_id (`20261017002_camp_employees_termination.sql`), +family_name (`20261019002_hr_employee_names_phones.sql`), +last_name (`20261019002_hr_employee_names_phones.sql`), +first_name (`20261019002_hr_employee_names_phones.sql`)
+🔒🔒 · үүсгэсэн `20261009002_camp_master.sql` · өөрчлөлт: +email (`20261011003_camp_employees_email.sql`), +position_id (`20261012003_camp_employees_position_meals.sql`), +meal_location_id (`20261012003_camp_employees_position_meals.sql`), +meals_included (`20261012003_camp_employees_position_meals.sql`), +user_id (`20261013004_core_users_login.sql`), +terminated_at (`20261017002_camp_employees_termination.sql`), +termination_reason (`20261017002_camp_employees_termination.sql`), +termination_note (`20261017002_camp_employees_termination.sql`), +rehired_from_id (`20261017002_camp_employees_termination.sql`), +family_name (`20261019002_hr_employee_names_phones.sql`), +last_name (`20261019002_hr_employee_names_phones.sql`), +first_name (`20261019002_hr_employee_names_phones.sql`), +data_issues (`20261019003_hr_employee_data_issues.sql`)
 
 | Багана | Төрөл | Шинж | FK |
 |---|---|---|---|
@@ -859,8 +859,9 @@ Trigger: `trg_camp_employee_phones_updated_at`
 | family_name | TEXT |  |  |
 | last_name | TEXT |  |  |
 | first_name | TEXT | NN |  |
+| data_issues | JSONB | NN |  |
 
-Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, camp_id, id)` · `UNIQUE (tenant_id, employee_code)` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id)` · `FOREIGN KEY (tenant_id, organization_id) REFERENCES camp_organizations (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, department_id) REFERENCES camp_departments (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, camp_id, crew_id) REFERENCES camp_crews (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, position_id) REFERENCES camp_positions (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, meal_location_id) REFERENCES camp_meal_locations (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, user_id) REFERENCES core_users (tenant_id, id) ON DELETE SET NULL (user_id)` · `CHECK ( (status = 'TERMINATED') = (terminated_at IS NOT NULL AND termination_reason IS NOT NULL) )` · `CHECK ( termination_reason IS DISTINCT FROM 'OTHER' OR btrim(coalesce(termination_note, '')) <> '' )` · `FOREIGN KEY (tenant_id, rehired_from_id) REFERENCES camp_employees (tenant_id, id)` · `CHECK (btrim(first_name) <> '')`
+Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, camp_id, id)` · `UNIQUE (tenant_id, employee_code)` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id)` · `FOREIGN KEY (tenant_id, organization_id) REFERENCES camp_organizations (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, department_id) REFERENCES camp_departments (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, camp_id, crew_id) REFERENCES camp_crews (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, position_id) REFERENCES camp_positions (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, meal_location_id) REFERENCES camp_meal_locations (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, user_id) REFERENCES core_users (tenant_id, id) ON DELETE SET NULL (user_id)` · `CHECK ( (status = 'TERMINATED') = (terminated_at IS NOT NULL AND termination_reason IS NOT NULL) )` · `CHECK ( termination_reason IS DISTINCT FROM 'OTHER' OR btrim(coalesce(termination_note, '')) <> '' )` · `FOREIGN KEY (tenant_id, rehired_from_id) REFERENCES camp_employees (tenant_id, id)` · `CHECK (btrim(first_name) <> '')` · `CHECK (jsonb_typeof(data_issues) = 'array')` · `CHECK ( (status = 'TERMINATED') = ( termination_reason IS NOT NULL AND (terminated_at IS NOT NULL OR data_issues @> '[{"field": "terminatedA`
 
 Policy: `tenant_isolation_camp_employees` (permissive ALL → app_user (camp_apply_tenant_rls))
 

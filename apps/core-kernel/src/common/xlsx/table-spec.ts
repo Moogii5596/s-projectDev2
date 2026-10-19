@@ -38,6 +38,11 @@ export interface ColumnSpec {
   width?: number;
   /** Text-ийн нэмэлт шалгалт (жнь код) */
   pattern?: RegExp;
+  /**
+   * v0.2.3 Блок D (S9): буруу утга мөрийг АЛДААТАЙ болгохгүй — утга null, эх утга `issues`-д
+   * (handler «Мэдээлэл дутуу»-д хадгална). Хоосон + required бол алдаа хэвээр.
+   */
+  soft?: boolean;
 }
 
 export interface TableSpec {
@@ -62,6 +67,8 @@ export interface ParsedTableRow {
   /** Файлд байхгүй багана → түлхүүр алга (шинэчлэхэд өөрчлөхгүй); байгаа ч хоосон → null */
   values: Record<string, CellValue>;
   errors: RowError[];
+  /** v0.2.3 Блок D (S9): `soft` баганын буруу утга — анхааруулга (оруулахад саад болохгүй) */
+  issues?: RowError[];
 }
 
 // ── Таних ───────────────────────────────────────────────────
@@ -147,6 +154,7 @@ function finishRows(spec: TableSpec, raws: { row: number; cells: Record<string, 
   return raws.map(({ row, cells }) => {
     const values: Record<string, CellValue> = {};
     const errors: RowError[] = [];
+    const issues: RowError[] = [];
     for (const col of spec.columns) {
       if (!present.has(col.key)) {
         if (col.required) errors.push({ column: col.key, code: 'row.required' });
@@ -154,7 +162,8 @@ function finishRows(spec: TableSpec, raws: { row: number; cells: Record<string, 
       }
       const { value, error } = coerceCell(col, cells[col.key]);
       values[col.key] = value;
-      if (error) errors.push(error);
+      if (error && col.soft && error.code !== 'row.required') issues.push(error);
+      else if (error) errors.push(error);
     }
     if (spec.keyColumn) {
       const k = values[spec.keyColumn];
@@ -165,7 +174,7 @@ function finishRows(spec: TableSpec, raws: { row: number; cells: Record<string, 
         else seen.set(norm, row);
       }
     }
-    return { row, values, errors };
+    return issues.length ? { row, values, errors, issues } : { row, values, errors };
   });
 }
 

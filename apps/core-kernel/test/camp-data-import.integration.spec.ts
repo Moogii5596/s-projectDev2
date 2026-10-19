@@ -71,7 +71,7 @@ describe('📥 Загвар', () => {
 describe('👥 Ажилтан — хүснэгтээр', () => {
   const base = () => ({ organization: it_.ids.orgReg, department: 'ADM', crew: 'A' });
 
-  it('preview: шинэ 1, алдаатай 3 (хэлтэс алга, утас буруу, өөр кемпийн код); DB-д юу ч бичигдээгүй', async () => {
+  it('preview: шинэ 2 (нэг нь утас буруу → «Мэдээлэл дутуу», v0.2.3 S9), алдаатай 2 (хэлтэс алга, өөр кемпийн код); DB-д юу ч бичигдээгүй', async () => {
     const res = await it_.api().post(DI('/employees')).set(it_.as('admin', { 'Accept-Language': 'en' })).send({
       rows: [
         { employeeCode: 'E-1', fullName: 'Бат', phone: '9911 2233', email: 'Bat@Mail.mn', ...base() },
@@ -82,11 +82,11 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
       ],
     });
     expect(res.status).toBe(201);
-    expect(res.body.import).toMatchObject({ status: 'PREVIEW', source: 'GRID', totalRows: 4, createRows: 1, errorRows: 3 });
+    expect(res.body.import).toMatchObject({ status: 'PREVIEW', source: 'GRID', totalRows: 4, createRows: 2, errorRows: 2 });
     const rows = res.body.rows as { row: number; op: string; errors: { column: string; code: string; message: string; columnLabel: string }[]; values: Record<string, unknown> }[];
     expect(rows[0]).toMatchObject({ op: 'create', values: { phone: '99112233', email: 'bat@mail.mn' } });
     expect(rows[1].errors[0]).toMatchObject({ column: 'department', code: 'row.ref_not_found', message: '"NOPE" was not found', columnLabel: 'Department code' });
-    expect(rows[2].errors[0].code).toBe('row.bad_phone');
+    expect(rows[2]).toMatchObject({ op: 'create', errors: [], warnings: [expect.objectContaining({ column: 'phone', code: 'row.bad_phone' })] });
     expect(rows[3].errors[0]).toMatchObject({ code: 'row.code_other_camp' });
     expect(await it_.prismaAdmin.hrEmployee.count({ where: { tenantId: it_.tenantId, campId: it_.ids.c1 } })).toBe(0);
     it_.ids.imp1 = res.body.import.id;
@@ -95,13 +95,15 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
   it('confirm (skipErrors=false) → 409 import.has_errors + алдаатай мөрүүд; юу ч бичигдэхгүй; дараа нь skipErrors → 1 үүснэ, түүх IMPORT', async () => {
     const bad = await it_.api().post(DI(`/employees/${it_.ids.imp1}/confirm`)).set(it_.as('admin')).send({});
     expect(bad.status).toBe(409);
-    expect(bad.body).toMatchObject({ code: 'import.has_errors', params: { n: 3 }, message: '3 мөр алдаатай — засаад дахин оруулна уу' });
-    expect(bad.body.rows).toHaveLength(3);
+    expect(bad.body).toMatchObject({ code: 'import.has_errors', params: { n: 2 }, message: '2 мөр алдаатай — засаад дахин оруулна уу' });
+    expect(bad.body.rows).toHaveLength(2);
     expect(await it_.prismaAdmin.hrEmployee.count({ where: { tenantId: it_.tenantId, campId: it_.ids.c1 } })).toBe(0);
 
     const ok = await it_.api().post(DI(`/employees/${it_.ids.imp1}/confirm`)).set(it_.as('admin')).send({ skipErrors: true });
     expect(ok.status).toBe(200);
-    expect(ok.body).toMatchObject({ status: 'CONFIRMED', created: 1, updated: 0, skipped: 3 });
+    expect(ok.body).toMatchObject({ status: 'CONFIRMED', created: 2, updated: 0, skipped: 2 });
+    const e3 = await it_.prismaAdmin.hrEmployee.findFirstOrThrow({ where: { tenantId: it_.tenantId, employeeCode: 'E-3' } });
+    expect(e3).toMatchObject({ phone: null, dataIssues: [{ field: 'phone', code: 'row.bad_phone', value: '99-11' }] });
     const e = await it_.prismaAdmin.hrEmployee.findFirstOrThrow({ where: { tenantId: it_.tenantId, employeeCode: 'E-1' } });
     expect(e).toMatchObject({ phone: '99112233', email: 'bat@mail.mn', crewId: it_.ids.crew, status: 'ACTIVE' });
     const audit = await it_.prismaAdmin.campAuditLog.findMany({ where: { tenantId: it_.tenantId, entityId: e.id } });
@@ -180,8 +182,8 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
     expect(sheet.rows.find((r) => r[0] === 'E-1')).toContain('Active');
     const back = await it_.api().post(DI('/employees')).set(it_.as('admin')).attach('file', exp.body as Buffer, 'export.xlsx');
     expect(back.status).toBe(201);
-    // v0.2.1: E-71/E-72 (албан тушаал, хоолны байршил, хоол авах = үгүй) ч өөрчлөлтгүй буцаж уншигдана
-    expect(back.body.import).toMatchObject({ totalRows: 4, unchangedRows: 4, createRows: 0, updateRows: 0, errorRows: 0 });
+    // v0.2.1: E-71/E-72 (албан тушаал, хоолны байршил, хоол авах = үгүй) ч өөрчлөлтгүй; v0.2.3 S9: E-3 (утас хоосон + «Мэдээлэл дутуу») — хоосон утас асуудлыг арилгахгүй
+    expect(back.body.import).toMatchObject({ totalRows: 5, unchangedRows: 5, createRows: 0, updateRows: 0, errorRows: 0 });
   });
 
   it('зэрэгцээ confirm → нэг нь 200, нөгөө нь 409 (давхар үүсэхгүй)', async () => {

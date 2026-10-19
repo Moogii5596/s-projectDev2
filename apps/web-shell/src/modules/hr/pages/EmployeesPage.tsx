@@ -121,6 +121,18 @@ export default function EmployeesPage() {
           <option value="INACTIVE">{EMPLOYEE_STATUS_LABEL.INACTIVE}</option>
           <option value="TERMINATED">{EMPLOYEE_STATUS_LABEL.TERMINATED}</option>
         </select>
+        {/* v0.2.3 Блок D (S9) */}
+        <label className="flex items-center gap-1 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={filter.dataIssues === true}
+            onChange={(e) => {
+              setSelected(new Set())
+              setFilter((f) => ({ ...f, dataIssues: e.target.checked ? true : undefined }))
+            }}
+          />
+          {t('hr.issue.filter')}
+        </label>
       </div>
       {canEdit && selected.size > 0 && (
         <BulkBar campId={campId} ids={[...selected]} positions={positions.data ?? []} onDone={() => setSelected(new Set())} />
@@ -168,6 +180,11 @@ export default function EmployeesPage() {
                 <Link to={`/hr/${campId}/employees/${e.id}`} className="hover:text-blue-700 hover:underline">
                   {e.fullName}
                 </Link>
+                {(e.dataIssues?.length ?? 0) > 0 && (
+                  <span className="ml-2" title={e.dataIssues!.map((i) => t(`hr.issue.field.${i.field}`)).join(', ')}>
+                    <Badge tone="yellow">{t('hr.issue.badge')}</Badge>
+                  </span>
+                )}
               </td>
               <td className={`${td} text-gray-600`}>{e.positionRef?.name ?? e.position ?? '—'}</td>
               <td className={td}>{e.department.code}</td>

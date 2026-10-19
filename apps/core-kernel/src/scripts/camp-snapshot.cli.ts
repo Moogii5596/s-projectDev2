@@ -60,7 +60,8 @@ async function snapshot(): Promise<number> {
   if (!isRealIsoDate(today)) throw new Error(`--today буруу: ${today}`);
   const out = arg('out');
   if (!out) throw new Error('--out=<файл.json> заавал');
-  const likeSlugs = like ? [...new Set(Object.keys(like.camps).map((k) => k.split('/')[0]))] : [];
+  // A-д байсан БҮХ байгууллага (кемптэй + кемпгүй — perms) — кемпгүй байгууллагыг B-ээс хасвал «perms.<slug>: B-д алга» хуурамч зөрүү (OPS-011)
+  const likeSlugs = like ? [...new Set([...Object.keys(like.camps).map((k) => k.split('/')[0]), ...Object.keys(like.perms ?? {})])] : [];
   const slug = arg('slug') ?? (likeSlugs.length === 1 ? likeSlugs[0] : undefined);
   const num = (name: string, def: number) => {
     const v = arg(name);

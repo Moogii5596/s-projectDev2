@@ -139,6 +139,8 @@ export interface EmployeeQuery {
   /** v0.2.1: UUID эсвэл 'none' */
   positionId?: string
   mealsIncluded?: boolean
+  /** v0.2.3 Блок D (S9): «Мэдээлэл дутуу» */
+  dataIssues?: boolean
 }
 
 export interface MovementQuery {

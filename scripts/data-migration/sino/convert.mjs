@@ -107,6 +107,9 @@ export function crewOf(v) {
   return { A: 'A', B: 'B', C: 'C', D: 'D', А: 'A', В: 'B', Б: 'B', С: 'C', Д: 'D' }[m[1]];
 }
 
+/** Ээлж (A–D) → системийн ростерын код (mapping.json crewCodes) */
+const crewCode = (c) => (c ? (MAP.crewCodes?.[c] ?? c) : null);
+
 function deptCode(raw) {
   const s = mnPart(raw).toUpperCase();
   if (!s) return null;
@@ -166,14 +169,13 @@ function personRow(sheet, r, file) {
   const c = r.cells;
   const code = normCode(c[14]);
   const name = `${clean(c[2])} ${clean(c[3])}`.trim();
+  // v0.2.3 Блок D (S9): буруу утгыг ХАЯХГҮЙ — системд «Мэдээлэл дутуу» болж эх утгаараа хадгалагдана (HR дараа засна)
   const phones = splitPhones(c[4]);
-  const valid = phones.filter((p) => PHONE.test(p));
-  phones.filter((p) => !PHONE.test(p)).forEach((p) => warn(file, sheet, r.n, code, 'Утас', p, 'буруу дугаар — хасав'));
-  let email = clean(c[8]).toLowerCase() || null;
-  if (email && !EMAIL.test(email)) {
-    warn(file, sheet, r.n, code, 'Имэйл', email, 'буруу имэйл — хасав');
-    email = null;
-  }
+  const primary = phones.find((p) => PHONE.test(p)) ?? phones[0] ?? null;
+  const extras = phones.filter((p) => p !== primary);
+  phones.filter((p) => !PHONE.test(p)).forEach((p) => warn(file, sheet, r.n, code, 'Утас', p, 'буруу дугаар → системд «Мэдээлэл дутуу»'));
+  const email = clean(c[8]).toLowerCase() || null;
+  if (email && !EMAIL.test(email)) warn(file, sheet, r.n, code, 'Имэйл', email, 'буруу имэйл → системд «Мэдээлэл дутуу»');
   const dept = deptCode(c[17]);
   if (dept === undefined) warn(file, sheet, r.n, code, 'Хэлтэс', c[17], 'mapping.json-д таарах хэлтэс алга');
   return {
@@ -182,8 +184,8 @@ function personRow(sheet, r, file) {
     lastName: clean(c[2]) || null,
     firstName: clean(c[3]) || null,
     position: positionName(c[15]),
-    phone: valid[0] ?? null,
-    extraPhones: valid.slice(1).join(', ') || null,
+    phone: primary,
+    extraPhones: extras.join(', ') || null,
     email,
     organization: ORG,
     department: dept ?? null,
@@ -193,7 +195,9 @@ function personRow(sheet, r, file) {
 
 const isDataRow = (r) => typeof r.cells[0] === 'number' && r.cells.slice(1, 4).some((v) => clean(v));
 
+const TODAY = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
 const employees = [];
+const activeHistory = [];
 const activeCodes = new Map();
 for (const r of activeSheet.rows.filter(isDataRow)) {
   const p = personRow(activeSheet.name, r, HR_FILE);
@@ -204,32 +208,49 @@ for (const r of activeSheet.rows.filter(isDataRow)) {
   if (!p.department) { skip(HR_FILE, activeSheet.name, r.n, p.employeeCode, p._name, 'Хэлтэс тодорхойгүй'); continue; }
   if (activeCodes.has(p.employeeCode)) { skip(HR_FILE, activeSheet.name, r.n, p.employeeCode, p._name, `ID давхардсан (${activeCodes.get(p.employeeCode)}-р мөр)`); continue; }
   activeCodes.set(p.employeeCode, r.n);
-  if (clean(r.cells[20])) warn(HR_FILE, activeSheet.name, r.n, p.employeeCode, 'Ажлаас гарсан өдөр', r.cells[20], 'идэвхтэй ажилтанд бөглөгдсөн — импортлоогүй (өмнө гарч дахин орсон байж магадгүй)');
-  employees.push({ ...p, crew, status: 'ACTIVE' });
+  employees.push({ ...p, crew: crewCode(crew), status: 'ACTIVE' });
+  // S10: идэвхтэй ажилтны «Ажлаас гарсан өдөр» = өмнө гарч дахин орсон → огноо бүр нэг түүхийн бүртгэл (04 файлд)
+  const ends = parseDates(r.cells[20]).filter((d) => d <= TODAY).sort();
+  if (clean(r.cells[20]) && ends.length === 0) warn(HR_FILE, activeSheet.name, r.n, p.employeeCode, 'Ажлаас гарсан өдөр', r.cells[20], 'огноо уншигдсангүй — түүх үүсгэсэнгүй');
+  for (const end of ends) activeHistory.push({ ...p, crew: crewCode(crew), terminatedAt: end, terminationReason: 'OTHER', terminationNote: MAP.rejoinedNote, _row: r.n, _sheet: activeSheet.name });
 }
 
 const former = [];
 const formerKeys = new Set();
-const today = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+/** Нэг (код + огноо) нэг бүртгэл; огноогүй ('') — кодоор нэг */
+function pushFormer(rec, sheet, rowN) {
+  const key = `${rec.employeeCode}|${rec.terminatedAt ?? ''}`;
+  if (formerKeys.has(key)) { skip(HR_FILE, sheet, rowN, rec.employeeCode, rec._name, `Давхардсан (ID + огноо ${rec.terminatedAt ?? 'тодорхойгүй'})`); return; }
+  formerKeys.add(key);
+  former.push(rec);
+}
 for (const r of formerSheet.rows.filter(isDataRow)) {
   const p = personRow(formerSheet.name, r, HR_FILE);
   if (!p.employeeCode) { skip(HR_FILE, formerSheet.name, r.n, r.cells[14], p._name, 'ID алга / буруу (хэрэглэгчийн шийдвэр: ID-гүйг оруулахгүй)'); continue; }
   if (!p.firstName) { skip(HR_FILE, formerSheet.name, r.n, p.employeeCode, p._name, 'Нэр алга'); continue; }
   if (!p.department) { skip(HR_FILE, formerSheet.name, r.n, p.employeeCode, p._name, 'Хэлтэс тодорхойгүй'); continue; }
-  const dates = parseDates(r.cells[20]).filter((d) => d <= today);
-  if (dates.length === 0) { skip(HR_FILE, formerSheet.name, r.n, p.employeeCode, p._name, `Гарсан огноо уншигдсангүй: "${clean(r.cells[20]) || '—'}"`); continue; }
-  const terminatedAt = dates.sort().at(-1);
-  if (dates.length > 1) warn(HR_FILE, formerSheet.name, r.n, p.employeeCode, 'Ажлаас гарсан өдөр', r.cells[20], `олон огноо — сүүлийнх ${terminatedAt}`);
-  const key = `${p.employeeCode}|${terminatedAt}`;
-  if (formerKeys.has(key)) { skip(HR_FILE, formerSheet.name, r.n, p.employeeCode, p._name, `Давхардсан мөр (ID + огноо ${terminatedAt})`); continue; }
-  formerKeys.add(key);
   const note = clean(r.cells[7]);
   const reason = reasonOf(note);
-  const crew = [34, 35, 36].map((i) => crewOf(r.cells[i])).find(Boolean) ?? null;
-  former.push({
-    ...p, crew, terminatedAt, terminationReason: reason,
-    terminationNote: (note || (reason === 'OTHER' ? MAP.defaultTerminationNote : '')).slice(0, 500) || null,
+  const crew = crewCode([34, 35, 36].map((i) => crewOf(r.cells[i])).find(Boolean) ?? null);
+  // S10: олон огноо = олон удаа орж гарсан. Гарсан огноо бүр нэг бүртгэл; сүүлийнх нь тэмдэглэлийн шалтгаантай, өмнөхүүд — «Бусад».
+  // S11: сүүлд орсны дараа гарсан огноо алга (эсвэл огт алга) → огноогүй бүртгэл («Мэдээлэл дутуу»)
+  const starts = parseDates(r.cells[18]).sort();
+  const ends = parseDates(r.cells[20]).filter((d) => d <= TODAY).sort();
+  const lastStart = starts.at(-1);
+  const undatedTail = ends.length === 0 || (lastStart && lastStart > ends.at(-1));
+  if (ends.length > 1 || starts.length > 1) warn(HR_FILE, formerSheet.name, r.n, p.employeeCode, 'Орсон/гарсан өдөр', `${clean(r.cells[18])} / ${clean(r.cells[20])}`, `олон удаа орж гарсан → ${ends.length + (undatedTail ? 1 : 0)} бүртгэл`);
+  if (ends.length === 0) warn(HR_FILE, formerSheet.name, r.n, p.employeeCode, 'Ажлаас гарсан өдөр', r.cells[20], 'огноо тодорхойгүй → системд «Мэдээлэл дутуу»');
+  const finalNote = (note || (reason === 'OTHER' ? MAP.defaultTerminationNote : '')).slice(0, 500) || null;
+  ends.forEach((end, i) => {
+    const isLast = i === ends.length - 1 && !undatedTail;
+    pushFormer({ ...p, crew, terminatedAt: end, terminationReason: isLast ? reason : 'OTHER', terminationNote: isLast ? finalNote : MAP.earlierStintNote }, formerSheet.name, r.n);
   });
+  if (undatedTail) pushFormer({ ...p, crew, terminatedAt: null, terminationReason: reason, terminationNote: finalNote }, formerSheet.name, r.n);
+}
+// Идэвхтэй ажилтны өмнөх ажилласан хугацаанууд (S10)
+for (const h of activeHistory) {
+  const { _row, _sheet, ...rec } = h;
+  pushFormer(rec, _sheet, _row);
 }
 
 // ── 2. Хэлтэс, албан тушаал ──────────────────────────────────
@@ -260,7 +281,8 @@ for (const p of positions) {
 const ROOM_FILE = MAP.files.rooms;
 const roomSheets = await readSheetRows(ROOM_FILE);
 const PRESENT = new Set(MAP.roomCodes.present);
-const allCodes = new Map([...employees.map((e) => [e.employeeCode, 'ACTIVE']), ...former.map((e) => [e.employeeCode, 'FORMER'])]);
+// Идэвхтэй давуу (ижил код гарсан хуудсанд ч байж болно — дахин орсон)
+const allCodes = new Map([...former.map((e) => [e.employeeCode, 'FORMER']), ...employees.map((e) => [e.employeeCode, 'ACTIVE'])]);
 const rooms = new Map(); // roomNo → { maxPerDay }
 const evidence = new Map(); // code → [{ date, room, last }]
 const monthOf = (name) => {
@@ -312,7 +334,7 @@ const roomRows = [...rooms.entries()]
   .map(([roomNo, r]) => ({ building: buildingOf(roomNo), roomNo, floor: null, capacity: Math.max(1, r.max), status: 'ACTIVE', note: r.max === 0 ? MAP.buildings.emptyRoomNote : null }));
 
 const formerLast = new Map();
-for (const f of former) if (!formerLast.has(f.employeeCode) || f.terminatedAt > formerLast.get(f.employeeCode)) formerLast.set(f.employeeCode, f.terminatedAt);
+for (const f of former) if (f.terminatedAt && (!formerLast.has(f.employeeCode) || f.terminatedAt > formerLast.get(f.employeeCode))) formerLast.set(f.employeeCode, f.terminatedAt);
 const allocations = [];
 for (const [code, evs] of evidence) {
   evs.sort((a, b) => a.date.localeCompare(b.date));
@@ -373,7 +395,7 @@ const add = (name, headers, rows) => {
 };
 const summary = [
   ['01 Хэлтэс', departments.length], ['02 Албан тушаал', positions.length], ['03 Ажилтан (идэвхтэй, A–D)', employees.length],
-  ['04 Ажлаас гарсан (түүх)', former.length], ['05 Байрны төрөл', buildingTypes.length], ['06 Байр', buildings.length], ['07 Өрөө', roomRows.length],
+  ['04 Ажлаас гарсан (түүх)', former.length], ['   үүнээс огноо тодорхойгүй', former.filter((f) => !f.terminatedAt).length], ['   үүнээс идэвхтэй ажилтны өмнөх хугацаа', activeHistory.length], ['05 Байрны төрөл', buildingTypes.length], ['06 Байр', buildings.length], ['07 Өрөө', roomRows.length],
   ['08 Өрөөнд байрлуулалт', allocations.length], ['Хасагдсан мөр', report.skipped.length], ['Анхааруулга', report.warnings.length],
   ['Байгууллага (--org)', ORG], ['Сүүлийн сар (одоогийн байрлуулалт)', lastMonthKey],
 ];
