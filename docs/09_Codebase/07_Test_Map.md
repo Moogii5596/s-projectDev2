@@ -53,7 +53,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 96 файл, ~783 тест
+## Unit — core-kernel — 96 файл, ~784 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -147,7 +147,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/workflow/workflow-definition.service.test.ts` | 4 | WorkflowDefinitionService |
 | `core-kernel/src/modules/workflow/workflow.service.spec.ts` | 13 | WorkflowService |
 | `core-kernel/src/scripts/camp-login-report.spec.ts` | 1 | camp-login-report (v0.2.2 §8) |
-| `core-kernel/src/scripts/camp-snapshot-perms.spec.ts` | 7 | camp-snapshot perms (v0.2.2 §5.1/5.2) · camp-snapshot perms — ADR-007 (v0.2.3): хуучин код ↔ шинэ код |
+| `core-kernel/src/scripts/camp-snapshot-perms.spec.ts` | 8 | camp-snapshot perms (v0.2.2 §5.1/5.2) · camp-snapshot perms — ADR-007 (v0.2.3): хуучин код ↔ шинэ код |
 | `core-kernel/src/scripts/e2e-fixture.spec.ts` | 4 | setupFixture · teardownFixture |
 | `core-kernel/src/scripts/pilot-admin.spec.ts` | 7 | validate* · onboard · ensureUser |
 | `core-kernel/src/scripts/test-user.spec.ts` | 9 | ensureTestUser · assertLocalUrl · parseDotenv / parseArgs |

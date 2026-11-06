@@ -28,7 +28,7 @@ describe('camp-snapshot perms (v0.2.2 §5.1/5.2)', () => {
     const extra = { ...Bok, effective: [...Bok.effective, 'u2|camp.settings.manage|*'].sort() };
     expect(comparePerms(snap({ t: A }), snap({ t: extra }), 'v022-q9')).toEqual([
       'perms.t: + u2|camp.settings.manage|*',
-      'perms.t: B дотор legacy ≠ effective (1 мөр) — шилжүүлэлт эсвэл загвар хэрэгжүүлээгүй',
+      'perms.t: legacy/effective зөрүү өөрчлөгдсөн (1 мөр) — шилжүүлэлт эсвэл загварыг шалгана',
     ]);
     const lost = { ...Bok, legacy: Bok.legacy.filter((k) => k !== `u2|${CLOSE}|C1`), effective: Bok.effective.filter((k) => k !== `u2|${CLOSE}|C1`) };
     expect(comparePerms(snap({ t: A }), snap({ t: lost }), 'v022-q9')).toEqual([`perms.t: − u2|${CLOSE}|C1`]);
@@ -61,7 +61,17 @@ describe('camp-snapshot perms — ADR-007 (v0.2.3): хуучин код ↔ ши
     const lost = { ...B, effective: newKeys.filter((k) => k !== 'u2|hr.shift.adjust|C1') };
     expect(comparePerms(snap({ t: A }), snap({ t: lost }))).toEqual([
       'perms.t: − u2|hr.shift.adjust|C1',
-      'perms.t: B дотор legacy ≠ effective (1 мөр) — шилжүүлэлт эсвэл загвар хэрэгжүүлээгүй',
+      'perms.t: legacy/effective зөрүү өөрчлөгдсөн (1 мөр) — шилжүүлэлт эсвэл загварыг шалгана',
+    ]);
+  });
+
+  it('өмнөх шууд эрхийн зөрүү хэвээр байвал зөвшөөрч, шинэ зөрүүг илрүүлнэ', () => {
+    const before = { ...A, legacy: oldKeys.filter((k) => k !== 'u1|camp.employee.manage|*') };
+    const after = { ...B, legacy: newKeys.filter((k) => k !== 'u1|hr.employee.manage|*') };
+    expect(comparePerms(snap({ t: before }), snap({ t: after }))).toEqual([]);
+    const changed = { ...after, legacy: after.legacy.filter((k) => k !== 'u2|hr.shift.adjust|C1') };
+    expect(comparePerms(snap({ t: before }), snap({ t: changed }))).toEqual([
+      'perms.t: legacy/effective зөрүү өөрчлөгдсөн (1 мөр) — шилжүүлэлт эсвэл загварыг шалгана',
     ]);
   });
 });

@@ -290,7 +290,7 @@ async function loadPerms(tx: Tx, tenantId: string, schema: PermSchema): Promise<
 /**
  * Эрхийн харьцуулалт (v0.2.2 §5.1/5.2): A-ийн бодит эрх ↔ B-ийн бодит эрх (+ / − мөр).
  * expect = 'v022-q9' → Q9-ийн хүлээгдэж буй нэмэлтийг зөвшөөрнө; хүлээгдэж буй мөр B-д алга бол мөн зөрүү.
- * Мөн B дотор legacy ≠ effective бол (upgrade-ийн ДАРАА шууд авахад) зөрүү — шилжүүлэлт буруу.
+ * Legacy ба effective-ийн зөрүү өмнөөс байсан бол хадгалагдсан эсэхийг шалгана (шууд эрх / өөрчлөгдсөн загвар).
  */
 export function comparePerms(a: CampSnapshot, b: CampSnapshot, expect: PermsExpectation = 'none'): string[] {
   const out: string[] = [];
@@ -313,9 +313,13 @@ export function comparePerms(a: CampSnapshot, b: CampSnapshot, expect: PermsExpe
     for (const k of [...ea].sort()) if (!eb.has(k)) out.push(`perms.${slug}: − ${k}`);
     for (const k of [...allowed].sort()) if (!eb.has(k)) out.push(`perms.${slug}: хүлээгдэж буй Q9 алга ${k}`);
     if (pb.effective) {
+      const la = new Set(normalizePermKeys(pa.legacy));
       const lb = new Set(normalizePermKeys(pb.legacy));
-      const diff = [...eb].filter((k) => !lb.has(k)).length + [...lb].filter((k) => !eb.has(k)).length;
-      if (diff > 0) out.push(`perms.${slug}: B дотор legacy ≠ effective (${diff} мөр) — шилжүүлэлт эсвэл загвар хэрэгжүүлээгүй`);
+      const only = (left: Set<string>, right: Set<string>) => new Set([...left].filter((k) => !right.has(k)));
+      const changed = (before: Set<string>, after: Set<string>) =>
+        only(before, after).size + only(after, before).size;
+      const diff = changed(only(ea, la), only(eb, lb)) + changed(only(la, ea), only(lb, eb));
+      if (diff > 0) out.push(`perms.${slug}: legacy/effective зөрүү өөрчлөгдсөн (${diff} мөр) — шилжүүлэлт эсвэл загварыг шалгана`);
     }
   }
   return out;
