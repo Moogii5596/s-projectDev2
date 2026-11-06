@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { accessibleSites, canManageCampSystem } from '../../../lib/access'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -7,12 +8,12 @@ import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
 import { useAuth } from '../../../hooks/useAuth'
 import { getLastCamp, resolveLastCamp } from '../lib/last-camp'
-import { P, isSystemAdmin } from '../lib/permissions'
+import { P } from '../lib/permissions'
 import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, inputCls } from '../components/ui'
 
 /**
  * /camp — FB-11 (v0.2.0): сүүлд орсон кемп рүү шууд (идэвхтэй, эрхтэй бол). `?list=1` эсвэл сүүлийнх алга → жагсаалт.
- * Байгууллагын түвшний тохиргоо → "Системийн тохиргоо" (/camp/system).
+ * Кемпийн тохиргоо (/camp/system); байгууллагын түвшний (роль, эрх, байгууллага, орчуулга) → «Системийн тохиргоо» (/settings).
  */
 export default function CampHomePage() {
   const { t } = useTranslation()
@@ -36,7 +37,8 @@ export default function CampHomePage() {
     return <ErrorBox error={camps.error} onRetry={() => camps.refetch()} />
   }
 
-  const list = camps.data ?? []
+  // v0.2.3 Блок 3 (PIL-19): зөвхөн хандах эрхтэй кемп
+  const list = accessibleSites(perms.data, camps.data ?? [])
   const last = params.get('list') ? null : resolveLastCamp(getLastCamp(user?.id), list)
   if (last) return <Navigate to={`/camp/${last}`} replace />
   // Ганц идэвхтэй кемп → шууд (сонгох алхамгүй)
@@ -44,7 +46,7 @@ export default function CampHomePage() {
   if (!params.get('list') && active.length === 1) return <Navigate to={`/camp/${active[0].id}`} replace />
 
   const canMaster = perms.can(P.MASTER_MANAGE)
-  const canSystem = canMaster || isSystemAdmin(perms.data)
+  const canSystem = canManageCampSystem(perms.data)
 
   return (
     <div className="space-y-6">

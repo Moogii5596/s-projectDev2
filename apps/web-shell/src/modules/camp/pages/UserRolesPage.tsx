@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { assignedRoleIds } from '../lib/granted'
 import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
 import type { UserRole } from '../api/types'
@@ -19,6 +20,8 @@ export default function UserRolesPage() {
   const assigned = useQuery({ queryKey: campKeys.userRoles, queryFn: () => campApi.userRoles(), enabled: canManage })
   const [f, setF] = useState({ userId: '', roleId: '', campId: '' })
   const [search, setSearch] = useState('')
+  // PIL-18: сонгосон хэрэглэгч + хүрээнд гараар олгосон роль → «олгогдсон», идэвхгүй
+  const assignedIds = f.userId ? assignedRoleIds(assigned.data ?? [], f.userId, f.campId || null) : new Set<string>()
 
   const assign = useCampMutation(
     () => campApi.assignUserRole({ userId: f.userId, roleId: f.roleId, campId: f.campId || null }),
@@ -68,8 +71,9 @@ export default function UserRolesPage() {
               <select id={id} className={inputCls} value={f.roleId} onChange={(e) => setF({ ...f, roleId: e.target.value })}>
                 <option value="">{t('camp.common.choose')}</option>
                 {roles.data?.map((r) => (
-                  <option key={r.id} value={r.id}>
+                  <option key={r.id} value={r.id} disabled={assignedIds.has(r.id)}>
                     {r.name}
+                    {assignedIds.has(r.id) ? ` — ${t('perm.granted')}` : ''}
                   </option>
                 ))}
               </select>
@@ -87,7 +91,7 @@ export default function UserRolesPage() {
               </select>
             )}
           </Field>
-          <Button type="submit" loading={assign.isPending} disabled={!f.userId || !f.roleId}>
+          <Button type="submit" loading={assign.isPending} disabled={!f.userId || !f.roleId || assignedIds.has(f.roleId)}>
             {t('camp.uroles.assign')}
           </Button>
         </form>

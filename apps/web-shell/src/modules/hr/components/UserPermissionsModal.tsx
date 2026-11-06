@@ -5,7 +5,8 @@ import { campApi } from '../../camp/api/camp-api'
 import type { CampUser, PermissionDef } from '../../camp/api/types'
 import { campKeys } from '../../camp/hooks/useCampPermissions'
 import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { permissionLabel, visiblePermissions } from '../../camp/lib/permissions'
+import { isComingSoon, permissionLabel, visiblePermissions } from '../../camp/lib/permissions'
+import { directPermissionCodes } from '../../camp/lib/granted'
 import { Badge, Button, Empty, ErrorBox, Loading, Modal, inputSmCls } from '../../camp/components/ui'
 import { outdatedAssignments, permissionView } from '../lib/user-access'
 
@@ -32,6 +33,8 @@ export default function UserPermissionsModal({ user, onClose }: { user: CampUser
   const campName = (id: string | null) => (id ? (camps.data?.find((c) => c.id === id)?.code ?? '…') : t('hr.perms.all_camps'))
   const rows = data.data ? permissionView(data.data, visible.map((p) => p.code)) : []
   const outdated = data.data ? outdatedAssignments(data.data) : []
+  // PIL-18: сонгосон хүрээнд аль хэдийн шууд олгосон эрх → «олгогдсон», идэвхгүй
+  const granted = directPermissionCodes(data.data?.permissions ?? [], campId || null)
 
   return (
     <Modal title={t('hr.perms.title', { name: user.fullName ?? user.email })} onClose={onClose} wide>
@@ -85,8 +88,10 @@ export default function UserPermissionsModal({ user, onClose }: { user: CampUser
         <select aria-label={t('hr.perms.add_perm')} className={`${inputSmCls} flex-1 min-w-[12rem]`} value={code} onChange={(e) => setCode(e.target.value)}>
           <option value="">{t('hr.perms.add_perm')}</option>
           {visible.map((p) => (
-            <option key={p.code} value={p.code}>
+            <option key={p.code} value={p.code} disabled={granted.has(p.code)}>
               {label(p.code)}
+              {isComingSoon(p.code) ? ` · ${t('perm.coming_soon')}` : ''}
+              {granted.has(p.code) ? ` — ${t('perm.granted')}` : ''}
             </option>
           ))}
         </select>
@@ -98,7 +103,7 @@ export default function UserPermissionsModal({ user, onClose }: { user: CampUser
             </option>
           ))}
         </select>
-        <Button size="sm" type="submit" disabled={!code} loading={grant.isPending}>
+        <Button size="sm" type="submit" disabled={!code || granted.has(code)} loading={grant.isPending}>
           {t('hr.perms.grant')}
         </Button>
       </form>

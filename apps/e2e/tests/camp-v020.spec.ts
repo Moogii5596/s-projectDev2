@@ -171,7 +171,7 @@ test.describe.serial('Кемп v0.2.0', () => {
     await page.goto('/camp/system/positions');
     await page.waitForURL('**/hr/*/positions');
     await page.goto('/camp/admin/organizations');
-    await page.waitForURL('**/camp/system/organizations');
+    await page.waitForURL('**/settings/organizations'); // v0.2.3 Блок 3: Системийн тохиргоо
     await page.goto('/camp');
     await page.waitForURL(`**/camp/${campId}/rooms`);
   });
@@ -226,7 +226,7 @@ test.describe.serial('Кемп v0.2.0', () => {
 test.describe.serial('Орчуулгын засвар (OWNER/ADMIN)', () => {
   test('CSV оруулах → урьдчилсан (хуучин → шинэ) → баталгаажуулах → UI шинэчлэгдэнэ → анхдагч руу буцаах', async ({ page }) => {
     await loginAsUser(page, 'devAdmin');
-    await page.goto('/camp/system/translations');
+    await page.goto('/settings/translations');
     await expect(page.getByRole('heading', { name: 'Орчуулга' })).toBeVisible();
     const csv = `\uFEFFkey;mn;en\r\nnav.camp;Кемп ${STAMP};\r\n`;
     await page.getByLabel('Excel/CSV оруулах').setInputFiles({ name: 'tr.csv', mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf8') });

@@ -4,14 +4,14 @@ import { campApi } from '../api/camp-api'
 import type { PermissionDef, Role } from '../api/types'
 import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
-import { isSystemAdmin, mergeRolePermissions, permissionLabel, visiblePermissions } from '../lib/permissions'
+import { isComingSoon, isSystemAdmin, mergeRolePermissions, permissionLabel, visiblePermissions } from '../lib/permissions'
 import { SYSTEM_ROLE_LABEL } from '../lib/labels'
 import { Badge, Button, Card, ErrorBox, Field, Loading, Modal, NoAccess, PageHeader, inputCls } from '../components/ui'
 import { useTranslation } from 'react-i18next'
 
 /**
  * /camp/admin/roles — роль × эрхийн матриц (системийн админ — SEC-009).
- * V2 эрх (availableIn = 'v2') харагдахгүй, гэхдээ роль эзэмшиж байвал хадгалахад хасагдахгүй.
+ * v0.2.3 Блок 3 (V2-05): бүх эрх харагдана, хэрэгжээгүй модулийнх «удахгүй» шошготой. (Өмнө: V2 эрх (availableIn = 'v2') харагдахгүй, гэхдээ роль эзэмшиж байвал хадгалахад хасагдахгүй.
  * v0.2.2 (ADR-003 §2.4): роль = загвар. Хадгалахад хэрэглэгчийн эрх АВТОМАТААР өөрчлөгдөхгүй →
  * "N хэрэглэгчид хэрэгжүүлэх" цонх (урьдчилсан харагдац → батлах); алгасвал баганад "хэрэгжээгүй" товч үлдэнэ.
  */
@@ -112,7 +112,12 @@ export default function RolesPage() {
                 {visible.map((p: PermissionDef) => (
                   <tr key={p.code}>
                     <td className="px-3 py-2">
-                      <div className="text-gray-900">{permLabel(p)}</div>
+                      <div className="text-gray-900">
+                        {permLabel(p)}
+                        {isComingSoon(p.code) && (
+                          <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-500">{t('perm.coming_soon')}</span>
+                        )}
+                      </div>
                       <div className="text-[11px] font-mono text-gray-400">{p.code}</div>
                     </td>
                     {roles.data.map((r) => (

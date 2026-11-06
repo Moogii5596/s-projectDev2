@@ -1,8 +1,8 @@
 import { Outlet, useLocation } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
-import { HOME_PATH, isEnabled } from '../config/enabled-modules'
+import { isEnabled } from '../config/enabled-modules'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from './LanguageSwitcher'
 import { useI18nSync } from '../hooks/useI18nSync'
@@ -11,6 +11,9 @@ import { CHANGE_PASSWORD_PATH, displayLogin } from '../lib/password-change'
 import PageSuspense from './PageSuspense'
 import { useEffect, useState } from 'react'
 import { hasUnseen, readSeen } from '../release-notes/release-notes'
+import { campApi } from '../modules/camp/api/camp-api'
+import { campKeys } from '../modules/camp/hooks/useCampPermissions'
+import { canSeeModule, visibleSettingsSections } from '../lib/access'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -21,7 +24,15 @@ export default function Layout() {
   const queryClient = useQueryClient()
   // Кемпийн хуудсууд (эрхийн матриц, календарь) өргөн хүснэгттэй
   const { pathname } = useLocation()
-  const wide = pathname.startsWith('/camp') || pathname.startsWith('/hr')
+  const wide = pathname.startsWith('/camp') || pathname.startsWith('/hr') || pathname.startsWith('/settings')
+  // v0.2.3 Блок 3 (PIL-19): эрхгүй модулийн цэс нуух (ачаалж байх үед ч нуусан — «эрх алга» анивчихгүй)
+  const access = useQuery({
+    queryKey: campKeys.myPerms(),
+    queryFn: () => campApi.myPermissions(),
+    enabled: isEnabled('hr'),
+    staleTime: 60_000,
+  }).data
+  const showSettings = isEnabled('hr') && visibleSettingsSections(access).length > 0
   // Phase 6.0: идэвхтэй цэсийг тодруулна
   const navCls = (prefix: string) =>
     `text-sm hover:text-blue-600 ${pathname.startsWith(prefix) ? 'text-blue-600 font-medium' : 'text-gray-600'}`
@@ -47,13 +58,14 @@ export default function Layout() {
       <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2">
         <span
           className="text-lg font-bold text-gray-900 cursor-pointer"
-          onClick={() => navigate(HOME_PATH)}
+          onClick={() => navigate('/')}
         >
           S Project
         </span>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          {isEnabled('hr') && <button onClick={() => navigate('/hr')} className={navCls('/hr')}>{t('nav.hr')}</button>}
-          {isEnabled('camp') && <button onClick={() => navigate('/camp')} className={navCls('/camp')}>{t('nav.camp')}</button>}
+          {isEnabled('hr') && canSeeModule(access, 'hr') && <button onClick={() => navigate('/hr')} className={navCls('/hr')}>{t('nav.hr')}</button>}
+          {isEnabled('camp') && canSeeModule(access, 'camp') && <button onClick={() => navigate('/camp')} className={navCls('/camp')}>{t('nav.camp')}</button>}
+          {showSettings && <button onClick={() => navigate('/settings')} className={navCls('/settings')}>{t('nav.settings')}</button>}
           {isEnabled('inventory') && <button onClick={() => navigate('/inventory')} className={navCls('/inventory')}>{t('nav.inventory')}</button>}
           {isEnabled('vendors') && <button onClick={() => navigate('/vendors')} className={navCls('/vendors')}>{t('nav.vendors')}</button>}
           {isEnabled('reports') && <button onClick={() => navigate('/reports')} className={navCls('/reports')}>{t('nav.reports')}</button>}

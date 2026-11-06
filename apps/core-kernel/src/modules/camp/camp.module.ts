@@ -8,6 +8,8 @@ import { CampStayStore, CampStaysService } from './attendance/camp-stays.service
 import { CampEmployeeSite } from './attendance/camp-employee-site';
 import { CampAuditController } from './audit/camp-audit.controller';
 import { CampRbacController } from './rbac/camp-rbac.controller';
+import { CoreRbacController } from './rbac/core-rbac.controller';
+import { CampRbacLegacyController } from './legacy/rbac-legacy.controller';
 import { CampRbacService } from './rbac/camp-rbac.service';
 import { CampEmployeeLoginService } from './rbac/camp-employee-login.service';
 import { CampUserAccessService } from './rbac/camp-user-access.service';
@@ -39,7 +41,9 @@ import { CampCatalogService } from './catalog/camp-catalog.service';
   controllers: [
     CampBuildingTypesController,
     CampPositionSettingsController,
+    CoreRbacController,
     CampRbacController,
+    CampRbacLegacyController,
     CampSettingsController,
     CampsController,
     CampMasterController,

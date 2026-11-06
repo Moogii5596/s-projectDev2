@@ -202,6 +202,7 @@ describe('CampRbacService (Шат 2.2)', () => {
     setActor(s.tx, { roles: [{ campId: null, perms: [P.REPORT_VIEW] }, { campId: 'c1', perms: [P.MEAL_ORDER] }] });
     const c1 = await svc.myPermissions('t1', 'a1', 'c1');
     expect(c1.permissions.sort()).toEqual([P.MEAL_ORDER, P.REPORT_VIEW].sort());
+    expect(c1.modules).toEqual(['camp']); // Блок 3 (PIL-19): hr.* эрхгүй → HR цэс нуугдана
     const c2 = await svc.myPermissions('t1', 'a1', 'c2');
     expect(c2.permissions).toEqual([P.REPORT_VIEW]);
     setActor(s.tx, { role: UserRole.OWNER });
@@ -211,6 +212,7 @@ describe('CampRbacService (Шат 2.2)', () => {
     expect(all).toHaveLength(21);
     expect(all).toEqual(expect.arrayContaining(['hr.employee.manage', 'camp.employee.manage', 'hr.shift.adjust', 'camp.shift.adjust']));
     expect(all).not.toContain('camp.roles.manage');
+    expect((await svc.myPermissions('t1', 'a1')).modules).toEqual(['camp', 'hr']);
   });
 
   it('createRole BadRequest нь Forbidden-оос өмнө (validation) — эрхгүй ч үл мэдэгдэх код → 400', async () => {

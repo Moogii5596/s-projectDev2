@@ -1,14 +1,16 @@
-/** Backend-ийн `CAMP_PERMISSIONS` (apps/core-kernel/src/modules/camp/common/camp-permissions.ts)-тэй ижил */
+/**
+ * Backend-ийн `PERMISSIONS` (apps/core-kernel/src/modules/core/permissions/permission-registry.ts)-тэй ижил.
+ * v0.2.3 Блок 3 (ADR-007): HR-ийн эрх `hr.*` (хуучин `camp.employee.*` г.м. — backend alias v0.2.4 хүртэл).
+ */
 export const P = {
   SETTINGS_MANAGE: 'camp.settings.manage',
-  ROLES_MANAGE: 'camp.roles.manage',
   MASTER_MANAGE: 'camp.master.manage',
   CONTRACT_MANAGE: 'camp.contract.manage',
-  EMPLOYEE_MANAGE: 'camp.employee.manage',
+  EMPLOYEE_MANAGE: 'hr.employee.manage',
   /** v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд авах (Кемп админ) */
-  EMPLOYEE_TERMINATE: 'camp.employee.terminate',
-  MOVEMENT_IMPORT: 'camp.movement.import',
-  SHIFT_ADJUST: 'camp.shift.adjust',
+  EMPLOYEE_TERMINATE: 'hr.employee.terminate',
+  MOVEMENT_IMPORT: 'hr.attendance.import',
+  SHIFT_ADJUST: 'hr.shift.adjust',
   ROOM_MANAGE: 'camp.room.manage',
   ASSET_MANAGE: 'camp.asset.manage',
   MAINTENANCE_CREATE: 'camp.maintenance.create',
@@ -32,15 +34,17 @@ export function makeCan(perm: { isTenantAdmin: boolean; permissions: string[] } 
   }
 }
 
-/** V1 UI-д харуулах эрхүүд (D8: availableIn = 'v2' нуугдана) */
 /**
- * v0.2.2 Блок 6б (SEC-009): хэрэглэгч / роль удирдах нь системийн роль (OWNER / ADMIN) — модулийн эрх биш.
- * `camp.roles.manage` DB-д үлдсэн ч юу ч зөвшөөрөхгүй → матрицад харуулахгүй (ADR-007, v0.2.3-т цэвэрлэнэ).
+ * v0.2.3 Блок 3 (V2-05, B3-4): роль/эрхийн матрицад БҮХ эрх харагдана. Модуль нь хараахан хэрэгжээгүй эрхэд «удахгүй» шошго.
+ * Хоолны захиалга (6а), гэрээ (6б) v0.2.3-т орно → шошгогүй.
  */
-export const RETIRED_PERMISSIONS: readonly string[] = ['camp.roles.manage']
+export const COMING_SOON_PERMISSIONS: readonly string[] = ['camp.haul.create', 'camp.haul.approve', 'camp.report.view']
 
+export const isComingSoon = (code: string): boolean => COMING_SOON_PERMISSIONS.includes(code)
+
+/** Матрицад харуулах эрх (V2-05: бүгд); дараалал хэвээр */
 export function visiblePermissions<T extends { code?: string; availableIn: string }>(list: T[]): T[] {
-  return list.filter((p) => p.availableIn === 'v1' && !RETIRED_PERMISSIONS.includes(p.code ?? ''))
+  return [...list]
 }
 
 /** SEC-009: хэрэглэгч, роль удирдах (урилга, идэвхгүй болгох, эрх олгох, «Хэн үзсэн») — системийн админ эсэх */

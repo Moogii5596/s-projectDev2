@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSION_CODES, campPermissionAvailableIn, isCampPermission } from '../common/camp-permissions';
-import { normalizePermissionCode, withLegacyAliases } from '../../core/permissions/permission-registry';
+import { normalizePermissionCode, permissionModule, withLegacyAliases } from '../../core/permissions/permission-registry';
 import { inTenantTx, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import {
@@ -117,7 +117,12 @@ export class CampRbacService {
         : CAMP_PERMISSION_CODES.filter((c) => CampAccessService.has(actor.perms, null, c));
       // ADR-007 B2-6: шинэ кодын хажууд хуучин alias код (Блок 3-аас өмнөх frontend хуучин кодоор шалгадаг) — v0.2.4-т хасна
       const byCamp = Object.fromEntries(Object.entries(actor.perms.byCamp).map(([k, v]) => [k, withLegacyAliases(v)]));
-      return { userId: actor.userId, isTenantAdmin: actor.perms.isTenantAdmin, campId: campId ?? null, permissions: withLegacyAliases(effective), byCamp };
+      // v0.2.3 Блок 3 (PIL-19, B3-3): аль модульд (кодын угтвар) аль нэг ажлын байранд эрхтэй — дээд цэс нуухад
+      const anyCodes = actor.perms.isTenantAdmin
+        ? CAMP_PERMISSION_CODES
+        : [...actor.perms.global, ...Object.values(actor.perms.byCamp).flat()];
+      const modules = [...new Set(anyCodes.map(permissionModule))].sort();
+      return { userId: actor.userId, isTenantAdmin: actor.perms.isTenantAdmin, campId: campId ?? null, permissions: withLegacyAliases(effective), byCamp, modules };
     });
   }
 
@@ -326,6 +331,8 @@ export class CampRbacService {
           user: { select: { id: true, email: true, fullName: true, isActive: true } },
           role: { select: { id: true, name: true, isSystem: true } },
           camp: { select: { id: true, code: true, name: true } },
+          // v0.2.3 Блок 3 (PIL-18): гарын олголтыг «олгогдсон» гэж ялгах (албан тушаалын автоматыг гараар давхар олгож болно — №7)
+          sourcePositionId: true,
         },
         orderBy: { createdAt: 'asc' },
       });

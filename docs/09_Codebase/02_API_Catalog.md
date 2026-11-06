@@ -10,7 +10,7 @@ tags: [codebase, api, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Нийт **220** endpoint, 30 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
+Нийт **242** endpoint, 32 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
 
 **Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). **OWNER·ADMIN** = зөвхөн системийн роль (`requireTenantAdmin` — хэрэглэгч / роль удирдах, SEC-009), `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].
 
@@ -43,7 +43,7 @@ tags: [codebase, api, generated]
 - [[#modules/tenant-admin]] — 1
 - [[#modules/vendor]] — 3
 - [[#modules/workflow]] — 7
-- [[#modules/camp/legacy]] — 44
+- [[#modules/camp/legacy]] — 66
 
 ## app
 
@@ -166,31 +166,31 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| GET | `/api/v1/camp/permissions` | `CampRbacController.permissions` → `CampRbacService.listPermissions` | — | `camp-rbac.controller.ts:33` |
-| GET | `/api/v1/camp/me/permissions` | `CampRbacController.myPermissions` → `CampRbacService.myPermissions` | — | `camp-rbac.controller.ts:38` |
-| GET | `/api/v1/camp/users` | `CampRbacController.users` → `CampRbacService.listUsers` | **OWNER·ADMIN** | `camp-rbac.controller.ts:44` |
-| GET | `/api/v1/camp/roles` | `CampRbacController.roles` → `CampRbacService.listRoles` | **OWNER·ADMIN** | `camp-rbac.controller.ts:50` |
-| POST | `/api/v1/camp/roles` | `CampRbacController.createRole` → `CampRbacService.createRole` | **OWNER·ADMIN** | `camp-rbac.controller.ts:57` |
-| PATCH | `/api/v1/camp/roles/:id` | `CampRbacController.updateRole` → `CampRbacService.updateRole` | **OWNER·ADMIN** | `camp-rbac.controller.ts:63` |
-| DELETE | `/api/v1/camp/roles/:id` | `CampRbacController.deleteRole` → `CampRbacService.deleteRole` | **OWNER·ADMIN** | `camp-rbac.controller.ts:69` |
-| PUT | `/api/v1/camp/roles/:id/permissions` | `CampRbacController.setPermissions` → `CampRbacService.setRolePermissions` | **OWNER·ADMIN** | `camp-rbac.controller.ts:75` |
-| GET | `/api/v1/camp/user-roles` | `CampRbacController.userRoles` → `CampRbacService.listUserRoles` | **OWNER·ADMIN** | `camp-rbac.controller.ts:81` |
-| POST | `/api/v1/camp/user-roles` | `CampRbacController.assign` → `CampRbacService.assignUserRole` | **OWNER·ADMIN** | `camp-rbac.controller.ts:88` |
-| DELETE | `/api/v1/camp/user-roles/:id` | `CampRbacController.remove` → `CampRbacService.removeUserRole` | **OWNER·ADMIN** | `camp-rbac.controller.ts:94` |
-| GET | `/api/v1/camp/roles/:id/apply-preview` | `CampRbacController.applyPreview` → `CampRbacService.previewRoleApply` | **OWNER·ADMIN** | `camp-rbac.controller.ts:102` |
-| POST | `/api/v1/camp/roles/:id/apply` | `CampRbacController.apply` → `CampRbacService.applyRoleTemplate` | **OWNER·ADMIN** | `camp-rbac.controller.ts:109` |
-| GET | `/api/v1/camp/users/:userId/permissions` | `CampRbacController.userPermissions` → `CampRbacService.listUserPermissions` | **OWNER·ADMIN** | `camp-rbac.controller.ts:115` |
-| POST | `/api/v1/camp/users/:userId/permissions` | `CampRbacController.grantDirect` → `CampRbacService.grantDirectPermission` | **OWNER·ADMIN** | `camp-rbac.controller.ts:122` |
-| DELETE | `/api/v1/camp/user-permissions/:id` | `CampRbacController.revokeDirect` → `CampRbacService.revokeDirectPermission` | **OWNER·ADMIN** | `camp-rbac.controller.ts:128` |
-| GET | `/api/v1/camp/positions/:positionId/role-templates` | `CampRbacController.positionTemplates` → `CampRbacService.getPositionTemplates` | **OWNER·ADMIN** | `camp-rbac.controller.ts:134` |
-| PUT | `/api/v1/camp/positions/:positionId/role-templates` | `CampRbacController.setPositionTemplates` → `CampRbacService.setPositionTemplates` | **OWNER·ADMIN** | `camp-rbac.controller.ts:140` |
-| PUT | `/api/v1/camp/camps/:campId/employees/:id/user` | `CampRbacController.linkUser` → `CampEmployeeLoginService.link` | **OWNER·ADMIN** | `camp-rbac.controller.ts:148` |
-| GET | `/api/v1/camp/camps/:campId/employees/:id/position-preview` | `CampRbacController.positionPreview` → `CampEmployeeLoginService.positionPreview` | **OWNER·ADMIN** | `camp-rbac.controller.ts:159` |
-| POST | `/api/v1/camp/positions/:positionId/role-templates/apply` | `CampRbacController.applyPositionTemplates` → `CampEmployeeLoginService.applyPositionTemplates` | **OWNER·ADMIN** | `camp-rbac.controller.ts:171` |
-| POST | `/api/v1/camp/camps/:campId/employees/:id/create-user` | `CampRbacController.createEmployeeUser` → `CampUserAccessService.createUserForEmployee` | **OWNER·ADMIN** | `camp-rbac.controller.ts:180` |
-| POST | `/api/v1/camp/users/:userId/invites` | `CampRbacController.inviteUser` → `CampUserAccessService.invite` | **OWNER·ADMIN** | `camp-rbac.controller.ts:192` |
-| PATCH | `/api/v1/camp/users/:userId` | `CampRbacController.setUserActive` → `CampUserAccessService.setActive` | **OWNER·ADMIN** | `camp-rbac.controller.ts:199` |
-| GET | `/api/v1/camp/invites/options` | `CampRbacController.inviteOptions` → `CampUserAccessService.options` | **OWNER·ADMIN** | `camp-rbac.controller.ts:205` |
+| PUT | `/api/v1/camp/camps/:campId/employees/:id/user` | `CampRbacController.linkUser` → `CampEmployeeLoginService.link` | **OWNER·ADMIN** | `camp-rbac.controller.ts:22` |
+| GET | `/api/v1/camp/camps/:campId/employees/:id/position-preview` | `CampRbacController.positionPreview` → `CampEmployeeLoginService.positionPreview` | **OWNER·ADMIN** | `camp-rbac.controller.ts:33` |
+| POST | `/api/v1/camp/camps/:campId/employees/:id/create-user` | `CampRbacController.createEmployeeUser` → `CampUserAccessService.createUserForEmployee` | **OWNER·ADMIN** | `camp-rbac.controller.ts:46` |
+| GET | `/api/v1/core/rbac/permissions` | `CoreRbacController.permissions` → `CampRbacService.listPermissions` | — | `core-rbac.controller.ts:34` |
+| GET | `/api/v1/core/rbac/me/permissions` | `CoreRbacController.myPermissions` → `CampRbacService.myPermissions` | — | `core-rbac.controller.ts:39` |
+| GET | `/api/v1/core/rbac/users` | `CoreRbacController.users` → `CampRbacService.listUsers` | **OWNER·ADMIN** | `core-rbac.controller.ts:45` |
+| GET | `/api/v1/core/rbac/roles` | `CoreRbacController.roles` → `CampRbacService.listRoles` | **OWNER·ADMIN** | `core-rbac.controller.ts:51` |
+| POST | `/api/v1/core/rbac/roles` | `CoreRbacController.createRole` → `CampRbacService.createRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:58` |
+| PATCH | `/api/v1/core/rbac/roles/:id` | `CoreRbacController.updateRole` → `CampRbacService.updateRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:64` |
+| DELETE | `/api/v1/core/rbac/roles/:id` | `CoreRbacController.deleteRole` → `CampRbacService.deleteRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:70` |
+| PUT | `/api/v1/core/rbac/roles/:id/permissions` | `CoreRbacController.setPermissions` → `CampRbacService.setRolePermissions` | **OWNER·ADMIN** | `core-rbac.controller.ts:76` |
+| GET | `/api/v1/core/rbac/user-roles` | `CoreRbacController.userRoles` → `CampRbacService.listUserRoles` | **OWNER·ADMIN** | `core-rbac.controller.ts:82` |
+| POST | `/api/v1/core/rbac/user-roles` | `CoreRbacController.assign` → `CampRbacService.assignUserRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:89` |
+| DELETE | `/api/v1/core/rbac/user-roles/:id` | `CoreRbacController.remove` → `CampRbacService.removeUserRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:95` |
+| GET | `/api/v1/core/rbac/roles/:id/apply-preview` | `CoreRbacController.applyPreview` → `CampRbacService.previewRoleApply` | **OWNER·ADMIN** | `core-rbac.controller.ts:103` |
+| POST | `/api/v1/core/rbac/roles/:id/apply` | `CoreRbacController.apply` → `CampRbacService.applyRoleTemplate` | **OWNER·ADMIN** | `core-rbac.controller.ts:110` |
+| GET | `/api/v1/core/rbac/users/:userId/permissions` | `CoreRbacController.userPermissions` → `CampRbacService.listUserPermissions` | **OWNER·ADMIN** | `core-rbac.controller.ts:116` |
+| POST | `/api/v1/core/rbac/users/:userId/permissions` | `CoreRbacController.grantDirect` → `CampRbacService.grantDirectPermission` | **OWNER·ADMIN** | `core-rbac.controller.ts:123` |
+| DELETE | `/api/v1/core/rbac/user-permissions/:id` | `CoreRbacController.revokeDirect` → `CampRbacService.revokeDirectPermission` | **OWNER·ADMIN** | `core-rbac.controller.ts:129` |
+| GET | `/api/v1/core/rbac/positions/:positionId/role-templates` | `CoreRbacController.positionTemplates` → `CampRbacService.getPositionTemplates` | **OWNER·ADMIN** | `core-rbac.controller.ts:135` |
+| PUT | `/api/v1/core/rbac/positions/:positionId/role-templates` | `CoreRbacController.setPositionTemplates` → `CampRbacService.setPositionTemplates` | **OWNER·ADMIN** | `core-rbac.controller.ts:141` |
+| POST | `/api/v1/core/rbac/positions/:positionId/role-templates/apply` | `CoreRbacController.applyPositionTemplates` → `CampEmployeeLoginService.applyPositionTemplates` | **OWNER·ADMIN** | `core-rbac.controller.ts:148` |
+| POST | `/api/v1/core/rbac/users/:userId/invites` | `CoreRbacController.inviteUser` → `CampUserAccessService.invite` | **OWNER·ADMIN** | `core-rbac.controller.ts:155` |
+| PATCH | `/api/v1/core/rbac/users/:userId` | `CoreRbacController.setUserActive` → `CampUserAccessService.setActive` | **OWNER·ADMIN** | `core-rbac.controller.ts:162` |
+| GET | `/api/v1/core/rbac/invites/options` | `CoreRbacController.inviteOptions` → `CampUserAccessService.options` | **OWNER·ADMIN** | `core-rbac.controller.ts:168` |
 
 ## modules/camp/settings
 
@@ -404,3 +404,25 @@ tags: [codebase, api, generated]
 | POST | `/api/v1/camp/camps/:campId/data-imports/:type/:id/confirm` | `CampDataController (extends HrDataController).confirm` → `HrDataImportService.confirm` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
 | POST | `/api/v1/camp/camps/:campId/data-imports/:type/:id/cancel` | `CampDataController (extends HrDataController).cancel` → `HrDataImportService.cancel` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
 | GET | `/api/v1/camp/camps/:campId/export/:type` | `CampDataController (extends HrDataController).export` → `HrDataImportService.export` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
+| GET | `/api/v1/camp/permissions` | `CampRbacLegacyController (extends CoreRbacController).permissions` → `CampRbacService.listPermissions` | — | Deprecated `rbac-legacy.controller.ts:10` |
+| GET | `/api/v1/camp/me/permissions` | `CampRbacLegacyController (extends CoreRbacController).myPermissions` → `CampRbacService.myPermissions` | — | Deprecated `rbac-legacy.controller.ts:10` |
+| GET | `/api/v1/camp/users` | `CampRbacLegacyController (extends CoreRbacController).users` → `CampRbacService.listUsers` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| GET | `/api/v1/camp/roles` | `CampRbacLegacyController (extends CoreRbacController).roles` → `CampRbacService.listRoles` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| POST | `/api/v1/camp/roles` | `CampRbacLegacyController (extends CoreRbacController).createRole` → `CampRbacService.createRole` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| PATCH | `/api/v1/camp/roles/:id` | `CampRbacLegacyController (extends CoreRbacController).updateRole` → `CampRbacService.updateRole` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| DELETE | `/api/v1/camp/roles/:id` | `CampRbacLegacyController (extends CoreRbacController).deleteRole` → `CampRbacService.deleteRole` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| PUT | `/api/v1/camp/roles/:id/permissions` | `CampRbacLegacyController (extends CoreRbacController).setPermissions` → `CampRbacService.setRolePermissions` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| GET | `/api/v1/camp/user-roles` | `CampRbacLegacyController (extends CoreRbacController).userRoles` → `CampRbacService.listUserRoles` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| POST | `/api/v1/camp/user-roles` | `CampRbacLegacyController (extends CoreRbacController).assign` → `CampRbacService.assignUserRole` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| DELETE | `/api/v1/camp/user-roles/:id` | `CampRbacLegacyController (extends CoreRbacController).remove` → `CampRbacService.removeUserRole` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| GET | `/api/v1/camp/roles/:id/apply-preview` | `CampRbacLegacyController (extends CoreRbacController).applyPreview` → `CampRbacService.previewRoleApply` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| POST | `/api/v1/camp/roles/:id/apply` | `CampRbacLegacyController (extends CoreRbacController).apply` → `CampRbacService.applyRoleTemplate` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| GET | `/api/v1/camp/users/:userId/permissions` | `CampRbacLegacyController (extends CoreRbacController).userPermissions` → `CampRbacService.listUserPermissions` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| POST | `/api/v1/camp/users/:userId/permissions` | `CampRbacLegacyController (extends CoreRbacController).grantDirect` → `CampRbacService.grantDirectPermission` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| DELETE | `/api/v1/camp/user-permissions/:id` | `CampRbacLegacyController (extends CoreRbacController).revokeDirect` → `CampRbacService.revokeDirectPermission` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| GET | `/api/v1/camp/positions/:positionId/role-templates` | `CampRbacLegacyController (extends CoreRbacController).positionTemplates` → `CampRbacService.getPositionTemplates` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| PUT | `/api/v1/camp/positions/:positionId/role-templates` | `CampRbacLegacyController (extends CoreRbacController).setPositionTemplates` → `CampRbacService.setPositionTemplates` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| POST | `/api/v1/camp/positions/:positionId/role-templates/apply` | `CampRbacLegacyController (extends CoreRbacController).applyPositionTemplates` → `CampEmployeeLoginService.applyPositionTemplates` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| POST | `/api/v1/camp/users/:userId/invites` | `CampRbacLegacyController (extends CoreRbacController).inviteUser` → `CampUserAccessService.invite` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| PATCH | `/api/v1/camp/users/:userId` | `CampRbacLegacyController (extends CoreRbacController).setUserActive` → `CampUserAccessService.setActive` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
+| GET | `/api/v1/camp/invites/options` | `CampRbacLegacyController (extends CoreRbacController).inviteOptions` → `CampUserAccessService.options` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |

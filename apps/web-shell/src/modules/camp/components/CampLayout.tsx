@@ -3,7 +3,8 @@ import { NavLink, Outlet, useLocation, useNavigate, useParams, Link } from 'reac
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
-import { campKeys } from '../hooks/useCampPermissions'
+import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
+import { accessibleSites } from '../../../lib/access'
 import { useAuth } from '../../../hooks/useAuth'
 import { setLastCamp } from '../lib/last-camp'
 import { Badge, ErrorBox, Loading, inputSmCls } from './ui'
@@ -25,6 +26,9 @@ export default function CampLayout() {
   const { pathname } = useLocation()
   const camp = useQuery({ queryKey: campKeys.camp(campId), queryFn: () => campApi.camp(campId), enabled: !!campId })
   const camps = useQuery({ queryKey: campKeys.camps, queryFn: () => campApi.camps(false) })
+  // v0.2.3 Блок 3 (PIL-19): сонгогчид зөвхөн хандах эрхтэй кемп
+  const perms = useCampPermissions()
+  const campList = accessibleSites(perms.data, camps.data ?? [])
 
   // FB-11: сүүлд орсон кемп (амжилттай ачаалсны дараа)
   useEffect(() => {
@@ -46,14 +50,14 @@ export default function CampLayout() {
         <span>/</span>
         {camp.data ? (
           <>
-            {camps.data && camps.data.length > 1 ? (
+            {campList.length > 1 ? (
               <select
                 aria-label={t('camp.layout.switch_camp')}
                 className={`${inputSmCls} w-auto font-medium text-gray-900`}
                 value={camp.data.id}
                 onChange={(e) => switchTo(e.target.value)}
               >
-                {camps.data.map((c) => (
+                {campList.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.code} · {c.name}
                     {c.isActive ? '' : ` (${t('camp.common.inactive')})`}

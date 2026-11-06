@@ -3,7 +3,8 @@ import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'reac
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { campApi } from '../../camp/api/camp-api'
-import { campKeys } from '../../camp/hooks/useCampPermissions'
+import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
+import { accessibleSites, canSeeHrSection } from '../../../lib/access'
 import { useAuth } from '../../../hooks/useAuth'
 import { setLastCamp } from '../../camp/lib/last-camp'
 import { Badge, ErrorBox, Loading, inputSmCls } from '../../camp/components/ui'
@@ -22,6 +23,10 @@ export default function HrLayout() {
   const { pathname } = useLocation()
   const site = useQuery({ queryKey: campKeys.camp(campId), queryFn: () => campApi.camp(campId), enabled: !!campId })
   const sites = useQuery({ queryKey: campKeys.camps, queryFn: () => campApi.camps(false) })
+  // v0.2.3 Блок 3 (PIL-19): зөвхөн хандах эрхтэй ажлын байр, хэсэг
+  const perms = useCampPermissions()
+  const siteList = accessibleSites(perms.data, sites.data ?? [])
+  const sections = HR_SECTIONS.filter((s) => canSeeHrSection(perms.data, campId, s))
 
   useEffect(() => {
     if (site.data) setLastCamp(user?.id, site.data.id)
@@ -35,14 +40,14 @@ export default function HrLayout() {
         <span>{t('hr.layout.site')}:</span>
         {site.data ? (
           <>
-            {sites.data && sites.data.length > 1 ? (
+            {siteList.length > 1 ? (
               <select
                 aria-label={t('hr.layout.switch_site')}
                 className={`${inputSmCls} w-auto font-medium text-gray-900`}
                 value={site.data.id}
                 onChange={(e) => navigate(hrPath(e.target.value, sectionFromPath(pathname)))}
               >
-                {sites.data.map((c) => (
+                {siteList.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.code} · {c.name}
                     {c.isActive ? '' : ` (${t('camp.common.inactive')})`}
@@ -68,7 +73,7 @@ export default function HrLayout() {
       {site.data && (
         <>
           <nav className="flex gap-1 overflow-x-auto border-b border-gray-200 mb-5" aria-label={t('hr.layout.sections')}>
-            {HR_SECTIONS.map((s) => (
+            {sections.map((s) => (
               <NavLink
                 key={s}
                 to={s}

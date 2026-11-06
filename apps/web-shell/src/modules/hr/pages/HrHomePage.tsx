@@ -1,8 +1,9 @@
 import { Link, Navigate } from 'react-router-dom'
+import { accessibleSites } from '../../../lib/access'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { campApi } from '../../camp/api/camp-api'
-import { campKeys } from '../../camp/hooks/useCampPermissions'
+import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
 import { useAuth } from '../../../hooks/useAuth'
 import { getLastCamp, resolveLastCamp } from '../../camp/lib/last-camp'
 import { ActiveBadge, Card, Empty, ErrorBox, Loading, PageHeader } from '../../camp/components/ui'
@@ -16,6 +17,7 @@ export default function HrHomePage({ section = HR_DEFAULT_SECTION }: { section?:
   const { t } = useTranslation()
   const { user } = useAuth()
   const sites = useQuery({ queryKey: campKeys.camps, queryFn: () => campApi.camps(false) })
+  const perms = useCampPermissions()
 
   if (sites.isLoading) return <Loading />
   if (sites.isError) {
@@ -31,7 +33,8 @@ export default function HrHomePage({ section = HR_DEFAULT_SECTION }: { section?:
     return <ErrorBox error={sites.error} onRetry={() => sites.refetch()} />
   }
 
-  const list = sites.data ?? []
+  // v0.2.3 Блок 3 (PIL-19): зөвхөн хандах эрхтэй ажлын байр
+  const list = accessibleSites(perms.data, sites.data ?? [])
   const last = resolveLastCamp(getLastCamp(user?.id), list)
   if (last) return <Navigate to={hrPath(last, section)} replace />
   const active = list.filter((c) => c.isActive)

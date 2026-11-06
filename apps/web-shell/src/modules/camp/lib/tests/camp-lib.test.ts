@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { AxiosError, AxiosHeaders } from 'axios'
 import { daysToSegments, formatRanges, missingDays, patternProblem, segmentsToDays } from '../shift-pattern'
-import { P, isSystemAdmin, makeCan, mergeRolePermissions, visiblePermissions } from '../permissions'
+import { P, isComingSoon, isSystemAdmin, makeCan, mergeRolePermissions, visiblePermissions } from '../permissions'
 import { apiErrorMessage } from '../errors'
 import { addDays, isoWeekday, todayUb } from '../dates'
 
@@ -53,15 +53,17 @@ describe('shift-pattern', () => {
 describe('permissions', () => {
   it('makeCan: admin бүгд; эрхүүдийн аль нэг; ачаалагдаагүй → false', () => {
     expect(makeCan(undefined)(P.MASTER_MANAGE)).toBe(false)
-    expect(makeCan({ isTenantAdmin: true, permissions: [] })(P.ROLES_MANAGE)).toBe(true)
+    expect(makeCan({ isTenantAdmin: true, permissions: [] })(P.SETTINGS_MANAGE)).toBe(true)
     const can = makeCan({ isTenantAdmin: false, permissions: [P.ROOM_MANAGE] })
     expect(can(P.MASTER_MANAGE)).toBe(false)
     expect(can(P.ROOM_MANAGE, P.MASTER_MANAGE)).toBe(true)
   })
 
-  it('visiblePermissions: V2-ийг нууна; SEC-009 — camp.roles.manage (хуучирсан) нууна', () => {
-    expect(visiblePermissions([{ code: 'a', availableIn: 'v1' }, { code: 'b', availableIn: 'v2' }]).map((p) => p.code)).toEqual(['a'])
-    expect(visiblePermissions([{ code: 'camp.roles.manage', availableIn: 'v1' }, { code: 'a', availableIn: 'v1' }]).map((p) => p.code)).toEqual(['a'])
+  it('visiblePermissions (V2-05): бүгд харагдана; «удахгүй» = бохир ус/хог, тайлан', () => {
+    expect(visiblePermissions([{ code: 'a', availableIn: 'v1' }, { code: 'b', availableIn: 'v2' }]).map((p) => p.code)).toEqual(['a', 'b'])
+    expect(isComingSoon('camp.haul.create')).toBe(true)
+    expect(isComingSoon('camp.meal.order')).toBe(false)
+    expect(P.EMPLOYEE_MANAGE).toBe('hr.employee.manage')
     expect(isSystemAdmin({ isTenantAdmin: true })).toBe(true)
     expect(isSystemAdmin({ isTenantAdmin: false })).toBe(false)
     expect(isSystemAdmin(undefined)).toBe(false)

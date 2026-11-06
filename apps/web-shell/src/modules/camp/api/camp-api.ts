@@ -48,6 +48,8 @@ import type {
 } from './types'
 
 const V1 = '/api/v1/camp'
+/** v0.2.3 Блок 3 (ADR-007 B3-1): роль, эрх — системийн түвшин (хуучин `/camp/...` v0.2.4-т устгана) */
+const RBAC = '/api/v1/core/rbac'
 /** v0.2.2 H2: tenant-түвшний HR/Core нөөц шинэ замаар (ADR-006 §5.1); байрны төрөл Кемпэд */
 const CORE_ORGS = '/api/v1/core/organizations'
 const CATALOG_BASE: Record<CatalogKind, string> = { positions: '/api/v1/hr/positions', 'building-types': `${V1}/building-types` }
@@ -60,34 +62,34 @@ const del = async <T>(url: string): Promise<T> => (await apiClient.delete<T>(url
 
 // ── Эрх ──────────────────────────────────────────────────────
 export const campApi = {
-  myPermissions: (campId?: string) => get<MyPermissions>(`${V1}/me/permissions`, campId ? { campId } : undefined),
-  permissions: () => get<PermissionDef[]>(`${V1}/permissions`),
-  users: () => get<CampUser[]>(`${V1}/users`),
-  roles: () => get<Role[]>(`${V1}/roles`),
-  createRole: (body: { name: string; description?: string | null; permissionCodes?: string[] }) => post<Role>(`${V1}/roles`, body),
-  updateRole: (id: string, body: { name?: string; description?: string | null }) => patch<Role>(`${V1}/roles/${id}`, body),
-  deleteRole: (id: string) => del<unknown>(`${V1}/roles/${id}`),
-  setRolePermissions: (id: string, permissionCodes: string[]) => put<Role>(`${V1}/roles/${id}/permissions`, { permissionCodes }),
+  myPermissions: (campId?: string) => get<MyPermissions>(`${RBAC}/me/permissions`, campId ? { campId } : undefined),
+  permissions: () => get<PermissionDef[]>(`${RBAC}/permissions`),
+  users: () => get<CampUser[]>(`${RBAC}/users`),
+  roles: () => get<Role[]>(`${RBAC}/roles`),
+  createRole: (body: { name: string; description?: string | null; permissionCodes?: string[] }) => post<Role>(`${RBAC}/roles`, body),
+  updateRole: (id: string, body: { name?: string; description?: string | null }) => patch<Role>(`${RBAC}/roles/${id}`, body),
+  deleteRole: (id: string) => del<unknown>(`${RBAC}/roles/${id}`),
+  setRolePermissions: (id: string, permissionCodes: string[]) => put<Role>(`${RBAC}/roles/${id}/permissions`, { permissionCodes }),
   /** v0.2.2 — загвар өөрчилсний дараа хэрэглэгчдэд хэрэгжүүлэх (автоматаар биш) */
-  roleApplyPreview: (id: string) => get<RoleApplyPreview>(`${V1}/roles/${id}/apply-preview`),
-  applyRole: (id: string) => post<{ roleId: string; affectedUsers: number; added: number; removed: number }>(`${V1}/roles/${id}/apply`, {}),
+  roleApplyPreview: (id: string) => get<RoleApplyPreview>(`${RBAC}/roles/${id}/apply-preview`),
+  applyRole: (id: string) => post<{ roleId: string; affectedUsers: number; added: number; removed: number }>(`${RBAC}/roles/${id}/apply`, {}),
   /** v0.2.2 Блок 4 (B4-Q2): идэвхгүй болгох / сэргээх */
-  setUserActive: (userId: string, isActive: boolean) => patch<{ id: string; isActive: boolean }>(`${V1}/users/${userId}`, { isActive }),
+  setUserActive: (userId: string, isActive: boolean) => patch<{ id: string; isActive: boolean }>(`${RBAC}/users/${userId}`, { isActive }),
   /** Блок 3: ажилтны картаас нэвтрэх эрх (email: undefined = картынх, null = имэйлгүй) */
   createEmployeeUser: (campId: string, employeeId: string, email?: string | null) =>
     post<CreateEmployeeUserResult>(campUrl(campId, `/employees/${employeeId}/create-user`), email === undefined ? {} : { email }),
-  inviteUser: (userId: string, channel: InviteChannel) => post<InviteResult>(`${V1}/users/${userId}/invites`, { channel }),
-  inviteOptions: () => get<InviteOptions>(`${V1}/invites/options`),
-  userPermissions: (userId: string) => get<UserPermissions>(`${V1}/users/${userId}/permissions`),
-  grantDirect: (userId: string, body: { permissionCode: string; campId: string | null }) => post<unknown>(`${V1}/users/${userId}/permissions`, body),
-  revokeDirect: (id: string) => del<unknown>(`${V1}/user-permissions/${id}`),
-  positionTemplates: (positionId: string) => get<PositionTemplates>(`${V1}/positions/${positionId}/role-templates`),
+  inviteUser: (userId: string, channel: InviteChannel) => post<InviteResult>(`${RBAC}/users/${userId}/invites`, { channel }),
+  inviteOptions: () => get<InviteOptions>(`${RBAC}/invites/options`),
+  userPermissions: (userId: string) => get<UserPermissions>(`${RBAC}/users/${userId}/permissions`),
+  grantDirect: (userId: string, body: { permissionCode: string; campId: string | null }) => post<unknown>(`${RBAC}/users/${userId}/permissions`, body),
+  revokeDirect: (id: string) => del<unknown>(`${RBAC}/user-permissions/${id}`),
+  positionTemplates: (positionId: string) => get<PositionTemplates>(`${RBAC}/positions/${positionId}/role-templates`),
   setPositionTemplates: (positionId: string, templates: { roleId: string; scope: CampTemplateScope }[]) =>
-    put<PositionTemplates>(`${V1}/positions/${positionId}/role-templates`, { templates }),
-  applyPositionTemplates: (positionId: string) => post<{ positionId: string; users: number }>(`${V1}/positions/${positionId}/role-templates/apply`, {}),
-  userRoles: (q: { userId?: string; roleId?: string; campId?: string } = {}) => get<UserRole[]>(`${V1}/user-roles`, q),
-  assignUserRole: (body: { userId: string; roleId: string; campId: string | null }) => post<unknown>(`${V1}/user-roles`, body),
-  removeUserRole: (id: string) => del<unknown>(`${V1}/user-roles/${id}`),
+    put<PositionTemplates>(`${RBAC}/positions/${positionId}/role-templates`, { templates }),
+  applyPositionTemplates: (positionId: string) => post<{ positionId: string; users: number }>(`${RBAC}/positions/${positionId}/role-templates/apply`, {}),
+  userRoles: (q: { userId?: string; roleId?: string; campId?: string } = {}) => get<UserRole[]>(`${RBAC}/user-roles`, q),
+  assignUserRole: (body: { userId: string; roleId: string; campId: string | null }) => post<unknown>(`${RBAC}/user-roles`, body),
+  removeUserRole: (id: string) => del<unknown>(`${RBAC}/user-roles/${id}`),
 
   // ── Кемп ───────────────────────────────────────────────────
   camps: (activeOnly = false) => get<Camp[]>(`${V1}/camps`, { activeOnly }),

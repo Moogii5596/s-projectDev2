@@ -6,33 +6,27 @@ import { campApi } from '../api/camp-api'
 import type { Camp } from '../api/types'
 import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
 import { useCampMutation } from '../hooks/useCampMutation'
-import { useMe } from '../../../hooks/useMe'
 import { P } from '../lib/permissions'
 import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Table, inputCls, td } from '../components/ui'
 import { CreateCampModal } from './CampHomePage'
-import OrganizationsPage from './OrganizationsPage'
 import AssetCategoriesPage from './AssetCategoriesPage'
-import RolesPage from './RolesPage'
-import UserRolesPage from './UserRolesPage'
-import TranslationsPage from './TranslationsPage'
 import CatalogPage from './CatalogPage'
 
 /**
- * /camp/system/:section — FB-11 (v0.2.0) "Системийн тохиргоо": кемпүүд, байгууллага, албан тушаал, байрны төрөл (v0.2.1), хөрөнгийн ангилал,
- * роль ба эрх, хэрэглэгчийн роль, орчуулга (OWNER/ADMIN). Хуучин /camp/admin/* → энд redirect.
- * v0.2.2 H2: албан тушаал → «Хүний нөөц» (/hr/positions).
+ * /camp/system/:section — «Кемпийн тохиргоо» (v0.2.3 Блок 3, B3-2): кемпүүд, байрны төрөл, хөрөнгийн ангилал.
+ * Байгууллага, роль ба эрх, хэрэглэгчийн роль, орчуулга → «Системийн тохиргоо» (`/settings/:section`); хуучин хаяг → redirect.
+ * (FB-11 v0.2.0 — анх «Системийн тохиргоо»; v0.2.2 H2: албан тушаал → /hr/positions.)
  */
-const SECTIONS = ['camps', 'organizations', 'building-types', 'asset-categories', 'roles', 'user-roles', 'translations'] as const
-const ADMIN_ONLY: readonly string[] = ['roles', 'user-roles', 'translations']
+const SECTIONS = ['camps', 'building-types', 'asset-categories'] as const
+/** v0.2.3 Блок 3: системийн түвшинд шилжсэн хэсгүүд */
+const MOVED_TO_SETTINGS: readonly string[] = ['organizations', 'roles', 'user-roles', 'translations']
 
 export default function SystemSettingsPage() {
   const { t } = useTranslation()
   const { section = 'camps' } = useParams()
-  const { me } = useMe()
-  const isOrgAdmin = me?.role === 'OWNER' || me?.role === 'ADMIN'
-  // SEC-009 (Блок 6б): роль ба эрх, хэрэглэгчийн роль, орчуулга — зөвхөн системийн админ
-  const visible = SECTIONS.filter((s) => !ADMIN_ONLY.includes(s) || isOrgAdmin)
+  if (MOVED_TO_SETTINGS.includes(section)) return <Navigate to={`/settings/${section}`} replace />
   if (!(SECTIONS as readonly string[]).includes(section)) return <Navigate to="/camp/system/camps" replace />
+  const visible = SECTIONS
 
   return (
     <div className="space-y-4">
@@ -58,12 +52,8 @@ export default function SystemSettingsPage() {
         </nav>
         <div className="min-w-0 flex-1">
           {section === 'camps' && <CampsSection />}
-          {section === 'organizations' && <OrganizationsPage />}
           {section === 'building-types' && <CatalogPage kind="building-types" />}
           {section === 'asset-categories' && <AssetCategoriesPage />}
-          {section === 'roles' && <RolesPage />}
-          {section === 'user-roles' && <UserRolesPage />}
-          {section === 'translations' && (isOrgAdmin ? <TranslationsPage /> : <Empty>{t('camp.error.forbidden')}</Empty>)}
         </div>
       </div>
     </div>

@@ -142,18 +142,18 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
     await expect(page.getByRole('cell', { name: new RegExp(wed) })).toBeVisible();
   });
 
-  test('эрхийн матриц: V2 эрх (зардлын тайлан, хоолны захиалга) харагдахгүй; хэрэглэгчийн роль', async ({ page }) => {
-    // SEC-009 (Блок 6б): роль ба эрх = зөвхөн системийн админ
+  test('эрхийн матриц (v0.2.3 V2-05: V2 эрх харагдана); хэрэглэгчийн роль', async ({ page }) => {
+    // SEC-009 (Блок 6б): роль ба эрх = зөвхөн системийн админ. v0.2.3 Блок 3: «Системийн тохиргоо» (/settings)
     await switchUser(page, 'devUserAdmin');
     await page.goto('/camp/admin/roles');
+    await page.waitForURL('**/settings/roles');
     await expect(page.getByRole('heading', { name: 'Роль ба эрх' })).toBeVisible();
     // v0.2.2 H2 (H2-Q5): эрхийн нэр = `perm.<code>` орчуулга («Кемп › …»)
     await expect(page.getByText('Кемп › Тохиргоо (НӨАТ, ростер, хоол идэх байршил)')).toBeVisible();
-    await expect(page.getByText('Зардлын тайлан харах')).toHaveCount(0);
-    await expect(page.getByText('Хоолны захиалга өгөх')).toHaveCount(0);
-    await expect(page.getByText('Систем › Роль, эрхийн тохиргоо')).toHaveCount(0); // хуучирсан эрх (SEC-009)
+    await expect(page.getByText('Кемп › Зардлын тайлан харах')).toBeVisible();
+    await expect(page.getByText('Систем › Роль, эрхийн тохиргоо')).toHaveCount(0); // ADR-007: устгасан
 
-    await page.goto('/camp/admin/user-roles');
+    await page.goto('/settings/user-roles');
     await page.getByLabel('Хэрэглэгч хайх').fill('admin@test.mn');
     await expect(page.getByText('Кемп админ · Бүх кемп')).toBeVisible();
   });

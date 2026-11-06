@@ -132,6 +132,22 @@ describe('🔑 Каталог ба анхдагч роль', () => {
     expect(Object.fromEntries(aliases.map((a) => [a.oldCode, a.newCode]))).toEqual(PERMISSION_ALIASES);
   });
 
+  it('v0.2.3 Блок 3 (B3-1): /core/rbac — шинэ зам; хуучин /camp зам ижил хариу + Deprecation; me/permissions.modules', async () => {
+    const core = await api().get('/api/v1/core/rbac/roles').set(as('admin'));
+    expect(core.status).toBe(200);
+    expect(core.headers.deprecation).toBeUndefined();
+    const legacy = await api().get(`${V1}/roles`).set(as('admin'));
+    expect(legacy.status).toBe(200);
+    expect(legacy.headers.deprecation).toBe('true');
+    expect(legacy.body.map((r: { id: string }) => r.id).sort()).toEqual(core.body.map((r: { id: string }) => r.id).sort());
+    const me = await api().get('/api/v1/core/rbac/me/permissions').set(as('admin'));
+    expect(me.status).toBe(200);
+    expect(me.body.modules).toEqual(['camp', 'hr']);
+    // ажилтны картаас нэвтрэх эрх — /camp-д үлдсэн (Deprecation-гүй)
+    const opt = await api().get('/api/v1/core/rbac/invites/options').set(as('admin'));
+    expect(opt.status).toBe(200);
+  });
+
   it('шинэ tenant → 4 системийн роль (trigger; v0.2.2 Блок 1 — «Ажилтан» EMPLOYEE); GET /camp/roles (ADMIN) 200', async () => {
     const res = await api().get(`${V1}/roles`).set(as('admin'));
     expect(res.status).toBe(200);

@@ -8,7 +8,7 @@ tags: [auth, rbac, v0.2.3]
 
 # ADR-007 — Роль, эрх системийн түвшинд (core RBAC)
 
-> Төлөв: **Батлагдсан — 2026-11-06** (Q-R1…R3: 2026-10-19, B2-1…B2-6: 2026-11-06) · Хэрэгжүүлэлт: v0.2.3 Блок 2 (DB + data layer), Блок 3 (guard, UI) · Ажлын ID: PIL-13
+> Төлөв: **Батлагдсан — 2026-11-06** (Q-R1…R3: 2026-10-19, B2-1…B2-6, B3-1…B3-4: 2026-11-06) · Хэрэгжүүлэлт: v0.2.3 Блок 2 (DB + data layer), Блок 3 (guard, UI) · Ажлын ID: PIL-13
 > Холбоотой: [[ADR-003_Users_Login_Permissions]] (эцсийн эрх, загвар) · [[ADR-006_HR_Core_Module]] · [[09_v0.2.3_tech_plan]] Блок 2–3 · [[11_v0.2_completion_master_plan]] §3 (ADR-008 «ажлын байр»)
 
 ## 1. Нөхцөл
@@ -76,6 +76,15 @@ Redis-ийн эрхийн cache-ийн түлхүүр солигдсон (`perms
 - `GET me/permissions`: шинэ кодын хажууд хуучин alias кодыг **нэмж** буцаана (Блок 3-аас өмнөх frontend, e2e эвдрэхгүй).
 - `GET permissions` (каталог): зөвхөн шинэ код.
 - v0.2.4: alias хүснэгт, кодын alias, `legacy_camp_*` устгана (backlog).
+
+## 6б. API ба UI (v0.2.3 Блок 3 — B3-1…B3-4, 2026-11-06)
+
+| # | Шийдвэр |
+|---|---|
+| **B3-1** | RBAC API → **`/api/v1/core/rbac/*`** (`CoreRbacController`). Хуучин `/api/v1/camp/{permissions,me/permissions,users,roles,user-roles,user-permissions,positions/:id/role-templates,invites}` — `CampRbacLegacyController` (өвлөсөн, `Deprecation: true`), v0.2.4-т устгана. Ажилтны картаас нэвтрэх эрх (`camp/camps/:campId/employees/:id/{user,position-preview,create-user}`) `/camp`-д үлдсэн. Service `camp/rbac`-д (ARC-01 — v0.3). |
+| **B3-2** | UI: **«Системийн тохиргоо»** `/settings/:section` (дээд цэс) — роль ба эрх, хэрэглэгчийн роль, байгууллага, орчуулга. `/camp/system` = **«Кемпийн тохиргоо»** (кемп, байрны төрөл, хөрөнгийн ангилал); хуучин хаяг → redirect. |
+| **B3-3** | Цэс / хэсэг нуух (PIL-19) — `web-shell/src/lib/access.ts` (ганц эх сурвалж, backend-ийн шалгалтыг дагана); `me/permissions.modules` (эрхтэй модуль); `ModuleGate`, `HomeRedirect`; ажлын байрны сонгогчид зөвхөн хандах эрхтэй. |
+| **B3-4** | V2-05: матрицад бүх эрх; хэрэгжээгүй модулийн эрх (бохир ус/хог, зардлын тайлан) «удахгүй». Олгосон роль / шууд эрх «олгогдсон» — идэвхгүй (PIL-18). |
 
 ## 7. Rollback
 

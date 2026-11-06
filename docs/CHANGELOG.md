@@ -17,6 +17,12 @@ tags: [release]
 
 ## [Unreleased]
 
+### v0.2.3 Блок 3 — «Системийн тохиргоо», эрхгүй цэс нуух ([[ADR-007_System_Roles_Permissions]] §6б)
+- **Нэмэгдсэн:** «Системийн тохиргоо» дээд цэс (`/settings`) — роль ба эрх, хэрэглэгчийн роль, байгууллага, орчуулга (OWNER / ADMIN; байгууллага — бүх кемпийн мастер өгөгдлийн эрхтэй хүнд).
+- **Өөрчлөгдсөн:** «Хүний нөөц», «Кемп», «Системийн тохиргоо» цэс, HR-ийн хэсэг, ажлын байрны сонгогч — зөвхөн эрхтэй хэрэглэгчид харагдана; эрхгүй хаягаар орвол «эрх алга» (PIL-19). Кемпийн «Системийн тохиргоо» → «Кемпийн тохиргоо» (кемп, байрны төрөл, хөрөнгийн ангилал); хуучин хаяг шинэ рүү шилжинэ.
+- **Өөрчлөгдсөн:** аль хэдийн олгосон роль / шууд эрх сонголтод «олгогдсон» гэж идэвхгүй (PIL-18); роль ба эрхийн матрицад бүх эрх, хэрэгжээгүй модулийнх «удахгүй» (V2-05).
+- **Өөрчлөгдсөн (API):** роль, эрхийн API → `/api/v1/core/rbac/*`; хуучин `/api/v1/camp/{roles,permissions,me/permissions,users,user-roles,...}` — ⚠️ `Deprecation`, v0.2.4-т устгана. `me/permissions` += `modules`.
+
 ### v0.2.3 Блок 2 — роль, эрх системийн түвшинд (ADR-007, PIL-13, [[ADR-007_System_Roles_Permissions]])
 - **Өөрчлөгдсөн (DB, migration `20261106005`):** `camp_permissions / roles / role_permissions / user_roles / user_permissions / position_role_templates` → `core_*` (байранд нь нэрлэсэн — ID, эрх хэвээр); олголтын `camp_id` → `site_id` + `scope_type` (TENANT / SITE); `core_roles.system_code` → TEXT; `core_permissions` += `module`, `available_in`. Migration дотор legacy ↔ core эрхийн олонлогийг тулгана.
 - **Өөрчлөгдсөн (эрхийн код):** `camp.employee.manage` → `hr.employee.manage`, `camp.employee.terminate` → `hr.employee.terminate`, `camp.movement.import` → `hr.attendance.import`, `camp.shift.adjust` → `hr.shift.adjust`. Хуучин код v0.2.3-т alias-аар уншигдана (`core_permission_aliases`; API оролт хөрвөнө, `me/permissions` хоёуланг буцаана) — ⚠️ v0.2.4-т устгана.

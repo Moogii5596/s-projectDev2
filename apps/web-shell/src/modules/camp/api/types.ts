@@ -130,6 +130,8 @@ export interface MyPermissions {
   campId: string | null
   permissions: string[]
   byCamp: Record<string, string[]>
+  /** v0.2.3 Блок 3 (PIL-19): аль модульд (`hr`, `camp`) аль нэг ажлын байранд эрхтэй — дээд цэс нуух */
+  modules: string[]
 }
 
 export interface CampUser {
@@ -222,6 +224,8 @@ export interface UserRole {
   user: CampUser
   role: { id: string; name: string; isSystem: boolean }
   camp: { id: string; code: string; name: string } | null
+  /** v0.2.3 Блок 3 (PIL-18): албан тушаалын загвараас автоматаар бол түүний id; гараар бол null */
+  sourcePositionId?: string | null
 }
 
 // ── Шат 8 багц 2: ажилтан, ирц, ээлж, өрөө, хоол ─────────────

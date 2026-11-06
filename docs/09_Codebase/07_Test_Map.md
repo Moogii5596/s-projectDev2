@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 30 файл, ~275 тест
+## Integration (бодит PG + RLS) — 30 файл, ~276 тест
 
 Команд: `pnpm test:integration`
 
@@ -24,7 +24,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/camp-attendance.integration.spec.ts` | 18 | 📥 Ирцийн xlsx импорт · 🍽️ Хоолны суурь тоо (presence) · ✍️ Гараар бүртгэл · 🛏️ Өрөө (хоногоор) · 🔒 Validation ба RLS · 📥 [R4] HR ShiftChange — PREVIEW, ростерын зөрүү, мөр засах |
 | `core-kernel/test/camp-audit.integration.spec.ts` | 6 | 📜 camp_audit_log |
 | `core-kernel/test/camp-data-import.integration.spec.ts` | 14 | 📥 Загвар · 👥 Ажилтан — хүснэгтээр · 🏢 Хэлтэс ба өрөөний экспорт · 🔒 RLS |
-| `core-kernel/test/camp-master.integration.spec.ts` | 26 | 🔑 Каталог ба анхдагч роль · 🏕️ Кемп, тохиргоо, байршил · 🏢 Хэлтэс + ээлжийн загвар, баг, байр/өрөө, байгууллага · 👷 Ажилтан · 👥 Кемпийн роль → эрх (зөвхөн тэр кемпэд) · 🧯 camp-errors — БОДИТ Pri |
+| `core-kernel/test/camp-master.integration.spec.ts` | 27 | 🔑 Каталог ба анхдагч роль · 🏕️ Кемп, тохиргоо, байршил · 🏢 Хэлтэс + ээлжийн загвар, баг, байр/өрөө, байгууллага · 👷 Ажилтан · 👥 Кемпийн роль → эрх (зөвхөн тэр кемпэд) · 🧯 camp-errors — БОДИТ Pri |
 | `core-kernel/test/camp-snapshot.integration.spec.ts` | 3 | 📸 camp:snapshot |
 | `core-kernel/test/camp-v020-ux.integration.spec.ts` | 10 | 🏠 FB-07 олон өрөө · 👥 FB-03 хэлтсийн тоо · 🗓 FB-14 ирц · 🛏 FB-12 өрөөний самбар |
 | `core-kernel/test/camp-v021.integration.spec.ts` | 11 | 🍽️ Хоолны байршил / хоол авах / ээлж — ажилтан ?? албан тушаал ?? анхдагч · 📋 C-14 ирцийн жагсаалт — тооцоолсон ээлжээр · 🏢 C-12 байрны төрөл, байранд хөрөнгө, өрөөний самбар · 🔒 RLS — шинэ хүснэг |
@@ -142,13 +142,14 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/scripts/pilot-admin.spec.ts` | 7 | validate* · onboard · ensureUser |
 | `core-kernel/src/scripts/test-user.spec.ts` | 9 | ensureTestUser · assertLocalUrl · parseDotenv / parseArgs |
 
-## Unit — web-shell — 23 файл, ~125 тест
+## Unit — web-shell — 25 файл, ~132 тест
 
 Команд: `pnpm --filter web-shell test`
 
 | Файл | Тест | describe |
 |---|---|---|
 | `web-shell/src/i18n/tests/i18n.test.ts` | 4 | орчуулгын каталог · i18n ажиллагаа |
+| `web-shell/src/lib/tests/access.test.ts` | 5 | access (PIL-19, ADR-007 B3-3) |
 | `web-shell/src/lib/tests/modules.test.ts` | 8 | parseModules · homePath · resolveSupabaseUrl |
 | `web-shell/src/lib/tests/mr-approval.test.ts` | 8 | approvalState [SEC-004] — backend approvalDenial-тэй ижил · stepViews |
 | `web-shell/src/lib/tests/password-change.test.ts` | 4 | password-change (v0.2.2 D-06) · displayLogin |
@@ -157,6 +158,7 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/camp/lib/tests/camp-maint-lib.test.ts` | 8 | formatMoney (string → float-гүй) · maintenance.availableActions (backend maintenance-flow-тэй ижил) · permissions.canInAnyCamp |
 | `web-shell/src/modules/camp/lib/tests/camp-ops-lib.test.ts` | 8 | calendar.cellKind (ростер 14+14: 0 = ирэх, 15 = явах) · calendar.rangeProblem · presence.pivotPresence · meals.mealsPayload |
 | `web-shell/src/modules/camp/lib/tests/camp-v021-lib.test.ts` | 4 | v0.2.1 filterStays (C-14) · v0.2.1 хөрөнгийн байршил (C-12) · v0.2.1 inherited (Q1): албан тушаал(кемп) ?? кемпийн анхдагч |
+| `web-shell/src/modules/camp/lib/tests/granted.test.ts` | 2 | granted (PIL-18) |
 | `web-shell/src/modules/camp/lib/tests/grid.test.ts` | 5 | grid (хүснэгтээр оруулах) · room-range (FB-07) |
 | `web-shell/src/modules/camp/lib/tests/last-camp.test.ts` | 3 | last-camp (FB-11) |
 | `web-shell/src/modules/camp/lib/tests/permission-label.test.ts` | 3 | permissionLabel |
@@ -172,7 +174,7 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/report/lib/tests/report.test.ts` | 5 | report lib |
 | `web-shell/src/release-notes/tests/release-notes.test.ts` | 7 | release notes — функц · release notes — өгөгдөл (notes.ts) |
 
-## E2E (Playwright) — 16 файл, ~81 тест
+## E2E (Playwright) — 17 файл, ~84 тест
 
 Команд: `pnpm test:e2e`
 
@@ -189,6 +191,7 @@ tags: [codebase, testing, generated]
 | `e2e/tests/camp-v022-users.spec.ts` | 5 |  |
 | `e2e/tests/camp-v023-shiftchange.spec.ts` | 5 |  |
 | `e2e/tests/camp.spec.ts` | 6 |  |
+| `e2e/tests/core-v023-access.spec.ts` | 3 |  |
 | `e2e/tests/core-v023-feedback.spec.ts` | 1 |  |
 | `e2e/tests/modules-lite.spec.ts` | 8 |  |
 | `e2e/tests/multi-tenant.spec.ts` | 5 |  |
