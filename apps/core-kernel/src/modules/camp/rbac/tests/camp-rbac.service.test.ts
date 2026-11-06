@@ -222,15 +222,15 @@ describe('CampRbacService (Шат 2.2)', () => {
 });
 
 describe('Эрхийн V1/V2 хүрээ (D8, 2026-10-09)', () => {
-  it('каталогийн код бүр тэмдэглэгээтэй; V2 = гэрээ, бохир ус/хог, зардлын тайлан (яг 4; хоолны захиалга v0.2.3 Блок 6а-д гарсан)', () => {
+  it('каталогийн код бүр тэмдэглэгээтэй; V2 = бохир ус/хог, зардлын тайлан (яг 3)', () => {
     expect(Object.keys(CAMP_PERMISSION_AVAILABILITY).sort()).toEqual([...CAMP_PERMISSION_CODES].sort());
     const v2 = CAMP_PERMISSION_CODES.filter((c) => CAMP_PERMISSION_AVAILABILITY[c] === 'v2').sort();
     expect(v2).toEqual(
-      [P.CONTRACT_MANAGE, P.HAUL_CREATE, P.HAUL_APPROVE, P.REPORT_VIEW].sort(),
+      [P.HAUL_CREATE, P.HAUL_APPROVE, P.REPORT_VIEW].sort(),
     );
     // Шат 2–4-ийн эрхүүд V1 (засвар хаах = сэлбэгийн зардал — гэрээнээс хамааралгүй)
     for (const c of [P.SETTINGS_MANAGE, P.MASTER_MANAGE, P.EMPLOYEE_MANAGE, P.MOVEMENT_IMPORT, P.SHIFT_ADJUST,
-      P.ROOM_MANAGE, P.ASSET_MANAGE, P.MEAL_ORDER, P.MEAL_ACCEPT, P.MAINTENANCE_CREATE, P.MAINTENANCE_PARTS, P.MAINTENANCE_CLOSE]) {
+      P.ROOM_MANAGE, P.ASSET_MANAGE, P.MEAL_ORDER, P.MEAL_ACCEPT, P.CONTRACT_MANAGE, P.MAINTENANCE_CREATE, P.MAINTENANCE_PARTS, P.MAINTENANCE_CLOSE]) {
       expect(campPermissionAvailableIn(c)).toBe('v1');
     }
     expect(campPermissionAvailableIn('camp.unknown.code')).toBe('v2');
@@ -353,4 +353,3 @@ describe('CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүл
     await expect(svc.setPositionTemplates('t1', 'a1', 'pos1', { templates: [{ roleId: 'r-other', scope: 'ALL_CAMPS' }] })).rejects.toThrow(BadRequestException);
   });
 });
-

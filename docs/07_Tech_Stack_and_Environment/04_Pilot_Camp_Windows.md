@@ -325,12 +325,13 @@ cd $sr ; git fetch --tags ; git checkout v0.1.6.1
 & $st init  -Profile staging -Root $sr
 & $st build -Profile staging -Root $sr
 & $st restore E:\MoogiiDev\Pilot\backups\sinohydro-YYYYMMDD-HHMMSS.7z -Profile staging -Root $sr   # slug бичиж баталгаажуулна
-# C. Snapshot A (dev хавтаснаас — шинэ кодын CLI, staging DB-г зөвхөн уншина)
-cd E:\MoogiiDev\Dev\s-project
+# C. Snapshot A (v0.2.2 → v0.2.3: хуучин staging clone-оос; бусад хувилбарын CLI нийцлийг урьдчилан шалгана)
+cd E:\MoogiiDev\Staging\s-project
 pnpm camp:snapshot --env=E:\MoogiiDev\Staging\s-project\.env.staging --out=E:\MoogiiDev\Staging\a.json
 # D. Шинэчлэл (пилот дээр хийх яг тэр команд)
 & $st upgrade -Tag v0.2.0 -Profile staging -Root $sr
-# E. Snapshot B — A-тай ижил өдөр/мужаар (--like)
+# E. Шинэ хувилбарын CLI: B-г A-тай ижил өдөр/мужаар (--like) авч, харьцуулна
+cd E:\MoogiiDev\Dev\s-project
 pnpm camp:snapshot --env=E:\MoogiiDev\Staging\s-project\.env.staging --out=E:\MoogiiDev\Staging\b.json --like=E:\MoogiiDev\Staging\a.json
 pnpm camp:snapshot --compare E:\MoogiiDev\Staging\a.json E:\MoogiiDev\Staging\b.json
 #    ✅ A = B  → пилотыг §13-аар шинэчилнэ.   ❌ зөрүү → пилотод ХИЙХГҮЙ, зөрүүний жагсаалтыг надад илгээнэ (тоо л, нэр байхгүй)
@@ -342,6 +343,7 @@ pnpm camp:snapshot --compare E:\MoogiiDev\Staging\a.json E:\MoogiiDev\Staging\b.
 ```
 - `init` нь Supabase-ийн `config.toml` өөрчлөгдсөн бол (жнь v0.2.1-ийн нэвтрэлтийн hook) migration-ы дараа Supabase-ийг **дахин асаана** (~1-2 мин, өгөгдөл хадгалагдана). v0.2.1 руу анх шинэчлэхэд нэг удаа заавал болно.
 - Замыг **бүтэн** (E:\...) бичнэ. Snapshot: кемп бүрт өнөөдөр − 35 … + 7 хоногийн хоолны тоо (хоол × байршил), хүн, хүн-өдөр, өрөөний самбарын нийлбэр, мастер/үйл ажиллагааны тоо. Файлд **хувийн мэдээлэл байхгүй** (тоо, кемп/байршлын нэр) — гэхдээ git-д оруулахгүй.
+- v0.2.2 → v0.2.3-д A-г хуучин хувилбарын CLI-аар авна: v0.2.3-ийн CLI хуучин DB-д байхгүй тохиргооны баганыг уншдаг. B ба харьцуулалтыг v0.2.3 CLI-аар хийж, ADR-007 эрхийн нэрийн шилжилтийг тооцно. CLI алдаа өгвөл өмнөх `a.json`-ийг ашиглахгүй.
 - Staging нь пилотын нөөцийг агуулна → `.env.staging`, `E:\MoogiiDev\Staging\backups` пилоттой ижил хамгаалалт; дадлага дууссаны дараа `stop -All`.
 - `upgrade` нь staging-ийн өөрийн нөөцийг `staging-sinohydro-*.7z` нэрээр авна (пилотын нөөцтэй холилдохгүй).
 
