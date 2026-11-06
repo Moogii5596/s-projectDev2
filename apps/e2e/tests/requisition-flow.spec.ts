@@ -14,6 +14,7 @@ async function pageAs(browser: Browser, key: FixtureUserKey): Promise<Page> {
 
 /** REQUESTER: UI-аар MR үүсгэж илгээнэ → MR id */
 async function createAndSubmit(page: Page, title: string): Promise<string> {
+  await page.goto('/requisitions');
   await page.getByRole('button', { name: /шинэ.*MR|new|үүсгэх|create/i }).first().click();
   await page.waitForURL(/.*requisitions.*new.*/);
   await page.getByLabel(/title|гарчиг|нэр/i).fill(title);
@@ -61,6 +62,7 @@ test.describe('Material Requisition бүрэн урсгал', () => {
 
   test('MR жагсаалт харагдана (pagination)', async ({ page }) => {
     await loginAsUser(page, 'devReq');
+    await page.goto('/requisitions');
     await expect(page).toHaveURL(/.*requisitions.*/);
     // Хүснэгт эсвэл жагсаалт харагдана
     const list = page.getByRole('table').or(page.getByTestId('mr-list'));
