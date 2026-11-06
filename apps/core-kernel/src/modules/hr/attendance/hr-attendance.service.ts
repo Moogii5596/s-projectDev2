@@ -17,6 +17,9 @@ import { collectShiftChange, isAttendanceTemplate, loadXlsx, SkippedSheet } from
 import { loadResolverEmployees, resolveShiftChange } from './shiftchange-resolver';
 import { applyRowEdits, planWithDeleted } from './import-edits';
 import { loadRosterGaps, RosterGap } from './roster-gaps';
+import { HrEmployeesService } from '../employees/hr-employees.service';
+import { HR_ID_PENDING } from '../employees/data-issues';
+import { normName } from '../positions/hr-positions.service';
 import type { Tx } from '../../camp/common/camp-tx';
 
 const P = CAMP_PERMISSIONS;
@@ -51,6 +54,7 @@ export class HrAttendanceService {
     private readonly prisma: PrismaTenantClientService,
     private readonly access: CampAccessService,
     private readonly hooks: HrAttendanceHooks,
+    private readonly employees: HrEmployeesService,
   ) {}
 
   template(): Promise<Buffer> {
@@ -162,11 +166,14 @@ export class HrAttendanceService {
         const imp = await tx.hrMovementImport.findFirst({ where: { id, tenantId, campId }, select: { status: true, parsedRows: true, previewMeta: true } });
         if (!imp) throw notFound('camp.err.attendance.2');
         if (imp.status !== CampImportStatus.PREVIEW) throw conflict('camp.err.attendance.11', { status: imp.status });
-        const ids = [...new Set(dto.rows.map((r) => r.employeeId).filter((x): x is string => !!x))];
+        const current = imp.parsedRows as unknown as ParsedRow[];
+        const created = await this.createRowEmployees(tx, tenantId, authId, campId, current, dto);
+        const edits = dto.rows.map((r) => (r.newEmployee ? { row: r.row, employeeId: created.get(r.row)?.id } : r));
+        const ids = [...new Set(edits.map((r) => r.employeeId).filter((x): x is string => !!x))];
         const emps = ids.length
           ? await tx.hrEmployee.findMany({ where: { tenantId, campId, id: { in: ids } }, select: { id: true, employeeCode: true } })
           : [];
-        const parsed = applyRowEdits(imp.parsedRows as unknown as ParsedRow[], dto.rows, new Map(emps.map((e) => [e.id, e.employeeCode])));
+        const parsed = applyRowEdits(current, edits, new Map(emps.map((e) => [e.id, e.employeeCode])));
         const planned = await this.planPreview(tx, tenantId, campId, parsed);
         const updated = await tx.hrMovementImport.update({
           where: { id },
@@ -177,6 +184,43 @@ export class HrAttendanceService {
         return this.previewResponse(updated, planned, meta, await this.rosterGaps(tx, tenantId, campId, parsed, meta));
       }),
     );
+  }
+
+  /**
+   * R9 — `newEmployee` мөр бүрт ажилтан үүсгэнэ (ижил transaction; ердийн үүсгэлтийн дүрэм — `createInTx`).
+   * Овог / нэр / албан тушаал = ShiftChange эх мөр (албан тушаал каталогт байвал л — шинээр үүсгэхгүй); код автоматаар (R7);
+   * ID = `NEW` бол S9 «HR ID хүлээгдэж байна». Эрх: + `camp.employee.manage`.
+   */
+  private async createRowEmployees(tx: Tx, tenantId: string, authId: string, campId: string, parsed: ParsedRow[], dto: UpdateImportRowsDto) {
+    const out = new Map<number, { id: string; employeeCode: string }>();
+    const wanted = dto.rows.filter((r) => r.newEmployee);
+    if (wanted.length === 0) return out;
+    const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_MANAGE);
+    const byRow = new Map(parsed.map((r) => [r.row, r]));
+    const positions = await tx.hrPosition.findMany({ where: { tenantId, isActive: true }, select: { id: true, name: true } });
+    for (const e of wanted) {
+      if (e.employeeId !== undefined || e.deleted !== undefined) throw badRequest('camp.err.attendance.13', { row: e.row });
+      const r = byRow.get(e.row);
+      if (!r) throw badRequest('camp.err.attendance.12', { row: e.row });
+      if (!r.source) throw badRequest('camp.err.attendance.14', { row: e.row });
+      const src = r.source;
+      const ne = e.newEmployee as NonNullable<typeof e.newEmployee>;
+      const pos = src.position ? positions.find((p) => normName(p.name) === normName(src.position as string)) : undefined;
+      const emp = await this.employees.createInTx(
+        tx, tenantId, campId, actorUserId,
+        {
+          organizationId: ne.organizationId,
+          departmentId: ne.departmentId,
+          crewId: ne.crewId ?? null,
+          lastName: src.lastName || null,
+          firstName: src.firstName || src.lastName,
+          ...(pos ? { positionId: pos.id } : {}),
+        },
+        { dataIssues: src.idType === 'NEW' ? [HR_ID_PENDING] : [] },
+      );
+      out.set(e.row, { id: emp.id, employeeCode: emp.employeeCode });
+    }
+    return out;
   }
 
   private summary(plan: ReturnType<typeof planImport>) {

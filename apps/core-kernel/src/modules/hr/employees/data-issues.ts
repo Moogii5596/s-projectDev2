@@ -5,7 +5,8 @@ import type { RowError } from '../../../common/xlsx/table-spec';
  * v0.2.3 Блок D (S9, S11) — ажилтны «Мэдээлэл дутуу» тэмдэглэгээ (`camp_employees.data_issues`).
  * Импортын буруу утга жинхэнэ талбарт ОРОХГҮЙ — энд эх утгатай хадгалагдаж, HR засна. Статустай холбоогүй.
  */
-export const DATA_ISSUE_FIELDS = ['email', 'phone', 'extraPhones', 'terminatedAt'] as const;
+/** v0.2.3 R9: `employeeCode` = HR ID хүлээгдэж байна (ShiftChange `NEW` мөрөөс түр кодтой бүртгэсэн; код солиход арилна) */
+export const DATA_ISSUE_FIELDS = ['email', 'phone', 'extraPhones', 'terminatedAt', 'employeeCode'] as const;
 export type DataIssueField = (typeof DATA_ISSUE_FIELDS)[number];
 export interface DataIssue {
   field: DataIssueField;
@@ -49,5 +50,8 @@ export function clearedBy(dto: Partial<Record<DataIssueField, unknown>>): IssueU
   for (const f of DATA_ISSUE_FIELDS) if (dto[f] !== undefined) u[f] = null;
   return u;
 }
+
+/** R9: HR ID хүлээгдэж байна */
+export const HR_ID_PENDING: DataIssue = { field: 'employeeCode', code: 'row.hr_id_pending', value: '' };
 
 export const toJson = (issues: readonly DataIssue[]) => issues as unknown as Prisma.InputJsonValue;

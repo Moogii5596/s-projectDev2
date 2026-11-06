@@ -161,7 +161,8 @@ export interface EmployeeInput {
   organizationId: string
   departmentId: string
   crewId?: string | null
-  employeeCode: string
+  /** v0.2.3 R7: өгөөгүй бол систем `<угтвар>0001` олгоно */
+  employeeCode?: string
   /** v0.2.3 Блок D (S1): овог / нэр тусдаа (fullName = хуучин клиент) */
   fullName?: string
   familyName?: string | null

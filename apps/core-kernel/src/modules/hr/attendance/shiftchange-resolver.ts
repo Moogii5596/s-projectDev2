@@ -94,7 +94,7 @@ export function resolveShiftChange(input: ShiftChangeRow[], employees: ResolverE
       shift: null,
       errors,
       ...(r.kind === 'EXTEND' ? { action: 'EXTEND' as const } : {}),
-      source: { sheet: r.sheet, row: r.row, idRaw: r.idRaw, idType: r.idType, lastName: r.lastName, firstName: r.firstName, crew: r.crew, extendDays: r.extendDays },
+      source: { sheet: r.sheet, row: r.row, idRaw: r.idRaw, idType: r.idType, lastName: r.lastName, firstName: r.firstName, crew: r.crew, extendDays: r.extendDays, position: r.position, department: r.department },
       ...(warnings.length ? { warnings } : {}),
     };
   });

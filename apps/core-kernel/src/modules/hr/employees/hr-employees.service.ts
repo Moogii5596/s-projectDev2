@@ -13,7 +13,7 @@ import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
 import { BulkEmployeesDto, CreateEmployeeDto, QueryEmployeesDto, UpdateEmployeeDto } from './hr-employees.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { normalizeExtraPhones, phonesOut, replaceExtraPhones, resolveNames } from './employee-names';
-import { applyIssues, clearedBy, readIssues, toJson } from './data-issues';
+import { applyIssues, clearedBy, DataIssue, readIssues, toJson } from './data-issues';
 import { allocateEmployeeCode } from './employee-code';
 
 const P = CAMP_PERMISSIONS;
@@ -188,41 +188,50 @@ export class HrEmployeesService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_MANAGE);
         await getCampOr404(tx, tenantId, campId);
-        await this.assertRefs(tx, tenantId, campId, { organizationId: dto.organizationId, departmentId: dto.departmentId, crewId: dto.crewId ?? null, mealLocationId: dto.mealLocationId });
-        const employeeCode = dto.employeeCode ?? (await allocateEmployeeCode(tx, tenantId, campId)); // R7
-        await this.assertCodeUnique(tx, tenantId, employeeCode);
-        const pos = await this.resolvePosition(tx, tenantId, dto);
-        const names = resolveNames(dto);
-        if (!names || !names.firstName) throw badRequest('camp.err.employees.name_required');
-        const created = await tx.hrEmployee.create({
-          data: {
-            tenantId,
-            campId,
-            organizationId: dto.organizationId,
-            departmentId: dto.departmentId,
-            crewId: dto.crewId ?? null,
-            employeeCode,
-            ...names,
-            position: pos.position ?? null,
-            positionId: pos.positionId ?? null,
-            mealLocationId: dto.mealLocationId ?? null,
-            mealsIncluded: dto.mealsIncluded ?? null,
-            phone: dto.phone ?? null,
-            email: dto.email ? dto.email.toLowerCase() : null,
-          },
-          select: EMPLOYEE_SELECT,
-        });
-        const extra = normalizeExtraPhones(dto.extraPhones ?? [], dto.phone);
-        if (extra.length > 0) await replaceExtraPhones(tx, tenantId, created.id, extra);
-        const out = extra.length > 0 ? { ...created, extraPhones: extra.map((phone) => ({ phone })) } : created;
-        await this.audit.record(tx, {
-          tenantId, campId, entityType: 'employee', entityId: out.id, action: 'CREATE', actorUserId,
-          fields: EMPLOYEE_AUDIT_FIELDS, before: null, after: out,
-          summaryParams: { code: out.employeeCode, name: out.fullName },
-        });
-        return employeeOut(out);
+        return this.createInTx(tx, tenantId, campId, actorUserId, dto);
       }),
     );
+  }
+
+  /**
+   * Нэг transaction дотор ажилтан үүсгэх (эрх, кемпийг дуудагч шалгасан). v0.2.3 R9: ирцийн импортын PREVIEW-ээс
+   * шинэ ажилтан бүртгэхэд ижил дүрэм (лавлагаа, код, нэр, албан тушаал, audit); `dataIssues` — S9 тэмдэг.
+   */
+  async createInTx(tx: Tx, tenantId: string, campId: string, actorUserId: string, dto: CreateEmployeeDto, opts: { dataIssues?: DataIssue[] } = {}) {
+    await this.assertRefs(tx, tenantId, campId, { organizationId: dto.organizationId, departmentId: dto.departmentId, crewId: dto.crewId ?? null, mealLocationId: dto.mealLocationId });
+    const employeeCode = dto.employeeCode ?? (await allocateEmployeeCode(tx, tenantId, campId)); // R7
+    await this.assertCodeUnique(tx, tenantId, employeeCode);
+    const pos = await this.resolvePosition(tx, tenantId, dto);
+    const names = resolveNames(dto);
+    if (!names || !names.firstName) throw badRequest('camp.err.employees.name_required');
+    const created = await tx.hrEmployee.create({
+      data: {
+        tenantId,
+        campId,
+        organizationId: dto.organizationId,
+        departmentId: dto.departmentId,
+        crewId: dto.crewId ?? null,
+        employeeCode,
+        ...names,
+        position: pos.position ?? null,
+        positionId: pos.positionId ?? null,
+        mealLocationId: dto.mealLocationId ?? null,
+        mealsIncluded: dto.mealsIncluded ?? null,
+        phone: dto.phone ?? null,
+        email: dto.email ? dto.email.toLowerCase() : null,
+        ...(opts.dataIssues?.length ? { dataIssues: toJson(opts.dataIssues) } : {}),
+      },
+      select: EMPLOYEE_SELECT,
+    });
+    const extra = normalizeExtraPhones(dto.extraPhones ?? [], dto.phone);
+    if (extra.length > 0) await replaceExtraPhones(tx, tenantId, created.id, extra);
+    const out = extra.length > 0 ? { ...created, extraPhones: extra.map((phone) => ({ phone })) } : created;
+    await this.audit.record(tx, {
+      tenantId, campId, entityType: 'employee', entityId: out.id, action: 'CREATE', actorUserId,
+      fields: EMPLOYEE_AUDIT_FIELDS, before: null, after: out,
+      summaryParams: { code: out.employeeCode, name: out.fullName },
+    });
+    return employeeOut(out);
   }
 
   async update(tenantId: string, authId: string, campId: string, id: string, dto: UpdateEmployeeDto) {
@@ -240,6 +249,8 @@ export class HrEmployeesService {
         if (names && !names.firstName) throw badRequest('camp.err.employees.name_required');
         // S9: зассан талбарын «Мэдээлэл дутуу»-г арилгана (DTO = зөв утга)
         const cleared = clearedBy(dto);
+        // R9: «HR ID хүлээгдэж байна» — код бодитоор өөрчлөгдсөн үед л арилна (маягт кодыг үргэлж илгээдэг)
+        if (dto.employeeCode !== undefined && dto.employeeCode === (e as { employeeCode?: string }).employeeCode) delete cleared.employeeCode;
         const issuesBefore = Object.keys(cleared).length
           ? readIssues((await tx.hrEmployee.findFirst({ where: { id, tenantId }, select: { dataIssues: true } }))?.dataIssues)
           : [];

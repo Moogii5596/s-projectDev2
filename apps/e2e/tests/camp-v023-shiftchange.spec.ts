@@ -131,4 +131,53 @@ test.describe.serial('v0.2.3 R4 — HR ShiftChange импорт', () => {
     await page.getByRole('button', { name: 'Цуцлах' }).first().click();
     await expect(page.getByText('Устгасан 1')).toBeHidden();
   });
+
+  test('[R8] гэрээт байгууллагын кодгүй ажилтан → «Код автоматаар» → Z… код; байгууллагаар шүүх', async ({ page }) => {
+    const orgName = `Харуул ${STAMP}`;
+    await api(page, 'POST', '/organizations', { name: orgName, orgType: 'CONTRACTOR' });
+    await page.goto(`/hr/${campId}`);
+    await page.waitForURL('**/employees');
+    await page.getByRole('button', { name: '+ Ажилтан' }).click();
+    const dlg = page.getByRole('dialog');
+    await dlg.getByLabel('Овог', { exact: true }).fill('Харуул');
+    await dlg.getByLabel('Нэр', { exact: true }).fill(`Ээлж ${STAMP}`);
+    await dlg.getByLabel('Байгууллага').selectOption({ label: orgName });
+    // гэрээт байгууллага → автомат код санал болгоно, кодын талбар идэвхгүй
+    await expect(dlg.getByLabel('Код автоматаар олгох (HR ID-гүй)')).toBeChecked();
+    await expect(dlg.getByLabel('Ажилтны код')).toBeDisabled();
+    await dlg.getByLabel('Хэлтэс').selectOption({ index: 1 });
+    await dlg.getByRole('button', { name: 'Хадгалах' }).click();
+    await expect(dlg).toBeHidden();
+    const notice = page.getByRole('status').filter({ hasText: 'Ажилтан нэмэгдлээ' });
+    await expect(notice).toContainText(/код [A-Z]{1,3}\d{4,}/);
+    const code = /код ([A-Z]{1,3}\d{4,})/.exec((await notice.textContent()) ?? '')?.[1] ?? '';
+
+    await page.getByLabel('Байгууллага', { exact: true }).selectOption({ label: orgName });
+    await expect(page.getByRole('cell', { name: code, exact: true })).toBeVisible();
+    await expect(page.getByRole('cell', { name: ec(1), exact: true })).toBeHidden(); // үндсэн байгууллагынх шүүгдэнэ
+  });
+
+  test('[R9] NEW мөр → «Шинэ ажилтан бүртгэх» (хэлтэс, баг файлаас) → батлах → «Мэдээлэл дутуу»', async ({ page }) => {
+    await openAttendance(page);
+    await upload(page, await shiftChange([{ name: SHEET, rows: [[1, 'A', 'NEW', 'Шинээр', `Ирсэн${STAMP}`, 'Уурхайчин', 'Уул']] }]));
+    await expect(page.getByText('Алдаатай 1')).toBeVisible();
+    await page.getByRole('button', { name: 'Алдаатай мөрийг засах' }).click();
+    const edit = page.getByTestId('import-edit-rows');
+    await edit.getByRole('radio', { name: 'Шинэ ажилтан бүртгэх' }).check();
+    const place = `${SHEET} · 3`;
+    await expect(edit.getByLabel(`${place} мөр: хэлтэс`)).toHaveValue(/.+/); // файлын «Уул» → хэлтэс
+    await expect(edit.getByLabel(`${place} мөр: баг`)).toHaveValue(/.+/); // «A» → баг
+    await edit.getByLabel(`${place} мөр: байгууллага`).selectOption({ label: `Уурхай SC ${STAMP}` });
+    await edit.getByRole('button', { name: 'Хадгалах (1)' }).click();
+    await expect(page.getByText('Алдаагүй')).toBeVisible();
+    await page.getByRole('button', { name: 'Батлах' }).click();
+    await expect(page.getByText(/Баталгаажлаа: 1 бүртгэл/)).toBeVisible();
+
+    await page.goto(`/hr/${campId}`);
+    await page.waitForURL('**/employees');
+    await page.getByLabel('Мэдээлэл дутуу').check();
+    const row = page.getByRole('row', { name: new RegExp(`Ирсэн${STAMP}`) });
+    await expect(row).toBeVisible();
+    await expect(row.getByText('Мэдээлэл дутуу')).toBeVisible();
+  });
 });

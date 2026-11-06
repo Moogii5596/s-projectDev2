@@ -81,6 +81,6 @@ tags: [codebase, frontend, generated]
 
 | Файл | Түлхүүр |
 |---|---|
-| `web.en.json` | 1024 |
-| `web.mn.json` | 1024 |
-| `web.zh.json` | 1024 |
+| `web.en.json` | 1042 |
+| `web.mn.json` | 1042 |
+| `web.zh.json` | 1042 |

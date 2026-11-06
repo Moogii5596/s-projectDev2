@@ -15,6 +15,7 @@ import ImportDialog, { ExportButton } from '../../camp/components/ImportDialog'
 import { EMPLOYEE_IMPORT_COLUMNS } from '../lib/import-columns'
 import EmployeeAccess from '../components/EmployeeAccess'
 import { useTranslation } from 'react-i18next'
+import { autoCodeExample, codePayload, codeReady, suggestAutoCode } from '../lib/employee-form'
 
 
 /** <select>-ийн утга ↔ boolean | null ('' = албан тушаалаас / анхдагч) */
@@ -44,6 +45,8 @@ export default function EmployeesPage() {
   const [importing, setImporting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const positions = useQuery({ queryKey: campKeys.catalog('positions'), queryFn: () => campApi.catalog('positions') })
+  const orgs = useQuery({ queryKey: [...campKeys.organizations, 'all'], queryFn: () => campApi.organizations({}) })
+  const [notice, setNotice] = useState<string | null>(null)
 
   const q: EmployeeQuery = { ...filter, q: search.trim() || undefined, limit: 50 }
   const list = useInfiniteQuery({
@@ -87,6 +90,14 @@ export default function EmployeesPage() {
         </div>
       }
     >
+      {notice && (
+        <div role="status" className="mb-3 flex items-center justify-between rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+          <span>{notice}</span>
+          <button type="button" aria-label={t('camp.common.close')} className="text-green-500 hover:text-green-800" onClick={() => setNotice(null)}>
+            ×
+          </button>
+        </div>
+      )}
       <div className="flex flex-wrap gap-2 mb-3">
         <input aria-label={t('camp.emp.search')} className={`${inputSmCls} w-56 max-w-full`} placeholder={t('camp.picker.search')} value={search} onChange={(e) => setSearch(e.target.value)} />
         <select aria-label={t('camp.filter.department')} className={`${inputSmCls} w-auto`} value={filter.departmentId ?? ''} onChange={(e) => setF('departmentId', e.target.value)}>
@@ -112,6 +123,15 @@ export default function EmployeesPage() {
           {positions.data?.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
+            </option>
+          ))}
+        </select>
+        {/* v0.2.3 R8: байгууллагаар (гэрээт — харуул, ээлжийн унаа г.м.) */}
+        <select aria-label={t('camp.filter.organization')} className={`${inputSmCls} w-auto`} value={filter.organizationId ?? ''} onChange={(e) => setF('organizationId', e.target.value)}>
+          <option value="">{t('camp.filter.all_organizations')}</option>
+          {orgs.data?.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.name}
             </option>
           ))}
         </select>
@@ -231,7 +251,7 @@ export default function EmployeesPage() {
           </Button>
         </div>
       )}
-      {modal && <EmployeeModal campId={campId} emp={modal === 'new' ? null : modal} onClose={() => setModal(null)} />}
+      {modal && <EmployeeModal campId={campId} emp={modal === 'new' ? null : modal} onClose={() => setModal(null)} onAutoCode={(e) => setNotice(t('camp.emp.auto_code_done', { code: e.employeeCode, name: e.fullName }))} />}
       {importing && (
         <ImportDialog
           campId={campId}
@@ -246,7 +266,7 @@ export default function EmployeesPage() {
   )
 }
 
-function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee | null; onClose: () => void }) {
+function EmployeeModal({ campId, emp, onClose, onAutoCode }: { campId: string; emp: Employee | null; onClose: () => void; onAutoCode?: (e: Employee) => void }) {
   const { t } = useTranslation()
   const orgs = useQuery({ queryKey: [...campKeys.organizations, 'active'], queryFn: () => campApi.organizations({ activeOnly: true }) })
   const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => hrApi.departments(campId) })
@@ -272,8 +292,14 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
     status: (emp?.status ?? 'ACTIVE') as EmployeeStatus,
   })
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }))
+  // v0.2.3 R8: «Код автоматаар олгох» — зөвхөн нэмэхэд; гэрээт байгууллага сонгоход санал болгоно (хэрэглэгч буцааж болно)
+  const [autoCode, setAutoCode] = useState(false)
+  const pickOrg = (id: string) => {
+    set('organizationId', id)
+    if (!emp) setAutoCode(suggestAutoCode(orgs.data?.find((o) => o.id === id)?.orgType))
+  }
   const body = () => ({
-    employeeCode: f.employeeCode.trim(),
+    ...codePayload(!emp && autoCode, f.employeeCode),
     lastName: f.lastName.trim() || null,
     firstName: f.firstName.trim(),
     familyName: f.familyName.trim() || null,
@@ -290,7 +316,10 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
   const m = useCampMutation(
     () => (emp ? hrApi.updateEmployee(campId, emp.id, { ...body(), status: f.status }) : hrApi.createEmployee(campId, body())),
     [campKeys.employees(campId), ...campKeys.operational(campId)],
-    onClose,
+    (saved) => {
+      if (!emp && autoCode) onAutoCode?.(saved)
+      onClose()
+    },
   )
   const activeDepts = (depts.data ?? []).filter((d) => d.isActive || d.id === f.departmentId)
   const activeCrews = (crews.data ?? []).filter((c) => c.isActive || c.id === f.crewId)
@@ -299,7 +328,7 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
   const inh = inherited(f.positionId, posSettings.data, locations.data?.find((l) => l.id === settings.data?.defaultMealLocationId))
   const inhFrom = t(`camp.emp.source.${inh.from}`)
   const badPhones = invalidPhones(splitPhones(f.extraPhones))
-  const ready = f.employeeCode.trim() && f.firstName.trim() && f.organizationId && f.departmentId && badPhones.length === 0
+  const ready = codeReady(!emp && autoCode, f.employeeCode) && f.firstName.trim() && f.organizationId && f.departmentId && badPhones.length === 0
 
   return (
     <Modal
@@ -317,8 +346,26 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
       }
     >
       <div className="grid grid-cols-3 gap-3">
-        <Field label={t('camp.emp.col.code')} hint={t('camp.emp.code_hint')}>
-          {(id) => <input id={id} className={inputCls} value={f.employeeCode} onChange={(e) => set('employeeCode', e.target.value)} maxLength={50} />}
+        <Field label={t('camp.emp.col.code')} hint={!emp && autoCode ? t('camp.emp.auto_code_hint', { example: autoCodeExample(settings.data?.autoCodePrefix) }) : t('camp.emp.code_hint')}>
+          {(id) => (
+            <div className="space-y-1">
+              <input
+                id={id}
+                className={inputCls}
+                value={!emp && autoCode ? '' : f.employeeCode}
+                placeholder={!emp && autoCode ? autoCodeExample(settings.data?.autoCodePrefix) : undefined}
+                onChange={(e) => set('employeeCode', e.target.value)}
+                maxLength={50}
+                disabled={!emp && autoCode}
+              />
+              {!emp && (
+                <label className="flex items-center gap-1 text-xs text-gray-600">
+                  <input type="checkbox" checked={autoCode} onChange={(e) => setAutoCode(e.target.checked)} />
+                  {t('camp.emp.auto_code')}
+                </label>
+              )}
+            </div>
+          )}
         </Field>
         <Field label={t('camp.emp.col.last_name')}>{(id) => <input id={id} className={inputCls} value={f.lastName} onChange={(e) => set('lastName', e.target.value)} maxLength={100} />}</Field>
         <Field label={t('camp.emp.col.first_name')}>{(id) => <input id={id} className={inputCls} value={f.firstName} onChange={(e) => set('firstName', e.target.value)} maxLength={100} />}</Field>
@@ -374,7 +421,7 @@ function EmployeeModal({ campId, emp, onClose }: { campId: string; emp: Employee
       </Field>
       <Field label={t('camp.emp.organization')}>
         {(id) => (
-          <select id={id} className={inputCls} value={f.organizationId} onChange={(e) => set('organizationId', e.target.value)}>
+          <select id={id} className={inputCls} value={f.organizationId} onChange={(e) => pickOrg(e.target.value)}>
             <option value="">{t('camp.common.choose')}</option>
             {orgs.data?.map((o) => (
               <option key={o.id} value={o.id}>

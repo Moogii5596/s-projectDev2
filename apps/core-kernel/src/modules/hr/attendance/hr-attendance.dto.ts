@@ -1,4 +1,4 @@
-import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CampImportStatus, CampMealType, CampMovementDirection, CampShiftAdjustmentReason, CampShiftType } from '@prisma/client';
 import { ISO_DATE, trimOrNull } from '../../camp/common/camp-dto.util';
@@ -96,7 +96,19 @@ export class QueryImportsDto {
   @IsOptional() @IsEnum(CampImportStatus) status?: CampImportStatus;
 }
 
-/** v0.2.3 Блок R4.1 — PREVIEW мөр: ажилтан солих ЭСВЭЛ устгах / сэргээх (аль нэг нь) */
+/** v0.2.3 Блок R9 — PREVIEW-ээс шинэ ажилтан бүртгэх (овог, нэр, албан тушаал — файлаас; код автоматаар) */
+export class ImportNewEmployeeDto {
+  @IsUUID('all', { message: 'organizationId UUID байх ёстой' })
+  organizationId!: string;
+
+  @IsUUID('all', { message: 'departmentId UUID байх ёстой' })
+  departmentId!: string;
+
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'crewId UUID байх ёстой' })
+  crewId?: string | null;
+}
+
+/** v0.2.3 Блок R4.1 / R9 — PREVIEW мөр: ажилтан солих ЭСВЭЛ устгах / сэргээх ЭСВЭЛ шинэ ажилтан бүртгэх (аль нэг нь) */
 export class ImportRowEditDto {
   @IsInt() @Min(1)
   row!: number;
@@ -107,6 +119,10 @@ export class ImportRowEditDto {
   /** true = устгах, false = сэргээх */
   @IsOptional() @IsBoolean()
   deleted?: boolean;
+
+  /** R9: шинэ ажилтан бүртгэж энэ мөрөнд холбох (эрх: + camp.employee.manage) */
+  @IsOptional() @ValidateNested() @Type(() => ImportNewEmployeeDto)
+  newEmployee?: ImportNewEmployeeDto;
 }
 
 export class UpdateImportRowsDto {

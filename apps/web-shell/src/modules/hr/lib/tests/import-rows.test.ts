@@ -54,3 +54,38 @@ describe('buildEdits / deleteErrorRowsEdits', () => {
     expect(deleteErrorRowsEdits(rows)).toEqual([{ row: 2, deleted: true }, { row: 5, deleted: true }])
   })
 })
+
+describe('R9 — шинэ ажилтан бүртгэх', () => {
+  const org = (id: string, orgType: 'MAIN' | 'CONTRACTOR', isActive = true) => ({ id, name: id, orgType, isActive }) as unknown as import('../../../camp/api/types').Organization
+  const dept = (id: string, code: string, name: string, isActive = true) => ({ id, code, name, isActive }) as unknown as import('../../../camp/api/types').Department
+  const crew = (id: string, code: string, isActive = true) => ({ id, code, isActive }) as unknown as import('../../../camp/api/types').Crew
+  const depts = [dept('d1', 'MINE', 'Уул'), dept('d2', 'ADM', 'Захиргаа'), dept('d3', 'OLD', 'Хуучин', false)]
+  const crews = [crew('c1', 'A'), crew('c2', 'B'), crew('c9', 'D', false)]
+
+  it('хэлтэс (код / нэр, жижиг том үсэг, зай), баг (код); идэвхгүй / таарахгүй → хоосон', async () => {
+    const { matchDepartment, matchCrew } = await import('../import-rows')
+    expect([matchDepartment(' уул ', depts), matchDepartment('adm', depts), matchDepartment('Хуучин', depts), matchDepartment('', depts), matchDepartment(undefined, depts)]).toEqual(['d1', 'd2', '', '', ''])
+    expect([matchCrew('a', crews), matchCrew('D', crews), matchCrew(null, crews), matchCrew('TIRE', crews)]).toEqual(['c1', '', '', ''])
+  })
+
+  it('анхдагч байгууллага: ганц MAIN → түүнийг; хоёр MAIN → хоосон; ганц байгууллага → түүнийг', async () => {
+    const { defaultOrganization } = await import('../import-rows')
+    expect(defaultOrganization([org('m', 'MAIN'), org('k', 'CONTRACTOR')])).toBe('m')
+    expect(defaultOrganization([org('m1', 'MAIN'), org('m2', 'MAIN')])).toBe('')
+    expect(defaultOrganization([org('k', 'CONTRACTOR')])).toBe('k')
+    expect(defaultOrganization([org('m', 'MAIN', false), org('k', 'CONTRACTOR'), org('k2', 'CONTRACTOR')])).toBe('')
+  })
+
+  it('buildEdits: «шинэ» + бөглөсөн → newEmployee (баг хоосон → null); дутуу → алгасна, incompleteNew тоолно; устгах давуу', async () => {
+    const { incompleteNew, canRegisterNew, newEmployeeDefaults } = await import('../import-rows')
+    const drafts = {
+      2: { mode: 'new' as const, newEmployee: { organizationId: 'o', departmentId: 'd1', crewId: '' } },
+      5: { mode: 'new' as const, newEmployee: { organizationId: 'o', departmentId: '', crewId: 'c1' } },
+      3: { mode: 'new' as const, deleted: true, newEmployee: { organizationId: 'o', departmentId: 'd1', crewId: '' } },
+    }
+    expect(buildEdits(rows, drafts)).toEqual([{ row: 2, newEmployee: { organizationId: 'o', departmentId: 'd1', crewId: null } }, { row: 3, deleted: true }])
+    expect(incompleteNew(drafts)).toBe(1)
+    expect([canRegisterNew(r(1, { source: src })), canRegisterNew(r(1))]).toEqual([true, false])
+    expect(newEmployeeDefaults(r(1, { source: { ...src, department: 'Уул', crew: 'A' } }), [org('m', 'MAIN')], depts, crews)).toEqual({ organizationId: 'm', departmentId: 'd1', crewId: 'c1' })
+  })
+})

@@ -2,7 +2,7 @@
 title: "Эрхийн каталог (Кемп RBAC)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-19
+last_updated: 2026-11-06
 tags: [codebase, auth, camp, generated]
 ---
 
@@ -22,7 +22,7 @@ tags: [codebase, auth, camp, generated]
 | `camp.roles.manage` | Роль, эрхийн тохиргоо | V1 | ✅ |  |  |  | — |
 | `camp.master.manage` | Мастер өгөгдөл (кемп, байр, өрөө, хэлтэс, баг, байгууллага) | V1 | ✅ |  |  |  | `camp-catalog.service.ts` `facilities.handlers.ts` `camp-facilities.service.ts` `camps.service.ts` `core-organizations.service.ts` `departments.handler.ts` `positions.handler.ts` `hr-crews.service.ts` `hr-departments.service.ts` `hr-positions.service.ts` |
 | `camp.contract.manage` | Гэрээ, ажил, үнэ | V2 | ✅ |  |  |  | — |
-| `camp.employee.manage` | Ажилтан бүртгэл | V1 | ✅ |  | ✅ |  | `hr-employees.service.ts` `employees.handler.ts` |
+| `camp.employee.manage` | Ажилтан бүртгэл | V1 | ✅ |  | ✅ |  | `hr-attendance.service.ts` `hr-employees.service.ts` `employees.handler.ts` |
 | `camp.employee.terminate` | Ажлаас гаргах, дахин ажилд авах | V1 | ✅ |  |  |  | `hr-employee-lifecycle.service.ts` `former-employees.handler.ts` `camp-snapshot.ts` |
 | `camp.movement.import` | Ирц (xlsx) импорт | V1 | ✅ | ✅ |  |  | `hr-attendance.service.ts` |
 | `camp.shift.adjust` | Ээлжийн зохицуулалт | V1 | ✅ | ✅ |  |  | `hr-shifts.service.ts` |

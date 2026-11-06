@@ -197,6 +197,9 @@ export const MESSAGES = {
   'camp.err.attendance.11': { mn: 'Зөвхөн PREVIEW төлөвтэй импортын мөрийг засна (одоо {status})', en: 'Rows can only be edited while the import is in PREVIEW (now {status})', zh: '只能在 PREVIEW 状态下修改导入行（当前为 {status}）' },
   'camp.err.attendance.12': { mn: '{row}-р мөр энэ импортод алга', en: 'Row {row} does not exist in this import', zh: '本次导入中不存在第 {row} 行' },
   'camp.err.attendance.13': { mn: '{row}-р мөр: ажилтан солих эсвэл устгахын аль нэгийг нэг удаа заана', en: 'Row {row}: specify either an employee or deletion, once', zh: '第 {row} 行：只能指定一次更换员工或删除' },
+  'camp.err.attendance.14': { mn: '{row}-р мөр: шинэ ажилтныг зөвхөн HR ShiftChange файлын мөрөөс бүртгэнэ', en: 'Row {row}: a new employee can only be registered from an HR ShiftChange row', zh: '第 {row} 行：只能从 HR ShiftChange 文件的行登记新员工' },
+  // v0.2.3 R9 — S9 «HR ID хүлээгдэж байна»
+  'row.hr_id_pending': { mn: 'HR ID хүлээгдэж байна (түр код)', en: 'Waiting for HR ID (temporary code)', zh: '等待 HR 编号（临时编号）' },
   'camp.err.attendance_ctl.1': { mn: 'multipart/form-data хэлбэрээр "file" талбартай илгээнэ үү', en: 'Send as multipart/form-data with a "file" field', zh: '请以 multipart/form-data 格式并包含"file"字段发送' },
   'camp.err.attendance_ctl.2': { mn: 'Файл алга ("file" талбар)', en: 'File missing ("file" field)', zh: '缺少文件（"file"字段）' },
   'camp.err.attendance_ctl.3': { mn: 'Файл 2 MB-ээс их байна', en: 'File is larger than 2 MB', zh: '文件超过 2 MB' },

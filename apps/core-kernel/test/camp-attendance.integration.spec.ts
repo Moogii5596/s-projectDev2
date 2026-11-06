@@ -385,4 +385,29 @@ describe('📥 [R4] HR ShiftChange — PREVIEW, ростерын зөрүү, м�
     expect(e.body.rosterGaps.length).toBeGreaterThan(0);
     expect((await api().post(hr(`/movement-imports/${r.body.import.id}/cancel`)).set(auth())).status).toBe(200);
   });
+
+  it('[R9] NEW мөр → шинэ ажилтан бүртгэх (Z код, S9 «HR ID хүлээгдэж байна») → батлах; код солиход S9 арилна', async () => {
+    const file = await shiftChange([{ name: '2026.11.18 C ирэх', rows: [[1, 'C', 'NEW', 'Шинэ', 'Хүн', 'Уурхайчин', 'Уул']] }]);
+    const r = await api().post(hr('/movement-imports')).set(auth()).attach('file', file, 'ShiftChange-new.xlsx');
+    expect(r.body.import.errorRows).toBe(1);
+    const row = r.body.rows[0].row;
+    const e = await api().patch(hr(`/movement-imports/${r.body.import.id}/rows`)).set(auth()).send({
+      rows: [{ row, newEmployee: { organizationId: ids.org, departmentId: ids.mine, crewId: ids.crewC } }],
+    });
+    expect(e.status).toBe(200);
+    expect(e.body.import).toMatchObject({ errorRows: 0, totalRows: 1 });
+    expect(e.body.rows[0]).toMatchObject({ kind: 'ROSTER', errors: [], edited: { fromCode: '' } });
+    const code = e.body.rows[0].employeeCode as string;
+    expect(code).toMatch(/^Z\d{4,}$/);
+    const emp = await prismaAdmin.hrEmployee.findFirstOrThrow({ where: { tenantId, employeeCode: code } });
+    expect(emp).toMatchObject({ lastName: 'Шинэ', firstName: 'Хүн', crewId: ids.crewC, departmentId: ids.mine, positionId: ids.posMiner });
+    expect(emp.dataIssues).toEqual([{ field: 'employeeCode', code: 'row.hr_id_pending', value: '' }]);
+
+    const c = await api().post(hr(`/movement-imports/${r.body.import.id}/confirm`)).set(auth());
+    expect([c.status, c.body.movements]).toEqual([200, 1]);
+    // HR ID ирсэн → кодыг солих → S9 арилна
+    const u = await api().patch(hr(`/employees/${emp.id}`)).set(auth()).send({ employeeCode: 'E77' });
+    expect(u.status).toBe(200);
+    expect((await prismaAdmin.hrEmployee.findUniqueOrThrow({ where: { id: emp.id } })).dataIssues).toEqual([]);
+  });
 });

@@ -1,4 +1,4 @@
-import type { ImportPreview, ImportRow, ImportRowEdit } from '../../camp/api/types'
+import type { Crew, Department, ImportPreview, ImportRow, ImportRowEdit, Organization } from '../../camp/api/types'
 
 /**
  * v0.2.3 Блок R4.4–R4.6 — PREVIEW хүснэгт (цэвэр): шүүлт, эх мөрийн байрлал / нэр, засварын горимын payload.
@@ -35,10 +35,20 @@ export const fileName = (r: ImportRow): string => (r.source ? `${r.source.lastNa
 /** Ажилтан хайх анхдагч утга: файлын нэр (нэр → овог) эсвэл код */
 export const pickerQuery = (r: ImportRow): string => (r.source ? r.source.firstName || r.source.lastName : r.employeeCode).trim()
 
+/** R9: шинэ ажилтны байгууллага / хэлтэс / баг */
+export interface NewEmployeeDraft {
+  organizationId: string
+  departmentId: string
+  crewId: string
+}
+
 /** Засварын горимын мөр бүрийн сонголт */
 export interface RowDraft {
   employeeId?: string
   deleted?: boolean
+  /** R9: 'new' = шинэ ажилтан бүртгэх */
+  mode?: 'existing' | 'new'
+  newEmployee?: NewEmployeeDraft
 }
 
 /** Засварын горим → PATCH payload (өөрчлөгдсөн мөр л; устгах нь ажилтан солихоос давуу) */
@@ -48,10 +58,51 @@ export function buildEdits(rows: ImportRow[], drafts: Record<number, RowDraft>):
     const d = drafts[r.row]
     if (!d) continue
     if (d.deleted !== undefined && d.deleted !== !!r.deleted) out.push({ row: r.row, deleted: d.deleted })
-    else if (!d.deleted && d.employeeId && d.employeeId !== r.employeeId) out.push({ row: r.row, employeeId: d.employeeId })
+    else if (!d.deleted && d.mode === 'new') {
+      if (newReady(d.newEmployee)) out.push({ row: r.row, newEmployee: { ...d.newEmployee, crewId: d.newEmployee.crewId || null } })
+    } else if (!d.deleted && d.employeeId && d.employeeId !== r.employeeId) out.push({ row: r.row, employeeId: d.employeeId })
   }
   return out
 }
 
 /** R4.6 — «Алдаатай бүх мөрийг устгах» */
 export const deleteErrorRowsEdits = (rows: ImportRow[]): ImportRowEdit[] => rows.filter(hasErrors).map((r) => ({ row: r.row, deleted: true }))
+
+// ── R9 — шинэ ажилтан бүртгэх ─────────────────────────────
+
+/** Зөвхөн ShiftChange мөр (овог, нэр файлд) */
+export const canRegisterNew = (r: ImportRow): boolean => !!r.source && !!(r.source.firstName || r.source.lastName)
+
+const norm = (v: string | null | undefined) => (v ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
+
+export const newReady = (n: NewEmployeeDraft | undefined): n is NewEmployeeDraft => !!n && !!n.organizationId && !!n.departmentId
+
+/** Файлын «Хэлтэс» → хэлтэс (код эсвэл нэрээр, идэвхтэй) */
+export function matchDepartment(text: string | undefined, depts: Department[]): string {
+  const t = norm(text)
+  if (!t) return ''
+  return depts.find((d) => d.isActive && (norm(d.code) === t || norm(d.name) === t))?.id ?? ''
+}
+
+/** Файлын «Shift» (A–D …) → баг (кодоор, идэвхтэй) */
+export function matchCrew(letter: string | null | undefined, crews: Crew[]): string {
+  const t = norm(letter)
+  if (!t) return ''
+  return crews.find((c) => c.isActive && norm(c.code) === t)?.id ?? ''
+}
+
+/** Анхдагч байгууллага: идэвхтэй үндсэн (MAIN) ганц бол түүнийг; эс бөгөөс ганц байгууллага; эс бөгөөс сонгоогүй */
+export function defaultOrganization(orgs: Organization[]): string {
+  const active = orgs.filter((o) => o.isActive)
+  const main = active.filter((o) => o.orgType === 'MAIN')
+  if (main.length === 1) return main[0].id
+  return active.length === 1 ? active[0].id : ''
+}
+
+export function newEmployeeDefaults(r: ImportRow, orgs: Organization[], depts: Department[], crews: Crew[]): NewEmployeeDraft {
+  return { organizationId: defaultOrganization(orgs), departmentId: matchDepartment(r.source?.department, depts), crewId: matchCrew(r.source?.crew, crews) }
+}
+
+/** «Шинэ» горимтой боловч байгууллага / хэлтэс сонгоогүй мөрийн тоо (хадгалахыг хаана) */
+export const incompleteNew = (drafts: Record<number, RowDraft>): number =>
+  Object.values(drafts).filter((d) => !d.deleted && d.mode === 'new' && !newReady(d.newEmployee)).length

@@ -2,15 +2,21 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { hrApi } from '../api/hr-api'
-import type { ImportPreview, ImportRow, ImportRowEdit, MealType } from '../../camp/api/types'
-import { campKeys } from '../../camp/hooks/useCampPermissions'
+import type { Crew, Department, ImportPreview, ImportRow, ImportRowEdit, MealType, Organization } from '../../camp/api/types'
+import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
+import { campApi } from '../../camp/api/camp-api'
+import { P } from '../../camp/lib/permissions'
 import { useCampMutation } from '../../camp/hooks/useCampMutation'
 import { DIRECTION_LABEL, KIND_LABEL, MEAL_LABEL, SHIFT_LABEL } from '../../camp/lib/labels'
 import { Button, Empty, ErrorBox, Table, inputSmCls, td } from '../../camp/components/ui'
 import {
+  type NewEmployeeDraft,
   type RowDraft,
   type RowFilter,
   buildEdits,
+  canRegisterNew,
+  incompleteNew,
+  newEmployeeDefaults,
   defaultFilter,
   deleteErrorRowsEdits,
   fileName,
@@ -175,6 +181,17 @@ function EditErrorRows({
   const [drafts, setDrafts] = useState<Record<number, RowDraft>>({})
   const set = (row: number, d: RowDraft) => setDrafts((x) => ({ ...x, [row]: { ...x[row], ...d } }))
   const edits = buildEdits(rows, drafts)
+  const incomplete = incompleteNew(drafts)
+  // R9: шинэ ажилтан бүртгэх — `camp.employee.manage` эрхтэйд л
+  const canCreate = useCampPermissions(campId).can(P.EMPLOYEE_MANAGE)
+  const orgs = useQuery({ queryKey: [...campKeys.organizations, 'active'], queryFn: () => campApi.organizations({ activeOnly: true }), enabled: canCreate })
+  const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => hrApi.departments(campId), enabled: canCreate })
+  const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => hrApi.crews(campId), enabled: canCreate })
+  const startNew = (r: ImportRow) =>
+    set(r.row, { mode: 'new', newEmployee: drafts[r.row]?.newEmployee ?? newEmployeeDefaults(r, orgs.data ?? [], depts.data ?? [], crews.data ?? []) })
+  /** R9-b: энэ мөрийн байгууллага / хэлтэс / багийг «шинэ» бусад мөрөнд */
+  const applyToAll = (n: NewEmployeeDraft) =>
+    setDrafts((x) => Object.fromEntries(Object.entries(x).map(([k, d]) => [k, d.mode === 'new' && !d.deleted ? { ...d, newEmployee: { ...n } } : d])))
   return (
     <div className="space-y-2" data-testid="import-edit-rows">
       <div className="text-sm font-medium">{t('camp.att.edit_title', { n: rows.length })}</div>
@@ -192,7 +209,30 @@ function EditErrorRows({
                 </td>
                 <td className={`${td} text-red-700 text-xs`}>{r.errors.join('; ')}</td>
                 <td className={`${td} min-w-64`}>
-                  {!d.deleted && <RowEmployeeChooser campId={campId} row={r} value={d.employeeId} onChange={(id) => set(r.row, { employeeId: id })} />}
+                  {!d.deleted && canCreate && canRegisterNew(r) && (
+                    <div role="radiogroup" aria-label={t('camp.att.row_mode', { row: rowPlace(r) })} className="mb-1 flex gap-3 text-xs">
+                      <label className="flex items-center gap-1">
+                        <input type="radio" name={`mode-${r.row}`} checked={d.mode !== 'new'} onChange={() => set(r.row, { mode: 'existing' })} />
+                        {t('camp.att.mode_existing')}
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <input type="radio" name={`mode-${r.row}`} checked={d.mode === 'new'} onChange={() => startNew(r)} />
+                        {t('camp.att.mode_new')}
+                      </label>
+                    </div>
+                  )}
+                  {!d.deleted && d.mode !== 'new' && <RowEmployeeChooser campId={campId} row={r} value={d.employeeId} onChange={(id) => set(r.row, { employeeId: id })} />}
+                  {!d.deleted && d.mode === 'new' && d.newEmployee && (
+                    <NewEmployeeFields
+                      row={r}
+                      value={d.newEmployee}
+                      orgs={orgs.data ?? []}
+                      depts={(depts.data ?? []).filter((x) => x.isActive)}
+                      crews={(crews.data ?? []).filter((x) => x.isActive)}
+                      onChange={(n) => set(r.row, { newEmployee: n })}
+                      onApplyAll={() => applyToAll(d.newEmployee as NewEmployeeDraft)}
+                    />
+                  )}
                 </td>
                 <td className={td}>
                   <input
@@ -207,9 +247,10 @@ function EditErrorRows({
           })}
         </Table>
       </div>
+      {incomplete > 0 && <p className="text-xs text-red-600">{t('camp.att.new_incomplete', { n: incomplete })}</p>}
       <ErrorBox error={error} />
       <div className="flex gap-2">
-        <Button onClick={() => onSave(edits)} loading={saving} disabled={edits.length === 0}>
+        <Button onClick={() => onSave(edits)} loading={saving} disabled={edits.length === 0 || incomplete > 0}>
           {t('camp.att.save_rows', { n: edits.length })}
         </Button>
         <Button variant="secondary" onClick={onCancel}>
@@ -280,6 +321,65 @@ function RowEmployeeChooser({ campId, row, value, onChange }: { campId: string; 
             </span>
           </label>
         ))}
+      </div>
+    </div>
+  )
+}
+
+/** R9 — шинэ ажилтны байгууллага / хэлтэс / баг (файлаас урьдчилан сонгосон); овог, нэр, албан тушаал — файлаас, код автоматаар */
+function NewEmployeeFields({
+  row,
+  value,
+  orgs,
+  depts,
+  crews,
+  onChange,
+  onApplyAll,
+}: {
+  row: ImportRow
+  value: NewEmployeeDraft
+  orgs: Organization[]
+  depts: Department[]
+  crews: Crew[]
+  onChange: (v: NewEmployeeDraft) => void
+  onApplyAll: () => void
+}) {
+  const { t } = useTranslation()
+  const place = rowPlace(row)
+  return (
+    <div className="space-y-1 text-xs">
+      <div className="text-gray-500">
+        {t('camp.att.new_from_file', { name: fileName(row), position: row.source?.position || '—' })}
+      </div>
+      <select aria-label={t('camp.att.new_org', { row: place })} className={inputSmCls} value={value.organizationId} onChange={(e) => onChange({ ...value, organizationId: e.target.value })}>
+        <option value="">{t('camp.att.choose_org')}</option>
+        {orgs.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.name}
+          </option>
+        ))}
+      </select>
+      <select aria-label={t('camp.att.new_dept', { row: place })} className={inputSmCls} value={value.departmentId} onChange={(e) => onChange({ ...value, departmentId: e.target.value })}>
+        <option value="">{t('camp.att.choose_dept', { file: row.source?.department || '—' })}</option>
+        {depts.map((d) => (
+          <option key={d.id} value={d.id}>
+            {d.code} · {d.name}
+          </option>
+        ))}
+      </select>
+      <select aria-label={t('camp.att.new_crew', { row: place })} className={inputSmCls} value={value.crewId} onChange={(e) => onChange({ ...value, crewId: e.target.value })}>
+        <option value="">{t('camp.emp.no_crew')}</option>
+        {crews.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.code}
+          </option>
+        ))}
+      </select>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-gray-400">{t('camp.att.new_code_auto')}</span>
+        <button type="button" className="text-blue-600 hover:underline" onClick={onApplyAll}>
+          {t('camp.att.apply_all_new')}
+        </button>
       </div>
     </div>
   )

@@ -431,6 +431,9 @@ export interface ShiftChangeSource {
   firstName: string
   crew: string | null
   extendDays: number | null
+  /** R9: файлын «Албан тушаал», «Хэлтэс» */
+  position?: string
+  department?: string
 }
 
 export interface ImportRow {
@@ -469,6 +472,8 @@ export interface ImportRowEdit {
   row: number
   employeeId?: string
   deleted?: boolean
+  /** R9: шинэ ажилтан бүртгэж холбох (код автоматаар; овог, нэр, албан тушаал — файлаас) */
+  newEmployee?: { organizationId: string; departmentId: string; crewId: string | null }
 }
 
 export interface ImportHeader {

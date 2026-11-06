@@ -42,6 +42,9 @@ export interface ShiftChangeSource {
   crew: string | null;
   /** EXTEND: «N хоног» — null бол кемпийн анхдагч */
   extendDays: number | null;
+  /** v0.2.3 R9: файлын «Албан тушаал», «Хэлтэс» (шинэ ажилтан бүртгэхэд урьдчилан бөглөнө) */
+  position?: string;
+  department?: string;
 }
 
 const norm = (s: string) => s.trim().toUpperCase().replace(/\s+/g, ' ');

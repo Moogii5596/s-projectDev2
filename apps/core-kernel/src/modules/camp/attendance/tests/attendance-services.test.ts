@@ -8,6 +8,7 @@ import { HrAttendanceHooks } from '../../../hr/attendance/stay-store';
 import { CampStayStore, CampStaysService } from '../camp-stays.service';
 import { HrAttendanceService } from '../../../hr/attendance/hr-attendance.service';
 import { HrShiftsService } from '../../../hr/attendance/hr-shifts.service';
+import { HrEmployeesService } from '../../../hr/employees/hr-employees.service';
 import { CampRoomsService, firstOverCapacityNight } from '../camp-rooms.service';
 import { CampPresenceService } from '../camp-presence.service';
 
@@ -36,7 +37,7 @@ describe('HrAttendanceService — импорт (Шат 3.3)', () => {
     s = setup();
     const hooks = new HrAttendanceHooks();
     hooks.registerStayStore(new CampStayStore());
-    svc = new HrAttendanceService(s.prisma as never, s.access, hooks);
+    svc = new HrAttendanceService(s.prisma as never, s.access, hooks, new HrEmployeesService(s.prisma as never, s.access, s.audit));
     stays = new CampStaysService(s.prisma as never, s.access);
     setActor(s.tx, { userId: 'cu1', roles: [{ campId: 'c1', perms: [P.MOVEMENT_IMPORT] }] });
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
@@ -166,6 +167,42 @@ describe('HrAttendanceService — импорт (Шат 3.3)', () => {
     expect(s.tx.hrMovementImport.update).not.toHaveBeenCalled();
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MEAL_ORDER] }] });
     await expect(svc.updateRows('t1', 'a1', 'c1', 'imp1', { rows: [{ row: 2, deleted: true }] })).rejects.toThrow(ForbiddenException);
+  });
+
+  // ── v0.2.3 Блок R9 — PREVIEW-ээс шинэ ажилтан бүртгэх ──
+  const scSrc = (p: Record<string, unknown> = {}) => ({ sheet: 's', row: 5, idRaw: 'NEW', idType: 'NEW', lastName: 'Бат', firstName: 'Дорж', crew: 'A', extendDays: null, position: 'Жолооч', ...p });
+  const newRow = (p: Record<string, unknown> = {}) => ({ row: 3, employeeCode: '', date: '2026-10-07', direction: 'ARRIVAL', meals: null, shift: null, errors: ['бүртгэлгүй'], source: scSrc(), ...p });
+
+  it('updateRows newEmployee: эрх + ажилтан үүсгэх (Z код, S9 NEW, албан тушаал каталогоос) → мөрөнд холбоно', async () => {
+    setActor(s.tx, { userId: 'cu1', roles: [{ campId: 'c1', perms: [P.MOVEMENT_IMPORT, P.EMPLOYEE_MANAGE] }] });
+    s.tx.hrMovementImport.findFirst.mockResolvedValueOnce({ ...pending([okRow, newRow()]), previewMeta: { format: 'SHIFTCHANGE', skippedSheets: [] } });
+    s.tx.hrMovementImport.update.mockImplementation(async (a: { data: Record<string, unknown> }) => ({ id: 'imp1', ...a.data }));
+    s.tx.coreOrganization.findFirst.mockResolvedValue({ isActive: true });
+    s.tx.hrDepartment.findFirst.mockResolvedValue({ isActive: true });
+    s.tx.hrPosition.findMany.mockResolvedValueOnce([{ id: 'p1', name: 'жолооч' }]);
+    s.tx.hrPosition.findFirst.mockResolvedValue({ id: 'p1', name: 'Жолооч', isActive: true });
+    s.tx.hrEmployee.findMany.mockImplementation(async (a: { where?: { employeeCode?: unknown; id?: unknown } }) =>
+      a.where?.employeeCode && typeof a.where.employeeCode === 'object' && 'startsWith' in (a.where.employeeCode as object)
+        ? [{ employeeCode: 'Z0004' }]
+        : a.where?.id
+          ? [{ id: 'e9', employeeCode: 'Z0005' }]
+          : employees,
+    );
+    s.tx.hrEmployee.create.mockImplementation(async (a: { data: Record<string, unknown> }) => ({ id: 'e9', fullName: 'Бат Дорж', ...a.data }));
+    await svc.updateRows('t1', 'a1', 'c1', 'imp1', { rows: [{ row: 3, newEmployee: { organizationId: 'o1', departmentId: 'd1', crewId: null } }] });
+    const data = s.tx.hrEmployee.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({ employeeCode: 'Z0005', lastName: 'Бат', firstName: 'Дорж', positionId: 'p1', organizationId: 'o1', departmentId: 'd1', dataIssues: [{ field: 'employeeCode', code: 'row.hr_id_pending', value: '' }] });
+    const saved = s.tx.hrMovementImport.update.mock.calls[0][0].data.parsedRows;
+    expect(saved[1]).toMatchObject({ row: 3, employeeCode: 'Z0005', errors: [], edited: { fromCode: '' } });
+  });
+
+  it('updateRows newEmployee: ажилтан үүсгэх эрхгүй → 403; «Ирц» загварын мөр → 400; бусадтай хамт → 400', async () => {
+    s.tx.hrMovementImport.findFirst.mockResolvedValue(pending([okRow, newRow()]));
+    await expect(svc.updateRows('t1', 'a1', 'c1', 'imp1', { rows: [{ row: 3, newEmployee: { organizationId: 'o1', departmentId: 'd1' } }] })).rejects.toThrow(ForbiddenException);
+    setActor(s.tx, { userId: 'cu1', roles: [{ campId: 'c1', perms: [P.MOVEMENT_IMPORT, P.EMPLOYEE_MANAGE] }] });
+    await expect(svc.updateRows('t1', 'a1', 'c1', 'imp1', { rows: [{ row: 2, newEmployee: { organizationId: 'o1', departmentId: 'd1' } }] })).rejects.toThrow(/ShiftChange/);
+    await expect(svc.updateRows('t1', 'a1', 'c1', 'imp1', { rows: [{ row: 3, deleted: true, newEmployee: { organizationId: 'o1', departmentId: 'd1' } }] })).rejects.toThrow(BadRequestException);
+    expect(s.tx.hrEmployee.create).not.toHaveBeenCalled();
   });
 
   it('confirm: устгасан мөр бичигдэхгүй; бүгд устгагдсан → 400', async () => {

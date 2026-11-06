@@ -13,6 +13,8 @@ export interface RowEdit {
   row: number;
   employeeId?: string;
   deleted?: boolean;
+  /** R9 — service ажилтан үүсгээд `employeeId` болгоно; энд ирэхгүй */
+  newEmployee?: unknown;
 }
 
 export function applyRowEdits(parsed: ParsedRow[], edits: RowEdit[], employeeCodeById: Map<string, string>): ParsedRow[] {
