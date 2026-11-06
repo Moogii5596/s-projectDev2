@@ -175,7 +175,7 @@ tags: [roadmap, v0.2]
 | QA-18 | Production кодын type цоорхой: `as any` 19, `as unknown as` 27 | кодын анализ 2026-10-18 | P3 | S | 📋 v0.2.9 [[11_v0.2_completion_master_plan]] |
 | QA-19 | `process.env`-ийг zod `env.config`-ийг тойрч уншдаг 6 файл (escalation, outbox, tenant-slug, prisma-log, main, system-prisma); `SYSTEM_DATABASE_URL` → `DATABASE_URL` «шилжилтийн» fallback-ийг хасаж fail-fast | кодын анализ 2026-10-18 | P3 | S | 📋 v0.2.4 |
 | QA-20 | `console.log/error` → Nest `Logger` (`db/redis.module.ts`, `main.ts`) | кодын анализ 2026-10-18 | P3 | S | 📋 v0.2.4 |
-| QA-21 | `schema.prisma` ↔ `supabase/migrations` зөрүүг автоматаар шалгах (CI-д `prisma migrate diff`, MIG-001) | кодын анализ 2026-10-18 | P2 | S–M | 📋 v0.2.3 |
+| QA-21 | `schema.prisma` ↔ `supabase/migrations` зөрүүг автоматаар шалгах (CI-д `prisma migrate diff`, MIG-001) | кодын анализ 2026-10-18 | P2 | S–M | ✅ v0.2.3 Блок 8 (`3db4ba5`, baseline ratchet) |
 | DBG-01 | **Debug цэс** (эрх `core.debug.view/manage` + `DEBUG_MENU_ENABLED`): унтаа модулиуд, MFE, системийн мэдээлэл, эрүүл мэнд (DB/Redis/GoTrue/SMTP/storage/outbox/cron), эрхийн шалгагч, лог, i18n дутуу, кэш цэвэрлэх — [[10_v0.2.4_tech_plan]] D-1 | Хэрэглэгчийн шийдвэр 2026-10-19 | P1 | M | 📋 v0.2.4 |
 | I18N-02 | Олон хэлний үлдэгдэл: DTO (class-validator) мессеж, DB trigger-ийн тайлбар, ирцийн хуучин xlsx загвар (zh толгой/утга) | [[i18n-review]] §4 | P2 | M | 📋 v0.2.4 Блок 5 [[11_v0.2_completion_master_plan]] |
 
