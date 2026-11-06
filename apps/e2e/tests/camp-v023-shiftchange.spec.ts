@@ -52,6 +52,24 @@ async function shiftChange(sheets: { name: string; rows: (string | number)[][] }
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
 
+/**
+ * TEST-032: admin@test.mn-ийн профайлын хэлийг өөр spec (camp-v021 «олон хэл») өөрчилж, унавал буцаахгүй үлдээдэг →
+ * энэ spec монгол шошгоор хайдаг тул нэвтэрсний дараа профайл + төхөөрөмжийн хэлийг МН болгоно.
+ */
+async function forceMongolian(page: Page) {
+  await page.evaluate(async () => {
+    const key = Object.keys(localStorage).find((k) => /^sb-.*-auth-token$/.test(k));
+    const token = key ? (JSON.parse(localStorage.getItem(key) as string) as { access_token: string }).access_token : '';
+    const res = await fetch('/api/v1/i18n/me/locale', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ locale: 'mn' }),
+    });
+    if (!res.ok) throw new Error(`locale → ${res.status}`);
+    localStorage.setItem('s-project.lang', 'mn');
+  });
+}
+
 async function openAttendance(page: Page) {
   await page.goto(`/hr/${campId}`);
   await page.waitForURL('**/employees');
@@ -64,6 +82,7 @@ const upload = (page: Page, buffer: Buffer) =>
 test.describe.serial('v0.2.3 R4 — HR ShiftChange импорт', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page);
+    await forceMongolian(page);
   });
 
   test('бэлтгэл (API): кемп, хэлтэс, А баг, 3 ажилтан (овог / нэртэй)', async ({ page }) => {
@@ -99,7 +118,7 @@ test.describe.serial('v0.2.3 R4 — HR ShiftChange импорт', () => {
 
     await page.getByRole('button', { name: 'Алдаатай мөрийг засах' }).click();
     const edit = page.getByTestId('import-edit-rows');
-    const search = edit.getByLabel(`${SHEET} · 4 мөрийн ажилтан`);
+    const search = edit.getByLabel(`${SHEET} · 4 мөрийн ажилтан`, { exact: true }); // TEST-031
     await expect(search).toHaveValue('Мэдэгдэх');
     await search.fill('Ням');
     await edit.getByRole('radio', { name: new RegExp(ec(3)) }).check();
@@ -165,9 +184,9 @@ test.describe.serial('v0.2.3 R4 — HR ShiftChange импорт', () => {
     const edit = page.getByTestId('import-edit-rows');
     await edit.getByRole('radio', { name: 'Шинэ ажилтан бүртгэх' }).check();
     const place = `${SHEET} · 3`;
-    await expect(edit.getByLabel(`${place} мөр: хэлтэс`)).toHaveValue(/.+/); // файлын «Уул» → хэлтэс
-    await expect(edit.getByLabel(`${place} мөр: баг`)).toHaveValue(/.+/); // «A» → баг
-    await edit.getByLabel(`${place} мөр: байгууллага`).selectOption({ label: `Уурхай SC ${STAMP}` });
+    await expect(edit.getByLabel(`${place} мөр: хэлтэс`, { exact: true })).toHaveValue(/.+/); // файлын «Уул» → хэлтэс
+    await expect(edit.getByLabel(`${place} мөр: баг`, { exact: true })).toHaveValue(/.+/); // «A» → баг
+    await edit.getByLabel(`${place} мөр: байгууллага`, { exact: true }).selectOption({ label: `Уурхай SC ${STAMP}` });
     await edit.getByRole('button', { name: 'Хадгалах (1)' }).click();
     await expect(page.getByText('Алдаагүй')).toBeVisible();
     await page.getByRole('button', { name: 'Батлах' }).click();

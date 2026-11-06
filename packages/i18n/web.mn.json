@@ -177,7 +177,7 @@
   "camp.att.roster_gap_more": "… бас {n}",
   "camp.att.roster_gaps": "Ростероор ирэх / явах ёстой боловч файлд алга: ирэх {arrivals}, явах {departures}",
   "camp.att.roster_gaps_help": "Импортыг зогсоохгүй. HR-ээс тодруулж, шаардлагатай бол гараар бүртгэнэ үү.",
-  "camp.att.row_mode": "{row} мөрийн ажилтан: хэлбэр",
+  "camp.att.row_mode": "{row} мөр: ажилтныг хэрхэн холбох",
   "camp.att.rows": "{n} мөр",
   "camp.att.save_rows": "Хадгалах ({n})",
   "camp.att.select_all": "Бүгдийг сонгох",

@@ -177,7 +177,7 @@
   "camp.att.roster_gap_more": "… 另有 {n}",
   "camp.att.roster_gaps": "按轮班应到 / 应离但文件中缺少：到达 {arrivals}，离开 {departures}",
   "camp.att.roster_gaps_help": "不影响导入。请与人力资源部核实，必要时手动登记。",
-  "camp.att.row_mode": "第 {row} 行的员工：方式",
+  "camp.att.row_mode": "第 {row} 行：员工关联方式",
   "camp.att.rows": "{n} 行",
   "camp.att.save_rows": "保存（{n}）",
   "camp.att.select_all": "全选",

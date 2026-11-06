@@ -177,7 +177,7 @@
   "camp.att.roster_gap_more": "… and {n} more",
   "camp.att.roster_gaps": "Due by roster but missing from the file: arriving {arrivals}, leaving {departures}",
   "camp.att.roster_gaps_help": "This does not block the import. Check with HR and register manually if needed.",
-  "camp.att.row_mode": "Employee for row {row}: option",
+  "camp.att.row_mode": "Row {row}: how to link the employee",
   "camp.att.rows": "{n} rows",
   "camp.att.save_rows": "Save ({n})",
   "camp.att.select_all": "Select all",

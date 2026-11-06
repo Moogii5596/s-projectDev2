@@ -2,7 +2,7 @@
 title: "Lessons Learned — индекс (ID → дүрэм)"
 type: "Log"
 status: "Active"
-last_updated: 2026-10-19
+last_updated: 2026-11-06
 tags: [lessons, index, generated]
 ---
 
@@ -13,7 +13,7 @@ tags: [lessons, index, generated]
 > **Шинэ алдаа:** тохирох `lessons/LL-*.md`-д `### [TAG-NNN] Гарчиг` + **Тохиолдсон / Шалтгаан / Дүрэм** → [[LL-99_Changelog]]-д мөр → `pnpm docs:gen`. Давтагдвал шинэ ID биш — `### [ID] (давтагдсан, огноо) …`.
 > Файл: [[LL-01_Backend_DB]] · [[LL-02_Test_CI]] · [[LL-03_Env_Ops_Pilot]] · [[LL-04_Architecture_RLS]] · [[LL-05_Frontend]] · [[LL-06_Camp_v02]] · [[LL-07_Docs]] · Хуучин нэгтгэсэн файл (архив): [[lessons_learned_MVP]]
 
-Нийт **175** сургамж.
+Нийт **177** сургамж.
 
 ## DB, Prisma, RLS, migration
 
@@ -153,6 +153,8 @@ tags: [lessons, index, generated]
 | TEST-028 | Улаан тестийг «мэдэгдэж буй» гэж хойшлуулахгүй — тухайн блокт засна (эсвэл `it.skip` + шалтгаан + ID). Release-ийн… | LL-06 §24 |
 | TEST-029 | Нэг transaction / нэг statement-ийн мөрүүдийн дарааллыг `created_at`-аар шалгахгүй — олонлог эсвэл тодорхой хоёр дахь… | LL-06 §24 |
 | TEST-030 | Layout / бүх хуудсанд харагдах товч, холбоос, текст нэмэхдээ шинэ шошгоны **үг бүрээр** `apps/e2e/tests`-ээс… | LL-06 §24 |
+| TEST-031 | нэг мөр / маягтад олон элемент нэмэхдээ шошго нь бусдынхаа **угтвар / дэд мөр** болохгүй байх; e2e-д хувьсагч агуулсан… | LL-06 §24 |
+| TEST-032 | монгол шошгоор хайдаг шинэ e2e spec нь нэвтэрсний дараа хэлийг МН болгоно (эсвэл хуваалцсан хэрэглэгчийн хэлийг өөрчилдөг… | LL-06 §24 |
 | VITEST-001 | `vitest.integration.config.ts`-д: | LL-02 §5 |
 
 ## Frontend
