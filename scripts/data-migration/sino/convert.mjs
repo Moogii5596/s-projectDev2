@@ -2,7 +2,8 @@
 /**
  * v0.2.3 Блок D (Хэсэг II) — Sino Hydro-гийн одоо ашиглаж буй Excel → системийн импортын файлууд.
  *
- *   node scripts/data-migration/sino/convert.mjs --src docs/source --out _data/sino/out --org "<байгууллагын регистр эсвэл нэр>"
+ *   node scripts/data-migration/sino/convert.mjs --src docs/source --out _data/sino/out --org "<байгууллагын регистр эсвэл нэр>" [--z-start N]
+ *   --z-start: гүйцэтгэгчийн (ID-гүй) кодын эхний дугаар (анхдагч 1 → Z0001). Системд байгаа хамгийн их Z кодын дараагийнхыг өгнө.
  *
  * Эх файлыг ЗӨВХӨН уншина (өөрчлөхгүй). Гаралт (хувийн мэдээлэлтэй → gitignore хийсэн хавтас):
  *   01_departments.xlsx · 02_positions.xlsx · 03_employees.xlsx · 04_former_employees.xlsx
@@ -11,7 +12,9 @@
  *
  * Гол дүрэм (хэрэглэгчийн шийдвэр 2026-10-19):
  *   - Ажилтны ID → 5 орон (8101 → 08101). Овог, нэр, ургийн овог тусдаа. Олон утас → эхнийх үндсэн, бусад «Нэмэлт утас».
- *   - Ажиллаж буй: зөвхөн A/B/C/D ээлжийнх. ID-гүй, ээлжгүй, харуул/автобус (Z/W/N) → импортлохгүй (тайланд).
+ *   - Ажиллаж буй: зөвхөн A/B/C/D ээлжийнх. ID-гүй, ээлжгүй → импортлохгүй (тайланд).
+ *   - v0.2.3 R10 (R-3, R-4 — D-10-ыг сольсон): өрөө бүртгэлийн ID-гүй гүйцэтгэгч (харуул, ээлжийн унаа, дугуйчин — mapping.json
+ *     `contractors`) → гэрээт байгууллагын ажилтан, систем код (Z0001…), ростергүй, өрөөний түүхтэй. Зөвхөн сүүлийн сард байгаа нь.
  *   - Ажлаас гарсан: ID-тэй бүгд (түүх); ID-гүй → тайланд. Гарсан огноо олон бол сүүлийнх.
  *   - Өрөө: 4 сарын хуудасны өрөө бүр; байр = дугаарын эхний орон; багтаамж = аль нэг өдөр хамгийн олон хоносон хүн.
  *   - Өрөөнд байрлуулалт: сар бүрийн хуудаснаас ажилтны өрөөний ТҮҮХ (өрөө солигдвол өмнөх нь шинийн өмнөх өдөр хаагдана).
@@ -19,6 +22,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { assignCodes, classifyContractor, contractorIdentity } from './contractors.mjs';
 
 const require = createRequire(import.meta.url);
 const ExcelJS = require('exceljs');
@@ -31,6 +35,12 @@ const SRC = path.resolve(args.src ?? 'docs/source');
 const OUT = path.resolve(args.out ?? '_data/sino/out');
 const MAP = JSON.parse(fs.readFileSync(new URL('./mapping.json', import.meta.url), 'utf8'));
 const ORG = args.org ?? MAP.organization;
+const Z_START = Number(args['z-start'] ?? 1);
+if (!Number.isInteger(Z_START) || Z_START < 1) {
+  console.error('❌ --z-start эерэг бүхэл тоо байх ёстой (системийн хамгийн их Z кодын дараагийнх)');
+  process.exit(1);
+}
+const CONTRACTORS = MAP.contractors ?? { codePrefix: 'Z', rules: [] };
 if (!ORG || ORG.startsWith('<')) {
   console.error('❌ --org "<байгууллагын регистр эсвэл нэр>" заавал (системд бүртгэлтэй байгууллага)');
   process.exit(1);
@@ -285,6 +295,7 @@ const PRESENT = new Set(MAP.roomCodes.present);
 const allCodes = new Map([...former.map((e) => [e.employeeCode, 'FORMER']), ...employees.map((e) => [e.employeeCode, 'ACTIVE'])]);
 const rooms = new Map(); // roomNo → { maxPerDay }
 const evidence = new Map(); // code → [{ date, room, last }]
+const contractorObs = []; // R10: ID-гүй гүйцэтгэгчийн мөр (сар бүр)
 const monthOf = (name) => {
   const m = name.match(/(\d{4})\s*([A-Za-z]+)/);
   const mon = m && ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(m[2].slice(0, 3).toLowerCase());
@@ -312,7 +323,21 @@ for (const sh of roomSheets) {
     const days = dayCols.filter(({ i }) => PRESENT.has(clean(c[i]).toUpperCase()) || MAP.roomCodes.departure.includes(clean(c[i]).toUpperCase()));
     const nights = dayCols.filter(({ i }) => PRESENT.has(clean(c[i]).toUpperCase()));
     for (const { d } of nights) perRoomDay.set(`${roomNo}|${d}`, (perRoomDay.get(`${roomNo}|${d}`) ?? 0) + 1);
-    if (!code) { skip(ROOM_FILE, sh.name, r.n, '', name, `ID алга (ээлж ${shift || '—'}) — байрлуулалт оруулахгүй`); continue; }
+    if (!code) {
+      // R10: харуул, ээлжийн унаа, дугуйчин (mapping.json contractors) → гүйцэтгэгч
+      const cRow = { shift, idText: clean(c[2]), lastName: clean(c[3]), firstName: clean(c[4]), position: clean(c[5]) };
+      const rule = classifyContractor(cRow, CONTRACTORS.rules);
+      if (rule) {
+        const id = contractorIdentity(cRow, rule);
+        if (id.error) { skip(ROOM_FILE, sh.name, r.n, '', name, `Гүйцэтгэгч (${rule.organization}): ${id.error}`); continue; }
+        const date = days[0] ? iso(ym.y, ym.m, days[0].d) : `${monthKey}-01`;
+        const last = days.at(-1) ? iso(ym.y, ym.m, days.at(-1).d) : null;
+        contractorObs.push({ ...id, rule, sheet: sh.name, row: r.n, month: monthKey, room: roomNo, date, last, position: cRow.position });
+        continue;
+      }
+      skip(ROOM_FILE, sh.name, r.n, '', name, `ID алга (ээлж ${shift || '—'}) — байрлуулалт оруулахгүй`);
+      continue;
+    }
     if (!['A', 'B', 'C', 'D', 'С', 'А', 'В', 'Д'].includes(shift)) { skip(ROOM_FILE, sh.name, r.n, code, name, `A/B/C/D ээлж биш (${shift || '—'}) — байрлуулалт оруулахгүй`); continue; }
     if (!allCodes.has(code)) { skip(ROOM_FILE, sh.name, r.n, code, name, 'HR файлд энэ ID алга (идэвхтэй ч, гарсан ч биш)'); continue; }
     const first = days[0] ? iso(ym.y, ym.m, days[0].d) : `${monthKey}-01`;
@@ -323,6 +348,41 @@ for (const sh of roomSheets) {
     const roomNo = k.split('|')[0];
     rooms.get(roomNo).max = Math.max(rooms.get(roomNo).max, n);
   }
+}
+
+// ── 3б. Гүйцэтгэгч (R10): сүүлийн сард байгаа түлхүүр → ажилтан + өрөөний түүх ──
+const contractorRows = [];
+{
+  const byKey = new Map();
+  for (const o of contractorObs) byKey.set(o.key, [...(byKey.get(o.key) ?? []), o]);
+  const current = [];
+  for (const [key, obs] of byKey) {
+    const latest = obs.reduce((a, b) => (b.month > a.month || (b.month === a.month && b.date > a.date) ? b : a));
+    if (latest.month !== lastMonthKey) {
+      skip(ROOM_FILE, latest.sheet, latest.row, '', `${latest.lastName ?? ''} ${latest.firstName}`.trim(), `Гүйцэтгэгч (${latest.rule.organization}) — сүүлийн сард (${lastMonthKey}) алга, оруулахгүй`);
+      continue;
+    }
+    current.push({ key, ruleId: latest.rule.id, latest, obs });
+  }
+  const codes = assignCodes(current, CONTRACTORS.rules, CONTRACTORS.codePrefix ?? 'Z', Z_START);
+  for (const { key, latest, obs } of current) {
+    const code = codes.get(key);
+    const rule = latest.rule;
+    const position = rule.position ?? positionName(latest.position);
+    const rec = {
+      employeeCode: code, familyName: null, lastName: latest.lastName, firstName: latest.firstName, position, phone: null, extraPhones: null, email: null,
+      organization: rule.organization, department: rule.department.code, crew: null, status: 'ACTIVE', _name: `${latest.lastName ?? ''} ${latest.firstName}`.trim(),
+    };
+    employees.push(rec);
+    contractorRows.push({ ...rec, rule: rule.id, room: latest.room, months: [...new Set(obs.map((o) => o.month))].sort().join(', '), key });
+    allCodes.set(code, 'ACTIVE');
+    evidence.set(code, obs.map((o) => ({ date: o.date, last: o.last, room: o.room, month: o.month })));
+    if (!departments.some((d) => d.code === rule.department.code)) departments.push({ code: rule.department.code, name: rule.department.name, active: true });
+    if (position && !posSeen.has(position.toLowerCase())) {
+      posSeen.set(position.toLowerCase(), position);
+      positions.push({ name: position, code: null, active: true });
+    }
+  }  contractorRows.sort((a, b) => a.employeeCode.localeCompare(b.employeeCode, 'en', { numeric: true }));
 }
 
 const buildingOf = (roomNo) => MAP.buildings.prefix + roomNo[0];
@@ -394,14 +454,18 @@ const add = (name, headers, rows) => {
   ws.views = [{ state: 'frozen', ySplit: 1 }];
 };
 const summary = [
-  ['01 Хэлтэс', departments.length], ['02 Албан тушаал', positions.length], ['03 Ажилтан (идэвхтэй, A–D)', employees.length],
+  ['01 Хэлтэс', departments.length], ['02 Албан тушаал', positions.length], ['03 Ажилтан (идэвхтэй: A–D + гүйцэтгэгч)', employees.length], ['   үүнээс гүйцэтгэгч (Z код, R10)', contractorRows.length],
   ['04 Ажлаас гарсан (түүх)', former.length], ['   үүнээс огноо тодорхойгүй', former.filter((f) => !f.terminatedAt).length], ['   үүнээс идэвхтэй ажилтны өмнөх хугацаа', activeHistory.length], ['05 Байрны төрөл', buildingTypes.length], ['06 Байр', buildings.length], ['07 Өрөө', roomRows.length],
   ['08 Өрөөнд байрлуулалт', allocations.length], ['Хасагдсан мөр', report.skipped.length], ['Анхааруулга', report.warnings.length],
   ['Байгууллага (--org)', ORG], ['Сүүлийн сар (одоогийн байрлуулалт)', lastMonthKey],
+  ['Гүйцэтгэгчийн код (--z-start)', contractorRows.length ? `${contractorRows[0].employeeCode} … ${contractorRows.at(-1).employeeCode}` : '—'],
+  ['Гүйцэтгэгчийн байгууллага (импортоос ӨМНӨ системд үүсгэнэ)', [...new Set(contractorRows.map((c) => c.organization))].join(', ') || '—'],
 ];
 add('Хураангуй', ['Файл / үзүүлэлт', 'Тоо'], summary);
 add('Хасагдсан', ['Файл', 'Хуудас', 'Мөр', 'ID', 'Нэр', 'Шалтгаан'], report.skipped.map((s) => [s.file, s.sheet, s.row, s.code, s.name, s.reason]));
 add('Анхааруулга', ['Файл', 'Хуудас', 'Мөр', 'ID', 'Талбар', 'Утга', 'Тайлбар'], report.warnings.map((w) => [w.file, w.sheet, w.row, w.code, w.field, w.value, w.note]));
+add('Гүйцэтгэгч', ['Код', 'Байгууллага', 'Хэлтэс', 'Овог', 'Нэр', 'Албан тушаал', 'Сүүлийн өрөө', 'Сарууд', 'Түлхүүр'],
+  contractorRows.map((c) => [c.employeeCode, c.organization, c.department, c.lastName ?? '', c.firstName, c.position ?? '', c.room, c.months, c.key]));
 add('Хэлтсийн толь', ['Эх бичлэг', 'Код + нэр'], [...report.deptMap.entries()].sort());
 add('Албан тушаалын толь', ['Эх бичлэг', 'Цэвэрлэсэн нэр'], [...report.posMap.entries()].sort());
 await rep.xlsx.writeFile(path.join(OUT, '00_report.xlsx'));
