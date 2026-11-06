@@ -123,7 +123,7 @@ tags: [roadmap, v0.2]
 | PIL-10 | Web bundle 509 kB (gzip 140) → code-split; утас + Funnel-ээр анхны ачаалал | build анхааруулга | P2 | S | ✅ v0.2.2 Блок 6 (gzip 310 → 245 kB) |
 | PIL-11 | ✅ v0.2.0: `pilot.ps1 upgrade -Tag` (+ `-Profile staging`, `camp:snapshot`) | runbook §13, §13в | — | — | ✅ v0.2.0 |
 | PIL-12 | Web: `@supabase/supabase-js` → зөвхөн `@supabase/auth-js` (realtime-ийг MR-д lazy) — `vendor-supabase` 222 kB (анхны ачааллын ~27%); localStorage-ийн `sb-*-auth-token` түлхүүрийг хадгалж session алдагдуулахгүй | PIL-10 хэмжилт (Блок 6) | P3 | S | 📋 |
-| PIL-13 | **ADR-007** Роль, эрхийг системийн түвшинд: `camp_roles` → `core_roles`, `camp_permissions` → `core_permissions`, код модулиар (`hr.*`, `camp.*`, `core.users.*`), «Роль ба эрх» → Системийн тохиргоо; `camp.roles.manage` устгах (хэрэглэгчийн шийдвэр 2026-10-17) | v0.2.2 анализ (SEC-009) | P1 | L | 📋 v0.2.3 |
+| PIL-13 | **ADR-007** Роль, эрхийг системийн түвшинд: `camp_roles` → `core_roles`, `camp_permissions` → `core_permissions`, код модулиар (`hr.*`, `camp.*`, `core.users.*`), «Роль ба эрх» → Системийн тохиргоо; `camp.roles.manage` устгах (хэрэглэгчийн шийдвэр 2026-10-17) | v0.2.2 анализ (SEC-009) | P1 | L | 🔄 v0.2.3 — Блок 2 (DB + data layer) ✅ код 2026-11-06; Блок 3 (guard, UI) 📋 |
 | PIL-14 | Ажилтны хувийн мэдээлэл (утас, имэйл) — кемпэд эрхтэй хэн бүхэнд API-аар бүтнээр (жагсаалт, профайл). **Дотоод нийгмийн сүлжээтэй хамт** шийднэ: найзын хүсэлт, хэрэглэгч өөрөө нийтэд / найзуудад харуулах мэдээллээ сонгоно (хэрэглэгчийн шийдвэр 2026-10-17) | v0.2.2 анализ №2 | P1 | M | 📋 v0.3 (Feed) |
 | PIL-15 | Нууц үг солих / сэргээхэд бусад төхөөрөмжийн session-ийг цуцлах (GoTrue admin `signOut` / session устгах) | v0.2.2 анализ №6 | P2 | S | 📋 v0.2.3 |
 | PIL-16 | Хэрэглэгчийн жагсаалтад «Сүүлийн нэвтрэлт» (PIL-01-ээс салгав) | B4-Q3 | P2 | S | 📋 v0.2.3 |
@@ -194,6 +194,7 @@ tags: [roadmap, v0.2]
 | ARC-04 | `schema.prisma` 1953 мөр (67 model, 38 enum) → модулиар `prisma/schema/*.prisma` (16 файл, `prismaSchemaFolder` preview, R22) | хэрэглэгч 2026-10-19 | P2 | S | ✅ v0.2.3 Блок 1б (2026-10-19) |
 | DEP-04 | Prisma 5.22 → 6.x (олон файлт schema GA, `prismaSchemaFolder` preview-г хасах) | Блок 1б | P2 | M | 📋 v0.2.4 |
 | DEP-05 | Хөгжүүлэлтийн хэрэгслийн эмзэг хамаарал (audit 2026-10-19, runtime-д хамаарахгүй): `vitest` 1.6 → 3.2+ (tinypool, vite, source-map-js), `@playwright/test` 1.48 → 1.55+, `@module-federation/vite` (adm-zip, undici), `@typescript-eslint` 7 (braces) | Блок 1 audit | P2 | M | 📋 v0.2.4 |
+| ARC-05 | ADR-007 цэвэрлэгээ: `legacy_camp_*` 6 хүснэгт, `core_permission_aliases`, кодын `PERMISSION_ALIASES` / `withLegacyAliases`, `CampRoleCode` enum, `supabase/dev/camp_schema_test.sql`-ийн RBAC хэсэг устгах ([[ADR-007_System_Roles_Permissions]] §6) | v0.2.3 Блок 2 | P2 | S | 📋 v0.2.4 |
 
 ## 5. Баримт
 

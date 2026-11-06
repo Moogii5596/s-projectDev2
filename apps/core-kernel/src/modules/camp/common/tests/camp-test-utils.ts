@@ -68,7 +68,7 @@ export function setActor(tx: TxMock, spec: ActorSpec, others: (args: { where: Re
     'authId' in args.where ? { id: spec.userId ?? 'cu-actor', role: spec.role ?? UserRole.REQUESTER } : others(args),
   );
   // v0.2.2 D-01: guard camp_user_permissions-ийг уншина (мөр бүр = нэг эрх × кемп)
-  tx.campUserPermission.findMany.mockImplementation(async (args: { where: Record<string, unknown> }) =>
+  tx.coreUserPermission.findMany.mockImplementation(async (args: { where: Record<string, unknown> }) =>
     args.where.userId === (spec.userId ?? 'cu-actor') && !('source' in args.where)
       ? (spec.roles ?? []).flatMap((r) => r.perms.map((permissionCode) => ({ campId: r.campId, permissionCode })))
       : [],

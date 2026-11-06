@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 29 файл, ~268 тест
+## Integration (бодит PG + RLS) — 30 файл, ~275 тест
 
 Команд: `pnpm test:integration`
 
@@ -35,6 +35,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/camp-v022-users.integration.spec.ts` | 3 | v0.2.2 Блок 4 — хэрэглэгч удирдах (integration) |
 | `core-kernel/test/camp-v023-data-import.integration.spec.ts` | 12 | S1 + S2 — нэр, нэмэлт утас · S4 — албан тушаал · S5 — өрөөний тохиргоо · S6 — өрөөнд байрлуулалт (түүх) · S7 — ажлаас гарсан ажилтан · S9 — «Мэдээлэл дутуу» (буруу имэйл / утас) · S11 — гарсан огноо т |
 | `core-kernel/test/core-feedback.integration.spec.ts` | 8 | v0.2.3 Блок F — санал хүсэлт (integration) |
+| `core-kernel/test/core-rbac-adr007.integration.spec.ts` | 7 | v0.2.3 Блок 2 — ADR-007 core RBAC (integration) |
 | `core-kernel/test/event-bus.integration.spec.ts` | 5 | 🔗 5.2 Гинж: MR → Workflow → Budget → Outbox → Redis · 🔒 5.0 Зэрэгцээ poller — event бүр яг нэг удаа [EVT-001] · ♻️ 5.3 Retry + DLQ |
 | `core-kernel/test/hr-routes.integration.spec.ts` | 7 | 👥 HR ажилтан, бүтэц — шинэ ба хуучин зам ижил · 🗓 HR ирц → Кемпийн байрлалт (H-Q2) · 📥 HR импорт / экспорт · 🔒 RLS (app_user) — HR model нэр солигдсон ч DB хүснэгт хэвээр |
 | `core-kernel/test/i18n-overrides.integration.spec.ts` | 7 | 🌐 Орчуулгын Excel · 🗣 Хэрэглэгчийн хэл · 🌐 Кемпийн алдаа 3 хэлээр (code + params + message) |
@@ -48,7 +49,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 85 файл, ~652 тест
+## Unit — core-kernel — 86 файл, ~660 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -95,11 +96,12 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/camp/costs/tests/vat.test.ts` | 2 | VatCalculator (Шат 4.2) |
 | `core-kernel/src/modules/camp/maintenance/tests/camp-maintenance.service.test.ts` | 28 | maintenance-flow (Шат 4.4) · CampMaintenanceService — үүсгэх (Шат 4.4) · CampMaintenanceService — төлөв шилжилт (Шат 4.4) · CampMaintenanceService — сэлбэг (Шат 4.4) |
 | `core-kernel/src/modules/camp/master/tests/camp-master.services.test.ts` | 28 | CampsService (Шат 2.4) · CampFacilitiesService (Шат 2.4) · CoreOrganizationsService (Шат 2.4) · HrDepartmentsService (Шат 2.4) · HrCrewsService (Шат 2.4) · HrEmployeesService (Шат 2.4) |
-| `core-kernel/src/modules/camp/rbac/tests/camp-rbac.service.test.ts` | 24 | CampRbacService (Шат 2.2) · Эрхийн V1/V2 хүрээ (D8, 2026-10-09) · CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүлэх, шууд эрх) |
+| `core-kernel/src/modules/camp/rbac/tests/camp-rbac.service.test.ts` | 25 | CampRbacService (Шат 2.2) · Эрхийн V1/V2 хүрээ (D8, 2026-10-09) · CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүлэх, шууд эрх) |
 | `core-kernel/src/modules/camp/rbac/tests/template-diff.test.ts` | 2 | template-diff (v0.2.2 D-09) |
 | `core-kernel/src/modules/camp/rbac/tests/user-access-b4.test.ts` | 16 | user-list (цэвэр) · CampRbacService.listUsers (B4-Q3) · CampUserAccessService.setActive (B4-Q2) · SEC-009 (Блок 6б) — хэрэглэгч удирдах = зөвхөн системийн админ (OWNER / ADMIN) |
 | `core-kernel/src/modules/camp/settings/tests/camp-settings.service.test.ts` | 12 | CampSettingsService (Шат 2.3) |
 | `core-kernel/src/modules/core/feedback/tests/feedback-rules.test.ts` | 5 | v0.2.3 Блок F — санал хүсэлтийн дүрэм |
+| `core-kernel/src/modules/core/permissions/tests/permission-registry.test.ts` | 4 | permission-registry (ADR-007) |
 | `core-kernel/src/modules/event-bus/cloud-events.adapter.spec.ts` | 6 | CloudEventsAdapter |
 | `core-kernel/src/modules/event-bus/dlq.service.spec.ts` | 3 | DlqService |
 | `core-kernel/src/modules/event-bus/event-bus.service.spec.ts` | 2 | EventBusService.emit (Phase 5.1 [EVT-003]) |
@@ -135,7 +137,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/workflow/workflow-definition.service.test.ts` | 4 | WorkflowDefinitionService |
 | `core-kernel/src/modules/workflow/workflow.service.spec.ts` | 13 | WorkflowService |
 | `core-kernel/src/scripts/camp-login-report.spec.ts` | 1 | camp-login-report (v0.2.2 §8) |
-| `core-kernel/src/scripts/camp-snapshot-perms.spec.ts` | 4 | camp-snapshot perms (v0.2.2 §5.1/5.2) |
+| `core-kernel/src/scripts/camp-snapshot-perms.spec.ts` | 7 | camp-snapshot perms (v0.2.2 §5.1/5.2) · camp-snapshot perms — ADR-007 (v0.2.3): хуучин код ↔ шинэ код |
 | `core-kernel/src/scripts/e2e-fixture.spec.ts` | 4 | setupFixture · teardownFixture |
 | `core-kernel/src/scripts/pilot-admin.spec.ts` | 7 | validate* · onboard · ensureUser |
 | `core-kernel/src/scripts/test-user.spec.ts` | 9 | ensureTestUser · assertLocalUrl · parseDotenv / parseArgs |

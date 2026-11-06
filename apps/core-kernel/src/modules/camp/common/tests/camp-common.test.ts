@@ -10,10 +10,11 @@ import { expectTenantTx, setActor, setup } from './camp-test-utils';
 const P = CAMP_PERMISSIONS;
 
 describe('Camp permission каталог (Шат 2.1)', () => {
-  it('18 эрх (v0.2.2 Блок 5: + camp.employee.terminate), давхардалгүй, camp.<x>.<y> хэлбэртэй (DB CHECK-тэй ижил regex)', () => {
-    expect(CAMP_PERMISSION_CODES).toHaveLength(18);
-    expect(new Set(CAMP_PERMISSION_CODES).size).toBe(18);
-    for (const c of CAMP_PERMISSION_CODES) expect(c).toMatch(/^camp\.[a-z_]+\.[a-z_]+$/);
+  it('17 эрх (ADR-007: camp.roles.manage устсан, hr.* 4), давхардалгүй, <модуль>.<x>.<y> хэлбэртэй (DB CHECK-тэй ижил regex)', () => {
+    expect(CAMP_PERMISSION_CODES).toHaveLength(17);
+    expect(new Set(CAMP_PERMISSION_CODES).size).toBe(17);
+    for (const c of CAMP_PERMISSION_CODES) expect(c).toMatch(/^(camp|hr|core)\.[a-z_]+\.[a-z_]+$/);
+    expect(CAMP_PERMISSION_CODES).not.toContain('camp.roles.manage');
   });
   it('isCampPermission', () => {
     expect(isCampPermission('camp.master.manage')).toBe(true);
@@ -49,10 +50,10 @@ describe('CampAccessService (Шат 2.1)', () => {
       global: [P.REPORT_VIEW],
       byCamp: { c1: [P.HAUL_APPROVE, P.MEAL_ORDER, P.REPORT_VIEW].sort() },
     });
-    // v0.2.2 D-01: эцсийн эрх = camp_user_permissions; camp_user_roles (олголт) guard-д уншигдахгүй
-    expect(s.tx.campUserPermission.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 't1', userId: 'cu1' } }));
-    expect(s.tx.campUserRole.findMany).not.toHaveBeenCalled();
-    expect(s.cache.set).toHaveBeenCalledWith('cache:camp:t1:perms:cu1', actor.perms, 300);
+    // v0.2.2 D-01 / ADR-007: эцсийн эрх = core_user_permissions; core_user_roles (олголт) guard-д уншигдахгүй
+    expect(s.tx.coreUserPermission.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 't1', userId: 'cu1' } }));
+    expect(s.tx.coreUserRole.findMany).not.toHaveBeenCalled();
+    expect(s.cache.set).toHaveBeenCalledWith('cache:camp:t1:perms2:cu1', actor.perms, 300); // ADR-007: шинэ түлхүүр
   });
 
   it('cache hit → роль DB-ээс уншихгүй, гэхдээ хэрэглэгчийг ҮРГЭЛЖ DB-ээс шалгана', async () => {
@@ -62,7 +63,7 @@ describe('CampAccessService (Шат 2.1)', () => {
     const actor = await s.access.resolve(s.tx as never, 't1', 'a1');
     expect(actor.perms).toBe(cached);
     expect(s.tx.coreUser.findFirst).toHaveBeenCalledTimes(1);
-    expect(s.tx.campUserPermission.findMany).not.toHaveBeenCalled();
+    expect(s.tx.coreUserPermission.findMany).not.toHaveBeenCalled();
   });
 
   it('OWNER / ADMIN → tenant admin (бүх кемп, бүх эрх); REQUESTER биш', async () => {
@@ -70,7 +71,7 @@ describe('CampAccessService (Шат 2.1)', () => {
       setActor(s.tx, { role });
       const { perms } = await s.access.resolve(s.tx as never, 't1', 'a1');
       expect(perms.isTenantAdmin).toBe(true);
-      expect(CampAccessService.has(perms, 'any-camp', P.ROLES_MANAGE)).toBe(true);
+      expect(CampAccessService.has(perms, 'any-camp', P.SETTINGS_MANAGE)).toBe(true);
       expect(CampAccessService.has(perms, null, P.MASTER_MANAGE)).toBe(true);
     }
     setActor(s.tx, { role: UserRole.APPROVER });

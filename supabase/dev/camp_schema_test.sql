@@ -1,3 +1,5 @@
+-- ⚠️ ХУУЧИРСАН (RBAC хэсэг): v0.2.3 ADR-007-оос хойш camp_roles/... → core_* (20261106005). RBAC-ийн шалгалт →
+--    apps/core-kernel/test/core-rbac-adr007.integration.spec.ts. Энэ скриптийн RBAC мөрүүдийг v0.2.4-т (legacy устгахад) цэвэрлэнэ.
 -- ============================================================
 -- Camp Module · Шат 1 (+4.1) — DB тест (99 шалгалт): RLS (app_user), composite FK (D2), EXCLUDE, CHECK, trigger, seed, CASCADE
 -- ============================================================

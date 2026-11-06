@@ -10,7 +10,7 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (55 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **68** хүснэгт, 38 enum, 25 функц, 57 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (56 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **69** хүснэгт, 38 enum, 29 функц, 60 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
@@ -18,9 +18,9 @@ tags: [codebase, database, rls, generated]
 
 **Бусад (tenant, MR, workflow, event bus, модулиуд):** [[#approval_logs]] · [[#auth_guard.password_failures]] · [[#budget_allocations]] · [[#budget_commitments]] · [[#budget_periods]] · [[#dlq_events]] · [[#i18n_override_history]] · [[#i18n_overrides]] · [[#idempotency_keys]] · [[#installed_modules]] · [[#inventory_items]] · [[#mr_headers]] · [[#mr_items]] · [[#outbox_events]] · [[#super_admins]] · [[#tenant_routes]] · [[#tenants]] · [[#vendors]] · [[#workflow_definitions]] · [[#workflow_delegations]] · [[#workflow_instances]] · [[#workflow_sla_logs]] · [[#workflow_step_logs]]
 
-**Кемп (`camp_*`):** [[#camp_asset_categories]] · [[#camp_asset_movements]] · [[#camp_assets]] · [[#camp_audit_log]] · [[#camp_building_types]] · [[#camp_buildings]] · [[#camp_contract_item_prices]] · [[#camp_contract_items]] · [[#camp_contracts]] · [[#camp_cost_entries]] · [[#camp_crews]] · [[#camp_data_imports]] · [[#camp_department_shift_patterns]] · [[#camp_departments]] · [[#camp_employee_phones]] · [[#camp_employees]] · [[#camp_haul_records]] · [[#camp_maintenance_parts]] · [[#camp_maintenance_requests]] · [[#camp_meal_locations]] · [[#camp_meal_order_lines]] · [[#camp_meal_orders]] · [[#camp_movement_imports]] · [[#camp_movements]] · [[#camp_organizations]] · [[#camp_permissions]] · [[#camp_pii_access_log]] · [[#camp_position_role_templates]] · [[#camp_position_settings]] · [[#camp_position_shift_patterns]] · [[#camp_positions]] · [[#camp_role_permissions]] · [[#camp_roles]] · [[#camp_room_allocations]] · [[#camp_rooms]] · [[#camp_settings]] · [[#camp_shift_adjustments]] · [[#camp_stays]] · [[#camp_user_permissions]] · [[#camp_user_roles]] · [[#camps]]
+**Кемп (`camp_*`):** [[#camp_asset_categories]] · [[#camp_asset_movements]] · [[#camp_assets]] · [[#camp_audit_log]] · [[#camp_building_types]] · [[#camp_buildings]] · [[#camp_contract_item_prices]] · [[#camp_contract_items]] · [[#camp_contracts]] · [[#camp_cost_entries]] · [[#camp_crews]] · [[#camp_data_imports]] · [[#camp_department_shift_patterns]] · [[#camp_departments]] · [[#camp_employee_phones]] · [[#camp_employees]] · [[#camp_haul_records]] · [[#camp_maintenance_parts]] · [[#camp_maintenance_requests]] · [[#camp_meal_locations]] · [[#camp_meal_order_lines]] · [[#camp_meal_orders]] · [[#camp_movement_imports]] · [[#camp_movements]] · [[#camp_organizations]] · [[#camp_pii_access_log]] · [[#camp_position_settings]] · [[#camp_position_shift_patterns]] · [[#camp_positions]] · [[#camp_room_allocations]] · [[#camp_rooms]] · [[#camp_settings]] · [[#camp_shift_adjustments]] · [[#camp_stays]] · [[#camps]]
 
-**Үндсэн (`core_*`):** [[#core_feedback]] · [[#core_feedback_votes]] · [[#core_user_invites]] · [[#core_users]]
+**Үндсэн (`core_*`):** [[#core_feedback]] · [[#core_feedback_votes]] · [[#core_permission_aliases]] · [[#core_permissions]] · [[#core_position_role_templates]] · [[#core_role_permissions]] · [[#core_roles]] · [[#core_user_invites]] · [[#core_user_permissions]] · [[#core_user_roles]] · [[#core_users]]
 
 ## Бусад (tenant, MR, workflow, event bus, модулиуд)
 
@@ -352,7 +352,7 @@ Policy: `rls_tenant_routes_tenant` (restrictive ALL → app_user) · `tenant_iso
 | max_mfes | INTEGER | NN |  |
 | onboarded_at | TIMESTAMPTZ |  |  |
 
-Trigger: `update_tenants_updated_at` · `trg_tenants_camp_seed_roles`
+Trigger: `update_tenants_updated_at` · `trg_tenants_camp_seed_roles` · `trg_tenants_core_seed_roles`
 
 ### vendors
 
@@ -1109,17 +1109,6 @@ Policy: `tenant_isolation_camp_organizations` (permissive ALL → app_user (camp
 
 Trigger: `trg_camp_organizations_updated_at`
 
-### camp_permissions
-
-🌐 глобал (tenant_id-гүй, RLS-гүй) · үүсгэсэн `20261009001_camp_rbac.sql`
-
-| Багана | Төрөл | Шинж | FK |
-|---|---|---|---|
-| code | TEXT | PK |  |
-| name | TEXT | NN |  |
-| sort_order | INTEGER | NN |  |
-| created_at | TIMESTAMPTZ | NN |  |
-
 ### camp_pii_access_log
 
 🔒🔒 · үүсгэсэн `20261017003_camp_pii_access_log.sql`
@@ -1136,25 +1125,6 @@ Trigger: `trg_camp_organizations_updated_at`
 Constraint: `FOREIGN KEY (tenant_id, viewer_user_id) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, employee_id) REFERENCES camp_employees (tenant_id, id) ON DELETE CASCADE`
 
 Policy: `tenant_isolation_camp_pii_access_log` (permissive ALL → app_user)
-
-### camp_position_role_templates
-
-🔒🔒 · үүсгэсэн `20261013002_camp_position_role_templates.sql`
-
-| Багана | Төрөл | Шинж | FK |
-|---|---|---|---|
-| tenant_id | UUID | NN | → tenants (cascade) |
-| position_id | UUID | NN |  |
-| role_id | UUID | NN |  |
-| scope | "CampTemplateScope" | NN |  |
-| created_at | TIMESTAMPTZ | NN |  |
-| updated_at | TIMESTAMPTZ | NN |  |
-
-Constraint: `PRIMARY KEY (position_id, role_id)` · `FOREIGN KEY (tenant_id, position_id) REFERENCES camp_positions (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, role_id) REFERENCES camp_roles (tenant_id, id) ON DELETE CASCADE`
-
-Policy: `tenant_isolation_camp_position_role_templates` (permissive ALL → app_user (camp_apply_tenant_rls))
-
-Trigger: `trg_camp_position_role_templates_updated_at`
 
 ### camp_position_settings
 
@@ -1217,45 +1187,6 @@ Constraint: `UNIQUE (tenant_id, id)`
 Policy: `tenant_isolation_camp_positions` (permissive ALL → app_user (camp_apply_tenant_rls))
 
 Trigger: `trg_camp_positions_updated_at`
-
-### camp_role_permissions
-
-🔒🔒 · үүсгэсэн `20261009001_camp_rbac.sql`
-
-| Багана | Төрөл | Шинж | FK |
-|---|---|---|---|
-| tenant_id | UUID | NN | → tenants (cascade) |
-| role_id | UUID | NN |  |
-| permission_code | TEXT | NN | → camp_permissions |
-| created_at | TIMESTAMPTZ | NN |  |
-| updated_at | TIMESTAMPTZ | NN |  |
-
-Constraint: `PRIMARY KEY (role_id, permission_code)` · `FOREIGN KEY (tenant_id, role_id) REFERENCES camp_roles (tenant_id, id) ON DELETE CASCADE`
-
-Policy: `tenant_isolation_camp_role_permissions` (permissive ALL → app_user (camp_apply_tenant_rls))
-
-Trigger: `trg_camp_role_permissions_updated_at`
-
-### camp_roles
-
-🔒🔒 · үүсгэсэн `20261009001_camp_rbac.sql`
-
-| Багана | Төрөл | Шинж | FK |
-|---|---|---|---|
-| id | UUID | PK |  |
-| tenant_id | UUID | NN | → tenants (cascade) |
-| name | TEXT | NN |  |
-| description | TEXT |  |  |
-| is_system | BOOLEAN | NN |  |
-| system_code | "CampRoleCode" |  |  |
-| created_at | TIMESTAMPTZ | NN |  |
-| updated_at | TIMESTAMPTZ | NN |  |
-
-Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, name)` · `UNIQUE (tenant_id, system_code)` · `CHECK ((system_code IS NOT NULL) = is_system)`
-
-Policy: `tenant_isolation_camp_roles` (permissive ALL → app_user (camp_apply_tenant_rls))
-
-Trigger: `trg_camp_roles_protect_system` · `trg_camp_roles_updated_at`
 
 ### camp_room_allocations
 
@@ -1377,50 +1308,6 @@ Policy: `tenant_isolation_camp_stays` (permissive ALL → app_user (camp_apply_t
 
 Trigger: `trg_camp_stays_validate` · `trg_camp_stays_updated_at`
 
-### camp_user_permissions
-
-🔒🔒 · үүсгэсэн `20261013001_camp_user_permissions.sql`
-
-| Багана | Төрөл | Шинж | FK |
-|---|---|---|---|
-| id | UUID | PK |  |
-| tenant_id | UUID | NN | → tenants (cascade) |
-| user_id | UUID | NN |  |
-| permission_code | TEXT | NN | → camp_permissions |
-| camp_id | UUID |  |  |
-| source | "CampPermissionSource" | NN |  |
-| user_role_id | UUID |  |  |
-| created_by | UUID |  |  |
-| created_at | TIMESTAMPTZ | NN |  |
-| updated_at | TIMESTAMPTZ | NN |  |
-
-Constraint: `FOREIGN KEY (tenant_id, user_id) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, user_role_id) REFERENCES camp_user_roles (tenant_id, id) ON DELETE CASCADE` · `CHECK ((source = 'TEMPLATE') = (user_role_id IS NOT NULL))`
-
-Policy: `tenant_isolation_camp_user_permissions` (permissive ALL → app_user (camp_apply_tenant_rls))
-
-Trigger: `trg_camp_user_permissions_updated_at`
-
-### camp_user_roles
-
-🔒🔒 · үүсгэсэн `20261009001_camp_rbac.sql` · өөрчлөлт: +source_position_id (`20261013004_core_users_login.sql`)
-
-| Багана | Төрөл | Шинж | FK |
-|---|---|---|---|
-| id | UUID | PK |  |
-| tenant_id | UUID | NN | → tenants (cascade) |
-| user_id | UUID | NN |  |
-| role_id | UUID | NN |  |
-| camp_id | UUID |  |  |
-| created_at | TIMESTAMPTZ | NN |  |
-| updated_at | TIMESTAMPTZ | NN |  |
-| source_position_id | UUID |  |  |
-
-Constraint: `FOREIGN KEY (tenant_id, user_id) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, role_id) REFERENCES camp_roles (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id) ON DELETE CASCADE` · `UNIQUE (tenant_id, id)` · `FOREIGN KEY (tenant_id, source_position_id) REFERENCES camp_positions (tenant_id, id) ON DELETE SET NULL (source_position_id)`
-
-Policy: `tenant_isolation_camp_user_roles` (permissive ALL → app_user (camp_apply_tenant_rls))
-
-Trigger: `trg_camp_user_roles_updated_at` · `trg_camp_user_roles_apply_template`
-
 ### camps
 
 🔒🔒 · үүсгэсэн `20261009002_camp_master.sql`
@@ -1492,6 +1379,90 @@ Policy: `tenant_isolation_core_feedback_votes` (permissive ALL → app_user (cam
 
 Trigger: `trg_core_feedback_votes_updated_at`
 
+### core_permission_aliases
+
+🌐 глобал (tenant_id-гүй, RLS-гүй) · үүсгэсэн `20261106005_core_rbac_adr007.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| old_code | TEXT | PK |  |
+| new_code | TEXT | NN | → core_permissions |
+| remove_in | TEXT | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+
+### core_permissions
+
+🌐 глобал (tenant_id-гүй, RLS-гүй) · үүсгэсэн `20261009001_camp_rbac.sql` · өөрчлөлт: +module (`20261106005_core_rbac_adr007.sql`), +available_in (`20261106005_core_rbac_adr007.sql`)
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| code | TEXT | PK |  |
+| name | TEXT | NN |  |
+| sort_order | INTEGER | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| module | TEXT | NN |  |
+| available_in | TEXT | NN |  |
+
+Constraint: `CHECK (code ~ '^(camp\|hr\|core)\.[a-z_]+\.[a-z_]+$')` · `CHECK (module = split_part(code, '.', 1))` · `CHECK (available_in IN ('v1', 'v2'))`
+
+### core_position_role_templates
+
+🔒🔒 · үүсгэсэн `20261013002_camp_position_role_templates.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| tenant_id | UUID | NN | → tenants (cascade) |
+| position_id | UUID | NN |  |
+| role_id | UUID | NN |  |
+| scope | "CampTemplateScope" | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `PRIMARY KEY (position_id, role_id)` · `FOREIGN KEY (tenant_id, position_id) REFERENCES camp_positions (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, role_id) REFERENCES camp_roles (tenant_id, id) ON DELETE CASCADE`
+
+Policy: `tenant_isolation_core_position_role_templates` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_core_position_role_templates_updated_at`
+
+### core_role_permissions
+
+🔒🔒 · үүсгэсэн `20261009001_camp_rbac.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| tenant_id | UUID | NN | → tenants (cascade) |
+| role_id | UUID | NN |  |
+| permission_code | TEXT | NN | → core_permissions |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `PRIMARY KEY (role_id, permission_code)` · `FOREIGN KEY (tenant_id, role_id) REFERENCES camp_roles (tenant_id, id) ON DELETE CASCADE`
+
+Policy: `tenant_isolation_core_role_permissions` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_core_role_permissions_updated_at`
+
+### core_roles
+
+🔒🔒 · үүсгэсэн `20261009001_camp_rbac.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| name | TEXT | NN |  |
+| description | TEXT |  |  |
+| is_system | BOOLEAN | NN |  |
+| system_code | TEXT |  |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, name)` · `UNIQUE (tenant_id, system_code)` · `CHECK ((system_code IS NOT NULL) = is_system)` · `CHECK (system_code ~ '^[A-Z][A-Z0-9_]*$')`
+
+Policy: `tenant_isolation_core_roles` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_core_roles_protect_system` · `trg_core_roles_updated_at` · `trg_core_roles_protect_system`
+
 ### core_user_invites
 
 🔒🔒 · үүсгэсэн `20261013005_core_user_invites.sql`
@@ -1516,6 +1487,52 @@ Constraint: `FOREIGN KEY (tenant_id, user_id) REFERENCES core_users (tenant_id, 
 Policy: `tenant_isolation_core_user_invites` (permissive ALL → app_user (camp_apply_tenant_rls))
 
 Trigger: `trg_core_user_invites_updated_at`
+
+### core_user_permissions
+
+🔒🔒 · үүсгэсэн `20261013001_camp_user_permissions.sql` · өөрчлөлт: +scope_type (`20261106005_core_rbac_adr007.sql`)
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| user_id | UUID | NN |  |
+| permission_code | TEXT | NN | → core_permissions |
+| source | "CampPermissionSource" | NN |  |
+| user_role_id | UUID |  |  |
+| created_by | UUID |  |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+| site_id | UUID |  |  |
+| scope_type | TEXT |  |  |
+
+Constraint: `FOREIGN KEY (tenant_id, user_id) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, user_role_id) REFERENCES camp_user_roles (tenant_id, id) ON DELETE CASCADE` · `CHECK ((source = 'TEMPLATE') = (user_role_id IS NOT NULL))`
+
+Policy: `tenant_isolation_core_user_permissions` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_core_user_permissions_updated_at`
+
+### core_user_roles
+
+🔒🔒 · үүсгэсэн `20261009001_camp_rbac.sql` · өөрчлөлт: +source_position_id (`20261013004_core_users_login.sql`), +scope_type (`20261106005_core_rbac_adr007.sql`)
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| user_id | UUID | NN |  |
+| role_id | UUID | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+| source_position_id | UUID |  |  |
+| site_id | UUID |  |  |
+| scope_type | TEXT |  |  |
+
+Constraint: `FOREIGN KEY (tenant_id, user_id) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, role_id) REFERENCES camp_roles (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id) ON DELETE CASCADE` · `UNIQUE (tenant_id, id)` · `FOREIGN KEY (tenant_id, source_position_id) REFERENCES camp_positions (tenant_id, id) ON DELETE SET NULL (source_position_id)`
+
+Policy: `tenant_isolation_core_user_roles` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_core_user_roles_updated_at` · `trg_core_user_roles_apply_template` · `trg_core_user_roles_apply_template`
 
 ### core_users
 
@@ -1595,7 +1612,7 @@ Trigger: `update_core_users_updated_at`
 | `camp_apply_tenant_rls` | p_table regclass | `20261009001_camp_rbac.sql` |
 | `camp_cost_entries_immutable` |  | `20261009006_camp_operations.sql` |
 | `camp_employees_names` |  | `20261019002_hr_employee_names_phones.sql` |
-| `camp_employees_sync_position_roles` |  | `20261013004_core_users_login.sql` |
+| `camp_employees_sync_position_roles` |  | `20261106005_core_rbac_adr007.sql` |
 | `camp_haul_records_guard` |  | `20261009006_camp_operations.sql` |
 | `camp_maintenance_parts_protect` |  | `20261010002_camp_org_services_maintenance.sql` |
 | `camp_maintenance_requests_protect` |  | `20261009004_camp_assets_maintenance.sql` |
@@ -1609,6 +1626,10 @@ Trigger: `update_core_users_updated_at`
 | `camp_user_roles_apply_template` |  | `20261013001_camp_user_permissions.sql` |
 | `cleanup_tenant_context` |  | `0003_force_rls_hardening.sql` |
 | `clone_tables_to_schema` | p_schema_name TEXT, p_tenant_id UUID | `20260921004_schema_isolation.sql` |
+| `core_roles_protect_system` |  | `20261106005_core_rbac_adr007.sql` |
+| `core_seed_default_roles` | p_tenant_id uuid | `20261106005_core_rbac_adr007.sql` |
+| `core_tenants_after_insert` |  | `20261106005_core_rbac_adr007.sql` |
+| `core_user_roles_apply_template` |  | `20261106005_core_rbac_adr007.sql` |
 | `current_tenant_id` |  | `20261010004_rls_app_user.sql` |
 | `deprovision_tenant_schema` | p_tenant_id UUID | `20260921004_schema_isolation.sql` |
 | `generate_mr_number` | p_tenant_id UUID | `0001_initial_schema.sql` |

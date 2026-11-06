@@ -352,3 +352,13 @@ tags: [lessons]
 - **Тохиолдсон (Sino-гийн `hrmasterdata.xlsx`, 2026-10-19):** ID 345 нь текст (`08101`), 232 нь тоо (`8101`); хэлтэс 21 янзаар бичигдсэн; «Яаралтай үеийн холбоо»-ны нэр/хамаарал солигдсон; гарсан огноо 5 өөр форматтай.
 - **Шийдэл:** эх файлыг өөрчлөхгүй — `scripts/data-migration/sino/convert.mjs` (+ `mapping.json`) цэвэрлэж импортын файл, тайлан гаргана ([[12_v0.2.3_data_import]]).
 - **Дүрэм:** Байгууллагын Excel-ийг шууд импортлохгүй — хөрвүүлэх скрипт + толь + тайлан (хасагдсан мөр бүр шалтгаантай), хоосон tenant-д dry-run хийсний дараа staging.
+
+### [PRISMA-004] `$queryRaw`-аар `information_schema`-ийн `name` төрлийн багана (`table_name`) уншихад deserialize алдаа (v0.2.3 Блок 2, ADR-007)
+- **Тохиолдсон (cloud integration, 2026-11-06):** `camp:snapshot`-ийн schema илрүүлэлт `SELECT table_name FROM information_schema.tables …` → `P2010 Failed to deserialize column of type 'name'` (driver adapter / wasm engine). Өмнө нь `count(*)` л уншдаг байсан тул илрээгүй.
+- **Шийдэл:** `SELECT table_name::text AS table_name …`.
+- **Дүрэм:** `$queryRaw`-д системийн каталогийн (`information_schema`, `pg_*`) `name` / `regclass` / `oid` төрлийн баганыг үргэлж `::text` (эсвэл `::int`) болгож уншина.
+
+### [MIG-004] Хүснэгт нэрлэхэд (RENAME) plpgsql функцийн бие хуучин нэрээ хадгална — функц / trigger-ийг дахин үүсгэ (v0.2.3 Блок 2, ADR-007)
+- **Нөхцөл:** `camp_*` → `core_*` нэрлэхэд FK, RLS policy, trigger-ийн холбоос автоматаар шилждэг ч plpgsql функцийн бие (текст) хуучин нэрээр хэвээр → дараагийн дуудлагад `relation "camp_…" does not exist`.
+- **Шийдэл (`20261106005`):** нэрлэсэн хүснэгтийг хөндөх бүх функцийг (`*_apply_template`, `*_protect_system`, `*_seed_default_roles`, `camp_employees_sync_position_roles`) шинэ нэрээр дахин үүсгэж, trigger-ийг дахин холбож, хуучин функцийг DROP; constraint / index / policy / trigger-ийн нэрийг DO-блокоор солив; migration-ийн төгсгөлд legacy ↔ core эрхийн олонлогийг тулгаж зөрвөл `RAISE`.
+- **Дүрэм:** Хүснэгт нэрлэх migration-ийн өмнө `grep -l <хүснэгт> supabase/migrations/*.sql`-ээр түүнийг хэрэглэдэг бүх функцийг олж дахин үүсгэнэ; өгөгдөл хөндөх бол migration дотор A = B шалгалт.

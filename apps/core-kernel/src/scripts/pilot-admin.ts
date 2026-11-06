@@ -36,7 +36,7 @@ export interface PilotDb {
   findCoreUserByAuthId(authId: string): Promise<PilotCoreUser | null>;
   createCoreUser(u: { tenantId: string; authId: string; email: string; fullName: string; role: PilotRole }): Promise<string>;
   updateCoreUser(id: string, data: { role?: PilotRole; isActive?: boolean; fullName?: string }): Promise<void>;
-  /** tenant-ийн анхдагч кемпийн роль (system_code) → camp_user_roles (бүх кемп, idempotent) */
+  /** tenant-ийн анхдагч кемпийн роль (system_code) → core_user_roles (tenant даяар, idempotent — ADR-007) */
   grantCampRole(tenantId: string, userId: string, code: CampRoleCode): Promise<void>;
 }
 

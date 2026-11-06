@@ -116,16 +116,16 @@ async function main(): Promise<void> {
     },
     async grantCampRole(tenantId, userId, code) {
       await prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SELECT camp_seed_default_roles(${tenantId}::uuid)`; // tenant trigger үүсгэсэн байх ёстой — idempotent
+        await tx.$executeRaw`SELECT core_seed_default_roles(${tenantId}::uuid)`; // tenant trigger үүсгэсэн байх ёстой — idempotent (ADR-007)
         const n = await tx.$executeRaw`
-          INSERT INTO camp_user_roles (tenant_id, user_id, role_id, camp_id)
+          INSERT INTO core_user_roles (tenant_id, user_id, role_id, site_id)
           SELECT ${tenantId}::uuid, ${userId}::uuid, r.id, NULL
-          FROM camp_roles r WHERE r.tenant_id = ${tenantId}::uuid AND r.system_code = ${code}::"CampRoleCode"
+          FROM core_roles r WHERE r.tenant_id = ${tenantId}::uuid AND r.system_code = ${code}
           ON CONFLICT DO NOTHING`;
         const exists = await tx.$queryRaw<{ c: bigint }[]>`
-          SELECT count(*) AS c FROM camp_user_roles ur JOIN camp_roles r ON r.id = ur.role_id
-          WHERE ur.tenant_id = ${tenantId}::uuid AND ur.user_id = ${userId}::uuid AND ur.camp_id IS NULL AND r.system_code = ${code}::"CampRoleCode"`;
-        if (Number(exists[0]?.c ?? 0) === 0) throw new Error(`кемпийн роль ${code} олгож чадсангүй (camp_roles алга?) — inserted ${n}`);
+          SELECT count(*) AS c FROM core_user_roles ur JOIN core_roles r ON r.id = ur.role_id
+          WHERE ur.tenant_id = ${tenantId}::uuid AND ur.user_id = ${userId}::uuid AND ur.site_id IS NULL AND r.system_code = ${code}`;
+        if (Number(exists[0]?.c ?? 0) === 0) throw new Error(`кемпийн роль ${code} олгож чадсангүй (core_roles алга?) — inserted ${n}`);
       });
     },
   };

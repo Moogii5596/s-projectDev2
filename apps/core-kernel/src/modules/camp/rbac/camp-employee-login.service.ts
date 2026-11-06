@@ -112,7 +112,7 @@ export class CampEmployeeLoginService {
       await this.access.requireTenantAdmin(tx, tenantId, authId);
       const e = await this.findEmployee(tx, tenantId, campId, employeeId);
       if (!e.userId) return { employeeId, userId: null, add: [], remove: [] };
-      const rows = await tx.campUserPermission.findMany({
+      const rows = await tx.coreUserPermission.findMany({
         where: { tenantId, userId: e.userId },
         select: { permissionCode: true, campId: true, userRole: { select: { sourcePositionId: true } } },
       });
@@ -121,7 +121,7 @@ export class CampEmployeeLoginService {
       const kept = new Set(rows.filter((r) => !r.userRole?.sourcePositionId).map((r) => key(r.permissionCode, r.campId)));
       const projected = new Set(kept);
       if (positionId) {
-        const tpl = await tx.campPositionRoleTemplate.findMany({
+        const tpl = await tx.corePositionRoleTemplate.findMany({
           where: { tenantId, positionId },
           select: { scope: true, role: { select: { permissions: { select: { permissionCode: true } } } } },
         });
@@ -155,10 +155,10 @@ export class CampEmployeeLoginService {
         });
         const userIds = emps.map((x) => x.userId!);
         if (userIds.length === 0) return { positionId, users: 0 };
-        await tx.campUserRole.deleteMany({ where: { tenantId, userId: { in: userIds }, sourcePositionId: positionId } });
-        const tpl = await tx.campPositionRoleTemplate.findMany({ where: { tenantId, positionId }, select: { roleId: true, scope: true } });
+        await tx.coreUserRole.deleteMany({ where: { tenantId, userId: { in: userIds }, sourcePositionId: positionId } });
+        const tpl = await tx.corePositionRoleTemplate.findMany({ where: { tenantId, positionId }, select: { roleId: true, scope: true } });
         // createMany + skipDuplicates: гараар олгосон ижил роль × кемп → хэвээр (trigger-тэй ижил дүрэм)
-        await tx.campUserRole.createMany({
+        await tx.coreUserRole.createMany({
           data: emps.flatMap((x) =>
             tpl.map((t) => ({ tenantId, userId: x.userId!, roleId: t.roleId, campId: t.scope === 'ALL_CAMPS' ? null : x.campId, sourcePositionId: positionId })),
           ),

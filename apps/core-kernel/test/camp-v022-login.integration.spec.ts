@@ -43,10 +43,10 @@ describe('v0.2.2 Блок 2 — нэвтрэх нэр, ажилтан ↔ хэр
     u[k] = (await admin.coreUser.create({ data: { tenantId, authId, email: `${k}-${sfx}@it.test`, role: r } })).id;
   };
   const effective = async (k: string) =>
-    [...new Set((await admin.campUserPermission.findMany({ where: { userId: u[k] }, select: { permissionCode: true, campId: true } }))
+    [...new Set((await admin.coreUserPermission.findMany({ where: { userId: u[k] }, select: { permissionCode: true, campId: true } }))
       .map((r) => `${r.permissionCode}@${r.campId === camp ? 'C1' : r.campId === camp2 ? 'C2' : '*'}`))].sort();
   const roleRows = async (k: string) =>
-    (await admin.campUserRole.findMany({ where: { userId: u[k] }, select: { roleId: true, campId: true, sourcePositionId: true } }))
+    (await admin.coreUserRole.findMany({ where: { userId: u[k] }, select: { roleId: true, campId: true, sourcePositionId: true } }))
       .map((r) => `${Object.keys(role).find((c) => role[c] === r.roleId)}@${r.campId === camp ? 'C1' : r.campId === camp2 ? 'C2' : '*'}${r.sourcePositionId ? ' (auto)' : ''}`).sort();
 
   beforeAll(async () => {
@@ -57,7 +57,7 @@ describe('v0.2.2 Блок 2 — нэвтрэх нэр, ажилтан ↔ хэр
     await mkUser(t, 'owner', UserRole.OWNER, ownerAuth);
     for (const k of ['bat', 'wang', 'dup', 'num']) await mkUser(t, k);
     await mkUser(tB, 'other');
-    for (const r of await admin.campRole.findMany({ where: { tenantId: t }, select: { id: true, systemCode: true } })) if (r.systemCode) role[r.systemCode] = r.id;
+    for (const r of await admin.coreRole.findMany({ where: { tenantId: t }, select: { id: true, systemCode: true } })) if (r.systemCode) role[r.systemCode] = r.id;
     posCook = (await admin.hrPosition.create({ data: { tenantId: t, name: `Тогооч ${sfx}` } })).id;
     posMgr = (await admin.hrPosition.create({ data: { tenantId: t, name: `Менежер ${sfx}` } })).id;
     await rbac.setPositionTemplates(t, ownerAuth, posCook, { templates: [{ roleId: role.EMPLOYEE, scope: 'EMPLOYEE_CAMP' }] });

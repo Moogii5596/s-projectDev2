@@ -17,14 +17,15 @@ import { ArgumentsHost, BadRequestException, ConflictException, ExceptionFilter,
 import { ConfigService } from '@nestjs/config';
 import supertest from 'supertest';
 import { createClient } from '@supabase/supabase-js';
-import { CampRoleCode, CampShiftType, PrismaClient, TierType, UserRole } from '@prisma/client';
+import { CampShiftType, PrismaClient, TierType, UserRole } from '@prisma/client';
 
 import { AppModule } from '../src/app/app.module';
 import { REDIS_CLIENT } from '../src/db/redis.module';
 import { createRedisMock } from './helpers/redis-mock';
 import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
-import { CAMP_PERMISSION_CODES } from '../src/modules/camp/common/camp-permissions';
+import { CAMP_PERMISSION_CODES, campPermissionAvailableIn } from '../src/modules/camp/common/camp-permissions';
+import { PERMISSION_ALIASES, permissionModule } from '../src/modules/core/permissions/permission-registry';
 import { toCampHttpError } from '../src/modules/camp/common/camp-errors';
 import { configureApp } from '../src/common/http/configure-app';
 import { ADMIN_DB_URL } from './helpers/db-urls';
@@ -120,17 +121,23 @@ afterAll(async () => {
 }, 30_000);
 
 describe('🔑 Каталог ба анхдагч роль', () => {
-  it('кодын CAMP_PERMISSIONS = DB camp_permissions (зөрөхгүй)', async () => {
-    const db = (await prismaAdmin.campPermission.findMany({ select: { code: true } })).map((p) => p.code).sort();
-    expect(db).toEqual([...CAMP_PERMISSION_CODES].sort());
+  it('кодын CAMP_PERMISSIONS = DB core_permissions (код, модуль, хувилбар) ба alias (ADR-007) — зөрөхгүй', async () => {
+    const rows = await prismaAdmin.corePermission.findMany({ select: { code: true, module: true, availableIn: true } });
+    expect(rows.map((p) => p.code).sort()).toEqual([...CAMP_PERMISSION_CODES].sort());
+    for (const r of rows) {
+      expect(r.module).toBe(permissionModule(r.code));
+      expect(r.availableIn).toBe(campPermissionAvailableIn(r.code));
+    }
+    const aliases = await prismaAdmin.corePermissionAlias.findMany({ select: { oldCode: true, newCode: true } });
+    expect(Object.fromEntries(aliases.map((a) => [a.oldCode, a.newCode]))).toEqual(PERMISSION_ALIASES);
   });
 
   it('шинэ tenant → 4 системийн роль (trigger; v0.2.2 Блок 1 — «Ажилтан» EMPLOYEE); GET /camp/roles (ADMIN) 200', async () => {
     const res = await api().get(`${V1}/roles`).set(as('admin'));
     expect(res.status).toBe(200);
     const sys = res.body.filter((r: { isSystem: boolean }) => r.isSystem).map((r: { systemCode: string }) => r.systemCode).sort();
-    expect(sys).toEqual([CampRoleCode.CAMP_ADMIN, CampRoleCode.CAMP_MANAGER, CampRoleCode.CATERING_ADMIN, CampRoleCode.EMPLOYEE].sort());
-    ids.roleManager = res.body.find((r: { systemCode: string }) => r.systemCode === CampRoleCode.CAMP_MANAGER).id;
+    expect(sys).toEqual(['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN', 'EMPLOYEE'].sort());
+    ids.roleManager = res.body.find((r: { systemCode: string }) => r.systemCode === 'CAMP_MANAGER').id;
   });
 
   it('рольгүй REQUESTER: /camp/roles 403, /camp/camps 403, /camp/me/permissions → хоосон', async () => {
@@ -334,7 +341,7 @@ describe('🧯 camp-errors — БОДИТ Prisma алдаан дээр', () => {
   });
 
   it('trigger CAMP_SYSTEM_ROLE → 409 (мессеж хадгалагдана)', async () => {
-    const e = await mapped(prismaAdmin.campRole.delete({ where: { id: ids.roleManager } }));
+    const e = await mapped(prismaAdmin.coreRole.delete({ where: { id: ids.roleManager } }));
     expect(e, String((e as Error).message)).toBeInstanceOf(ConflictException);
     expect((e as Error).message).toBe('CAMP_SYSTEM_ROLE: системийн ролийг устгах боломжгүй (Кемп менежер)');
   });
@@ -366,7 +373,7 @@ describe('🔒 RLS leakage (app_user)', () => {
       return [
         await tx.camp.count({ where: { tenantId } }),
         await tx.hrEmployee.count({ where: { tenantId } }),
-        await tx.campRole.count({ where: { tenantId } }),
+        await tx.coreRole.count({ where: { tenantId } }),
       ];
     });
 

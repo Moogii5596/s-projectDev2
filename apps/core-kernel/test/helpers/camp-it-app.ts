@@ -12,7 +12,7 @@ import { ArgumentsHost, ExceptionFilter, HttpException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import supertest from 'supertest';
 import { createClient } from '@supabase/supabase-js';
-import { CampRoleCode, PrismaClient, TierType, UserRole } from '@prisma/client';
+import { PrismaClient, TierType, UserRole } from '@prisma/client';
 
 import { AppModule } from '../../src/app/app.module';
 import { REDIS_CLIENT } from '../../src/db/redis.module';
@@ -123,7 +123,7 @@ export async function createCampIt(prefix: string): Promise<CampIt> {
 
   // manager = "Кемп менежер" (C1)
   const rolesList = (await api().get(`${V1}/roles`).set(as('admin'))).body as { id: string; systemCode: string | null }[];
-  ids.roleManager = rolesList.find((r) => r.systemCode === CampRoleCode.CAMP_MANAGER)!.id;
+  ids.roleManager = rolesList.find((r) => r.systemCode === 'CAMP_MANAGER')!.id;
   await must(api().post(`${V1}/user-roles`).set(as('admin')).send({ userId: coreIds.manager, roleId: ids.roleManager, campId: ids.c1 }), 'user-role');
 
   const close = async () => {

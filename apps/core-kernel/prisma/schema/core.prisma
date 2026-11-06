@@ -35,9 +35,9 @@ model Tenant {
   inventoryItems       InventoryItem[]      // Phase 4.2
   vendors              Vendor[]             // Phase 4.3
   // Camp Module (20261009001..006)
-  campRoles                   CampRole[]
-  campRolePermissions         CampRolePermission[]
-  campUserRoles               CampUserRole[]
+  coreRoles                   CoreRole[]
+  coreRolePermissions         CoreRolePermission[]
+  coreUserRoles               CoreUserRole[]
   camps                       Camp[]
   campMealLocations           CampMealLocation[]
   campSettings                CampSetting[]
@@ -103,8 +103,8 @@ model CoreUser {
   superAdmin         SuperAdmin?          // Sprint 4
 
   // Camp Module — (tenant_id, id) composite FK-ууд (D2)
-  campUserRoles             CampUserRole[]           @relation("CampUserRoleUser")
-  campUserPermissions       CampUserPermission[]     @relation("CampUserPermissionUser")
+  coreUserRoles             CoreUserRole[]           @relation("CoreUserRoleUser")
+  coreUserPermissions       CoreUserPermission[]     @relation("CoreUserPermissionUser")
   campEmployees             HrEmployee[]           @relation("CampEmployeeUser")
   piiViews                  CampPiiAccessLog[]     @relation("CampPiiViewer")
   invites                   CoreUserInvite[]

@@ -172,8 +172,8 @@ describe('HrEmployeeLifecycleService', () => {
     expect(dupCheck).toMatchObject({ employeeCode: 'SH1', status: { not: 'TERMINATED' } });
     expect(userAdmin.setBanned).toHaveBeenCalledWith(USER.authId, false);
     expect(s.tx.hrEmployee.update).toHaveBeenCalledWith({ where: { id: 'e1' }, data: { userId: null } });
-    expect(s.tx.campUserPermission.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 't1', userId: USER.id } });
-    expect(s.tx.campUserRole.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 't1', userId: USER.id } });
+    expect(s.tx.coreUserPermission.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 't1', userId: USER.id } });
+    expect(s.tx.coreUserRole.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 't1', userId: USER.id } });
     expect(s.tx.hrEmployee.create.mock.calls[0][0].data).toMatchObject({ employeeCode: 'SH1', rehiredFromId: 'e1', userId: USER.id, phone: '99112233' });
     expect(s.tx.coreUser.updateMany).toHaveBeenCalledWith({ where: { id: USER.id, tenantId: 't1' }, data: { isActive: true } });
     const audit = s.tx.campAuditLog.createMany.mock.calls[0][0].data;
@@ -188,7 +188,7 @@ describe('HrEmployeeLifecycleService', () => {
     s.tx.hrEmployee.create.mockResolvedValueOnce({ id: 'e2', employeeCode: 'SH1', fullName: 'Бат', status: 'ACTIVE', userId: null, rehiredFromId: 'e1' });
     await svc.rehire('t1', 'a1', 'c1', 'e1', { transferUser: false });
     expect(userAdmin.setBanned).not.toHaveBeenCalled();
-    expect(s.tx.campUserRole.deleteMany).not.toHaveBeenCalled();
+    expect(s.tx.coreUserRole.deleteMany).not.toHaveBeenCalled();
     expect(s.tx.hrEmployee.create.mock.calls[0][0].data.userId).toBeNull();
   });
 
@@ -209,7 +209,7 @@ describe('HrEmployeeLifecycleService', () => {
   it('piiViews (SEC-009): зөвхөн системийн админ — Кемп админ (roles.manage) ч 403', async () => {
     asAdmin([P.EMPLOYEE_MANAGE, P.EMPLOYEE_TERMINATE]);
     await expect(svc.piiViews('t1', 'a1', 'c1', 'e1', {})).rejects.toThrow(ForbiddenException);
-    asAdmin([P.ROLES_MANAGE]);
+    asAdmin([P.SETTINGS_MANAGE]);
     await expect(svc.piiViews('t1', 'a1', 'c1', 'e1', {})).rejects.toThrow(ForbiddenException);
     setActor(s.tx, { userId: 'cu-admin', role: UserRole.ADMIN });
     s.tx.campPiiAccessLog.findMany.mockResolvedValueOnce([{ id: 'l1', viewerUserId: 'cu-admin', context: 'profile', viewedAt: new Date() }]);

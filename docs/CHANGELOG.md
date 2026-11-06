@@ -17,6 +17,12 @@ tags: [release]
 
 ## [Unreleased]
 
+### v0.2.3 Блок 2 — роль, эрх системийн түвшинд (ADR-007, PIL-13, [[ADR-007_System_Roles_Permissions]])
+- **Өөрчлөгдсөн (DB, migration `20261106005`):** `camp_permissions / roles / role_permissions / user_roles / user_permissions / position_role_templates` → `core_*` (байранд нь нэрлэсэн — ID, эрх хэвээр); олголтын `camp_id` → `site_id` + `scope_type` (TENANT / SITE); `core_roles.system_code` → TEXT; `core_permissions` += `module`, `available_in`. Migration дотор legacy ↔ core эрхийн олонлогийг тулгана.
+- **Өөрчлөгдсөн (эрхийн код):** `camp.employee.manage` → `hr.employee.manage`, `camp.employee.terminate` → `hr.employee.terminate`, `camp.movement.import` → `hr.attendance.import`, `camp.shift.adjust` → `hr.shift.adjust`. Хуучин код v0.2.3-т alias-аар уншигдана (`core_permission_aliases`; API оролт хөрвөнө, `me/permissions` хоёуланг буцаана) — ⚠️ v0.2.4-т устгана.
+- **Хассан:** `camp.roles.manage` (юу ч зөвшөөрдөггүй байсан — SEC-009). Хэрэглэгчийн бодит эрх өөрчлөгдөхгүй.
+- **Нэмэгдсэн (дотоод):** хөлдөөсөн `legacy_camp_*` хуулбар (зөвхөн унших, v0.2.4-т устгана); `camp:snapshot` core schema-г таньж, хуучин ↔ шинэ кодыг тулгана.
+
 ### v0.2.3 Блок 1 / 1б — хамаарал, Prisma schema ([[09_v0.2.3_tech_plan]])
 - **Өөрчлөгдсөн:** NestJS 10.4 → 11.2.7, Fastify 4.28 → 5.12.7, `@fastify/multipart` 9.4, nodemailer 6.10 → 10.1.7 (аюулгүй байдлын засвар, DEP-01/02). Хэрэглэгчид харагдах өөрчлөлтгүй.
 - **Хассан:** ашиглагдаагүй хамаарал (`@nestjs/throttler`, `prisma-rls-extension` core-kernel-ээс, mfe-ийн `@tanstack/react-query`) — QA-13.

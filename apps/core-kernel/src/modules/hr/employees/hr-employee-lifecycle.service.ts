@@ -270,8 +270,8 @@ export class HrEmployeeLifecycleService {
     if (user) {
       // Q-C (1): эрх загвараас дахин — хуучин бүх олголт/шууд эрхийг цэвэрлээд (TEMPLATE мөр CASCADE), холбоосыг шилжүүлнэ
       await tx.hrEmployee.update({ where: { id: old.id }, data: { userId: null } });
-      await tx.campUserPermission.deleteMany({ where: { tenantId, userId: user.id } });
-      await tx.campUserRole.deleteMany({ where: { tenantId, userId: user.id } });
+      await tx.coreUserPermission.deleteMany({ where: { tenantId, userId: user.id } });
+      await tx.coreUserRole.deleteMany({ where: { tenantId, userId: user.id } });
     }
     const created = await tx.hrEmployee.create({
       data: {

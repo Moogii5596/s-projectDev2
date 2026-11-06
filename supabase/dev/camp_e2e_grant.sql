@@ -18,9 +18,9 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'admin@test.mn core_users-д алга (supabase/seed.sql)';
   END IF;
-  PERFORM camp_seed_default_roles(v_user.tenant_id);   -- анхдагч роль байхгүй бол үүсгэнэ (idempotent)
-  SELECT id INTO v_role FROM camp_roles WHERE tenant_id = v_user.tenant_id AND system_code = 'CAMP_ADMIN';
-  INSERT INTO camp_user_roles (tenant_id, user_id, role_id, camp_id)
+  PERFORM core_seed_default_roles(v_user.tenant_id);   -- анхдагч роль байхгүй бол үүсгэнэ (idempotent; ADR-007 — core_*)
+  SELECT id INTO v_role FROM core_roles WHERE tenant_id = v_user.tenant_id AND system_code = 'CAMP_ADMIN';
+  INSERT INTO core_user_roles (tenant_id, user_id, role_id, site_id)
   VALUES (v_user.tenant_id, v_user.id, v_role, NULL)
   ON CONFLICT DO NOTHING;
   RAISE NOTICE 'OK: % → Кемп админ (бүх кемп), tenant %', v_user.email, v_user.tenant_id;

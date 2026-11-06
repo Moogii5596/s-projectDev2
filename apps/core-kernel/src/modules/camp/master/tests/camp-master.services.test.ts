@@ -288,7 +288,7 @@ describe('HrEmployeesService (Шат 2.4)', () => {
 
   it('create: employee.manage-гүй → 403', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MASTER_MANAGE] }] });
-    await expect(svc.create('t1', 'a1', 'c1', dto)).rejects.toThrow(/camp\.employee\.manage/);
+    await expect(svc.create('t1', 'a1', 'c1', dto)).rejects.toThrow(/hr\.employee\.manage/);
   });
 
   it('create: байгууллага/хэлтэс/баг байхгүй эсвэл идэвхгүй → 400; хэлтэс/багийг тухайн кемпээр хайна', async () => {

@@ -74,11 +74,11 @@ for (const f of tsFiles) {
 const classFile = new Map();
 for (const f of tsFiles) for (const m of read(f).matchAll(/export\s+class\s+(\w+)/g)) classFile.set(m[1], f);
 
-// CAMP_PERMISSIONS константын нэр → код
-const permFile = path.join(SRC, 'modules/camp/common/camp-permissions.ts');
+// CAMP_PERMISSIONS (= PERMISSIONS) константын нэр → код. v0.2.3 (ADR-007): эх нь core/permissions/permission-registry.ts
+const permFile = path.join(SRC, 'modules/core/permissions/permission-registry.ts');
 const PERM_CONST = new Map();
 if (exists(permFile)) {
-  const body = read(permFile).match(/CAMP_PERMISSIONS\s*=\s*\{([\s\S]*?)\}\s*as const/);
+  const body = read(permFile).match(/\bPERMISSIONS\s*=\s*\{([\s\S]*?)\}\s*as const/);
   if (body) for (const m of body[1].matchAll(/(\w+)\s*:\s*'([^']+)'/g)) PERM_CONST.set(m[1], m[2]);
 }
 
@@ -343,6 +343,12 @@ for (const f of migs) {
         } else if ((a = act.match(/^RENAME TO "?(\w+)"?/i))) {
           tables.set(a[1], t);
           tables.delete(name);
+          // ADR-007 (20261106005): FK-ийн заалт, policy / trigger нэр дэх хуучин хүснэгтийн нэрийг шинэчлэх
+          for (const other of tables.values()) for (const c of other.cols.values()) {
+            if (c.ref === name || c.ref.startsWith(`${name} `)) c.ref = a[1] + c.ref.slice(name.length);
+          }
+          for (const [k, v] of [...t.policies]) if (k.includes(name)) { t.policies.delete(k); t.policies.set(k.replace(name, a[1]), v.replace(name, a[1])); }
+          for (const tr of triggers) if (tr.table === name) { tr.table = a[1]; tr.name = tr.name.replace(name, a[1]); }
         } else if (/^ENABLE ROW LEVEL SECURITY/i.test(act)) t.rls = true;
         else if (/^FORCE ROW LEVEL SECURITY/i.test(act)) t.force = true;
         else if (/^DISABLE ROW LEVEL SECURITY/i.test(act)) t.rls = false;
@@ -434,22 +440,22 @@ for (const f of migs) {
   const names = new Map();
   for (const f of migs) {
     for (const st of splitSql(read(f))) {
-      if (!/^INSERT INTO camp_permissions\b/i.test(st)) continue;
-      for (const m of st.matchAll(/\(\s*'(camp\.[a-z]+\.[a-z]+)',\s*'([^']+)'/g)) names.set(m[1], m[2]);
+      if (!/^INSERT INTO (camp|core)_permissions\b/i.test(st)) continue;
+      for (const m of st.matchAll(/\(\s*'((?:camp|hr|core)\.[a-z_]+\.[a-z_]+)',\s*'([^']+)'/g)) names.set(m[1], m[2]);
     }
   }
   const v2 = new Set();
   if (exists(permFile)) {
     const vm = read(permFile).match(/V2_CODES[\s\S]*?\[([\s\S]*?)\]/);
-    if (vm) for (const m of vm[1].matchAll(/CAMP_PERMISSIONS\.(\w+)/g)) v2.add(PERM_CONST.get(m[1]));
+    if (vm) for (const m of vm[1].matchAll(/\bPERMISSIONS\.(\w+)/g)) v2.add(PERM_CONST.get(m[1]));
   }
   let roles = [];
   let roleMig = '';
   for (const f of migs) {
-    const fm = read(f).match(/FUNCTION camp_seed_default_roles[\s\S]*?\$\$;/);
+    const fm = read(f).match(/FUNCTION (?:camp|core)_seed_default_roles[\s\S]*?\$\$;/);
     if (!fm) continue;
     roleMig = path.basename(f);
-    roles = [...fm[0].matchAll(/\('(\w+)'::"CampRoleCode",\s*'([^']+)',\s*'([^']*)',\s*ARRAY\[([^\]]+)\]\)/g)].map((m) => ({
+    roles = [...fm[0].matchAll(/\('(\w+)'(?:::"CampRoleCode")?,\s*'([^']+)',\s*'([^']*)',\s*ARRAY\[([^\]]+)\]\)/g)].map((m) => ({
       code: m[1],
       name: m[2],
       descr: m[3],
@@ -467,19 +473,26 @@ for (const f of migs) {
   }
   const codes = [...PERM_CONST.values()];
   let body =
-    'Эх сурвалж: `apps/core-kernel/src/modules/camp/common/camp-permissions.ts` (код) · migration-ийн `camp_permissions` (нэр) · ' +
-    `\`camp_seed_default_roles\` (\`${roleMig}\`, анхдагч роль). Код ба DB ЯГ ижил байх ёстой (\`camp-master.integration.spec.ts\` тулгана).\n\n` +
-    'Шинэ эрх: (1) migration-д INSERT, (2) `camp-permissions.ts`, (3) хэрэгтэй бол seed роль → `pnpm docs:gen`. ' +
-    'Хэрэглэгчийн эцсийн эрх = `camp_user_permissions` (v0.2.2 Блок 1, ганц эх сурвалж). ' +
+    'Эх сурвалж: `apps/core-kernel/src/modules/core/permissions/permission-registry.ts` (код) · migration-ийн `core_permissions` (нэр) · ' +
+    `\`core_seed_default_roles\` (\`${roleMig}\`, анхдагч роль). Код ба DB ЯГ ижил байх ёстой (\`camp-master.integration.spec.ts\` тулгана).\n\n` +
+    'Шинэ эрх: (1) migration-д `INSERT INTO core_permissions`, (2) `permission-registry.ts`, (3) хэрэгтэй бол seed роль → `pnpm docs:gen`. ' +
+    'Хэрэглэгчийн эцсийн эрх = `core_user_permissions` (ганц эх сурвалж). Роль, эрх системийн түвшинд — [[ADR-007_System_Roles_Permissions]]. ' +
     'Үндсэн (core) роль — [[03_DB_Catalog]] → Enum. Загвар: [[ADR-003_Users_Login_Permissions]].\n\n';
-  body += `## Кемпийн эрх (${codes.length})\n\n| Код | Нэр | Хувилбар | ${roles.map((r) => r.code).join(' | ')} | Ашигласан файл |\n|---|---|---|${roles.map(() => '---|').join('')}---|\n`;
+  body += `## Эрх (${codes.length})\n\n| Код | Нэр | Хувилбар | ${roles.map((r) => r.code).join(' | ')} | Ашигласан файл |\n|---|---|---|${roles.map(() => '---|').join('')}---|\n`;
   for (const c of codes) {
     const files = [...(used.get(c) ?? [])].map((x) => `\`${x}\``).join(' ') || '—';
     body += `| \`${c}\` | ${esc(names.get(c) ?? '')} | ${v2.has(c) ? 'V2' : 'V1'} | ${roles.map((r) => (r.perms.includes(c) ? '✅' : '')).join(' | ')} | ${files} |\n`;
   }
   body += '\n## Анхдагч роль\n\n| Код | Нэр | Тайлбар | Эрхийн тоо |\n|---|---|---|---|\n';
   for (const r of roles) body += `| ${r.code} | ${r.name} | ${esc(r.descr)} | ${r.perms.length} |\n`;
-  emit('05_Permissions_Catalog.md', 'Эрхийн каталог (Кемп RBAC)', 'Architecture', ['codebase', 'auth', 'camp', 'generated'], body);
+  if (exists(permFile)) {
+    const am = read(permFile).match(/PERMISSION_ALIASES[^=]*=\s*\{([\s\S]*?)\};/);
+    if (am) {
+      body += '\n## Хуучин код (alias, ADR-007 — v0.2.4-т устгана)\n\n| Хуучин | Шинэ |\n|---|---|\n';
+      for (const m of am[1].matchAll(/'([^']+)'\s*:\s*PERMISSIONS\.(\w+)/g)) body += `| \`${m[1]}\` | \`${PERM_CONST.get(m[2]) ?? m[2]}\` |\n`;
+    }
+  }
+  emit('05_Permissions_Catalog.md', 'Эрхийн каталог (core RBAC)', 'Architecture', ['codebase', 'auth', 'rbac', 'generated'], body);
 }
 
 // ───────────────────────────── 4. Config / env / scripts ─────────────────────────────

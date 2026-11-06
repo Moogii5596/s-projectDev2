@@ -24,7 +24,7 @@ tags: [index, moc]
 - [[ARCH-00_System_Overview]] — **архитектурын тойм**: одоо ✅ / зорилт 🧭, эрсдэлийн бүртгэл
 - [[01_Core_API_Gateway_ReverseProxy_Spec]] — edge → API: Cloudflare, Caddy, guard гинж, хязгаар
 - [[ARCH-05_UI_UX_Architecture_Spec]] — frontend шийдвэрүүд
-- ADR: [[ADR-001_Tenant_Isolation]] (RLS + dedicated) · [[ADR-003_Users_Login_Permissions]] (хэрэглэгч, нэвтрэлт, эрх) · [[ADR-004_Feed_Architecture]] · [[ADR-005_Org_Connectivity_Domains]] (домэйн, tunnel, нүүр хуудас) · [[ADR-006_HR_Core_Module]]
+- ADR: [[ADR-001_Tenant_Isolation]] (RLS + dedicated) · [[ADR-003_Users_Login_Permissions]] (хэрэглэгч, нэвтрэлт, эрх) · [[ADR-004_Feed_Architecture]] · [[ADR-005_Org_Connectivity_Domains]] (домэйн, tunnel, нүүр хуудас) · [[ADR-006_HR_Core_Module]] · [[ADR-007_System_Roles_Permissions]] (роль, эрх системийн түвшинд)
 
 ## 🗄 Өгөгдөл ба аюулгүй байдал
 - [[01_PostgreSQL_MultiTenant_RLS_Spec]] — tenant тусгаарлалт, DB роль, policy загвар

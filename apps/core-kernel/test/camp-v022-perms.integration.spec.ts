@@ -1,5 +1,5 @@
 /**
- * v0.2.2 Блок 1 — эрхийн ганц эх сурвалж (camp_user_permissions), загвар хэрэгжүүлэх, шууд эрх, Q9 (ADR-003 §2.4, D-01, D-09).
+ * v0.2.2 Блок 1 — эрхийн ганц эх сурвалж (camp_user_permissions → v0.2.3 core_user_permissions, ADR-007), загвар хэрэгжүүлэх, шууд эрх, Q9 (ADR-003 §2.4, D-01, D-09).
  * Бодит PostgreSQL + app_user (RLS). GoTrue шаардахгүй: service-ийг шууд дуудна (authId = санамсаргүй UUID).
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -48,7 +48,7 @@ describe('v0.2.2 Блок 1 — camp_user_permissions (integration)', () => {
     user[key] = (await admin.coreUser.create({ data: { tenantId, authId, email: `${key}-${sfx}@it.test`, role: r } })).id;
   };
   const effective = async (tenantId: string, userKey: string) => {
-    const rows = await admin.campUserPermission.findMany({ where: { tenantId, userId: user[userKey] }, select: { permissionCode: true, campId: true } });
+    const rows = await admin.coreUserPermission.findMany({ where: { tenantId, userId: user[userKey] }, select: { permissionCode: true, campId: true } });
     return [...new Set(rows.map((r) => `${r.permissionCode}@${r.campId ?? '*'}`))].sort();
   };
 
@@ -62,7 +62,7 @@ describe('v0.2.2 Блок 1 — camp_user_permissions (integration)', () => {
     await mkUser(tA, 'u1', UserRole.REQUESTER);
     await mkUser(tA, 'u2', UserRole.REQUESTER);
     await mkUser(tB, 'ownerB', UserRole.OWNER, auth.ownerB);
-    const roles = await admin.campRole.findMany({ where: { tenantId: tA }, select: { id: true, systemCode: true } });
+    const roles = await admin.coreRole.findMany({ where: { tenantId: tA }, select: { id: true, systemCode: true } });
     for (const r of roles) if (r.systemCode) role[r.systemCode] = r.id;
   });
 
@@ -75,7 +75,7 @@ describe('v0.2.2 Блок 1 — camp_user_permissions (integration)', () => {
   it('seed (20261013003): 4 системийн роль; Кемп админд parts + close (Q9); Ажилтан = maintenance.create', async () => {
     expect(Object.keys(role).sort()).toEqual(['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN', 'EMPLOYEE']);
     const perms = async (code: string) =>
-      (await admin.campRolePermission.findMany({ where: { tenantId: tA, roleId: role[code] }, select: { permissionCode: true } })).map((r) => r.permissionCode);
+      (await admin.coreRolePermission.findMany({ where: { tenantId: tA, roleId: role[code] }, select: { permissionCode: true } })).map((r) => r.permissionCode);
     expect(await perms('CAMP_ADMIN')).toEqual(expect.arrayContaining([P.MAINTENANCE_PARTS, P.MAINTENANCE_CLOSE]));
     expect(await perms('EMPLOYEE')).toEqual([P.MAINTENANCE_CREATE]);
   });
@@ -83,7 +83,7 @@ describe('v0.2.2 Блок 1 — camp_user_permissions (integration)', () => {
   it('роль олгох → trigger загварыг хуулна; guard = загвар; 2 роль ижил эрх → нэгийг хасахад нөгөөгийнх үлдэнэ', async () => {
     const a = await svc.assignUserRole(tA, auth.owner, { userId: user.u1, roleId: role.CAMP_MANAGER, campId: c1 });
     await svc.assignUserRole(tA, auth.owner, { userId: user.u1, roleId: role.EMPLOYEE, campId: c1 });
-    const tpl = (await admin.campRolePermission.findMany({ where: { roleId: role.CAMP_MANAGER }, select: { permissionCode: true } })).map((r) => r.permissionCode);
+    const tpl = (await admin.coreRolePermission.findMany({ where: { roleId: role.CAMP_MANAGER }, select: { permissionCode: true } })).map((r) => r.permissionCode);
     const actor = await rls.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tA}, true)`;
       return access.resolve(tx as never, tA, (await admin.coreUser.findUniqueOrThrow({ where: { id: user.u1 } })).authId);
@@ -91,7 +91,7 @@ describe('v0.2.2 Блок 1 — camp_user_permissions (integration)', () => {
     expect(actor.perms.global).toEqual([]);
     expect(actor.perms.byCamp[c1]).toEqual([...tpl].sort());
     // maintenance.create хоёр ролиос → 2 мөр; менежерийг хасахад EMPLOYEE-ийнх үлдэнэ
-    expect(await admin.campUserPermission.count({ where: { userId: user.u1, permissionCode: P.MAINTENANCE_CREATE } })).toBe(2);
+    expect(await admin.coreUserPermission.count({ where: { userId: user.u1, permissionCode: P.MAINTENANCE_CREATE } })).toBe(2);
     await svc.removeUserRole(tA, auth.owner, a.id);
     expect(await effective(tA, 'u1')).toEqual([`${P.MAINTENANCE_CREATE}@${c1}`]);
   });
@@ -117,7 +117,7 @@ describe('v0.2.2 Блок 1 — camp_user_permissions (integration)', () => {
     expect((await svc.applyRoleTemplate(tA, auth.owner, custom.id)).affectedUsers).toBe(0); // idempotent
 
     // TEMPLATE мөрийг шууд хасахгүй; DIRECT-ийг хасна
-    const tplRow = await admin.campUserPermission.findFirstOrThrow({ where: { userId: user.u2, source: 'TEMPLATE' } });
+    const tplRow = await admin.coreUserPermission.findFirstOrThrow({ where: { userId: user.u2, source: 'TEMPLATE' } });
     await expect(svc.revokeDirectPermission(tA, auth.owner, tplRow.id)).rejects.toThrow(BadRequestException);
     await svc.revokeDirectPermission(tA, auth.owner, direct.id);
     // custom роль устгах → TEMPLATE эрх CASCADE
@@ -137,21 +137,21 @@ describe('v0.2.2 Блок 1 — camp_user_permissions (integration)', () => {
     // app_user: tenant B-ийн context-оор A-ийн мөр харагдахгүй, бичих боломжгүй
     const seen = await rls.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tB}, true)`;
-      return tx.campUserPermission.count({ where: { tenantId: tA } });
+      return tx.coreUserPermission.count({ where: { tenantId: tA } });
     });
     expect(seen).toBe(0);
     await expect(
       rls.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tB}, true)`;
-        await tx.campUserPermission.create({ data: { tenantId: tA, userId: user.u1, permissionCode: P.REPORT_VIEW, source: 'DIRECT' } });
+        await tx.coreUserPermission.create({ data: { tenantId: tA, userId: user.u1, permissionCode: P.REPORT_VIEW, source: 'DIRECT' } });
       }),
     ).rejects.toThrow();
   });
 
   it('pilot.ps1 user (raw SQL insert) → trigger эрхийг хуулна', async () => {
-    await admin.$executeRaw`INSERT INTO camp_user_roles (tenant_id, user_id, role_id, camp_id) VALUES (${tA}::uuid, ${user.plain}::uuid, ${role.CAMP_ADMIN}::uuid, NULL)`;
-    const tpl = await admin.campRolePermission.count({ where: { roleId: role.CAMP_ADMIN } });
-    expect(await admin.campUserPermission.count({ where: { userId: user.plain, source: 'TEMPLATE' } })).toBe(tpl);
+    await admin.$executeRaw`INSERT INTO core_user_roles (tenant_id, user_id, role_id, site_id) VALUES (${tA}::uuid, ${user.plain}::uuid, ${role.CAMP_ADMIN}::uuid, NULL)`;
+    const tpl = await admin.coreRolePermission.count({ where: { roleId: role.CAMP_ADMIN } });
+    expect(await admin.coreUserPermission.count({ where: { userId: user.plain, source: 'TEMPLATE' } })).toBe(tpl);
   });
 
   it('албан тушаалын загвар: тавих/унших, өөр байгууллагын роль → 400', async () => {
@@ -159,7 +159,7 @@ describe('v0.2.2 Блок 1 — camp_user_permissions (integration)', () => {
     const res = await svc.setPositionTemplates(tA, auth.owner, pos.id, { templates: [{ roleId: role.EMPLOYEE, scope: 'EMPLOYEE_CAMP' }] });
     expect(res.templates).toEqual([expect.objectContaining({ roleId: role.EMPLOYEE, scope: 'EMPLOYEE_CAMP' })]);
     expect((await svc.getPositionTemplates(tA, auth.owner, pos.id)).templates).toHaveLength(1);
-    const roleB = await admin.campRole.findFirstOrThrow({ where: { tenantId: tB, systemCode: 'EMPLOYEE' } });
+    const roleB = await admin.coreRole.findFirstOrThrow({ where: { tenantId: tB, systemCode: 'EMPLOYEE' } });
     await expect(svc.setPositionTemplates(tA, auth.owner, pos.id, { templates: [{ roleId: roleB.id, scope: 'ALL_CAMPS' }] })).rejects.toThrow(BadRequestException);
   });
 

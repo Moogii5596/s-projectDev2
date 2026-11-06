@@ -331,7 +331,7 @@ describe('HrShiftsService (Шат 3.2)', () => {
 
   it('shift.adjust-гүй → 403; deleteAdjustment өөр кемпийнх → 404', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MEAL_ORDER] }] });
-    await expect(svc.createAdjustments('t1', 'a1', 'c1', dto)).rejects.toThrow(/camp\.shift\.adjust/);
+    await expect(svc.createAdjustments('t1', 'a1', 'c1', dto)).rejects.toThrow(/hr\.shift\.adjust/);
     setActor(s.tx, { role: UserRole.OWNER });
     await expect(svc.deleteAdjustment('t1', 'a1', 'c1', 'x')).rejects.toThrow(NotFoundException);
     expect(s.tx.hrShiftAdjustment.findFirst).toHaveBeenCalledWith({ where: { id: 'x', tenantId: 't1', employee: { campId: 'c1' } }, select: { id: true } });

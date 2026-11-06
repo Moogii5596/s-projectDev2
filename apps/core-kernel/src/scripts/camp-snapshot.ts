@@ -7,8 +7,9 @@
  *   - counts   — мастер / үйл ажиллагааны өгөгдлийн тоо (төлөвөөр)
  * Байгууллага бүрт (v0.2.2 §5.1):
  *   - perms    — эрхийн жагсаалт "<core_users.id>|<эрх>|<кемпийн код | *>" (хувийн мэдээлэлгүй):
- *                legacy = camp_user_roles ⋈ camp_role_permissions (v0.2.1 schema дээр ч), effective = camp_user_permissions (байвал),
+ *                legacy = (core|camp)_user_roles ⋈ (core|camp)_role_permissions (v0.2.1 schema дээр ч), effective = (core|camp)_user_permissions (байвал),
  *                campAdmins = Кемп админ рольтой олголт "<user>|<кемп | *>" (Q9-ийн хүлээгдэж буй зөрүүг тооцоход)
+ *                v0.2.3 (ADR-007): хүснэгт core_* (site_id), код hr.* — харьцуулахдаа хоёр талын кодыг alias-аар хөрвүүлж, устгасан кодыг хасна.
  *
  * Зөвхөн УНШИНА (READ ONLY transaction). Хуучин хувилбарын schema дээр ч ажиллана: v0.1.6-д байсан багана л уншина.
  */
@@ -17,6 +18,7 @@ import { addDays } from '../modules/camp/common/camp-date';
 import { loadPresence } from '../modules/camp/attendance/camp-presence.service';
 import { computeRoomBoard } from '../modules/camp/attendance/camp-rooms.service';
 import type { Tx } from '../modules/camp/common/camp-tx';
+import { RETIRED_PERMISSIONS, normalizePermissionCode } from '../modules/core/permissions/permission-registry';
 
 export const SNAPSHOT_FORMAT = 'camp-snapshot/1';
 
@@ -62,6 +64,20 @@ export interface CampSnapshotPerms {
 export const enforcedPerms = (p: CampSnapshotPerms): string[] => p.effective ?? p.legacy;
 
 /**
+ * ADR-007 (v0.2.3): "<user>|<код>|<кемп>" мөрийн кодыг шинэ нэр рүү (alias) хөрвүүлж, устгасан кодыг (`camp.roles.manage`) хасна.
+ * A (≤ v0.2.2, хуучин код) ба B (v0.2.3) хоёуланд хэрэглэнэ — нэрлэлт өөрчлөгдсөн нь зөрүү биш.
+ */
+export function normalizePermKeys(keys: readonly string[]): string[] {
+  const out = new Set<string>();
+  for (const k of keys) {
+    const [user, code, camp] = k.split('|');
+    if (code === undefined || RETIRED_PERMISSIONS.includes(code)) continue;
+    out.add(`${user}|${normalizePermissionCode(code)}|${camp}`);
+  }
+  return [...out].sort();
+}
+
+/**
  * v0.2.2-ын хүлээгдэж буй нэмэлт: Кемп админ олголт бүрт засвар эхлүүлэх (parts) + хаах (close) — Q9 (20261013003),
  * ажлаас гаргах / дахин ажилд авах — B5-Q2 (20261017002). Нэр нь хуучнаараа (`--expect=v022-q9`).
  */
@@ -69,12 +85,12 @@ export const Q9_PERMS = ['camp.maintenance.parts', 'camp.maintenance.close', 'ca
 
 /** A → B-д хүлээгдэж буй (зөвхөн нэмэгдэх) мөрүүд: B-ийн Кемп админ олголт × Q9, A-д байгаагүй нь */
 export function expectedQ9Additions(a: CampSnapshotPerms, b: CampSnapshotPerms): Set<string> {
-  const had = new Set(enforcedPerms(a));
+  const had = new Set(normalizePermKeys(enforcedPerms(a)));
   const out = new Set<string>();
   for (const g of b.campAdmins) {
     const [user, camp] = g.split('|');
     for (const code of Q9_PERMS) {
-      const k = `${user}|${code}|${camp}`;
+      const k = `${user}|${normalizePermissionCode(code)}|${camp}`;
       if (!had.has(k)) out.add(k);
     }
   }
@@ -122,7 +138,7 @@ const COUNTS: CountFn = async (tx, tenantId, campId) => {
       tx.campAsset.count({ where: w }),
       tx.campAssetMovement.count({ where: w }),
       tx.campCostEntry.count({ where: w }),
-      tx.campUserRole.count({ where: w }),
+      tx.coreUserRole.count({ where: w }),
     ]);
   const out: Record<string, number> = {
     ...byStatus('employees', employees),
@@ -167,9 +183,11 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
     WHERE table_schema = 'public' AND table_name = 'camp_employees' AND column_name = 'meal_location_id'`;
   const legacy = Number(cols[0]?.n ?? 0) === 0;
 
-  const permTable = await prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name = 'camp_user_permissions'`;
-  const hasEffective = Number(permTable[0]?.n ?? 0) > 0;
+  const permTables = await prisma.$queryRaw<{ table_name: string }[]>`SELECT table_name::text AS table_name FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name IN ('camp_user_permissions', 'core_user_permissions')`;
+  const names = new Set(permTables.map((r) => r.table_name));
+  // v0.2.3+ → core_* (ADR-007); v0.2.2 → camp_* + effective; v0.2.1 → camp_* (legacy л)
+  const permSchema: PermSchema = names.has('core_user_permissions') ? 'core' : names.has('camp_user_permissions') ? 'camp' : 'camp-legacy';
 
   const camps: Record<string, CampSnapshotCamp> = {};
   const perms: Record<string, CampSnapshotPerms> = {};
@@ -205,7 +223,7 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
             counts: await COUNTS(tx as Tx, t.id, c.id),
           };
         }
-        perms[t.slug] = await loadPerms(tx as Tx, t.id, hasEffective);
+        perms[t.slug] = await loadPerms(tx as Tx, t.id, permSchema);
       },
       { timeout: 120_000, maxWait: 10_000, isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
@@ -221,15 +239,38 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
   };
 }
 
-/** Байгууллагын эрхийн жагсаалт (READ ONLY tx дотор). Raw SQL — v0.2.1 schema-д Prisma model-гүй хүснэгт байж болно. */
-async function loadPerms(tx: Tx, tenantId: string, hasEffective: boolean): Promise<CampSnapshotPerms> {
+type PermSchema = 'core' | 'camp' | 'camp-legacy';
+
+/** Байгууллагын эрхийн жагсаалт (READ ONLY tx дотор). Raw SQL — хуучин schema-д Prisma model-гүй хүснэгт байж болно. */
+async function loadPerms(tx: Tx, tenantId: string, schema: PermSchema): Promise<CampSnapshotPerms> {
+  const sorted = (rows: { k: string }[]) => rows.map((r) => r.k).sort();
+  if (schema === 'core') {
+    const legacy = await tx.$queryRaw<{ k: string }[]>`
+      SELECT DISTINCT ur.user_id::text || '|' || rp.permission_code || '|' || COALESCE(c.code, '*') AS k
+      FROM core_user_roles ur
+      JOIN core_role_permissions rp ON rp.tenant_id = ur.tenant_id AND rp.role_id = ur.role_id
+      LEFT JOIN camps c ON c.tenant_id = ur.tenant_id AND c.id = ur.site_id
+      WHERE ur.tenant_id = ${tenantId}::uuid ORDER BY 1`;
+    const effective = await tx.$queryRaw<{ k: string }[]>`
+      SELECT DISTINCT up.user_id::text || '|' || up.permission_code || '|' || COALESCE(c.code, '*') AS k
+      FROM core_user_permissions up
+      LEFT JOIN camps c ON c.tenant_id = up.tenant_id AND c.id = up.site_id
+      WHERE up.tenant_id = ${tenantId}::uuid ORDER BY 1`;
+    const admins = await tx.$queryRaw<{ k: string }[]>`
+      SELECT DISTINCT ur.user_id::text || '|' || COALESCE(c.code, '*') AS k
+      FROM core_user_roles ur
+      JOIN core_roles r ON r.tenant_id = ur.tenant_id AND r.id = ur.role_id AND r.system_code = 'CAMP_ADMIN'
+      LEFT JOIN camps c ON c.tenant_id = ur.tenant_id AND c.id = ur.site_id
+      WHERE ur.tenant_id = ${tenantId}::uuid ORDER BY 1`;
+    return { legacy: sorted(legacy), effective: sorted(effective), campAdmins: sorted(admins) };
+  }
   const legacy = await tx.$queryRaw<{ k: string }[]>`
     SELECT DISTINCT ur.user_id::text || '|' || rp.permission_code || '|' || COALESCE(c.code, '*') AS k
     FROM camp_user_roles ur
     JOIN camp_role_permissions rp ON rp.tenant_id = ur.tenant_id AND rp.role_id = ur.role_id
     LEFT JOIN camps c ON c.tenant_id = ur.tenant_id AND c.id = ur.camp_id
     WHERE ur.tenant_id = ${tenantId}::uuid ORDER BY 1`;
-  const effective = hasEffective
+  const effective = schema === 'camp'
     ? await tx.$queryRaw<{ k: string }[]>`
         SELECT DISTINCT up.user_id::text || '|' || up.permission_code || '|' || COALESCE(c.code, '*') AS k
         FROM camp_user_permissions up
@@ -243,7 +284,6 @@ async function loadPerms(tx: Tx, tenantId: string, hasEffective: boolean): Promi
     LEFT JOIN camps c ON c.tenant_id = ur.tenant_id AND c.id = ur.camp_id
     WHERE ur.tenant_id = ${tenantId}::uuid ORDER BY 1`;
   // ORDER BY (DB collation) ≠ JS эрэмбэ байж болно → JS-ээр дахин эрэмбэлнэ (файл тогтвортой)
-  const sorted = (rows: { k: string }[]) => rows.map((r) => r.k).sort();
   return { legacy: sorted(legacy), effective: effective ? sorted(effective) : null, campAdmins: sorted(admins) };
 }
 
@@ -265,15 +305,16 @@ export function comparePerms(a: CampSnapshot, b: CampSnapshot, expect: PermsExpe
       out.push(`perms.${slug}: ${pa ? 'B' : 'A'}-д алга`);
       continue;
     }
-    const ea = new Set(enforcedPerms(pa));
-    const eb = new Set(enforcedPerms(pb));
+    // ADR-007: нэрлэлт (alias) ба устгасан код зөрүү биш — хоёр талыг хөрвүүлж харьцуулна
+    const ea = new Set(normalizePermKeys(enforcedPerms(pa)));
+    const eb = new Set(normalizePermKeys(enforcedPerms(pb)));
     const allowed = expect === 'v022-q9' ? expectedQ9Additions(pa, pb) : new Set<string>();
     for (const k of [...eb].sort()) if (!ea.has(k) && !allowed.has(k)) out.push(`perms.${slug}: + ${k}`);
     for (const k of [...ea].sort()) if (!eb.has(k)) out.push(`perms.${slug}: − ${k}`);
     for (const k of [...allowed].sort()) if (!eb.has(k)) out.push(`perms.${slug}: хүлээгдэж буй Q9 алга ${k}`);
     if (pb.effective) {
-      const lb = new Set(pb.legacy);
-      const diff = pb.effective.filter((k) => !lb.has(k)).length + pb.legacy.filter((k) => !eb.has(k)).length;
+      const lb = new Set(normalizePermKeys(pb.legacy));
+      const diff = [...eb].filter((k) => !lb.has(k)).length + [...lb].filter((k) => !eb.has(k)).length;
       if (diff > 0) out.push(`perms.${slug}: B дотор legacy ≠ effective (${diff} мөр) — шилжүүлэлт эсвэл загвар хэрэгжүүлээгүй`);
     }
   }
@@ -310,7 +351,7 @@ export function summarize(s: CampSnapshot): string[] {
     }`;
   });
   const perms = Object.entries(s.perms ?? {}).map(([slug, p]) =>
-    `${slug}: эрх ${enforcedPerms(p).length} мөр (${p.effective ? 'camp_user_permissions' : 'хуучин зам'}) · хэрэглэгч ${
+    `${slug}: эрх ${enforcedPerms(p).length} мөр (${p.effective ? 'эцсийн эрх' : 'хуучин зам'}) · хэрэглэгч ${
       new Set(enforcedPerms(p).map((k) => k.split('|')[0])).size
     } · Кемп админ олголт ${p.campAdmins.length}`,
   );

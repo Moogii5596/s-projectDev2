@@ -41,12 +41,13 @@ export class CampAccessService {
     });
     if (!user) throw forbidden('camp.err.access.1');
 
-    const key = this.cache.buildKey('camp', tenantId, 'perms', user.id);
+    // ADR-007: түлхүүр `perms2` — v0.2.3-ийн өмнөх (хуучин кодтой) cache-ийг шинэчлэлийн дараа уншихгүй
+    const key = this.cache.buildKey('camp', tenantId, 'perms2', user.id);
     const cached = await this.cache.get<CampPermissionSet>(key);
     if (cached) return { userId: user.id, perms: cached };
 
-    // v0.2.2 D-01: эцсийн эрх = camp_user_permissions (TEMPLATE + DIRECT). Нэг эрх олон эх сурвалжаас → Set.
-    const rows = await tx.campUserPermission.findMany({
+    // v0.2.2 D-01 / ADR-007: эцсийн эрх = core_user_permissions (TEMPLATE + DIRECT). Нэг эрх олон эх сурвалжаас → Set.
+    const rows = await tx.coreUserPermission.findMany({
       where: { tenantId, userId: user.id },
       select: { campId: true, permissionCode: true },
     });

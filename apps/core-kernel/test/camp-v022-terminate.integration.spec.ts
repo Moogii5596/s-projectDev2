@@ -66,8 +66,8 @@ describe('v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд
     user[key] = (await admin.coreUser.create({ data: { tenantId, authId, email: `${key}-${sfx}@it.test`, role: r, fullName: key } })).id;
   };
   const grantRole = async (key: string, systemCode: 'CAMP_ADMIN' | 'CATERING_ADMIN') => {
-    const r = await admin.campRole.findFirstOrThrow({ where: { tenantId: tA, systemCode } });
-    await admin.campUserRole.create({ data: { tenantId: tA, userId: user[key], roleId: r.id, campId: c1 } });
+    const r = await admin.coreRole.findFirstOrThrow({ where: { tenantId: tA, systemCode } });
+    await admin.coreUserRole.create({ data: { tenantId: tA, userId: user[key], roleId: r.id, campId: c1 } });
   };
   const mkEmployee = async (code: string, over: Record<string, unknown> = {}) =>
     (await admin.hrEmployee.create({ data: { tenantId: tA, campId: c1, ...base, employeeCode: code, fullName: `Ажилтан ${code}`, ...over } })).id;
@@ -77,7 +77,7 @@ describe('v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд
     await admin.campStay.create({ data: { tenantId: tA, campId: c1, employeeId, arrivalMovementId: m.id, startDate: toDbDate(date) } });
   };
   const perms = async (userId: string) =>
-    (await admin.campUserPermission.findMany({ where: { tenantId: tA, userId }, select: { permissionCode: true, source: true } }))
+    (await admin.coreUserPermission.findMany({ where: { tenantId: tA, userId }, select: { permissionCode: true, source: true } }))
       .map((p) => `${p.source}:${p.permissionCode}`).sort();
 
   beforeAll(async () => {
@@ -96,9 +96,9 @@ describe('v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд
     await mkUser(tB, 'ownerB', UserRole.OWNER, auth.ownerB);
     await grantRole('campAdmin', 'CAMP_ADMIN');
     await grantRole('hrOnly', 'CATERING_ADMIN');
-    const employeeRole = await admin.campRole.findFirstOrThrow({ where: { tenantId: tA, systemCode: 'EMPLOYEE' } });
+    const employeeRole = await admin.coreRole.findFirstOrThrow({ where: { tenantId: tA, systemCode: 'EMPLOYEE' } });
     positionId = (await admin.hrPosition.create({ data: { tenantId: tA, name: `Жолооч ${sfx}` } })).id;
-    await admin.campPositionRoleTemplate.create({ data: { tenantId: tA, positionId, roleId: employeeRole.id, scope: 'EMPLOYEE_CAMP' } });
+    await admin.corePositionRoleTemplate.create({ data: { tenantId: tA, positionId, roleId: employeeRole.id, scope: 'EMPLOYEE_CAMP' } });
   });
 
   afterAll(async () => {
@@ -108,14 +108,14 @@ describe('v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд
   });
 
   it('seed: каталогт camp.employee.terminate; Кемп админ загвар + олголтод (TEMPLATE), катеринг админд үгүй', async () => {
-    expect(await admin.campPermission.findUnique({ where: { code: P.EMPLOYEE_TERMINATE } })).not.toBeNull();
+    expect(await admin.corePermission.findUnique({ where: { code: P.EMPLOYEE_TERMINATE } })).not.toBeNull();
     expect(await perms(user.campAdmin)).toContain(`TEMPLATE:${P.EMPLOYEE_TERMINATE}`);
     expect(await perms(user.hrOnly)).not.toContain(`TEMPLATE:${P.EMPLOYEE_TERMINATE}`);
   });
 
   it('terminate: кемпэд байсан ажилтан — явалт, өрөө, төлөв, хэрэглэгч, урилга, аудит НЭГ transaction-д', async () => {
     const e1 = await mkEmployee('SH1', { positionId, userId: user.emp });
-    await admin.campUserPermission.create({ data: { tenantId: tA, userId: user.emp, permissionCode: P.REPORT_VIEW, campId: c1, source: 'DIRECT' } });
+    await admin.coreUserPermission.create({ data: { tenantId: tA, userId: user.emp, permissionCode: P.REPORT_VIEW, campId: c1, source: 'DIRECT' } });
     expect(await perms(user.emp)).toEqual([`DIRECT:${P.REPORT_VIEW}`, `TEMPLATE:${P.MAINTENANCE_CREATE}`]);
     await arrive(e1, addDays(D, -4));
     await admin.campRoomAllocation.create({ data: { tenantId: tA, campId: c1, roomId: room, employeeId: e1, startDate: toDbDate(addDays(D, -10)) } });

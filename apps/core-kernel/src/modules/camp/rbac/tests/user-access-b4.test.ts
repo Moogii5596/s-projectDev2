@@ -96,7 +96,7 @@ describe('CampUserAccessService.setActive (B4-Q2)', () => {
     setActor(s.tx, { userId: 'cu-me', role: UserRole.ADMIN }, (a) => ('id' in a.where ? found : null));
 
   it('roles.manage-гүй → 403, ban хийхгүй', async () => {
-    setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.ROLES_MANAGE] }] });
+    setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.SETTINGS_MANAGE] }] });
     await expect(svc.setActive('t1', 'a1', 'u2', false)).rejects.toThrow(ForbiddenException);
     expect(userAdmin.setBanned).not.toHaveBeenCalled();
   });
@@ -160,7 +160,7 @@ describe('CampUserAccessService.setActive (B4-Q2)', () => {
 
 describe('SEC-009 (Блок 6б) — хэрэглэгч удирдах = зөвхөн системийн админ (OWNER / ADMIN)', () => {
   const campAdmin = (s: ReturnType<typeof setup>) =>
-    setActor(s.tx, { userId: 'cu-camp', roles: [{ campId: null, perms: [P.ROLES_MANAGE, P.EMPLOYEE_MANAGE] }] }, (a) =>
+    setActor(s.tx, { userId: 'cu-camp', roles: [{ campId: null, perms: [P.SETTINGS_MANAGE, P.EMPLOYEE_MANAGE] }] }, (a) =>
       'id' in a.where ? { id: 'owner', authId: 'auth-owner', role: UserRole.OWNER, isActive: true, fullName: 'Owner', email: 'o@x' } : null);
 
   it('Кемп админ (бүх кемпийн roles.manage) OWNER-т урилгын линк үүсгэж чадахгүй — токен үүсэхгүй', async () => {

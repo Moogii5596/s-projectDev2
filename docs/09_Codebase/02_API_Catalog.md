@@ -234,19 +234,19 @@ tags: [codebase, api, generated]
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
 | GET | `/api/v1/hr/sites/:campId/movement-imports/template` | `HrAttendanceController.template` → `HrAttendanceService.template` | — | `hr-attendance.controller.ts:43` |
-| POST | `/api/v1/hr/sites/:campId/movement-imports` | `HrAttendanceController.upload` → `HrAttendanceService.preview` | `camp.movement.import` | `hr-attendance.controller.ts:53` |
-| POST | `/api/v1/hr/sites/:campId/movement-imports/manual` | `HrAttendanceController.manual` → `HrAttendanceService.previewManual` | `camp.movement.import` | `hr-attendance.controller.ts:62` |
-| GET | `/api/v1/hr/sites/:campId/movement-imports` | `HrAttendanceController.listImports` → `HrAttendanceService.listImports` | `camp.movement.import` | `hr-attendance.controller.ts:68` |
-| GET | `/api/v1/hr/sites/:campId/movement-imports/:id` | `HrAttendanceController.getImport` → `HrAttendanceService.getImport` | `camp.movement.import` | `hr-attendance.controller.ts:74` |
-| PATCH | `/api/v1/hr/sites/:campId/movement-imports/:id/rows` | `HrAttendanceController.updateRows` → `HrAttendanceService.updateRows` | `camp.movement.import` `camp.employee.manage` | `hr-attendance.controller.ts:81` |
-| POST | `/api/v1/hr/sites/:campId/movement-imports/:id/confirm` | `HrAttendanceController.confirm` → `HrAttendanceService.confirm` | `camp.movement.import` | `hr-attendance.controller.ts:88` |
-| POST | `/api/v1/hr/sites/:campId/movement-imports/:id/cancel` | `HrAttendanceController.cancel` → `HrAttendanceService.cancel` | `camp.movement.import` | `hr-attendance.controller.ts:95` |
+| POST | `/api/v1/hr/sites/:campId/movement-imports` | `HrAttendanceController.upload` → `HrAttendanceService.preview` | `hr.attendance.import` | `hr-attendance.controller.ts:53` |
+| POST | `/api/v1/hr/sites/:campId/movement-imports/manual` | `HrAttendanceController.manual` → `HrAttendanceService.previewManual` | `hr.attendance.import` | `hr-attendance.controller.ts:62` |
+| GET | `/api/v1/hr/sites/:campId/movement-imports` | `HrAttendanceController.listImports` → `HrAttendanceService.listImports` | `hr.attendance.import` | `hr-attendance.controller.ts:68` |
+| GET | `/api/v1/hr/sites/:campId/movement-imports/:id` | `HrAttendanceController.getImport` → `HrAttendanceService.getImport` | `hr.attendance.import` | `hr-attendance.controller.ts:74` |
+| PATCH | `/api/v1/hr/sites/:campId/movement-imports/:id/rows` | `HrAttendanceController.updateRows` → `HrAttendanceService.updateRows` | `hr.attendance.import` `hr.employee.manage` | `hr-attendance.controller.ts:81` |
+| POST | `/api/v1/hr/sites/:campId/movement-imports/:id/confirm` | `HrAttendanceController.confirm` → `HrAttendanceService.confirm` | `hr.attendance.import` | `hr-attendance.controller.ts:88` |
+| POST | `/api/v1/hr/sites/:campId/movement-imports/:id/cancel` | `HrAttendanceController.cancel` → `HrAttendanceService.cancel` | `hr.attendance.import` | `hr-attendance.controller.ts:95` |
 | GET | `/api/v1/hr/sites/:campId/movements` | `HrAttendanceController.listMovements` → `HrAttendanceService.listMovements` | гишүүн | `hr-attendance.controller.ts:102` |
-| POST | `/api/v1/hr/sites/:campId/movements` | `HrAttendanceController.createMovement` → `HrAttendanceService.createMovement` | `camp.movement.import` | `hr-attendance.controller.ts:109` |
-| DELETE | `/api/v1/hr/sites/:campId/movements/:id` | `HrAttendanceController.deleteMovement` → `HrAttendanceService.deleteMovement` | `camp.movement.import` | `hr-attendance.controller.ts:115` |
+| POST | `/api/v1/hr/sites/:campId/movements` | `HrAttendanceController.createMovement` → `HrAttendanceService.createMovement` | `hr.attendance.import` | `hr-attendance.controller.ts:109` |
+| DELETE | `/api/v1/hr/sites/:campId/movements/:id` | `HrAttendanceController.deleteMovement` → `HrAttendanceService.deleteMovement` | `hr.attendance.import` | `hr-attendance.controller.ts:115` |
 | GET | `/api/v1/hr/sites/:campId/shift-adjustments` | `HrAttendanceController.listAdjustments` → `HrShiftsService.listAdjustments` | гишүүн | `hr-attendance.controller.ts:122` |
-| POST | `/api/v1/hr/sites/:campId/shift-adjustments` | `HrAttendanceController.createAdjustments` → `HrShiftsService.createAdjustments` | `camp.shift.adjust` | `hr-attendance.controller.ts:129` |
-| DELETE | `/api/v1/hr/sites/:campId/shift-adjustments/:id` | `HrAttendanceController.deleteAdjustment` → `HrShiftsService.deleteAdjustment` | `camp.shift.adjust` | `hr-attendance.controller.ts:135` |
+| POST | `/api/v1/hr/sites/:campId/shift-adjustments` | `HrAttendanceController.createAdjustments` → `HrShiftsService.createAdjustments` | `hr.shift.adjust` | `hr-attendance.controller.ts:129` |
+| DELETE | `/api/v1/hr/sites/:campId/shift-adjustments/:id` | `HrAttendanceController.deleteAdjustment` → `HrShiftsService.deleteAdjustment` | `hr.shift.adjust` | `hr-attendance.controller.ts:135` |
 | GET | `/api/v1/hr/sites/:campId/shift-calendar` | `HrAttendanceController.calendar` → `HrShiftsService.calendar` | гишүүн | `hr-attendance.controller.ts:141` |
 
 ## modules/hr/employees
@@ -255,13 +255,13 @@ tags: [codebase, api, generated]
 |---|---|---|---|---|
 | GET | `/api/v1/hr/sites/:campId/employees` | `HrEmployeesController.listEmployees` → `HrEmployeesService.list` | гишүүн | `hr-employees.controller.ts:19` |
 | GET | `/api/v1/hr/sites/:campId/employees/:id` | `HrEmployeesController.getEmployee` → `HrEmployeesService.get` | гишүүн | `hr-employees.controller.ts:25` |
-| POST | `/api/v1/hr/sites/:campId/employees/bulk` | `HrEmployeesController.bulkEmployees` → `HrEmployeesService.bulkUpdate` | `camp.employee.manage` | `hr-employees.controller.ts:33` |
-| POST | `/api/v1/hr/sites/:campId/employees` | `HrEmployeesController.createEmployee` → `HrEmployeesService.create` | `camp.employee.manage` | `hr-employees.controller.ts:40` |
-| PATCH | `/api/v1/hr/sites/:campId/employees/:id` | `HrEmployeesController.updateEmployee` → `HrEmployeesService.update` | `camp.employee.manage` | `hr-employees.controller.ts:46` |
-| GET | `/api/v1/hr/sites/:campId/employees/:id/profile` | `HrEmployeesController.profile` → `HrEmployeeLifecycleService.profile` | `camp.employee.terminate` | `hr-employees.controller.ts:54` |
+| POST | `/api/v1/hr/sites/:campId/employees/bulk` | `HrEmployeesController.bulkEmployees` → `HrEmployeesService.bulkUpdate` | `hr.employee.manage` | `hr-employees.controller.ts:33` |
+| POST | `/api/v1/hr/sites/:campId/employees` | `HrEmployeesController.createEmployee` → `HrEmployeesService.create` | `hr.employee.manage` | `hr-employees.controller.ts:40` |
+| PATCH | `/api/v1/hr/sites/:campId/employees/:id` | `HrEmployeesController.updateEmployee` → `HrEmployeesService.update` | `hr.employee.manage` | `hr-employees.controller.ts:46` |
+| GET | `/api/v1/hr/sites/:campId/employees/:id/profile` | `HrEmployeesController.profile` → `HrEmployeeLifecycleService.profile` | `hr.employee.terminate` | `hr-employees.controller.ts:54` |
 | GET | `/api/v1/hr/sites/:campId/employees/:id/pii-views` | `HrEmployeesController.piiViews` → `HrEmployeeLifecycleService.piiViews` | **OWNER·ADMIN** | `hr-employees.controller.ts:60` |
-| POST | `/api/v1/hr/sites/:campId/employees/:id/terminate` | `HrEmployeesController.terminate` → `HrEmployeeLifecycleService.terminate` | `camp.employee.terminate` | `hr-employees.controller.ts:67` |
-| POST | `/api/v1/hr/sites/:campId/employees/:id/rehire` | `HrEmployeesController.rehire` → `HrEmployeeLifecycleService.rehire` | `camp.employee.terminate` / OWNER·ADMIN | `hr-employees.controller.ts:74` |
+| POST | `/api/v1/hr/sites/:campId/employees/:id/terminate` | `HrEmployeesController.terminate` → `HrEmployeeLifecycleService.terminate` | `hr.employee.terminate` | `hr-employees.controller.ts:67` |
+| POST | `/api/v1/hr/sites/:campId/employees/:id/rehire` | `HrEmployeesController.rehire` → `HrEmployeeLifecycleService.rehire` | `hr.employee.terminate` / OWNER·ADMIN | `hr-employees.controller.ts:74` |
 
 ## modules/hr/import
 
@@ -375,27 +375,27 @@ tags: [codebase, api, generated]
 | PATCH | `/api/v1/camp/camps/:campId/crews/:id` | `CampHrOrgLegacyController (extends HrOrgController).updateCrew` → `HrCrewsService.update` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:23` |
 | GET | `/api/v1/camp/camps/:campId/employees` | `CampHrEmployeesLegacyController (extends HrEmployeesController).listEmployees` → `HrEmployeesService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:27` |
 | GET | `/api/v1/camp/camps/:campId/employees/:id` | `CampHrEmployeesLegacyController (extends HrEmployeesController).getEmployee` → `HrEmployeesService.get` | гишүүн | Deprecated `hr-legacy.controller.ts:27` |
-| POST | `/api/v1/camp/camps/:campId/employees/bulk` | `CampHrEmployeesLegacyController (extends HrEmployeesController).bulkEmployees` → `HrEmployeesService.bulkUpdate` | `camp.employee.manage` | Deprecated `hr-legacy.controller.ts:27` |
-| POST | `/api/v1/camp/camps/:campId/employees` | `CampHrEmployeesLegacyController (extends HrEmployeesController).createEmployee` → `HrEmployeesService.create` | `camp.employee.manage` | Deprecated `hr-legacy.controller.ts:27` |
-| PATCH | `/api/v1/camp/camps/:campId/employees/:id` | `CampHrEmployeesLegacyController (extends HrEmployeesController).updateEmployee` → `HrEmployeesService.update` | `camp.employee.manage` | Deprecated `hr-legacy.controller.ts:27` |
-| GET | `/api/v1/camp/camps/:campId/employees/:id/profile` | `CampHrEmployeesLegacyController (extends HrEmployeesController).profile` → `HrEmployeeLifecycleService.profile` | `camp.employee.terminate` | Deprecated `hr-legacy.controller.ts:27` |
+| POST | `/api/v1/camp/camps/:campId/employees/bulk` | `CampHrEmployeesLegacyController (extends HrEmployeesController).bulkEmployees` → `HrEmployeesService.bulkUpdate` | `hr.employee.manage` | Deprecated `hr-legacy.controller.ts:27` |
+| POST | `/api/v1/camp/camps/:campId/employees` | `CampHrEmployeesLegacyController (extends HrEmployeesController).createEmployee` → `HrEmployeesService.create` | `hr.employee.manage` | Deprecated `hr-legacy.controller.ts:27` |
+| PATCH | `/api/v1/camp/camps/:campId/employees/:id` | `CampHrEmployeesLegacyController (extends HrEmployeesController).updateEmployee` → `HrEmployeesService.update` | `hr.employee.manage` | Deprecated `hr-legacy.controller.ts:27` |
+| GET | `/api/v1/camp/camps/:campId/employees/:id/profile` | `CampHrEmployeesLegacyController (extends HrEmployeesController).profile` → `HrEmployeeLifecycleService.profile` | `hr.employee.terminate` | Deprecated `hr-legacy.controller.ts:27` |
 | GET | `/api/v1/camp/camps/:campId/employees/:id/pii-views` | `CampHrEmployeesLegacyController (extends HrEmployeesController).piiViews` → `HrEmployeeLifecycleService.piiViews` | **OWNER·ADMIN** | Deprecated `hr-legacy.controller.ts:27` |
-| POST | `/api/v1/camp/camps/:campId/employees/:id/terminate` | `CampHrEmployeesLegacyController (extends HrEmployeesController).terminate` → `HrEmployeeLifecycleService.terminate` | `camp.employee.terminate` | Deprecated `hr-legacy.controller.ts:27` |
-| POST | `/api/v1/camp/camps/:campId/employees/:id/rehire` | `CampHrEmployeesLegacyController (extends HrEmployeesController).rehire` → `HrEmployeeLifecycleService.rehire` | `camp.employee.terminate` / OWNER·ADMIN | Deprecated `hr-legacy.controller.ts:27` |
+| POST | `/api/v1/camp/camps/:campId/employees/:id/terminate` | `CampHrEmployeesLegacyController (extends HrEmployeesController).terminate` → `HrEmployeeLifecycleService.terminate` | `hr.employee.terminate` | Deprecated `hr-legacy.controller.ts:27` |
+| POST | `/api/v1/camp/camps/:campId/employees/:id/rehire` | `CampHrEmployeesLegacyController (extends HrEmployeesController).rehire` → `HrEmployeeLifecycleService.rehire` | `hr.employee.terminate` / OWNER·ADMIN | Deprecated `hr-legacy.controller.ts:27` |
 | GET | `/api/v1/camp/camps/:campId/movement-imports/template` | `CampHrAttendanceLegacyController (extends HrAttendanceController).template` → `HrAttendanceService.template` | — | Deprecated `hr-legacy.controller.ts:31` |
-| POST | `/api/v1/camp/camps/:campId/movement-imports` | `CampHrAttendanceLegacyController (extends HrAttendanceController).upload` → `HrAttendanceService.preview` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
-| POST | `/api/v1/camp/camps/:campId/movement-imports/manual` | `CampHrAttendanceLegacyController (extends HrAttendanceController).manual` → `HrAttendanceService.previewManual` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
-| GET | `/api/v1/camp/camps/:campId/movement-imports` | `CampHrAttendanceLegacyController (extends HrAttendanceController).listImports` → `HrAttendanceService.listImports` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
-| GET | `/api/v1/camp/camps/:campId/movement-imports/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).getImport` → `HrAttendanceService.getImport` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
-| PATCH | `/api/v1/camp/camps/:campId/movement-imports/:id/rows` | `CampHrAttendanceLegacyController (extends HrAttendanceController).updateRows` → `HrAttendanceService.updateRows` | `camp.movement.import` `camp.employee.manage` | Deprecated `hr-legacy.controller.ts:31` |
-| POST | `/api/v1/camp/camps/:campId/movement-imports/:id/confirm` | `CampHrAttendanceLegacyController (extends HrAttendanceController).confirm` → `HrAttendanceService.confirm` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
-| POST | `/api/v1/camp/camps/:campId/movement-imports/:id/cancel` | `CampHrAttendanceLegacyController (extends HrAttendanceController).cancel` → `HrAttendanceService.cancel` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
+| POST | `/api/v1/camp/camps/:campId/movement-imports` | `CampHrAttendanceLegacyController (extends HrAttendanceController).upload` → `HrAttendanceService.preview` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
+| POST | `/api/v1/camp/camps/:campId/movement-imports/manual` | `CampHrAttendanceLegacyController (extends HrAttendanceController).manual` → `HrAttendanceService.previewManual` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
+| GET | `/api/v1/camp/camps/:campId/movement-imports` | `CampHrAttendanceLegacyController (extends HrAttendanceController).listImports` → `HrAttendanceService.listImports` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
+| GET | `/api/v1/camp/camps/:campId/movement-imports/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).getImport` → `HrAttendanceService.getImport` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
+| PATCH | `/api/v1/camp/camps/:campId/movement-imports/:id/rows` | `CampHrAttendanceLegacyController (extends HrAttendanceController).updateRows` → `HrAttendanceService.updateRows` | `hr.attendance.import` `hr.employee.manage` | Deprecated `hr-legacy.controller.ts:31` |
+| POST | `/api/v1/camp/camps/:campId/movement-imports/:id/confirm` | `CampHrAttendanceLegacyController (extends HrAttendanceController).confirm` → `HrAttendanceService.confirm` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
+| POST | `/api/v1/camp/camps/:campId/movement-imports/:id/cancel` | `CampHrAttendanceLegacyController (extends HrAttendanceController).cancel` → `HrAttendanceService.cancel` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
 | GET | `/api/v1/camp/camps/:campId/movements` | `CampHrAttendanceLegacyController (extends HrAttendanceController).listMovements` → `HrAttendanceService.listMovements` | гишүүн | Deprecated `hr-legacy.controller.ts:31` |
-| POST | `/api/v1/camp/camps/:campId/movements` | `CampHrAttendanceLegacyController (extends HrAttendanceController).createMovement` → `HrAttendanceService.createMovement` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
-| DELETE | `/api/v1/camp/camps/:campId/movements/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).deleteMovement` → `HrAttendanceService.deleteMovement` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
+| POST | `/api/v1/camp/camps/:campId/movements` | `CampHrAttendanceLegacyController (extends HrAttendanceController).createMovement` → `HrAttendanceService.createMovement` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
+| DELETE | `/api/v1/camp/camps/:campId/movements/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).deleteMovement` → `HrAttendanceService.deleteMovement` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
 | GET | `/api/v1/camp/camps/:campId/shift-adjustments` | `CampHrAttendanceLegacyController (extends HrAttendanceController).listAdjustments` → `HrShiftsService.listAdjustments` | гишүүн | Deprecated `hr-legacy.controller.ts:31` |
-| POST | `/api/v1/camp/camps/:campId/shift-adjustments` | `CampHrAttendanceLegacyController (extends HrAttendanceController).createAdjustments` → `HrShiftsService.createAdjustments` | `camp.shift.adjust` | Deprecated `hr-legacy.controller.ts:31` |
-| DELETE | `/api/v1/camp/camps/:campId/shift-adjustments/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).deleteAdjustment` → `HrShiftsService.deleteAdjustment` | `camp.shift.adjust` | Deprecated `hr-legacy.controller.ts:31` |
+| POST | `/api/v1/camp/camps/:campId/shift-adjustments` | `CampHrAttendanceLegacyController (extends HrAttendanceController).createAdjustments` → `HrShiftsService.createAdjustments` | `hr.shift.adjust` | Deprecated `hr-legacy.controller.ts:31` |
+| DELETE | `/api/v1/camp/camps/:campId/shift-adjustments/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).deleteAdjustment` → `HrShiftsService.deleteAdjustment` | `hr.shift.adjust` | Deprecated `hr-legacy.controller.ts:31` |
 | GET | `/api/v1/camp/camps/:campId/shift-calendar` | `CampHrAttendanceLegacyController (extends HrAttendanceController).calendar` → `HrShiftsService.calendar` | гишүүн | Deprecated `hr-legacy.controller.ts:31` |
 | GET | `/api/v1/camp/camps/:campId/data-imports/:type/template` | `CampDataController (extends HrDataController).template` → `HrDataImportService.template` | — | Deprecated `hr-legacy.controller.ts:35` |
 | GET | `/api/v1/camp/camps/:campId/data-imports` | `CampDataController (extends HrDataController).list` → `HrDataImportService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |

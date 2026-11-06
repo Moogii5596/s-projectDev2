@@ -62,7 +62,7 @@ describe('v0.2.2 Блок 3 — урилга, хэрэглэгч үүсгэх (i
     const org = await admin.coreOrganization.create({ data: { tenantId: t, name: `Org ${sfx}`, orgType: 'MAIN' } });
     const dept = await admin.hrDepartment.create({ data: { tenantId: t, campId: camp, code: 'D1', name: 'D1' } });
     const pos = await admin.hrPosition.create({ data: { tenantId: t, name: `Ажилтан ${sfx}` } });
-    const empRole = await admin.campRole.findFirstOrThrow({ where: { tenantId: t, systemCode: 'EMPLOYEE' } });
+    const empRole = await admin.coreRole.findFirstOrThrow({ where: { tenantId: t, systemCode: 'EMPLOYEE' } });
     await rbac.setPositionTemplates(t, ownerAuth, pos.id, { templates: [{ roleId: empRole.id, scope: 'EMPLOYEE_CAMP' }] });
     const mk = async (k: string, phone: string | null, email: string | null) => {
       emp[k] = (await admin.hrEmployee.create({ data: { tenantId: t, campId: camp, organizationId: org.id, departmentId: dept.id, employeeCode: `${k.toUpperCase()}${sfx}`, fullName: k, phone, email, positionId: pos.id } })).id;
@@ -86,7 +86,7 @@ describe('v0.2.2 Блок 3 — урилга, хэрэглэгч үүсгэх (i
     batUser = b.userId;
     const bu = await admin.coreUser.findUniqueOrThrow({ where: { id: batUser } });
     expect(bu.email).toMatch(/\.login\.invalid$/);
-    expect(await admin.campUserPermission.count({ where: { userId: batUser } })).toBeGreaterThan(0);
+    expect(await admin.coreUserPermission.count({ where: { userId: batUser } })).toBeGreaterThan(0);
     const l = await ua.createUserForEmployee(t, `v022ia-${sfx}`, ownerAuth, camp, emp.li, undefined);
     expect(l).toMatchObject({ hasEmail: true, phone: null, username: `li${sfx}`.toLowerCase() });
     liUser = l.userId;

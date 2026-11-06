@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSION_CODES, campPermissionAvailableIn, isCampPermission } from '../common/camp-permissions';
+import { normalizePermissionCode, withLegacyAliases } from '../../core/permissions/permission-registry';
 import { inTenantTx, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import {
@@ -74,24 +75,27 @@ export class CampRbacService {
   /** Ролийн олголт бүр + түүний одоогийн TEMPLATE эрх, ролийн загвар (D-09) */
   private async loadRoleAssignments(tx: Tx, tenantId: string, roleId: string) {
     const [assignments, tpl] = await Promise.all([
-      tx.campUserRole.findMany({
+      tx.coreUserRole.findMany({
         where: { tenantId, roleId },
         select: { id: true, userId: true, campId: true, permissions: { where: { source: 'TEMPLATE' }, select: { permissionCode: true } } },
       }),
-      tx.campRolePermission.findMany({ where: { tenantId, roleId }, select: { permissionCode: true } }),
+      tx.coreRolePermission.findMany({ where: { tenantId, roleId }, select: { permissionCode: true } }),
     ]);
     const template = tpl.map((r) => r.permissionCode);
     const rows = assignments.map((a) => ({ userRoleId: a.id, userId: a.userId, campId: a.campId, current: a.permissions.map((p) => p.permissionCode) }));
     return { template, rows };
   }
 
-  private validateCodes(codes: string[]): void {
-    const unknown = codes.filter((c) => !isCampPermission(c));
+  /** ADR-007 B2-6: хуучин кодыг (alias) шинэ рүү хөрвүүлж, каталогт байхгүй (устгасан `camp.roles.manage` г.м.) бол 400 */
+  private normalizeCodes(codes: string[]): string[] {
+    const normalized = [...new Set(codes.map(normalizePermissionCode))];
+    const unknown = normalized.filter((c) => !isCampPermission(c));
     if (unknown.length > 0) throw badRequest('camp.err.rbac.1', { codes: unknown.join(', ') });
+    return normalized;
   }
 
   private async findRole(tx: Tx, tenantId: string, id: string) {
-    const role = await tx.campRole.findFirst({ where: { id, tenantId }, select: ROLE_SELECT });
+    const role = await tx.coreRole.findFirst({ where: { id, tenantId }, select: ROLE_SELECT });
     if (!role) throw notFound('camp.err.rbac.2');
     return role;
   }
@@ -99,7 +103,7 @@ export class CampRbacService {
   /** Каталог + `availableIn` ('v1' | 'v2') — V1 UI нь V2 эрхийг нууна (D8) */
   async listPermissions(tenantId: string) {
     const rows = await inTenantTx(this.prisma, tenantId, (tx) =>
-      tx.campPermission.findMany({ orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }], select: { code: true, name: true, sortOrder: true } }),
+      tx.corePermission.findMany({ orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }], select: { code: true, name: true, sortOrder: true, module: true } }),
     );
     return rows.map((r) => ({ ...r, availableIn: campPermissionAvailableIn(r.code) }));
   }
@@ -111,7 +115,9 @@ export class CampRbacService {
       const effective = campId
         ? CAMP_PERMISSION_CODES.filter((c) => CampAccessService.has(actor.perms, campId, c))
         : CAMP_PERMISSION_CODES.filter((c) => CampAccessService.has(actor.perms, null, c));
-      return { userId: actor.userId, isTenantAdmin: actor.perms.isTenantAdmin, campId: campId ?? null, permissions: effective, byCamp: actor.perms.byCamp };
+      // ADR-007 B2-6: шинэ кодын хажууд хуучин alias код (Блок 3-аас өмнөх frontend хуучин кодоор шалгадаг) — v0.2.4-т хасна
+      const byCamp = Object.fromEntries(Object.entries(actor.perms.byCamp).map(([k, v]) => [k, withLegacyAliases(v)]));
+      return { userId: actor.userId, isTenantAdmin: actor.perms.isTenantAdmin, campId: campId ?? null, permissions: withLegacyAliases(effective), byCamp };
     });
   }
 
@@ -145,8 +151,8 @@ export class CampRbacService {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireTenantAdmin(tx, tenantId, authId);
       const [rows, assignments] = await Promise.all([
-        tx.campRole.findMany({ where: { tenantId }, select: ROLE_SELECT, orderBy: [{ isSystem: 'desc' }, { name: 'asc' }] }),
-        tx.campUserRole.findMany({
+        tx.coreRole.findMany({ where: { tenantId }, select: ROLE_SELECT, orderBy: [{ isSystem: 'desc' }, { name: 'asc' }] }),
+        tx.coreUserRole.findMany({
           where: { tenantId },
           select: { id: true, roleId: true, userId: true, campId: true, permissions: { where: { source: 'TEMPLATE' }, select: { permissionCode: true } } },
         }),
@@ -162,16 +168,15 @@ export class CampRbacService {
   }
 
   async createRole(tenantId: string, authId: string, dto: CreateCampRoleDto) {
-    const codes = dto.permissionCodes ?? [];
-    this.validateCodes(codes);
+    const codes = this.normalizeCodes(dto.permissionCodes ?? []);
     const role = await withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireTenantAdmin(tx, tenantId, authId);
-        const dup = await tx.campRole.findFirst({ where: { tenantId, name: dto.name }, select: { id: true } });
+        const dup = await tx.coreRole.findFirst({ where: { tenantId, name: dto.name }, select: { id: true } });
         if (dup) throw conflict('camp.err.rbac.3', { name: dto.name });
-        const created = await tx.campRole.create({ data: { tenantId, name: dto.name, description: dto.description ?? null } });
+        const created = await tx.coreRole.create({ data: { tenantId, name: dto.name, description: dto.description ?? null } });
         if (codes.length > 0) {
-          await tx.campRolePermission.createMany({ data: codes.map((permissionCode) => ({ tenantId, roleId: created.id, permissionCode })) });
+          await tx.coreRolePermission.createMany({ data: codes.map((permissionCode) => ({ tenantId, roleId: created.id, permissionCode })) });
         }
         return toRoleView(await this.findRole(tx, tenantId, created.id));
       }),
@@ -186,10 +191,10 @@ export class CampRbacService {
         await this.access.requireTenantAdmin(tx, tenantId, authId);
         await this.findRole(tx, tenantId, id);
         if (dto.name !== undefined) {
-          const dup = await tx.campRole.findFirst({ where: { tenantId, name: dto.name, NOT: { id } }, select: { id: true } });
+          const dup = await tx.coreRole.findFirst({ where: { tenantId, name: dto.name, NOT: { id } }, select: { id: true } });
           if (dup) throw conflict('camp.err.rbac.3', { name: dto.name });
         }
-        await tx.campRole.update({
+        await tx.coreRole.update({
           where: { id },
           data: {
             ...(dto.name !== undefined ? { name: dto.name } : {}),
@@ -208,7 +213,7 @@ export class CampRbacService {
         await this.access.requireTenantAdmin(tx, tenantId, authId);
         const role = await this.findRole(tx, tenantId, id);
         if (role.isSystem) throw conflict('camp.err.rbac.4', { name: role.name });
-        await tx.campRole.delete({ where: { id } });   // camp_role_permissions, camp_user_roles → CASCADE
+        await tx.coreRole.delete({ where: { id } });   // camp_role_permissions, camp_user_roles → CASCADE
       }),
     );
     await this.access.invalidate(tenantId);
@@ -217,14 +222,14 @@ export class CampRbacService {
 
   /** Ролийн эрхийн багцыг бүхэлд нь солино (системийн рольд ч зөвшөөрнө — ERD v4: админ засна) */
   async setRolePermissions(tenantId: string, authId: string, id: string, dto: SetRolePermissionsDto) {
-    this.validateCodes(dto.permissionCodes);
+    const codes = this.normalizeCodes(dto.permissionCodes);
     const role = await withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         const before = await this.findRole(tx, tenantId, id);
-        await tx.campRolePermission.deleteMany({ where: { tenantId, roleId: id } });
-        if (dto.permissionCodes.length > 0) {
-          await tx.campRolePermission.createMany({ data: dto.permissionCodes.map((permissionCode) => ({ tenantId, roleId: id, permissionCode })) });
+        await tx.coreRolePermission.deleteMany({ where: { tenantId, roleId: id } });
+        if (codes.length > 0) {
+          await tx.coreRolePermission.createMany({ data: codes.map((permissionCode) => ({ tenantId, roleId: id, permissionCode })) });
         }
         const after = await this.findRole(tx, tenantId, id);
         await this.audit.record(tx, {
@@ -275,13 +280,13 @@ export class CampRbacService {
         let removed = 0;
         for (const it of preview.items) {
           if (it.remove.length > 0) {
-            const d = await tx.campUserPermission.deleteMany({
+            const d = await tx.coreUserPermission.deleteMany({
               where: { tenantId, userRoleId: it.userRoleId, source: 'TEMPLATE', permissionCode: { in: it.remove } },
             });
             removed += d.count;
           }
           if (it.add.length > 0) {
-            const c = await tx.campUserPermission.createMany({
+            const c = await tx.coreUserPermission.createMany({
               data: it.add.map((permissionCode) => ({
                 tenantId, userId: it.userId, permissionCode, campId: it.campId, source: 'TEMPLATE' as const, userRoleId: it.userRoleId,
               })),
@@ -308,7 +313,7 @@ export class CampRbacService {
   async listUserRoles(tenantId: string, authId: string, query: QueryUserRolesDto) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireTenantAdmin(tx, tenantId, authId);
-      return tx.campUserRole.findMany({
+      return tx.coreUserRole.findMany({
         where: {
           tenantId,
           ...(query.userId ? { userId: query.userId } : {}),
@@ -335,13 +340,13 @@ export class CampRbacService {
         const user = await tx.coreUser.findFirst({ where: { id: dto.userId, tenantId }, select: { id: true, isActive: true, email: true, fullName: true } });
         if (!user) throw badRequest('camp.err.rbac.5');
         if (!user.isActive) throw badRequest('camp.err.rbac.6');
-        const role = await tx.campRole.findFirst({ where: { id: dto.roleId, tenantId }, select: { id: true, name: true } });
+        const role = await tx.coreRole.findFirst({ where: { id: dto.roleId, tenantId }, select: { id: true, name: true } });
         if (!role) throw badRequest('camp.err.rbac.2');
         if (campId !== null) {
           const camp = await tx.camp.findFirst({ where: { id: campId, tenantId }, select: { id: true } });
           if (!camp) throw badRequest('camp.err.lookup.1');
         }
-        const dup = await tx.campUserRole.findFirst({
+        const dup = await tx.coreUserRole.findFirst({
           where: { tenantId, userId: dto.userId, roleId: dto.roleId, campId },
           select: { id: true, userId: true, roleId: true, campId: true, createdAt: true, sourcePositionId: true },
         });
@@ -349,7 +354,7 @@ export class CampRbacService {
         if (dup) {
           // №7 (Блок 6б): албан тушаалын загвараас АВТОМАТААР олгогдсон → гарын олголт болгоно (албан тушаал солигдоход хасагдахгүй).
           // Эрхийн мөрүүд (TEMPLATE, user_role_id) хэвээр — trigger роль/кемп/хэрэглэгч өөрчлөгдөөгүй тул юу ч хийхгүй.
-          await tx.campUserRole.update({ where: { id: dup.id }, data: { sourcePositionId: null } });
+          await tx.coreUserRole.update({ where: { id: dup.id }, data: { sourcePositionId: null } });
           const { sourcePositionId: _src, ...pinned } = dup;
           await this.audit.record(tx, {
             tenantId, campId, entityType: 'user_role', entityId: dup.id, action: 'UPDATE', actorUserId,
@@ -359,7 +364,7 @@ export class CampRbacService {
           return pinned;
         }
         // D-09: AFTER INSERT trigger загварын эрхийг camp_user_permissions-д хуулна (ижил transaction)
-        const created = await tx.campUserRole.create({
+        const created = await tx.coreUserRole.create({
           data: { tenantId, userId: dto.userId, roleId: dto.roleId, campId },
           select: { id: true, userId: true, roleId: true, campId: true, createdAt: true },
         });
@@ -379,12 +384,12 @@ export class CampRbacService {
     await withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
-        const row = await tx.campUserRole.findFirst({
+        const row = await tx.coreUserRole.findFirst({
           where: { id, tenantId },
           select: { id: true, userId: true, roleId: true, campId: true, role: { select: { name: true } }, user: { select: { email: true, fullName: true } } },
         });
         if (!row) throw notFound('camp.err.rbac.8');
-        await tx.campUserRole.delete({ where: { id } });   // TEMPLATE эрх → CASCADE (D-09)
+        await tx.coreUserRole.delete({ where: { id } });   // TEMPLATE эрх → CASCADE (D-09)
         await this.audit.record(tx, {
           tenantId, campId: row.campId, entityType: 'user_role', entityId: id, action: 'DEACTIVATE', actorUserId,
           fields: ['userId', 'roleId', 'campId'], before: { userId: row.userId, roleId: row.roleId, campId: row.campId }, after: null,
@@ -405,7 +410,7 @@ export class CampRbacService {
       const user = await tx.coreUser.findFirst({ where: { id: userId, tenantId }, select: { id: true, email: true, fullName: true, isActive: true } });
       if (!user) throw notFound('camp.err.rbac.5');
       const [perms, assignments] = await Promise.all([
-        tx.campUserPermission.findMany({
+        tx.coreUserPermission.findMany({
           where: { tenantId, userId },
           select: {
             id: true, permissionCode: true, campId: true, source: true, userRoleId: true, createdAt: true,
@@ -413,7 +418,7 @@ export class CampRbacService {
           },
           orderBy: [{ permissionCode: 'asc' }, { createdAt: 'asc' }],
         }),
-        tx.campUserRole.findMany({
+        tx.coreUserRole.findMany({
           where: { tenantId, userId },
           select: {
             id: true, campId: true,
@@ -439,7 +444,7 @@ export class CampRbacService {
 
   /** Шууд (DIRECT) эрх — албан тушаал/роль солиход хадгалагдана */
   async grantDirectPermission(tenantId: string, authId: string, userId: string, dto: GrantDirectPermissionDto) {
-    this.validateCodes([dto.permissionCode]);
+    const [permissionCode] = this.normalizeCodes([dto.permissionCode]);
     const campId = dto.campId ?? null;
     const row = await withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
@@ -451,18 +456,18 @@ export class CampRbacService {
           const camp = await tx.camp.findFirst({ where: { id: campId, tenantId }, select: { id: true } });
           if (!camp) throw badRequest('camp.err.lookup.1');
         }
-        const dup = await tx.campUserPermission.findFirst({
-          where: { tenantId, userId, permissionCode: dto.permissionCode, campId, source: 'DIRECT' }, select: { id: true },
+        const dup = await tx.coreUserPermission.findFirst({
+          where: { tenantId, userId, permissionCode, campId, source: 'DIRECT' }, select: { id: true },
         });
         if (dup) throw conflict('camp.err.rbac.10');
-        const created = await tx.campUserPermission.create({
-          data: { tenantId, userId, permissionCode: dto.permissionCode, campId, source: 'DIRECT', createdBy: actorUserId },
+        const created = await tx.coreUserPermission.create({
+          data: { tenantId, userId, permissionCode, campId, source: 'DIRECT', createdBy: actorUserId },
           select: { id: true, userId: true, permissionCode: true, campId: true, source: true, createdAt: true },
         });
         await this.audit.record(tx, {
           tenantId, campId, entityType: 'user_permission', entityId: created.id, action: 'CREATE', actorUserId,
           fields: ['userId', 'permissionCode', 'campId'], before: null, after: created,
-          summaryParams: { code: dto.permissionCode, user: CampRbacService.userLabel(user) },
+          summaryParams: { code: permissionCode, user: CampRbacService.userLabel(user) },
         });
         return created;
       }),
@@ -476,13 +481,13 @@ export class CampRbacService {
     await withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
-        const row = await tx.campUserPermission.findFirst({
+        const row = await tx.coreUserPermission.findFirst({
           where: { id, tenantId },
           select: { id: true, userId: true, permissionCode: true, campId: true, source: true, user: { select: { email: true, fullName: true } } },
         });
         if (!row) throw notFound('camp.err.rbac.11');
         if (row.source !== 'DIRECT') throw badRequest('camp.err.rbac.9');
-        await tx.campUserPermission.delete({ where: { id } });
+        await tx.coreUserPermission.delete({ where: { id } });
         await this.audit.record(tx, {
           tenantId, campId: row.campId, entityType: 'user_permission', entityId: id, action: 'DEACTIVATE', actorUserId,
           fields: ['userId', 'permissionCode', 'campId'], before: { userId: row.userId, permissionCode: row.permissionCode, campId: row.campId }, after: null,
@@ -502,7 +507,7 @@ export class CampRbacService {
       await this.access.requireTenantAdmin(tx, tenantId, authId);
       const pos = await tx.hrPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true, name: true } });
       if (!pos) throw notFound('camp.err.rbac.12');
-      const rows = await tx.campPositionRoleTemplate.findMany({
+      const rows = await tx.corePositionRoleTemplate.findMany({
         where: { tenantId, positionId },
         select: { roleId: true, scope: true, role: { select: { name: true, isSystem: true } } },
         orderBy: { createdAt: 'asc' },
@@ -520,21 +525,21 @@ export class CampRbacService {
         const pos = await tx.hrPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true, name: true } });
         if (!pos) throw notFound('camp.err.rbac.12');
         if (roleIds.length > 0) {
-          const found = await tx.campRole.count({ where: { tenantId, id: { in: roleIds } } });
+          const found = await tx.coreRole.count({ where: { tenantId, id: { in: roleIds } } });
           if (found !== roleIds.length) throw badRequest('camp.err.rbac.2');
         }
         const label = (rows: { roleId: string; scope: string }[]) => rows.map((r) => `${r.roleId}:${r.scope}`).sort().join(', ');
-        const before = await tx.campPositionRoleTemplate.findMany({ where: { tenantId, positionId }, select: { roleId: true, scope: true } });
-        await tx.campPositionRoleTemplate.deleteMany({ where: { tenantId, positionId } });
+        const before = await tx.corePositionRoleTemplate.findMany({ where: { tenantId, positionId }, select: { roleId: true, scope: true } });
+        await tx.corePositionRoleTemplate.deleteMany({ where: { tenantId, positionId } });
         if (dto.templates.length > 0) {
-          await tx.campPositionRoleTemplate.createMany({ data: dto.templates.map((t) => ({ tenantId, positionId, roleId: t.roleId, scope: t.scope })) });
+          await tx.corePositionRoleTemplate.createMany({ data: dto.templates.map((t) => ({ tenantId, positionId, roleId: t.roleId, scope: t.scope })) });
         }
         await this.audit.record(tx, {
           tenantId, campId: null, entityType: 'position_template', entityId: positionId, action: 'UPDATE', actorUserId,
           fields: ['templates'], before: { templates: label(before) }, after: { templates: label(dto.templates) },
           summaryParams: { name: pos.name },
         });
-        const rows = await tx.campPositionRoleTemplate.findMany({
+        const rows = await tx.corePositionRoleTemplate.findMany({
           where: { tenantId, positionId },
           select: { roleId: true, scope: true, role: { select: { name: true, isSystem: true } } },
           orderBy: { createdAt: 'asc' },

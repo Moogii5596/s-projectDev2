@@ -13,7 +13,7 @@ tags: [lessons, index, generated]
 > **Шинэ алдаа:** тохирох `lessons/LL-*.md`-д `### [TAG-NNN] Гарчиг` + **Тохиолдсон / Шалтгаан / Дүрэм** → [[LL-99_Changelog]]-д мөр → `pnpm docs:gen`. Давтагдвал шинэ ID биш — `### [ID] (давтагдсан, огноо) …`.
 > Файл: [[LL-01_Backend_DB]] · [[LL-02_Test_CI]] · [[LL-03_Env_Ops_Pilot]] · [[LL-04_Architecture_RLS]] · [[LL-05_Frontend]] · [[LL-06_Camp_v02]] · [[LL-07_Docs]] · Хуучин нэгтгэсэн файл (архив): [[lessons_learned_MVP]]
 
-Нийт **177** сургамж.
+Нийт **179** сургамж.
 
 ## DB, Prisma, RLS, migration
 
@@ -30,11 +30,13 @@ tags: [lessons, index, generated]
 | MIG-001 | `supabase/migrations/*.sql` → `pnpm exec supabase migration up` (auth хэрэглэгчийг устгахгүй) → `pnpm db:generate`. | LL-04 §14 |
 | MIG-002 | Migration файлын дугаарыг **хэрэгжүүлэх үед** (бодит дарааллаар) өгнө; tech plan-д зөвхөн «шинэ migration» гэж… | LL-06 §24 |
 | MIG-003 | Enum утга нэмэх migration-д тэр утгыг хэрэглэх юу ч (index, CHECK, seed, функц) бичихгүй. | LL-06 §24 |
+| MIG-004 | Хүснэгт нэрлэх migration-ийн өмнө `grep -l <хүснэгт> supabase/migrations/*.sql`-ээр түүнийг хэрэглэдэг бүх функцийг олж… | LL-06 §24 |
 | MIGRATE-001 | DROP CHECK → CREATE ENUM → ALTER TYPE → RECREATE CHECK | LL-01 §3 |
 | MIGRATE-002 | DROP index → DROP CHECK → CREATE ENUM → ALTER TYPE → RECREATE index | LL-01 §3 |
 | PRISMA-001 | `id String @id @default(uuid()) @db.Uuid`, `tenantId String @map("tenant_id") @db.Uuid` | LL-01 §2 |
 | PRISMA-002 | ```typescript | LL-01 §2 |
 | PRISMA-003 | DB/гадаад системийн алдааны текстэд тулгуурласан код бичихдээ (1) mock-ийн мессежийг **бодит гаралтаас хуулж** бичнэ, (2)… | LL-06 §15 |
+| PRISMA-004 | `$queryRaw`-д системийн каталогийн (`information_schema`, `pg_*`) `name` / `regclass` / `oid` төрлийн баганыг үргэлж… | LL-06 §24 |
 | RLS-001 | `this.prisma.$transaction(async tx => { await tx.$executeRaw(set_config); return tx.model.findFirst() })` | LL-01 §2 |
 | RLS-002 | Dual PrismaClient — `prismaAdmin` (postgres, setup/teardown) + `prismaRls` (app_user, бодит тест) | LL-01 §2 |
 | RLS-003 | `NULLIF(current_setting('app.tenant_id', true), '')::uuid` (RULE-12 аль хэдийн хамардаг) | LL-01 §2 |

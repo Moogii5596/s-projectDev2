@@ -169,8 +169,8 @@ model HrPosition {
 
   employees HrEmployee[]
   settings  CampPositionSetting[]
-  roleTemplates CampPositionRoleTemplate[]
-  autoUserRoles CampUserRole[] @relation("CampUserRoleSourcePosition")
+  roleTemplates CorePositionRoleTemplate[]
+  autoUserRoles CoreUserRole[] @relation("CoreUserRoleSourcePosition")
 
   @@unique([tenantId, id], map: "uq_camp_positions_tenant_id")
   @@map("camp_positions")
