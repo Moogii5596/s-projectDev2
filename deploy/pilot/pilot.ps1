@@ -485,6 +485,8 @@ function Start-Backend([hashtable] $cfg) {
   $p = Get-PilotProcess 'backend' 'node'
   if ($null -ne $p) { Write-Ok "backend ажиллаж байна (PID $($p.Id))"; return }
   $port = Get-Cfg $cfg 'PORT' $Prof.Port
+  # backend STORAGE_DIR-ийг уншина; backup/restore-ийн хавтастай ЯГ ИЖИЛ байх ёстой
+  $env:STORAGE_DIR = Get-StorageDir $cfg
   $p = Start-PilotProcess 'backend' 'node' @('dist/src/main.js') $BackendDir
   if (-not (Wait-Http "http://127.0.0.1:$port/api/v1/health" 90)) {
     Stop-Pilot2 "backend эхэлсэнгүй — $(Join-Path $LogDir 'backend.err.log'), backend.log-ийг үз"
