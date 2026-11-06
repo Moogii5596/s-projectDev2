@@ -20,7 +20,7 @@ tags: [codebase, auth, rbac, generated]
 |---|---|---|---|---|---|---|---|
 | `camp.settings.manage` | Кемпийн тохиргоо (НӨАТ, ростер, хоол идэх байршил) | V1 | ✅ |  |  |  | `meal-orders.service.ts` `camp-settings.service.ts` |
 | `camp.master.manage` | Мастер өгөгдөл (кемп, байр, өрөө, хэлтэс, баг, байгууллага) | V1 | ✅ |  |  |  | `camp-catalog.service.ts` `facilities.handlers.ts` `camp-facilities.service.ts` `camps.service.ts` `core-organizations.service.ts` `departments.handler.ts` `positions.handler.ts` `hr-crews.service.ts` `hr-departments.service.ts` `hr-positions.service.ts` |
-| `camp.contract.manage` | Гэрээ, ажил, үнэ | V2 | ✅ |  |  |  | — |
+| `camp.contract.manage` | Гэрээ, ажил, үнэ | V1 | ✅ |  |  |  | `contract-catalog.service.ts` `contract-pricing.service.ts` `contracts.service.ts` `exchange-rates.service.ts` |
 | `hr.employee.manage` | Ажилтан бүртгэл | V1 | ✅ |  | ✅ |  | `hr-attendance.service.ts` `hr-employees.service.ts` `employees.handler.ts` |
 | `hr.employee.terminate` | Ажлаас гаргах, дахин ажилд авах | V1 | ✅ |  |  |  | `hr-employee-lifecycle.service.ts` `former-employees.handler.ts` |
 | `hr.attendance.import` | Ирц (xlsx) импорт | V1 | ✅ | ✅ |  |  | `hr-attendance.service.ts` |

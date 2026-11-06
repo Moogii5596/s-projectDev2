@@ -79,6 +79,16 @@ describe('орчуулгын каталог', () => {
 })
 
 describe('i18n ажиллагаа', () => {
+  it('гэрээний хувьсагчид гурван хэлээр зөв орлуулагдана', () => {
+    for (const lang of ['mn', 'en', 'zh'] as const) {
+      const t = i18n.getFixedT(lang)
+      expect(t('camp.ct.payment_terms_total', { total: 95 })).toContain('95')
+      expect(t('camp.ct.term_rule.AFTER_INVOICE_DAYS', { n: 10 })).toContain('10')
+      expect(t('camp.ct.contract_currency', { currency: 'CNY' })).toContain('CNY')
+      expect(t('camp.ct.quote_rate', { rate: '500', date: '2026-05-01' })).not.toMatch(/[{}]/)
+    }
+  })
+
   it('хэл солих; хувьсагч {name}; байгууллагын засвар давхарлаж, буцаахад анхдагч', async () => {
     setLanguage('zh')
     expect(i18n.t('camp.att.rows', { n: 3 })).toBe('3 行')

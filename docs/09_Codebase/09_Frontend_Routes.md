@@ -40,33 +40,37 @@ tags: [codebase, frontend, generated]
 | `/settings/:section` | `SettingsPage` | модуль `hr` | `App.tsx:86` |
 | `/mfe/*` | `Suspense` |  | `App.tsx:90` |
 | `*` | `Navigate` |  | `App.tsx:103` |
-| `(index)` | `CampHomePage` |  | `modules/camp/CampRoutes.tsx:25` |
-| `system` | `Navigate` |  | `modules/camp/CampRoutes.tsx:27` |
-| `system/positions` | `Navigate` |  | `modules/camp/CampRoutes.tsx:28` |
-| `system/:section` | `SystemSettingsPage` |  | `modules/camp/CampRoutes.tsx:29` |
-| `admin/organizations` | `Navigate` |  | `modules/camp/CampRoutes.tsx:30` |
-| `admin/roles` | `Navigate` |  | `modules/camp/CampRoutes.tsx:31` |
-| `admin/user-roles` | `Navigate` |  | `modules/camp/CampRoutes.tsx:32` |
-| `admin/asset-categories` | `Navigate` |  | `modules/camp/CampRoutes.tsx:33` |
-| `:campId` | `CampLayout` |  | `modules/camp/CampRoutes.tsx:34` |
-| `(index)` | `Navigate` |  | `modules/camp/CampRoutes.tsx:35` |
-| `rooms` | `RoomBoardPage` |  | `modules/camp/CampRoutes.tsx:36` |
-| `meals` | `PresencePage` |  | `modules/camp/CampRoutes.tsx:37` |
-| `meal-orders` | `MealOrdersPage` |  | `modules/camp/CampRoutes.tsx:38` |
-| `maintenance` | `MaintenanceListPage` |  | `modules/camp/CampRoutes.tsx:39` |
-| `maintenance/:id` | `MaintenanceDetailPage` |  | `modules/camp/CampRoutes.tsx:40` |
-| `assets` | `AssetsPage` |  | `modules/camp/CampRoutes.tsx:41` |
-| `settings` | `Navigate` |  | `modules/camp/CampRoutes.tsx:43` |
-| `settings/departments` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:44` |
-| `settings/crews` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:45` |
-| `settings/:section` | `CampSettingsPage` |  | `modules/camp/CampRoutes.tsx:46` |
-| `facilities` | `Navigate` |  | `modules/camp/CampRoutes.tsx:47` |
-| `employees` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:49` |
-| `attendance` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:50` |
-| `shifts` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:51` |
-| `departments` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:52` |
-| `crews` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:53` |
-| `*` | `Navigate` |  | `modules/camp/CampRoutes.tsx:55` |
+| `(index)` | `CampHomePage` |  | `modules/camp/CampRoutes.tsx:29` |
+| `system` | `Navigate` |  | `modules/camp/CampRoutes.tsx:31` |
+| `system/positions` | `Navigate` |  | `modules/camp/CampRoutes.tsx:32` |
+| `system/:section` | `SystemSettingsPage` |  | `modules/camp/CampRoutes.tsx:33` |
+| `admin/organizations` | `Navigate` |  | `modules/camp/CampRoutes.tsx:34` |
+| `admin/roles` | `Navigate` |  | `modules/camp/CampRoutes.tsx:35` |
+| `admin/user-roles` | `Navigate` |  | `modules/camp/CampRoutes.tsx:36` |
+| `admin/asset-categories` | `Navigate` |  | `modules/camp/CampRoutes.tsx:37` |
+| `:campId` | `CampLayout` |  | `modules/camp/CampRoutes.tsx:38` |
+| `(index)` | `Navigate` |  | `modules/camp/CampRoutes.tsx:39` |
+| `rooms` | `RoomBoardPage` |  | `modules/camp/CampRoutes.tsx:40` |
+| `meals` | `PresencePage` |  | `modules/camp/CampRoutes.tsx:41` |
+| `meal-orders` | `MealOrdersPage` |  | `modules/camp/CampRoutes.tsx:42` |
+| `contracts` | `ContractsPage` |  | `modules/camp/CampRoutes.tsx:43` |
+| `contracts/:contractId` | `ContractDetailPage` |  | `modules/camp/CampRoutes.tsx:44` |
+| `maintenance` | `MaintenanceListPage` |  | `modules/camp/CampRoutes.tsx:45` |
+| `maintenance/:id` | `MaintenanceDetailPage` |  | `modules/camp/CampRoutes.tsx:46` |
+| `assets` | `AssetsPage` |  | `modules/camp/CampRoutes.tsx:47` |
+| `settings` | `Navigate` |  | `modules/camp/CampRoutes.tsx:49` |
+| `settings/contract-catalog` | `ContractCatalogPage` |  | `modules/camp/CampRoutes.tsx:50` |
+| `settings/exchange-rates` | `ExchangeRatesPage` |  | `modules/camp/CampRoutes.tsx:51` |
+| `settings/departments` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:52` |
+| `settings/crews` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:53` |
+| `settings/:section` | `CampSettingsPage` |  | `modules/camp/CampRoutes.tsx:54` |
+| `facilities` | `Navigate` |  | `modules/camp/CampRoutes.tsx:55` |
+| `employees` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:57` |
+| `attendance` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:58` |
+| `shifts` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:59` |
+| `departments` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:60` |
+| `crews` | `LegacyHrRedirect` |  | `modules/camp/CampRoutes.tsx:61` |
+| `*` | `Navigate` |  | `modules/camp/CampRoutes.tsx:63` |
 | `(index)` | `HrHomePage` |  | `modules/hr/HrRoutes.tsx:26` |
 | `positions` | `HrHomePage` |  | `modules/hr/HrRoutes.tsx:27` |
 | `:campId` | `HrLayout` |  | `modules/hr/HrRoutes.tsx:28` |
@@ -87,6 +91,6 @@ tags: [codebase, frontend, generated]
 
 | Файл | Түлхүүр |
 |---|---|
-| `web.en.json` | 1212 |
-| `web.mn.json` | 1212 |
-| `web.zh.json` | 1212 |
+| `web.en.json` | 1347 |
+| `web.mn.json` | 1347 |
+| `web.zh.json` | 1347 |

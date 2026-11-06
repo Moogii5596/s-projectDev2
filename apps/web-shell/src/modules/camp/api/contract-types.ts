@@ -1,6 +1,7 @@
-// ⚠️ АВТОМАТ БИШ — backend-ийн хуулбар: apps/core-kernel/src/modules/camp/contracts/contract.types.ts (R20, ТАМ АДИЛ)
 /**
- * v0.2.3 Блок 6б — гэрээ, үнэ, ханш, каталог (V2-01, V2-07). Мөнгө, ханш, хуваагч — string (Decimal).
+ * v0.2.3 Блок 6б — гэрээ, үнэ, ханш, каталог (V2-01, V2-07). API-ийн гэрээ.
+ * ⚠️ Frontend-ийн хуулбар: `apps/web-shell/src/modules/camp/api/contract-types.ts` — ТАМ АДИЛ (R20).
+ * Мөнгөн дүн, ханш, хуваагч — string (Decimal, нарийвчлал алдахгүй).
  */
 
 export const QUANTITY_SOURCES = ['MEAL_ORDER', 'HAUL', 'MANUAL'] as const;

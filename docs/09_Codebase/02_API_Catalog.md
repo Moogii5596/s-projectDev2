@@ -10,7 +10,7 @@ tags: [codebase, api, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Нийт **236** endpoint, 33 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
+Нийт **258** endpoint, 35 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
 
 **Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). **OWNER·ADMIN** = зөвхөн системийн роль (`requireTenantAdmin` — хэрэглэгч / роль удирдах, SEC-009), `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].
 
@@ -24,11 +24,13 @@ tags: [codebase, api, generated]
 - [[#modules/camp/attendance]] — 6
 - [[#modules/camp/audit]] — 1
 - [[#modules/camp/catalog]] — 5
+- [[#modules/camp/contracts]] — 19
 - [[#modules/camp/maintenance]] — 12
 - [[#modules/camp/master]] — 11
 - [[#modules/camp/meal-orders]] — 15
 - [[#modules/camp/rbac]] — 25
 - [[#modules/camp/settings]] — 5
+- [[#modules/core/exchange-rates]] — 3
 - [[#modules/core/feedback]] — 11
 - [[#modules/core/organizations]] — 3
 - [[#modules/feed]] — 17
@@ -134,6 +136,30 @@ tags: [codebase, api, generated]
 | GET | `/api/v1/camp/camps/:campId/position-settings` | `CampPositionSettingsController.list` → `CampCatalogService.listSettings` | гишүүн | `camp-catalog.controller.ts:42` |
 | PUT | `/api/v1/camp/camps/:campId/position-settings/:positionId` | `CampPositionSettingsController.upsert` → `CampCatalogService.upsertSetting` | `camp.master.manage` | `camp-catalog.controller.ts:48` |
 
+## modules/camp/contracts
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/camp/contract-catalog` | `ContractCatalogController.get` → `ContractCatalogService.catalog` | гишүүн | `contracts.controller.ts:31` |
+| POST | `/api/v1/camp/contract-catalog/units` | `ContractCatalogController.createUnit` → `ContractCatalogService.createUnit` | `camp.contract.manage` | `contracts.controller.ts:38` |
+| PATCH | `/api/v1/camp/contract-catalog/units/:id` | `ContractCatalogController.updateUnit` → `ContractCatalogService.updateUnit` | `camp.contract.manage` | `contracts.controller.ts:44` |
+| POST | `/api/v1/camp/contract-catalog/service-types` | `ContractCatalogController.createServiceType` → `ContractCatalogService.createServiceType` | `camp.contract.manage` | `contracts.controller.ts:51` |
+| PATCH | `/api/v1/camp/contract-catalog/service-types/:id` | `ContractCatalogController.updateServiceType` → `ContractCatalogService.updateServiceType` | `camp.contract.manage` | `contracts.controller.ts:57` |
+| GET | `/api/v1/camp/camps/:campId/contracts` | `ContractsController.list` → `ContractsService.list` | `camp.contract.manage` | `contracts.controller.ts:72` |
+| POST | `/api/v1/camp/camps/:campId/contracts` | `ContractsController.create` → `ContractsService.create` | `camp.contract.manage` | `contracts.controller.ts:79` |
+| GET | `/api/v1/camp/camps/:campId/contracts/:id` | `ContractsController.get` → `ContractsService.get` | `camp.contract.manage` | `contracts.controller.ts:85` |
+| PATCH | `/api/v1/camp/camps/:campId/contracts/:id` | `ContractsController.update` → `ContractsService.update` | `camp.contract.manage` | `contracts.controller.ts:91` |
+| DELETE | `/api/v1/camp/camps/:campId/contracts/:id` | `ContractsController.remove` → `ContractsService.remove` | `camp.contract.manage` | `contracts.controller.ts:98` |
+| POST | `/api/v1/camp/camps/:campId/contracts/:id/activate` | `ContractsController.activate` → `ContractsService.activate` | `camp.contract.manage` | `contracts.controller.ts:105` |
+| POST | `/api/v1/camp/camps/:campId/contracts/:id/terminate` | `ContractsController.terminate` → `ContractsService.terminate` | `camp.contract.manage` | `contracts.controller.ts:112` |
+| POST | `/api/v1/camp/camps/:campId/contracts/:id/items` | `ContractsController.addItem` → `ContractsService.addItem` | `camp.contract.manage` | `contracts.controller.ts:119` |
+| PATCH | `/api/v1/camp/camps/:campId/contracts/:id/items/:itemId` | `ContractsController.updateItem` → `ContractsService.updateItem` | `camp.contract.manage` | `contracts.controller.ts:125` |
+| DELETE | `/api/v1/camp/camps/:campId/contracts/:id/items/:itemId` | `ContractsController.removeItem` → `ContractsService.removeItem` | `camp.contract.manage` | `contracts.controller.ts:138` |
+| POST | `/api/v1/camp/camps/:campId/contracts/:id/items/:itemId/prices` | `ContractsController.addPrice` → `ContractsService.addPrice` | `camp.contract.manage` | `contracts.controller.ts:145` |
+| DELETE | `/api/v1/camp/camps/:campId/contracts/:id/items/:itemId/prices/:priceId` | `ContractsController.removePrice` → `ContractsService.removePrice` | `camp.contract.manage` | `contracts.controller.ts:158` |
+| POST | `/api/v1/camp/camps/:campId/contracts/:id/amendments` | `ContractsController.addAmendment` → `ContractsService.addAmendment` | `camp.contract.manage` | `contracts.controller.ts:171` |
+| GET | `/api/v1/camp/camps/:campId/contracts/:id/quote` | `ContractsController.quote` → `ContractPricingService.quote` | `camp.contract.manage` | `contracts.controller.ts:177` |
+
 ## modules/camp/maintenance
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
@@ -226,6 +252,14 @@ tags: [codebase, api, generated]
 | GET | `/api/v1/camp/camps/:campId/meal-locations` | `CampSettingsController.listLocations` → `CampSettingsService.listMealLocations` | гишүүн | `camp-settings.controller.ts:25` |
 | POST | `/api/v1/camp/camps/:campId/meal-locations` | `CampSettingsController.createLocation` → `CampSettingsService.createMealLocation` | `camp.settings.manage` | `camp-settings.controller.ts:32` |
 | PATCH | `/api/v1/camp/camps/:campId/meal-locations/:id` | `CampSettingsController.updateLocation` → `CampSettingsService.updateMealLocation` | `camp.settings.manage` | `camp-settings.controller.ts:38` |
+
+## modules/core/exchange-rates
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/core/exchange-rates` | `ExchangeRatesController.list` → `ExchangeRatesService.list` | `camp.contract.manage` | `exchange-rates.controller.ts:13` |
+| PUT | `/api/v1/core/exchange-rates` | `ExchangeRatesController.upsert` → `ExchangeRatesService.upsert` | `camp.contract.manage` | `exchange-rates.controller.ts:19` |
+| DELETE | `/api/v1/core/exchange-rates/:id` | `ExchangeRatesController.remove` → `ExchangeRatesService.remove` | `camp.contract.manage` | `exchange-rates.controller.ts:26` |
 
 ## modules/core/feedback
 

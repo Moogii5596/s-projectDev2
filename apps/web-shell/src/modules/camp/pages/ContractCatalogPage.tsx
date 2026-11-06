@@ -7,13 +7,14 @@ import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, NoAc
 import { useCampMutation } from '../hooks/useCampMutation'
 import { useCampPermissions } from '../hooks/useCampPermissions'
 import { contractCatalogName } from '../lib/contract'
+import { canInAnyCamp, P } from '../lib/permissions'
 
 const catalogKey = ['camp', 'contract-catalog'] as const
 
 export default function ContractCatalogPage() {
   const { t, i18n } = useTranslation()
   const permissions = useCampPermissions()
-  const canManage = permissions.can('camp.contract.manage')
+  const canManage = canInAnyCamp(permissions.data, P.CONTRACT_MANAGE)
   const catalog = useQuery({ queryKey: catalogKey, queryFn: contractApi.catalog, enabled: canManage })
   const [unitDialog, setUnitDialog] = useState<UnitView | 'new' | null>(null)
   const [serviceDialog, setServiceDialog] = useState<ServiceTypeView | 'new' | null>(null)

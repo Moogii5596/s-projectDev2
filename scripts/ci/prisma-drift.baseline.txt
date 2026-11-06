@@ -61,6 +61,8 @@ ALTER TABLE "camp_building_types" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_building_types" DROP CONSTRAINT "camp_building_types_tenant_id_fkey"
 ALTER TABLE "camp_buildings" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_buildings" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_contract_amendments" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_contract_amendments" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_contract_item_prices" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_contract_item_prices" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_contract_items" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
@@ -123,6 +125,8 @@ ALTER TABLE "camp_room_allocations" ALTER COLUMN "created_at" SET DEFAULT CURREN
 ALTER TABLE "camp_room_allocations" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_rooms" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_rooms" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_service_types" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_service_types" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_settings" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_settings" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_shift_adjustments" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
@@ -131,6 +135,8 @@ ALTER TABLE "camp_stays" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_stays" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camps" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camps" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_exchange_rates" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_exchange_rates" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_feedback" ADD CONSTRAINT "fk_core_feedback_replied_by" FOREIGN KEY ("tenant_id", "replied_by") REFERENCES "core_users"("tenant_id", "id") ON DELETE NO ACTION ON UPDATE NO ACTION
 ALTER TABLE "core_feedback" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "core_feedback" ALTER COLUMN "updated_at" DROP DEFAULT
@@ -151,6 +157,8 @@ ALTER TABLE "core_role_permissions" ALTER COLUMN "created_at" SET DEFAULT CURREN
 ALTER TABLE "core_role_permissions" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_roles" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "core_roles" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_units" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_units" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_user_invites" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "core_user_invites" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_user_invites" DROP CONSTRAINT "core_user_invites_tenant_id_fkey"
@@ -303,6 +311,7 @@ DROP INDEX "idx_mr_headers_tenant_id"
 DROP INDEX "idx_mr_headers_tenant_status_created"
 DROP INDEX "idx_mr_items_header_id"
 DROP INDEX "idx_outbox_events_tenant"
+DROP INDEX "uq_camp_contract_items_service"
 DROP INDEX "uq_core_user_permissions"
 DROP INDEX "uq_core_user_roles"
 DROP TABLE "legacy_camp_permissions"

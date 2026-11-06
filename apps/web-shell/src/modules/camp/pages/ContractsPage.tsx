@@ -67,6 +67,10 @@ export default function ContractsPage() {
         title={t('camp.ct.title')}
         actions={<Button onClick={() => setCreating(true)}>{t('camp.ct.new_contract')}</Button>}
       />
+      <nav className="flex flex-wrap gap-4 text-sm">
+        <Link className="text-blue-700 hover:underline" to={`/camp/${campId}/settings/contract-catalog`}>{t('camp.ct.catalog_title')}</Link>
+        <Link className="text-blue-700 hover:underline" to={`/camp/${campId}/settings/exchange-rates`}>{t('camp.ct.exchange_rates_title')}</Link>
+      </nav>
       <Card>
         <div className="mb-3 max-w-xs">
           <label className="block text-xs font-medium text-gray-600 mb-1" htmlFor="contract-status">{t('camp.ct.filter_status')}</label>

@@ -77,13 +77,12 @@ export function withLegacyAliases(codes: readonly string[]): string[] {
 }
 
 /**
- * Хувилбарын хүрээ (D8, 2026-10-09): гэрээ, бохир ус/хог, хоолны захиалга, зардлын тайлан → V2.
+ * Хувилбарын хүрээ: бохир ус/хог, зардлын тайлан → V2; гэрээ, хоолны захиалга v0.2.3-д хэрэгжсэн.
  * V2 эрх DB/каталогоос УСТГАГДАХГҮЙ, эрх шалгалт өөрчлөгдөхгүй — зөвхөн UI-д нуухад (`core_permissions.available_in`).
  */
 export type ReleaseScope = 'v1' | 'v2';
 
 const V2_CODES: ReadonlySet<Permission> = new Set<Permission>([
-  PERMISSIONS.CONTRACT_MANAGE,
   PERMISSIONS.HAUL_CREATE,
   PERMISSIONS.HAUL_APPROVE,
   PERMISSIONS.REPORT_VIEW,

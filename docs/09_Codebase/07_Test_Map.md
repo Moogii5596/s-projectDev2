@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 33 файл, ~308 тест
+## Integration (бодит PG + RLS) — 34 файл, ~309 тест
 
 Команд: `pnpm test:integration`
 
@@ -34,6 +34,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/camp-v022-terminate.integration.spec.ts` | 7 | v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд авах, PII лог (integration) |
 | `core-kernel/test/camp-v022-users.integration.spec.ts` | 3 | v0.2.2 Блок 4 — хэрэглэгч удирдах (integration) |
 | `core-kernel/test/camp-v023-auth.integration.spec.ts` | 6 | PIL-16 — сүүлийн нэвтрэлт · PIL-15 — нэвтэрсэн төхөөрөмжүүд (D-3) · PIL-15 — нууц үг солих: одоогийн төхөөрөмж үлдэнэ (D-1, OPS-013) · PIL-15 — урилга accept: бүх session цуцлагдана |
+| `core-kernel/test/camp-v023-contracts.integration.spec.ts` | 1 | v0.2.3 contracts and exchange rates |
 | `core-kernel/test/camp-v023-data-import.integration.spec.ts` | 12 | S1 + S2 — нэр, нэмэлт утас · S4 — албан тушаал · S5 — өрөөний тохиргоо · S6 — өрөөнд байрлуулалт (түүх) · S7 — ажлаас гарсан ажилтан · S9 — «Мэдээлэл дутуу» (буруу имэйл / утас) · S11 — гарсан огноо т |
 | `core-kernel/test/camp-v023-meal-orders.integration.spec.ts` | 13 | Тохиргоо A — хүлээн авах шаардлагагүй + ALLOW · Cutoff — BLOCK / FREE · Тохиргоо B — хүлээн авах + TWO_SIDED + өөрөө хүлээн авахгүй · Тогтмол загвар + анхдагч тоо |
 | `core-kernel/test/core-feedback.integration.spec.ts` | 8 | v0.2.3 Блок F — санал хүсэлт (integration) |
@@ -52,7 +53,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 94 файл, ~754 тест
+## Unit — core-kernel — 96 файл, ~783 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -97,6 +98,8 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/camp/catalog/tests/camp-catalog.service.test.ts` | 4 | v0.2.1 CampCatalogService — байрны төрөл, кемп × албан тушаал |
 | `core-kernel/src/modules/camp/common/tests/camp-audit.test.ts` | 6 | auditValue · computeAuditDiff · resolveAuditAction / buildAuditRow · CampAuditService.record/recordMany |
 | `core-kernel/src/modules/camp/common/tests/camp-common.test.ts` | 19 | Camp permission каталог (Шат 2.1) · CampAccessService (Шат 2.1) · camp-errors (Шат 2.1) · camp-tx (Шат 2.1) |
+| `core-kernel/src/modules/camp/contracts/tests/contract-pricing.test.ts` | 15 | contract-pricing — хугацаа · contract-pricing — үнэ · contract-pricing — ханш · contract-pricing — хоолны тоо (G-3) · contract-pricing — төлбөрийн хуваарь |
+| `core-kernel/src/modules/camp/contracts/tests/contract-services.test.ts` | 14 | contract services |
 | `core-kernel/src/modules/camp/costs/tests/vat.test.ts` | 2 | VatCalculator (Шат 4.2) |
 | `core-kernel/src/modules/camp/maintenance/tests/camp-maintenance.service.test.ts` | 28 | maintenance-flow (Шат 4.4) · CampMaintenanceService — үүсгэх (Шат 4.4) · CampMaintenanceService — төлөв шилжилт (Шат 4.4) · CampMaintenanceService — сэлбэг (Шат 4.4) |
 | `core-kernel/src/modules/camp/master/tests/camp-master.services.test.ts` | 28 | CampsService (Шат 2.4) · CampFacilitiesService (Шат 2.4) · CoreOrganizationsService (Шат 2.4) · HrDepartmentsService (Шат 2.4) · HrCrewsService (Шат 2.4) · HrEmployeesService (Шат 2.4) |
@@ -153,13 +156,13 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/storage/tests/local-disk.storage.test.ts` | 7 | LocalDiskStorage · contentTypeOf |
 | `core-kernel/src/storage/tests/media.test.ts` | 11 | MediaUrlSigner — гарын үсэгтэй зургийн URL · parseVariants / pickVariant / mediaImageDto · MediaService — хадгалах / устгах (LocalDiskStorage, бодит sharp) · storageDir |
 
-## Unit — web-shell — 34 файл, ~166 тест
+## Unit — web-shell — 35 файл, ~171 тест
 
 Команд: `pnpm --filter web-shell test`
 
 | Файл | Тест | describe |
 |---|---|---|
-| `web-shell/src/i18n/tests/i18n.test.ts` | 4 | орчуулгын каталог · i18n ажиллагаа |
+| `web-shell/src/i18n/tests/i18n.test.ts` | 5 | орчуулгын каталог · i18n ажиллагаа |
 | `web-shell/src/lib/tests/access.test.ts` | 5 | access (PIL-19, ADR-007 B3-3) |
 | `web-shell/src/lib/tests/devices.test.ts` | 5 | describeUserAgent · deviceTitle · sortDevices / otherDevices |
 | `web-shell/src/lib/tests/home.test.ts` | 3 | M-0 — нэвтэрсний дараах зам (v0.2.3 Блок 5) |
@@ -172,6 +175,7 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/camp/lib/tests/camp-maint-lib.test.ts` | 8 | formatMoney (string → float-гүй) · maintenance.availableActions (backend maintenance-flow-тэй ижил) · permissions.canInAnyCamp |
 | `web-shell/src/modules/camp/lib/tests/camp-ops-lib.test.ts` | 8 | calendar.cellKind (ростер 14+14: 0 = ирэх, 15 = явах) · calendar.rangeProblem · presence.pivotPresence · meals.mealsPayload |
 | `web-shell/src/modules/camp/lib/tests/camp-v021-lib.test.ts` | 4 | v0.2.1 filterStays (C-14) · v0.2.1 хөрөнгийн байршил (C-12) · v0.2.1 inherited (Q1): албан тушаал(кемп) ?? кемпийн анхдагч |
+| `web-shell/src/modules/camp/lib/tests/contract.test.ts` | 4 | contract helpers |
 | `web-shell/src/modules/camp/lib/tests/granted.test.ts` | 2 | granted (PIL-18) |
 | `web-shell/src/modules/camp/lib/tests/grid.test.ts` | 5 | grid (хүснэгтээр оруулах) · room-range (FB-07) |
 | `web-shell/src/modules/camp/lib/tests/last-camp.test.ts` | 3 | last-camp (FB-11) |

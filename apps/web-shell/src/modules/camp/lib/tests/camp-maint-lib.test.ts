@@ -65,5 +65,7 @@ describe('permissions.canInAnyCamp', () => {
     expect(canInAnyCamp({ isTenantAdmin: false, permissions: ['camp.asset.manage'], byCamp: {} }, 'camp.asset.manage')).toBe(true)
     expect(canInAnyCamp({ isTenantAdmin: false, permissions: [], byCamp: { c2: ['camp.asset.manage'] } }, 'camp.asset.manage')).toBe(true)
     expect(canInAnyCamp({ isTenantAdmin: false, permissions: [], byCamp: { c2: ['camp.room.manage'] } }, 'camp.asset.manage')).toBe(false)
+    expect(canInAnyCamp({ isTenantAdmin: false, permissions: [], byCamp: { c1: ['camp.contract.manage'] } }, 'camp.contract.manage')).toBe(true)
+    expect(canInAnyCamp({ isTenantAdmin: false, permissions: [], byCamp: { c1: ['camp.room.manage'] } }, 'camp.contract.manage')).toBe(false)
   })
 })

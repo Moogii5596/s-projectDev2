@@ -6,13 +6,14 @@ import { Button, Card, Empty, ErrorBox, Field, Loading, Modal, NoAccess, PageHea
 import { useCampMutation } from '../hooks/useCampMutation'
 import { useCampPermissions } from '../hooks/useCampPermissions'
 import { todayUb } from '../lib/dates'
+import { canInAnyCamp, P } from '../lib/permissions'
 
 const exchangeRatesKey = ['camp', 'exchange-rates'] as const
 
 export default function ExchangeRatesPage() {
   const { t } = useTranslation()
   const permissions = useCampPermissions()
-  const canManage = permissions.can('camp.contract.manage')
+  const canManage = canInAnyCamp(permissions.data, P.CONTRACT_MANAGE)
   const [filters, setFilters] = useState({ from: '', to: '', currency: '' })
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState<ExchangeRateInput>({ rateDate: todayUb(), baseCurrency: '', quoteCurrency: '', rate: '', sourceNote: '' })

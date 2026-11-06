@@ -10,7 +10,7 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (61 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **78** хүснэгт, 41 enum, 31 функц, 70 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (62 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **82** хүснэгт, 41 enum, 35 функц, 76 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
@@ -18,9 +18,9 @@ tags: [codebase, database, rls, generated]
 
 **Бусад (tenant, MR, workflow, event bus, модулиуд):** [[#approval_logs]] · [[#auth_guard.password_failures]] · [[#budget_allocations]] · [[#budget_commitments]] · [[#budget_periods]] · [[#dlq_events]] · [[#feed_comments]] · [[#feed_post_media]] · [[#feed_posts]] · [[#feed_reactions]] · [[#feed_reports]] · [[#feed_revisions]] · [[#i18n_override_history]] · [[#i18n_overrides]] · [[#idempotency_keys]] · [[#installed_modules]] · [[#inventory_items]] · [[#mr_headers]] · [[#mr_items]] · [[#outbox_events]] · [[#super_admins]] · [[#tenant_routes]] · [[#tenants]] · [[#vendors]] · [[#workflow_definitions]] · [[#workflow_delegations]] · [[#workflow_instances]] · [[#workflow_sla_logs]] · [[#workflow_step_logs]]
 
-**Кемп (`camp_*`):** [[#camp_asset_categories]] · [[#camp_asset_movements]] · [[#camp_assets]] · [[#camp_audit_log]] · [[#camp_building_types]] · [[#camp_buildings]] · [[#camp_contract_item_prices]] · [[#camp_contract_items]] · [[#camp_contracts]] · [[#camp_cost_entries]] · [[#camp_crews]] · [[#camp_data_imports]] · [[#camp_department_shift_patterns]] · [[#camp_departments]] · [[#camp_employee_phones]] · [[#camp_employees]] · [[#camp_haul_records]] · [[#camp_maintenance_parts]] · [[#camp_maintenance_requests]] · [[#camp_meal_locations]] · [[#camp_meal_order_extras]] · [[#camp_meal_order_lines]] · [[#camp_meal_order_templates]] · [[#camp_meal_orders]] · [[#camp_movement_imports]] · [[#camp_movements]] · [[#camp_organizations]] · [[#camp_pii_access_log]] · [[#camp_position_settings]] · [[#camp_position_shift_patterns]] · [[#camp_positions]] · [[#camp_room_allocations]] · [[#camp_rooms]] · [[#camp_settings]] · [[#camp_shift_adjustments]] · [[#camp_stays]] · [[#camps]]
+**Кемп (`camp_*`):** [[#camp_asset_categories]] · [[#camp_asset_movements]] · [[#camp_assets]] · [[#camp_audit_log]] · [[#camp_building_types]] · [[#camp_buildings]] · [[#camp_contract_amendments]] · [[#camp_contract_item_prices]] · [[#camp_contract_items]] · [[#camp_contracts]] · [[#camp_cost_entries]] · [[#camp_crews]] · [[#camp_data_imports]] · [[#camp_department_shift_patterns]] · [[#camp_departments]] · [[#camp_employee_phones]] · [[#camp_employees]] · [[#camp_haul_records]] · [[#camp_maintenance_parts]] · [[#camp_maintenance_requests]] · [[#camp_meal_locations]] · [[#camp_meal_order_extras]] · [[#camp_meal_order_lines]] · [[#camp_meal_order_templates]] · [[#camp_meal_orders]] · [[#camp_movement_imports]] · [[#camp_movements]] · [[#camp_organizations]] · [[#camp_pii_access_log]] · [[#camp_position_settings]] · [[#camp_position_shift_patterns]] · [[#camp_positions]] · [[#camp_room_allocations]] · [[#camp_rooms]] · [[#camp_service_types]] · [[#camp_settings]] · [[#camp_shift_adjustments]] · [[#camp_stays]] · [[#camps]]
 
-**Үндсэн (`core_*`):** [[#core_feedback]] · [[#core_feedback_attachments]] · [[#core_feedback_votes]] · [[#core_permission_aliases]] · [[#core_permissions]] · [[#core_position_role_templates]] · [[#core_role_permissions]] · [[#core_roles]] · [[#core_user_invites]] · [[#core_user_permissions]] · [[#core_user_roles]] · [[#core_users]]
+**Үндсэн (`core_*`):** [[#core_exchange_rates]] · [[#core_feedback]] · [[#core_feedback_attachments]] · [[#core_feedback_votes]] · [[#core_permission_aliases]] · [[#core_permissions]] · [[#core_position_role_templates]] · [[#core_role_permissions]] · [[#core_roles]] · [[#core_units]] · [[#core_user_invites]] · [[#core_user_permissions]] · [[#core_user_roles]] · [[#core_users]]
 
 ## Бусад (tenant, MR, workflow, event bus, модулиуд)
 
@@ -494,7 +494,7 @@ Policy: `rls_tenant_routes_tenant` (restrictive ALL → app_user) · `tenant_iso
 | max_mfes | INTEGER | NN |  |
 | onboarded_at | TIMESTAMPTZ |  |  |
 
-Trigger: `update_tenants_updated_at` · `trg_tenants_camp_seed_roles` · `trg_tenants_core_seed_roles`
+Trigger: `update_tenants_updated_at` · `trg_tenants_camp_seed_roles` · `trg_tenants_core_seed_roles` · `trg_tenants_seed_contract_catalog`
 
 ### vendors
 
@@ -749,9 +749,35 @@ Policy: `tenant_isolation_camp_buildings` (permissive ALL → app_user (camp_app
 
 Trigger: `trg_camp_buildings_updated_at`
 
+### camp_contract_amendments
+
+🔒🔒 · үүсгэсэн `20261107005_camp_contracts_configurable.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| camp_id | UUID | NN |  |
+| contract_id | UUID | NN |  |
+| amendment_type | TEXT | NN |  |
+| effective_date | DATE | NN |  |
+| previous_end_date | DATE |  |  |
+| new_end_date | DATE |  |  |
+| document_no | TEXT |  |  |
+| note | TEXT |  |  |
+| created_by | UUID | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `UNIQUE (tenant_id, id)` · `CHECK (amendment_type <> 'EXTENSION' OR new_end_date IS NOT NULL)` · `FOREIGN KEY (tenant_id, camp_id, contract_id) REFERENCES camp_contracts (tenant_id, camp_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, created_by) REFERENCES core_users (tenant_id, id)`
+
+Policy: `tenant_isolation_camp_contract_amendments` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_camp_contract_amendments_updated_at` · `trg_camp_contract_amendments_immutable`
+
 ### camp_contract_item_prices
 
-🔒🔒 · үүсгэсэн `20261009005_camp_contracts.sql`
+🔒🔒 · үүсгэсэн `20261009005_camp_contracts.sql` · өөрчлөлт: +currency (`20261107005_camp_contracts_configurable.sql`), +note (`20261107005_camp_contracts_configurable.sql`), +created_by (`20261107005_camp_contracts_configurable.sql`), +amendment_id (`20261107005_camp_contracts_configurable.sql`)
 
 | Багана | Төрөл | Шинж | FK |
 |---|---|---|---|
@@ -763,8 +789,12 @@ Trigger: `trg_camp_buildings_updated_at`
 | vat_included | BOOLEAN | NN |  |
 | created_at | TIMESTAMPTZ | NN |  |
 | updated_at | TIMESTAMPTZ | NN |  |
+| currency | TEXT | NN |  |
+| note | TEXT |  |  |
+| created_by | UUID |  |  |
+| amendment_id | UUID |  |  |
 
-Constraint: `UNIQUE (contract_item_id, effective_from)` · `FOREIGN KEY (tenant_id, contract_item_id) REFERENCES camp_contract_items (tenant_id, id) ON DELETE CASCADE`
+Constraint: `UNIQUE (contract_item_id, effective_from)` · `FOREIGN KEY (tenant_id, contract_item_id) REFERENCES camp_contract_items (tenant_id, id) ON DELETE CASCADE` · `UNIQUE (tenant_id, id)` · `FOREIGN KEY (tenant_id, created_by) REFERENCES core_users (tenant_id, id)` · `FOREIGN KEY (tenant_id, amendment_id) REFERENCES camp_contract_amendments (tenant_id, id)`
 
 Policy: `tenant_isolation_camp_contract_item_prices` (permissive ALL → app_user (camp_apply_tenant_rls))
 
@@ -772,7 +802,7 @@ Trigger: `trg_camp_contract_item_prices_updated_at`
 
 ### camp_contract_items
 
-🔒🔒 · үүсгэсэн `20261009005_camp_contracts.sql`
+🔒🔒 · үүсгэсэн `20261009005_camp_contracts.sql` · өөрчлөлт: +service_type_id (`20261107005_camp_contracts_configurable.sql`), +unit_id (`20261107005_camp_contracts_configurable.sql`), +quantity_rule (`20261107005_camp_contracts_configurable.sql`), +quantity_divisor (`20261107005_camp_contracts_configurable.sql`), +meal_type (`20261107005_camp_contracts_configurable.sql`), −service_type (`20261107005_camp_contracts_configurable.sql`), −unit (`20261107005_camp_contracts_configurable.sql`)
 
 | Багана | Төрөл | Шинж | FK |
 |---|---|---|---|
@@ -780,13 +810,16 @@ Trigger: `trg_camp_contract_item_prices_updated_at`
 | tenant_id | UUID | NN | → tenants (cascade) |
 | camp_id | UUID | NN |  |
 | contract_id | UUID | NN |  |
-| service_type | "CampServiceType" | NN |  |
-| unit | "CampContractUnit" | NN |  |
 | description | TEXT |  |  |
 | created_at | TIMESTAMPTZ | NN |  |
 | updated_at | TIMESTAMPTZ | NN |  |
+| service_type_id | UUID | NN |  |
+| unit_id | UUID | NN |  |
+| quantity_rule | TEXT |  |  |
+| quantity_divisor | NUMERIC(8,2) |  |  |
+| meal_type | "CampMealType" |  |  |
 
-Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, camp_id, id)` · `UNIQUE (contract_id, service_type)` · `CHECK ( (service_type = 'MEAL') = (unit = 'PERSON_DAY'))` · `FOREIGN KEY (tenant_id, camp_id, contract_id) REFERENCES camp_contracts (tenant_id, camp_id, id) ON DELETE CASCADE`
+Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, camp_id, id)` · `UNIQUE (contract_id, service_type)` · `CHECK ( (service_type = 'MEAL') = (unit = 'PERSON_DAY'))` · `FOREIGN KEY (tenant_id, camp_id, contract_id) REFERENCES camp_contracts (tenant_id, camp_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, service_type_id) REFERENCES camp_service_types (tenant_id, id)` · `FOREIGN KEY (tenant_id, unit_id) REFERENCES core_units (tenant_id, id)` · `CHECK ( (quantity_rule IS NULL AND quantity_divisor IS NULL AND meal_type IS NULL) OR (quantity_rule = 'TOTAL_DIV_N' AND quantity_divisor IS`
 
 Policy: `tenant_isolation_camp_contract_items` (permissive ALL → app_user (camp_apply_tenant_rls))
 
@@ -794,7 +827,7 @@ Trigger: `trg_camp_contract_items_updated_at`
 
 ### camp_contracts
 
-🔒🔒 · үүсгэсэн `20261009005_camp_contracts.sql`
+🔒🔒 · үүсгэсэн `20261009005_camp_contracts.sql` · өөрчлөлт: +customer_organization_id (`20261107005_camp_contracts_configurable.sql`), +currency (`20261107005_camp_contracts_configurable.sql`), +payment_currency (`20261107005_camp_contracts_configurable.sql`), +vat_rate (`20261107005_camp_contracts_configurable.sql`), +rate_policy (`20261107005_camp_contracts_configurable.sql`), +fixed_rate (`20261107005_camp_contracts_configurable.sql`), +payment_terms (`20261107005_camp_contracts_configurable.sql`)
 
 | Багана | Төрөл | Шинж | FK |
 |---|---|---|---|
@@ -811,8 +844,15 @@ Trigger: `trg_camp_contract_items_updated_at`
 | note | TEXT |  |  |
 | created_at | TIMESTAMPTZ | NN |  |
 | updated_at | TIMESTAMPTZ | NN |  |
+| customer_organization_id | UUID |  |  |
+| currency | TEXT | NN |  |
+| payment_currency | TEXT | NN |  |
+| vat_rate | NUMERIC(5,2) | NN |  |
+| rate_policy | TEXT | NN |  |
+| fixed_rate | NUMERIC(18,6) |  |  |
+| payment_terms | JSONB | NN |  |
 
-Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, camp_id, id)` · `UNIQUE (tenant_id, contract_no)` · `CHECK (end_date IS NULL OR end_date >= start_date)` · `CHECK ((status = 'TERMINATED') = (terminated_at IS NOT NULL))` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id)` · `FOREIGN KEY (tenant_id, organization_id) REFERENCES camp_organizations (tenant_id, id)`
+Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, camp_id, id)` · `UNIQUE (tenant_id, contract_no)` · `CHECK (end_date IS NULL OR end_date >= start_date)` · `CHECK ((status = 'TERMINATED') = (terminated_at IS NOT NULL))` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id)` · `FOREIGN KEY (tenant_id, organization_id) REFERENCES camp_organizations (tenant_id, id)` · `CHECK ( ((rate_policy = 'NONE') = (currency = payment_currency)) AND ((rate_policy = 'FIXED') = (fixed_rate IS NOT NULL)))` · `FOREIGN KEY (tenant_id, customer_organization_id) REFERENCES camp_organizations (tenant_id, id)`
 
 Policy: `tenant_isolation_camp_contracts` (permissive ALL → app_user (camp_apply_tenant_rls))
 
@@ -832,7 +872,7 @@ Trigger: `trg_camp_contracts_updated_at`
 | haul_record_id | UUID |  |  |
 | meal_order_id | UUID |  |  |
 | maintenance_part_id | UUID |  |  |
-| service_type | "CampServiceType" |  |  |
+| service_type | TEXT |  |  |
 | contract_item_id | UUID |  |  |
 | organization_id | UUID |  |  |
 | description | TEXT |  |  |
@@ -848,7 +888,7 @@ Trigger: `trg_camp_contracts_updated_at`
 | created_at | TIMESTAMPTZ | NN |  |
 | updated_at | TIMESTAMPTZ | NN |  |
 
-Constraint: `CHECK (net_amount + vat_amount = gross_amount)` · `CHECK ( (source = 'HAUL' AND haul_record_id IS NOT NULL AND meal_order_id IS NULL AND maintenance_part_id IS NULL AND contract_item_id IS NO` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id)` · `FOREIGN KEY (tenant_id, haul_record_id) REFERENCES camp_haul_records (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, meal_order_id) REFERENCES camp_meal_orders (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, maintenance_part_id) REFERENCES camp_maintenance_parts (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, contract_item_id) REFERENCES camp_contract_items (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, organization_id) REFERENCES camp_organizations (tenant_id, id)` · `FOREIGN KEY (tenant_id, created_by) REFERENCES core_users (tenant_id, id)`
+Constraint: `CHECK (net_amount + vat_amount = gross_amount)` · `CHECK ( (source = 'HAUL' AND haul_record_id IS NOT NULL AND meal_order_id IS NULL AND maintenance_part_id IS NULL AND contract_item_id IS NO` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id)` · `FOREIGN KEY (tenant_id, haul_record_id) REFERENCES camp_haul_records (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, meal_order_id) REFERENCES camp_meal_orders (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, maintenance_part_id) REFERENCES camp_maintenance_parts (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, contract_item_id) REFERENCES camp_contract_items (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, organization_id) REFERENCES camp_organizations (tenant_id, id)` · `FOREIGN KEY (tenant_id, created_by) REFERENCES core_users (tenant_id, id)` · `CHECK ( (source = 'HAUL' AND haul_record_id IS NOT NULL AND meal_order_id IS NULL AND maintenance_part_id IS NULL AND contract_item_id IS NO`
 
 Policy: `tenant_isolation_camp_cost_entries` (permissive ALL → app_user (camp_apply_tenant_rls))
 
@@ -1426,6 +1466,31 @@ Policy: `tenant_isolation_camp_rooms` (permissive ALL → app_user (camp_apply_t
 
 Trigger: `trg_camp_rooms_updated_at`
 
+### camp_service_types
+
+🔒🔒 · үүсгэсэн `20261107005_camp_contracts_configurable.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| code | TEXT | NN |  |
+| name_mn | TEXT | NN |  |
+| name_en | TEXT |  |  |
+| name_zh | TEXT |  |  |
+| quantity_source | TEXT | NN |  |
+| default_unit_id | UUID |  |  |
+| sort_order | INTEGER | NN |  |
+| is_active | BOOLEAN | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, code)` · `FOREIGN KEY (tenant_id, default_unit_id) REFERENCES core_units (tenant_id, id)`
+
+Policy: `tenant_isolation_camp_service_types` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_camp_service_types_updated_at`
+
 ### camp_settings
 
 🔒🔒 · үүсгэсэн `20261009002_camp_master.sql` · өөрчлөлт: +catering_organization_id (`20261010002_camp_org_services_maintenance.sql`), +extension_default_days (`20261106002_camp_extension_days.sql`), +auto_code_prefix (`20261106004_camp_auto_code_prefix.sql`), +meal_order_lead_days (`20261107003_camp_meal_orders_configurable.sql`), +meal_order_after_cutoff (`20261107003_camp_meal_orders_configurable.sql`), +meal_order_requires_accept (`20261107003_camp_meal_orders_configurable.sql`), +meal_order_edit_after_accept (`20261107003_camp_meal_orders_configurable.sql`), +meal_order_default_fill (`20261107003_camp_meal_orders_configurable.sql`), +meal_order_allow_self_accept (`20261107003_camp_meal_orders_configurable.sql`)
@@ -1528,6 +1593,29 @@ Policy: `tenant_isolation_camps` (permissive ALL → app_user (camp_apply_tenant
 Trigger: `trg_camps_updated_at`
 
 ## Үндсэн (`core_*`)
+
+### core_exchange_rates
+
+🔒🔒 · үүсгэсэн `20261107005_camp_contracts_configurable.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| rate_date | DATE | NN |  |
+| base_currency | TEXT | NN |  |
+| quote_currency | TEXT | NN |  |
+| rate | NUMERIC(18,6) | NN |  |
+| source_note | TEXT |  |  |
+| created_by | UUID | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `CHECK (base_currency <> quote_currency)` · `UNIQUE (tenant_id, rate_date, base_currency, quote_currency)` · `FOREIGN KEY (tenant_id, created_by) REFERENCES core_users (tenant_id, id)`
+
+Policy: `tenant_isolation_core_exchange_rates` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_core_exchange_rates_updated_at`
 
 ### core_feedback
 
@@ -1685,6 +1773,30 @@ Policy: `tenant_isolation_core_roles` (permissive ALL → app_user (camp_apply_t
 
 Trigger: `trg_core_roles_protect_system` · `trg_core_roles_updated_at` · `trg_core_roles_protect_system`
 
+### core_units
+
+🔒🔒 · үүсгэсэн `20261107005_camp_contracts_configurable.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| code | TEXT | NN |  |
+| name_mn | TEXT | NN |  |
+| name_en | TEXT |  |  |
+| name_zh | TEXT |  |  |
+| decimals | SMALLINT | NN |  |
+| sort_order | INTEGER | NN |  |
+| is_active | BOOLEAN | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, code)`
+
+Policy: `tenant_isolation_core_units` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_core_units_updated_at`
+
 ### core_user_invites
 
 🔒🔒 · үүсгэсэн `20261013005_core_user_invites.sql`
@@ -1836,20 +1948,24 @@ Trigger: `update_core_users_updated_at`
 | `assert_tenant_context_set` |  | `0003_force_rls_hardening.sql` |
 | `auth_guard.hook_password_verification_attempt` | event JSONB | `20261012006_auth_password_guard.sql` |
 | `camp_apply_tenant_rls` | p_table regclass | `20261009001_camp_rbac.sql` |
+| `camp_contract_amendments_immutable` |  | `20261107005_camp_contracts_configurable.sql` |
+| `camp_contract_item_service_code` | p_tenant_id uuid, p_item_id uuid | `20261107005_camp_contracts_configurable.sql` |
 | `camp_cost_entries_immutable` |  | `20261009006_camp_operations.sql` |
 | `camp_employees_names` |  | `20261019002_hr_employee_names_phones.sql` |
 | `camp_employees_sync_position_roles` |  | `20261106005_core_rbac_adr007.sql` |
-| `camp_haul_records_guard` |  | `20261009006_camp_operations.sql` |
+| `camp_haul_records_guard` |  | `20261107005_camp_contracts_configurable.sql` |
 | `camp_maintenance_parts_protect` |  | `20261010002_camp_org_services_maintenance.sql` |
 | `camp_maintenance_requests_protect` |  | `20261009004_camp_assets_maintenance.sql` |
 | `camp_meal_edit_allowed` |  | `20261107003_camp_meal_orders_configurable.sql` |
 | `camp_meal_order_lines_guard` |  | `20261107003_camp_meal_orders_configurable.sql` |
-| `camp_meal_orders_guard` |  | `20261107003_camp_meal_orders_configurable.sql` |
+| `camp_meal_orders_guard` |  | `20261107005_camp_contracts_configurable.sql` |
 | `camp_roles_protect_system` |  | `20261009001_camp_rbac.sql` |
+| `camp_seed_contract_catalog` | p_tenant_id uuid | `20261107005_camp_contracts_configurable.sql` |
 | `camp_seed_default_roles` | p_tenant_id uuid | `20261017002_camp_employees_termination.sql` |
 | `camp_stays_validate` |  | `20261009003_camp_attendance.sql` |
 | `camp_tenant_exists` | p_tenant_id uuid | `20261009001_camp_rbac.sql` |
 | `camp_tenants_after_insert` |  | `20261009001_camp_rbac.sql` |
+| `camp_tenants_seed_contract_catalog` |  | `20261107005_camp_contracts_configurable.sql` |
 | `camp_user_roles_apply_template` |  | `20261013001_camp_user_permissions.sql` |
 | `cleanup_tenant_context` |  | `0003_force_rls_hardening.sql` |
 | `clone_tables_to_schema` | p_schema_name TEXT, p_tenant_id UUID | `20260921004_schema_isolation.sql` |
