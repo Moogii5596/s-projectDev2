@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
+import { rgbaToThumbHash } from 'thumbhash';
 import sharp, { type Metadata, type Sharp } from 'sharp';
 import { badRequest, payloadTooLarge } from '../common/i18n/app-error';
 
@@ -51,9 +53,67 @@ export interface ImageProcessOptions {
 
 const QUALITY = { main: 82, thumbnail: 72 } as const;
 
+/** Responsive хувилбарын өргөнүүд (Feed) */
+export const IMAGE_VARIANT_WIDTHS = [480, 1080, 2048] as const;
+const VARIANT_QUALITY: Record<number, number> = { 480: 75, 1080: 80, 2048: 82 };
+
+export interface HashedVariant extends ImageVariant {
+  /** sha256(data) hex-ийн эхний 16 тэмдэгт */
+  hash: string;
+}
+
+export interface ResponsiveImage {
+  /** EXIF-ээр эргүүлсний дараах, хамгийн том хувилбарын хэмжээ */
+  width: number;
+  height: number;
+  /** base64 (thumbhash) */
+  thumbhash: string;
+  /** Өргөнөөр өсөх дараалал; жижиг эх зургийн давхардал хасагдсан */
+  variants: HashedVariant[];
+}
+
 @Injectable()
 export class ImageProcessorService {
   async process(input: Buffer, opts: ImageProcessOptions = {}): Promise<ProcessedImage> {
+    const { base, format } = await this.prepare(input, opts);
+    try {
+      const [main, thumbnail] = await Promise.all([
+        encode(base.clone(), opts.maxEdge ?? IMAGE_MAX_EDGE, format, QUALITY.main),
+        encode(base.clone(), opts.thumbEdge ?? IMAGE_THUMB_EDGE, format, QUALITY.thumbnail),
+      ]);
+      return { main, thumbnail };
+    } catch {
+      throw badRequest(IMAGE_ERR.unreadable);
+    }
+  }
+
+  async processResponsive(input: Buffer, opts: ImageProcessOptions = {}): Promise<ResponsiveImage> {
+    const { base, format } = await this.prepare(input, opts);
+    try {
+      const encoded = await Promise.all(
+        IMAGE_VARIANT_WIDTHS.map((w) => encodeWidth(base.clone(), w, format, VARIANT_QUALITY[w] ?? 80)),
+      );
+      // withoutEnlargement: жижиг эх зурагт хэд хэдэн өргөн ижил хэмжээтэй гарна — давхардлыг хасна
+      const variants: HashedVariant[] = [];
+      for (const v of encoded) {
+        if (!variants.some((x) => x.width === v.width)) variants.push({ ...v, hash: hashOf(v.data) });
+      }
+      const largest = variants[variants.length - 1]!;
+      const { data, info } = await base
+        .clone()
+        .resize({ width: 100, height: 100, fit: 'inside', withoutEnlargement: true })
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const thumbhash = Buffer.from(rgbaToThumbHash(info.width, info.height, data)).toString('base64');
+      return { width: largest.width, height: largest.height, thumbhash, variants };
+    } catch {
+      throw badRequest(IMAGE_ERR.unreadable);
+    }
+  }
+
+  /** Оролтын шалгалт + EXIF-ийн дагуу эргүүлсэн sharp pipeline (process/processResponsive-д нийтлэг) */
+  private async prepare(input: Buffer, opts: ImageProcessOptions): Promise<{ base: Sharp; format: ImageOutputFormat }> {
     const format = opts.format ?? 'webp';
     const maxBytes = opts.maxInputBytes ?? IMAGE_MAX_INPUT_BYTES;
     const maxPixels = opts.maxPixels ?? IMAGE_MAX_PIXELS;
@@ -73,20 +133,23 @@ export class ImageProcessorService {
 
     // rotate() — EXIF Orientation-оор эргүүлнэ (дараа нь метадата хаягдана). withMetadata() дуудахгүй = EXIF/GPS/ICC арилна.
     const base = sharp(input, { failOn: 'error', limitInputPixels: maxPixels }).rotate();
-    try {
-      const [main, thumbnail] = await Promise.all([
-        encode(base.clone(), opts.maxEdge ?? IMAGE_MAX_EDGE, format, QUALITY.main),
-        encode(base.clone(), opts.thumbEdge ?? IMAGE_THUMB_EDGE, format, QUALITY.thumbnail),
-      ]);
-      return { main, thumbnail };
-    } catch {
-      throw badRequest(IMAGE_ERR.unreadable);
-    }
+    return { base, format };
   }
 }
 
+function hashOf(data: Buffer): string {
+  return createHash('sha256').update(data).digest('hex').slice(0, 16);
+}
+
 async function encode(img: Sharp, edge: number, format: ImageOutputFormat, quality: number): Promise<ImageVariant> {
-  img.resize({ width: edge, height: edge, fit: 'inside', withoutEnlargement: true });
+  return finish(img.resize({ width: edge, height: edge, fit: 'inside', withoutEnlargement: true }), format, quality);
+}
+
+async function encodeWidth(img: Sharp, width: number, format: ImageOutputFormat, quality: number): Promise<ImageVariant> {
+  return finish(img.resize({ width, fit: 'inside', withoutEnlargement: true }), format, quality);
+}
+
+async function finish(img: Sharp, format: ImageOutputFormat, quality: number): Promise<ImageVariant> {
   const out =
     format === 'jpeg'
       ? img.flatten({ background: '#ffffff' }).jpeg({ quality, mozjpeg: true })

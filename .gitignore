@@ -10,6 +10,8 @@ build/
 docs/source/
 # v0.2.3 Блок D: импортын гаралт (хувийн мэдээлэлтэй)
 _data/
+# Feed-ийн зураг (PILOT_STORAGE_DIR анхдагч)
+/storage/
 # Environment files
 .env
 .env.staging
