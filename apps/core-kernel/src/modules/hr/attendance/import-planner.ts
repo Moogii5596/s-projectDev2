@@ -52,6 +52,10 @@ export interface PlannedRow {
   warnings?: string[];
   /** ShiftChange эх мөр (хуудас, мөр, нэр) */
   source?: ShiftChangeSource;
+  /** R4.1: PREVIEW-д устгасан (planner алгассан) */
+  deleted?: boolean;
+  /** R4.1: ажилтныг гараар сольсон */
+  edited?: { fromCode: string };
 }
 export interface PlannedMovement {
   key: string;
@@ -92,6 +96,7 @@ export function planImport(input: ParsedRow[], state: PlannerState): ImportPlan 
     if (r.warnings?.length) out.warnings = [...r.warnings];
     if (r.action) out.action = r.action;
     if (r.source) out.source = r.source;
+    if (r.edited) out.edited = r.edited;
     plan.rows.push(out);
     const emp = r.employeeCode ? state.employees.get(r.employeeCode) : undefined;
     if (r.employeeCode && !emp) out.errors.push(t('camp.row.employee_not_found', { code: r.employeeCode }));

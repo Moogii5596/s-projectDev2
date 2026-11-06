@@ -2,7 +2,7 @@
 title: "Backend модулиуд (core-kernel)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-19
+last_updated: 2026-11-06
 tags: [codebase, backend, camp, hr, auth]
 ---
 
@@ -81,9 +81,9 @@ tags: [codebase, backend, camp, hr, auth]
 - **TERMINATED-ийн дүрэм:** жагсаалт анхдагчаар хасна (`status=TERMINATED` шүүлтээр), засах/бөөнөөр → 409, `assertCodeUnique`/импорт/ирцийн planner кодоор TERMINATED биш бүртгэлийг сонгоно (импорт: зөвхөн гарсан кодтой мөр → `row.code_terminated`), экспорт хасна. Тест: `hr-employee-lifecycle.test`, `camp-v022-terminate` integration.
 
 ## hr/attendance
-- **Ирц:** `hr-attendance.service.ts` — xlsx импорт **PREVIEW → CONFIRM** (нэг tx), гараар бүртгэл, устгал · `hr-shifts.service.ts` (ээлжийн өөрчлөлт, календарь). Цэвэр функц: `import-parser`, `import-planner`, `attendance-state`, `roster`, `shift-resolver`, `meal-rules`, `range` (огноо — `camp/common/camp-date.ts`). **v0.2.3 Блок R:** PREVIEW загварыг автоматаар таньна — «Ирц» эсвэл HR ShiftChange: `shiftchange-parser` (хуудас ирэх / буух / Сунах; ЗОХИЦУУЛАЛТ, чөлөө алгасна) → `shiftchange-resolver` (код / овог+нэрээр тулгах) → planner (`action: 'EXTEND'` → EXTENSION зохицуулалт, `camp_settings.extension_default_days`).
+- **Ирц:** `hr-attendance.service.ts` — xlsx импорт **PREVIEW → CONFIRM** (нэг tx), гараар бүртгэл, устгал · `hr-shifts.service.ts` (ээлжийн өөрчлөлт, календарь). Цэвэр функц: `import-parser`, `import-planner`, `attendance-state`, `roster`, `shift-resolver`, `meal-rules`, `range` (огноо — `camp/common/camp-date.ts`). **v0.2.3 Блок R:** PREVIEW загварыг автоматаар таньна — «Ирц» эсвэл HR ShiftChange: `shiftchange-parser` (хуудас ирэх / буух / Сунах; ЗОХИЦУУЛАЛТ, чөлөө алгасна) → `shiftchange-resolver` (код / овог+нэрээр тулгах) → planner (`action: 'EXTEND'` → EXTENSION зохицуулалт, `camp_settings.extension_default_days`). **R4.1:** `PATCH movement-imports/:id/rows` (зөвхөн PREVIEW) — мөр бүрт ажилтан солих / устгах / сэргээх (`import-edits.ts`: `applyRowEdits`, `planWithDeleted`; `parsedRows`-д `deleted`, `edited.fromCode`) → дахин төлөвлөж шинэ PREVIEW; CONFIRM устгасан мөрийг алгасна (бүгд устгагдсан → 400). `camp_movement_imports.preview_meta` = `{ format, skippedSheets }`. **R4.2:** `roster-gaps.ts` — ShiftChange PREVIEW / PATCH хариунд `rosterGaps` (ростероор ирэх / явах ёстой боловч файлд алга; анхааруулга, DB-д хадгалахгүй).
 - **Кемпийн байрлалт (порт):** `stay-store.ts` — `AttendanceStayStore` + `HrAttendanceHooks`. Ирцийн бичилт `camp_stays`-ыг **нэг transaction-д** порт-оор шинэчилнэ; хэрэгжүүлэлт `CampStayStore` (Кемп), бүртгэл `CampHrBridge.onModuleInit`. Бүртгэгдээгүй бол алдаа.
-- **Хүснэгт:** `camp_movements`, `camp_movement_imports`, `camp_shift_adjustments`. **Эрх:** `camp.movement.import`, `camp.shift.adjust`. Тест: `import.test`, `attendance-services.test` (Кемптэй хамт), `camp-attendance` integration + golden.
+- **Хүснэгт:** `camp_movements`, `camp_movement_imports`, `camp_shift_adjustments`. **Эрх:** `camp.movement.import`, `camp.shift.adjust`. Тест: `import.test`, `import-edits.test`, `roster-gaps.test`, `attendance-services.test` (Кемптэй хамт), `camp-attendance` integration + golden.
 
 ## hr/import
 - `hr-data-import.service.ts` — хүснэгтээр оруулах/экспорт, урсгал PREVIEW → CONFIRM (дахин шалгана). Handler-ийн **бүртгэл** (v0.2.3 Блок D): HR-ийнх `employees`, `former-employees`, `departments`, `positions`; бусад модуль `registerHandler(urlType, handler)` (Кемп: `building-types`, `buildings`, `rooms`, `room-allocations` — `CampHrBridge`). `registerExport` — handler-гүй экспорт. Хүснэгт: `camp_data_imports` (`CampDataImportType` 8 утга).

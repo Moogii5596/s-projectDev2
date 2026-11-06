@@ -15,6 +15,7 @@ import type {
   ImportConfirmResult,
   ImportHeader,
   ImportPreview,
+  ImportRowEdit,
   MealType,
   Movement,
   Page,
@@ -86,6 +87,8 @@ export const hrApi = {
     return (await apiClient.post<ImportPreview>(siteUrl(campId, '/movement-imports'), form, { headers: { 'Content-Type': 'multipart/form-data' } })).data
   },
   imports: (campId: string) => get<ImportHeader[]>(siteUrl(campId, '/movement-imports')),
+  /** v0.2.3 R4.1 — PREVIEW мөр: ажилтан солих / устгах / сэргээх → шинэ PREVIEW */
+  updateImportRows: (campId: string, id: string, rows: ImportRowEdit[]) => patch<ImportPreview>(siteUrl(campId, `/movement-imports/${id}/rows`), { rows }),
   confirmImport: (campId: string, id: string) => post<ImportConfirmResult>(siteUrl(campId, `/movement-imports/${id}/confirm`)),
   cancelImport: (campId: string, id: string) => post<unknown>(siteUrl(campId, `/movement-imports/${id}/cancel`)),
   movements: (campId: string, q: MovementQuery) => get<Movement[]>(siteUrl(campId, '/movements'), q),

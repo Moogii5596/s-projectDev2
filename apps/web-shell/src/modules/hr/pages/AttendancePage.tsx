@@ -17,6 +17,8 @@ import { type MealMode, mealsPayload } from '../../camp/lib/meals'
 import { downloadBlob } from '../../camp/lib/download'
 import i18n from '../../../i18n'
 import EmployeePicker, { type PickedEmployee } from '../../camp/components/EmployeePicker'
+import ImportPreviewHeader from '../components/ImportPreviewHeader'
+import ImportRowsTable from '../components/ImportRowsTable'
 import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../camp/components/ui'
 
 const MAX_UPLOAD = 2 * 1024 * 1024
@@ -128,7 +130,6 @@ function DayListCard({ campId }: { campId: string }) {
 function ImportCard({ campId, preview, setPreview }: { campId: string; preview: ImportPreview | null; setPreview: Dispatch<SetStateAction<ImportPreview | null>> }) {
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
-  const [errorsOnly, setErrorsOnly] = useState(true)
   const [localError, setLocalError] = useState<string | null>(null)
   const [confirmErrors, setConfirmErrors] = useState<ImportRowError[] | null>(null)
   const [done, setDone] = useState<string | null>(null)
@@ -136,7 +137,6 @@ function ImportCard({ campId, preview, setPreview }: { campId: string; preview: 
 
   const upload = useCampMutation((file: File) => hrApi.uploadImport(campId, file), [campKeys.imports(campId)], (res) => {
     setPreview(res)
-    setErrorsOnly(res.summary.errorRows > 0)
     setConfirmErrors(null)
     setDone(null)
   })
@@ -176,8 +176,6 @@ function ImportCard({ campId, preview, setPreview }: { campId: string; preview: 
       },
     })
 
-  const rows = preview ? (errorsOnly ? preview.rows.filter((r) => r.errors.length > 0) : preview.rows) : []
-
   return (
     <Card
       title={t('camp.att.import_title')}
@@ -189,6 +187,7 @@ function ImportCard({ campId, preview, setPreview }: { campId: string; preview: 
     >
       <div className="space-y-3">
         <p className="text-xs text-gray-500">{t('camp.att.import_help')}</p>
+        <p className="text-xs text-gray-500">{t('camp.att.import_help_shiftchange')}</p>
         <div className="flex flex-wrap items-center gap-3">
           <label className="inline-flex items-center gap-2 text-sm">
             <span className="sr-only">{t('camp.att.file')}</span>
@@ -210,53 +209,16 @@ function ImportCard({ campId, preview, setPreview }: { campId: string; preview: 
 
         {preview && (
           <div className="border border-gray-200 rounded-lg p-3 space-y-3">
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-medium">{preview.import.fileName}</span>
-              <Badge>{t('camp.att.rows', { n: preview.import.totalRows })}</Badge>
-              <Badge tone="green">{t('camp.att.arrivals', { n: preview.summary.arrivals })}</Badge>
-              <Badge tone="blue">{t('camp.att.departures', { n: preview.summary.departures })}</Badge>
-              <Badge tone="yellow">{t('camp.att.off_roster', { n: preview.summary.offRoster })}</Badge>
-              <Badge>{t('camp.att.adjustments', { n: preview.summary.shiftAdjustments })}</Badge>
-              {preview.summary.errorRows > 0 ? (
-                <Badge tone="red">{t('camp.att.error_rows', { n: preview.summary.errorRows })}</Badge>
-              ) : (
-                <Badge tone="green">{t('camp.att.no_errors')}</Badge>
-              )}
-            </div>
-            <label className="inline-flex items-center gap-2 text-sm text-gray-600">
-              <input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} /> {t('camp.import.only_errors')}
-            </label>
-            {rows.length === 0 ? (
-              <Empty>{errorsOnly ? t('camp.att.no_error_rows') : t('camp.att.no_rows')}</Empty>
-            ) : (
-              <div className="max-h-96 overflow-y-auto">
-                <Table
-                  head={[
-                    t('camp.att.col.row'),
-                    t('camp.common.code'),
-                    t('camp.att.col.date'),
-                    t('camp.att.col.direction'),
-                    t('camp.att.col.kind'),
-                    t('camp.att.col.meals'),
-                    t('camp.att.col.shift'),
-                    t('camp.att.col.error'),
-                  ]}
-                >
-                  {rows.map((r) => (
-                    <tr key={r.row} className={r.errors.length > 0 ? 'bg-red-50/60' : ''}>
-                      <td className={`${td} text-gray-400`}>{r.row}</td>
-                      <td className={`${td} font-mono`}>{r.employeeCode || '—'}</td>
-                      <td className={td}>{r.date ?? '—'}</td>
-                      <td className={td}>{r.direction ? DIRECTION_LABEL[r.direction] : '—'}</td>
-                      <td className={td}>{r.kind ? KIND_LABEL[r.kind] : '—'}</td>
-                      <td className={td}>{meals(r.meals)}</td>
-                      <td className={td}>{r.shift ? SHIFT_LABEL[r.shift] : ''}</td>
-                      <td className={`${td} text-red-700`}>{r.errors.join('; ')}</td>
-                    </tr>
-                  ))}
-                </Table>
-              </div>
-            )}
+            <ImportPreviewHeader preview={preview} />
+            <ImportRowsTable
+              key={preview.import.id}
+              campId={campId}
+              preview={preview}
+              onUpdated={(p) => {
+                setPreview(p)
+                setConfirmErrors(null)
+              }}
+            />
             {confirmErrors && (
               <div role="alert" className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700 space-y-1">
                 <div className="font-medium">{t('camp.att.confirm_errors', { n: confirmErrors.length })}</div>

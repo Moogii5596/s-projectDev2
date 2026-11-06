@@ -179,6 +179,42 @@ describe('📥 Ирцийн xlsx импорт', () => {
     expect((await api().post(camp(`/movement-imports/${r.body.import.id}/cancel`)).set(auth())).status).toBe(200);
   });
 
+  it('[R4.1] PREVIEW мөр засах / устгах → дахин төлөвлөнө (DB-д бичихгүй); validation; CANCEL-ийн дараа 409', async () => {
+    const hr = (p: string) => `/api/v1/hr/sites/${ids.c1}${p}`;
+    const r = await upload([
+      ['E1', '2026-10-07', 'ARRIVAL'],
+      ['E4', '2026-10-05', 'ARRIVAL'],                // мөр 3: хоолгүй → алдаа → устгана
+      ['NOPE', '2026-10-07', 'ARRIVAL', 'NONE'],      // мөр 4: ажилтан алга → E3 болгоно
+    ]);
+    expect(r.body.import.errorRows).toBe(2);
+    const id = r.body.import.id;
+    const patch = (body: object) => api().patch(hr(`/movement-imports/${id}/rows`)).set(auth()).send(body);
+
+    expect((await patch({ rows: [{ row: 0, deleted: true }] })).status).toBe(400);              // DTO
+    expect((await patch({ rows: [{ row: 4 }] })).body.code).toBe('camp.err.attendance.13');      // аль нь ч алга
+    expect((await patch({ rows: [{ row: 9, deleted: true }] })).body.code).toBe('camp.err.attendance.12');
+    expect((await patch({ rows: [{ row: 4, employeeId: '00000000-0000-7000-8000-000000000000' }] })).body.code).toBe('camp.err.attendance.5');
+
+    const e = await patch({ rows: [{ row: 3, deleted: true }, { row: 4, employeeId: ids.E3 }] });
+    expect(e.status).toBe(200);
+    expect(e.body.import).toMatchObject({ id, status: 'PREVIEW', totalRows: 2, okRows: 2, errorRows: 0 });
+    expect(e.body.summary).toMatchObject({ arrivals: 2, errorRows: 0, deletedRows: 1 });
+    expect(e.body.format).toBe('TEMPLATE');
+    expect(e.body.rows.map((x: { row: number; deleted?: boolean; employeeCode: string }) => [x.row, !!x.deleted, x.employeeCode])).toEqual([[2, false, 'E1'], [3, true, 'E4'], [4, false, 'E3']]);
+    const db = await prismaAdmin.hrMovementImport.findUniqueOrThrow({ where: { id } });
+    expect(db).toMatchObject({ status: 'PREVIEW', totalRows: 2, errorRows: 0 });
+    expect((db.parsedRows as { row: number; deleted?: boolean; edited?: unknown }[]).map((x) => [x.row, !!x.deleted, x.edited ?? null])).toEqual([[2, false, null], [3, true, null], [4, false, { fromCode: 'NOPE' }]]);
+    expect(await prismaAdmin.hrMovement.count({ where: { tenantId } })).toBe(0);
+
+    // сэргээхэд алдаа буцаж ирнэ
+    const back = await patch({ rows: [{ row: 3, deleted: false }] });
+    expect(back.body.import.errorRows).toBe(1);
+
+    expect((await api().post(camp(`/movement-imports/${id}/cancel`)).set(auth())).status).toBe(200);
+    const late = await patch({ rows: [{ row: 3, deleted: true }] });
+    expect([late.status, late.body.code]).toEqual([409, 'camp.err.attendance.11']);
+  });
+
   it('засварласан файл → CONFIRM: ростер/ээлжийн бус ангилал, stay нээх/хаах', async () => {
     const r = await upload([
       ['E1', '2026-10-07', 'ARRIVAL'],                          // А баг ирэх Лхагва → ROSTER, DINNER
@@ -305,5 +341,48 @@ describe('🔒 Validation ба RLS', () => {
     const own = await countAs(tenantId);
     expect(own[0]).toBe(6);
     expect(own[1]).toBe(4);
+  });
+});
+
+describe('📥 [R4] HR ShiftChange — PREVIEW, ростерын зөрүү, мөр засах', () => {
+  const hr = (p: string) => `/api/v1/hr/sites/${ids.c1}${p}`;
+  /** ShiftChange бүтэц: хуудасны нэрэнд огноо + төрөл, 1-р мөр гарчиг, 2-р мөр толгой */
+  async function shiftChange(sheets: { name: string; rows: (string | number)[][] }[]): Promise<Buffer> {
+    const wb = new ExcelJS.Workbook();
+    for (const s of sheets) {
+      const ws = wb.addWorksheet(s.name);
+      ws.addRow(['Ажилчдын жагсаалт']);
+      ws.addRow(['Д/д', 'Shift', 'ID', 'Ажилтны овог', 'Ажилтны нэр', 'Албан тушаал', 'Хэлтэс']);
+      s.rows.forEach((r) => ws.addRow(r));
+    }
+    return Buffer.from(await wb.xlsx.writeBuffer());
+  }
+
+  it('C баг 2026-11-18 ирэх: нэрээр тулгана, ЗОХИЦУУЛАЛТ алгасна, ростерын зөрүү (E4); алдаатай мөрийг устгахад загвар / алгассан хуудас хэвээр', async () => {
+    const e5 = await api().post(camp('/employees')).set(auth()).send({
+      organizationId: ids.org, departmentId: ids.mine, crewId: ids.crewC, employeeCode: 'E5', lastName: 'Бат', firstName: 'Дорж', positionId: ids.posMiner,
+    });
+    expect(e5.status).toBe(201);
+    const file = await shiftChange([
+      { name: '2026.11.18 C ирэх', rows: [[1, 'C', 'NEW', 'Бат', 'Дорж', 'Уурхайчин', 'Уул'], [2, 'C', 'NEW', 'Үл', 'Мэдэгдэх', 'Уурхайчин', 'Уул']] },
+      { name: 'ЗОХИЦУУЛАЛТ 2026.11.18', rows: [[1, 'C', 'NEW', 'Бат', 'Дорж', '', '']] },
+    ]);
+    const r = await api().post(hr('/movement-imports')).set(auth()).attach('file', file, 'ShiftChange.xlsx');
+    expect(r.status).toBe(201);
+    expect(r.body.format).toBe('SHIFTCHANGE');
+    expect(r.body.skippedSheets).toEqual([{ sheet: 'ЗОХИЦУУЛАЛТ 2026.11.18', reason: 'LEGACY_ADJUSTMENT' }]);
+    expect(r.body.import).toMatchObject({ totalRows: 2, errorRows: 1 });
+    expect(r.body.rows[0]).toMatchObject({ employeeCode: 'E5', direction: 'ARRIVAL', kind: 'ROSTER', errors: [], source: { sheet: '2026.11.18 C ирэх', idType: 'NEW' } });
+    expect(r.body.rows[1].errors.length).toBe(1);
+    const gap = r.body.rosterGaps.find((g: { date: string; direction: string }) => g.date === '2026-11-18' && g.direction === 'ARRIVAL');
+    const gapCodes = gap.employees.map((e: { employeeCode: string }) => e.employeeCode);
+    expect(gapCodes).toContain('E4');
+    expect(gapCodes).not.toContain('E5');
+
+    const e = await api().patch(hr(`/movement-imports/${r.body.import.id}/rows`)).set(auth()).send({ rows: [{ row: r.body.rows[1].row, deleted: true }] });
+    expect(e.status).toBe(200);
+    expect(e.body).toMatchObject({ format: 'SHIFTCHANGE', skippedSheets: [{ reason: 'LEGACY_ADJUSTMENT' }], import: { totalRows: 1, errorRows: 0 }, summary: { deletedRows: 1 } });
+    expect(e.body.rosterGaps.length).toBeGreaterThan(0);
+    expect((await api().post(hr(`/movement-imports/${r.body.import.id}/cancel`)).set(auth())).status).toBe(200);
   });
 });

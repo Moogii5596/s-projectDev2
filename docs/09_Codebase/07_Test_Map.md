@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 29 файл, ~264 тест
+## Integration (бодит PG + RLS) — 29 файл, ~266 тест
 
 Команд: `pnpm test:integration`
 
@@ -21,7 +21,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/auth.integration.spec.ts` | 6 | AuthService Integration |
 | `core-kernel/test/budget.integration.spec.ts` | 12 | 🧾 Budget API · 🔗 MR ↔ Budget (transaction дотор) · 🔒 RLS leakage (app_user, NOBYPASSRLS) |
 | `core-kernel/test/camp-assets-maintenance.integration.spec.ts` | 15 | 🪑 Үндсэн хөрөнгө · 🔧 Засвар · 🪑🔧 Хөрөнгө ба засвар · 🔒 RLS |
-| `core-kernel/test/camp-attendance.integration.spec.ts` | 15 | 📥 Ирцийн xlsx импорт · 🍽️ Хоолны суурь тоо (presence) · ✍️ Гараар бүртгэл · 🛏️ Өрөө (хоногоор) · 🔒 Validation ба RLS |
+| `core-kernel/test/camp-attendance.integration.spec.ts` | 17 | 📥 Ирцийн xlsx импорт · 🍽️ Хоолны суурь тоо (presence) · ✍️ Гараар бүртгэл · 🛏️ Өрөө (хоногоор) · 🔒 Validation ба RLS · 📥 [R4] HR ShiftChange — PREVIEW, ростерын зөрүү, мөр засах |
 | `core-kernel/test/camp-audit.integration.spec.ts` | 6 | 📜 camp_audit_log |
 | `core-kernel/test/camp-data-import.integration.spec.ts` | 14 | 📥 Загвар · 👥 Ажилтан — хүснэгтээр · 🏢 Хэлтэс ба өрөөний экспорт · 🔒 RLS |
 | `core-kernel/test/camp-master.integration.spec.ts` | 25 | 🔑 Каталог ба анхдагч роль · 🏕️ Кемп, тохиргоо, байршил · 🏢 Хэлтэс + ээлжийн загвар, баг, байр/өрөө, байгууллага · 👷 Ажилтан · 👥 Кемпийн роль → эрх (зөвхөн тэр кемпэд) · 🧯 camp-errors — БОДИТ Pri |
@@ -48,7 +48,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 82 файл, ~632 тест
+## Unit — core-kernel — 84 файл, ~644 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -86,7 +86,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/budget/tests/budget.service.test.ts` | 18 | BudgetService — ledger (MR transaction дотор) · BudgetService — CRUD / эрх · budgetDate() |
 | `core-kernel/src/modules/camp/assets/tests/camp-assets.service.test.ts` | 21 | CampAssetsService — ангилал (Шат 4.3) · CampAssetsService — хөрөнгө (Шат 4.3) |
 | `core-kernel/src/modules/camp/attendance/tests/attendance-rules.test.ts` | 18 | camp-date · roster — 14 ажил, замын хоног амралтад (Лхагва ирж, Пүрэв явна) · ShiftResolver · Хоолны дүрэм · Presence — D өдрийн суурь тоо (ERD v4 жишээнүүд) |
-| `core-kernel/src/modules/camp/attendance/tests/attendance-services.test.ts` | 27 | HrAttendanceService — импорт (Шат 3.3) · HrShiftsService (Шат 3.2) · Өрөөний багтаамж — хоногоор (Шат 3.4) · CampRoomsService (Шат 3.4) · CampPresenceService (Шат 3.5) — DB → тооцоо |
+| `core-kernel/src/modules/camp/attendance/tests/attendance-services.test.ts` | 30 | HrAttendanceService — импорт (Шат 3.3) · HrShiftsService (Шат 3.2) · Өрөөний багтаамж — хоногоор (Шат 3.4) · CampRoomsService (Шат 3.4) · CampPresenceService (Шат 3.5) — DB → тооцоо |
 | `core-kernel/src/modules/camp/attendance/tests/presence-golden.test.ts` | 3 | Хоолны тооцоо — golden (§0.6) |
 | `core-kernel/src/modules/camp/attendance/tests/presence-v021.test.ts` | 5 | effectiveEmployee · computePresence — v0.2.1 |
 | `core-kernel/src/modules/camp/catalog/tests/camp-catalog.service.test.ts` | 4 | v0.2.1 CampCatalogService — байрны төрөл, кемп × албан тушаал |
@@ -104,7 +104,9 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/event-bus/dlq.service.spec.ts` | 3 | DlqService |
 | `core-kernel/src/modules/event-bus/event-bus.service.spec.ts` | 2 | EventBusService.emit (Phase 5.1 [EVT-003]) |
 | `core-kernel/src/modules/event-bus/outbox-poller.service.spec.ts` | 10 | OutboxPollerService |
+| `core-kernel/src/modules/hr/attendance/tests/import-edits.test.ts` | 6 | applyRowEdits (R4.1) · planWithDeleted (R4.1) |
 | `core-kernel/src/modules/hr/attendance/tests/import.test.ts` | 15 | import-parser · import-planner |
+| `core-kernel/src/modules/hr/attendance/tests/roster-gaps.test.ts` | 3 | findRosterGaps (R4.2) |
 | `core-kernel/src/modules/hr/attendance/tests/shiftchange-parser.test.ts` | 9 | shiftchange-parser — туслах функц · shiftchange-parser — файл |
 | `core-kernel/src/modules/hr/attendance/tests/shiftchange-planner.test.ts` | 7 | planImport — Сунах (R-6) · firstOverCapacityNight — сунгалт (R-7) |
 | `core-kernel/src/modules/hr/attendance/tests/shiftchange-resolver.test.ts` | 6 | shiftchange-resolver |
@@ -137,7 +139,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/scripts/pilot-admin.spec.ts` | 7 | validate* · onboard · ensureUser |
 | `core-kernel/src/scripts/test-user.spec.ts` | 9 | ensureTestUser · assertLocalUrl · parseDotenv / parseArgs |
 
-## Unit — web-shell — 20 файл, ~109 тест
+## Unit — web-shell — 22 файл, ~119 тест
 
 Команд: `pnpm --filter web-shell test`
 
@@ -157,6 +159,8 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/camp/lib/tests/permission-label.test.ts` | 3 | permissionLabel |
 | `web-shell/src/modules/feedback/tests/feedback-lib.test.ts` | 3 | feedback lib |
 | `web-shell/src/modules/hr/lib/tests/hr-sections.test.ts` | 4 | hr-sections |
+| `web-shell/src/modules/hr/lib/tests/import-preview.test.ts` | 5 | previewBadges · rosterGapTotals · i18n түлхүүр |
+| `web-shell/src/modules/hr/lib/tests/import-rows.test.ts` | 5 | filterRows / filterCounts · эх мөр · buildEdits / deleteErrorRowsEdits |
 | `web-shell/src/modules/hr/lib/tests/phones.test.ts` | 1 | phones (v0.2.3 Блок D) |
 | `web-shell/src/modules/hr/lib/tests/termination.test.ts` | 8 | terminationFormError · lifecycleActions · terminationEffects · орчуулга (mn/en/zh) |
 | `web-shell/src/modules/hr/lib/tests/user-access.test.ts` | 6 | inviteLink · loginName · userState · permissionView |
@@ -164,7 +168,7 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/report/lib/tests/report.test.ts` | 5 | report lib |
 | `web-shell/src/release-notes/tests/release-notes.test.ts` | 7 | release notes — функц · release notes — өгөгдөл (notes.ts) |
 
-## E2E (Playwright) — 15 файл, ~76 тест
+## E2E (Playwright) — 16 файл, ~79 тест
 
 Команд: `pnpm test:e2e`
 
@@ -179,6 +183,7 @@ tags: [codebase, testing, generated]
 | `e2e/tests/camp-v021.spec.ts` | 7 |  |
 | `e2e/tests/camp-v022-terminate.spec.ts` | 5 |  |
 | `e2e/tests/camp-v022-users.spec.ts` | 5 |  |
+| `e2e/tests/camp-v023-shiftchange.spec.ts` | 3 |  |
 | `e2e/tests/camp.spec.ts` | 6 |  |
 | `e2e/tests/core-v023-feedback.spec.ts` | 1 |  |
 | `e2e/tests/modules-lite.spec.ts` | 8 |  |

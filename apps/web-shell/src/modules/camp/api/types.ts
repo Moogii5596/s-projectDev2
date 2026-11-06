@@ -411,6 +411,26 @@ export interface Page<T> {
   hasMore: boolean
 }
 
+/** v0.2.3 Блок R — PREVIEW-ийн эх загвар */
+export type ImportFormat = 'TEMPLATE' | 'SHIFTCHANGE' | 'MANUAL'
+export type SkippedSheetReason = 'LEGACY_ADJUSTMENT' | 'LEAVE' | 'UNKNOWN_KIND' | 'NO_DATE' | 'NO_HEADER'
+export interface SkippedSheet {
+  sheet: string
+  reason: SkippedSheetReason
+}
+
+/** HR ShiftChange эх мөр (хуудас, мөр, файлын нэр / ID) */
+export interface ShiftChangeSource {
+  sheet: string
+  row: number
+  idRaw: string
+  idType: 'CODE' | 'NEW' | 'CONTRACTOR' | 'EMPTY'
+  lastName: string
+  firstName: string
+  crew: string | null
+  extendDays: number | null
+}
+
 export interface ImportRow {
   row: number
   employeeCode: string
@@ -421,6 +441,32 @@ export interface ImportRow {
   meals: MealType[] | null
   shift: ShiftType | null
   errors: string[]
+  /** ShiftChange «Сунах» (direction = null) */
+  action?: 'EXTEND'
+  /** EXTEND: сунгалтын сүүлийн өдөр (date = эхлэх) */
+  extendTo?: string
+  /** Анхааруулга — импортыг зогсоохгүй */
+  warnings?: string[]
+  source?: ShiftChangeSource
+  /** R4.1: устгасан (батлахад бичигдэхгүй) */
+  deleted?: boolean
+  /** R4.1: ажилтныг гараар сольсон — анхны код */
+  edited?: { fromCode: string }
+}
+
+/** R4.2 — ростероор ирэх / явах ёстой боловч ShiftChange файлд алга */
+export interface RosterGap {
+  date: string
+  direction: Direction
+  total: number
+  employees: { id: string; employeeCode: string; fullName: string; crew: string | null }[]
+}
+
+/** R4.1 — PATCH …/movement-imports/:id/rows */
+export interface ImportRowEdit {
+  row: number
+  employeeId?: string
+  deleted?: boolean
 }
 
 export interface ImportHeader {
@@ -437,7 +483,20 @@ export interface ImportHeader {
 export interface ImportPreview {
   import: ImportHeader
   rows: ImportRow[]
-  summary: { arrivals: number; departures: number; offRoster: number; shiftAdjustments: number; errorRows: number }
+  summary: {
+    arrivals: number
+    departures: number
+    offRoster: number
+    shiftAdjustments: number
+    errorRows: number
+    /** v0.2.3 Блок R */
+    extensions: number
+    warningRows: number
+    deletedRows: number
+  }
+  format: ImportFormat
+  skippedSheets: SkippedSheet[]
+  rosterGaps: RosterGap[]
 }
 
 export interface ImportConfirmResult {

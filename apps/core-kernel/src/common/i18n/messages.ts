@@ -192,6 +192,11 @@ export const MESSAGES = {
   'camp.err.attendance.7': { mn: 'Энэ ажилтны дараагийн бүртгэл ({date}) байна — зөвхөн хамгийн сүүлийнхийг устгана', en: 'This employee has a later record ({date}) — only the most recent one can be deleted', zh: '该员工还有更晚的记录（{date}），只能删除最新一条' },
   'camp.err.attendance.8': { mn: '{n} мөр алдаатай — засаад дахин импортлоно уу', en: '{n} row(s) have errors — fix them and import again', zh: '{n} 行有错误，请修正后重新导入' },
   'camp.err.attendance.9': { mn: '{errors}', en: '{errors}', zh: '{errors}' },
+  // v0.2.3 Блок R4.1 — PREVIEW мөр засах / устгах
+  'camp.err.attendance.10': { mn: 'Бүх мөр устгагдсан — импортлох мөр алга', en: 'All rows were deleted — there is nothing to import', zh: '所有行均已删除，没有可导入的内容' },
+  'camp.err.attendance.11': { mn: 'Зөвхөн PREVIEW төлөвтэй импортын мөрийг засна (одоо {status})', en: 'Rows can only be edited while the import is in PREVIEW (now {status})', zh: '只能在 PREVIEW 状态下修改导入行（当前为 {status}）' },
+  'camp.err.attendance.12': { mn: '{row}-р мөр энэ импортод алга', en: 'Row {row} does not exist in this import', zh: '本次导入中不存在第 {row} 行' },
+  'camp.err.attendance.13': { mn: '{row}-р мөр: ажилтан солих эсвэл устгахын аль нэгийг нэг удаа заана', en: 'Row {row}: specify either an employee or deletion, once', zh: '第 {row} 行：只能指定一次更换员工或删除' },
   'camp.err.attendance_ctl.1': { mn: 'multipart/form-data хэлбэрээр "file" талбартай илгээнэ үү', en: 'Send as multipart/form-data with a "file" field', zh: '请以 multipart/form-data 格式并包含"file"字段发送' },
   'camp.err.attendance_ctl.2': { mn: 'Файл алга ("file" талбар)', en: 'File missing ("file" field)', zh: '缺少文件（"file"字段）' },
   'camp.err.attendance_ctl.3': { mn: 'Файл 2 MB-ээс их байна', en: 'File is larger than 2 MB', zh: '文件超过 2 MB' },

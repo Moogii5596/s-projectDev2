@@ -64,8 +64,8 @@ describe('HrAttendanceService — импорт (Шат 3.3)', () => {
       { row: 4, employeeCode: 'NOPE', messages: ['Ажилтан олдсонгүй: NOPE'] },
     ]);
     expect(data.parsedRows).toHaveLength(3);
-    expect(res.summary).toEqual({ arrivals: 1, departures: 0, offRoster: 0, shiftAdjustments: 0, extensions: 0, warningRows: 0, errorRows: 2 });
-    expect([res.format, res.skippedSheets]).toEqual(['TEMPLATE', []]);
+    expect(res.summary).toEqual({ arrivals: 1, departures: 0, offRoster: 0, shiftAdjustments: 0, extensions: 0, warningRows: 0, errorRows: 2, deletedRows: 0 });
+    expect([res.format, res.skippedSheets, res.rosterGaps]).toEqual(['TEMPLATE', [], []]);
     expect(res.rows[0]).toMatchObject({ employeeCode: 'E1', kind: 'ROSTER', meals: ['DINNER'], errors: [] });
     expect(s.tx.hrMovement.createManyAndReturn).not.toHaveBeenCalled();
   });
@@ -136,6 +136,45 @@ describe('HrAttendanceService — импорт (Шат 3.3)', () => {
     s.tx.hrMovement.createManyAndReturn.mockResolvedValueOnce([{ id: 'm2', employeeId: 'e1', movementDate: d('2026-10-22'), direction: 'DEPARTURE' }]);
     s.tx.campStay.updateMany.mockResolvedValueOnce({ count: 0 });
     await expect(svc.confirm('t1', 'a1', 'c1', 'imp1')).rejects.toThrow(/зэрэгцээ/);
+  });
+
+  // ── v0.2.3 Блок R4.1 — PREVIEW мөр засах / устгах ──
+  const badRow = { row: 3, employeeCode: 'NOPE', date: '2026-10-07', direction: 'ARRIVAL', meals: [], shift: null, errors: [] };
+
+  it('updateRows: ажилтан солих + устгах → дахин төлөвлөж хадгалаад шинэ PREVIEW (lock, мета)', async () => {
+    s.tx.hrMovementImport.findFirst.mockResolvedValueOnce({ ...pending([okRow, badRow]), previewMeta: { format: 'SHIFTCHANGE', skippedSheets: [{ sheet: 'Чөлөө', reason: 'x' }] } });
+    s.tx.hrMovementImport.update.mockImplementation(async (a: { data: Record<string, unknown> }) => ({ id: 'imp1', ...a.data }));
+    const res = await svc.updateRows('t1', 'a1', 'c1', 'imp1', { rows: [{ row: 3, employeeId: 'e1' }, { row: 2, deleted: true }] });
+    const sqls = s.tx.$executeRaw.mock.calls.map((c: unknown[]) => (c[0] as string[]).join('?'));
+    expect(sqls.some((q: string) => q.includes('pg_advisory_xact_lock'))).toBe(true);
+    const data = s.tx.hrMovementImport.update.mock.calls[0][0].data;
+    expect(data).toMatchObject({ totalRows: 1, okRows: 1, errorRows: 0, errors: [] });
+    expect(data.parsedRows).toEqual([{ ...okRow, deleted: true }, { ...badRow, employeeCode: 'E1', edited: { fromCode: 'NOPE' } }]);
+    expect(res.format).toBe('SHIFTCHANGE');
+    expect(res.skippedSheets).toHaveLength(1);
+    expect(res.summary).toMatchObject({ arrivals: 1, errorRows: 0, deletedRows: 1 });
+    expect(res.rows.map((r) => [r.row, !!r.deleted])).toEqual([[2, true], [3, false]]);
+  });
+
+  it('updateRows: PREVIEW биш → 409; байхгүй → 404; эрхгүй → 403; өөр кемпийн ажилтан → 400', async () => {
+    s.tx.hrMovementImport.findFirst.mockResolvedValueOnce({ ...pending([okRow]), status: CampImportStatus.CONFIRMED });
+    await expect(svc.updateRows('t1', 'a1', 'c1', 'imp1', { rows: [{ row: 2, deleted: true }] })).rejects.toThrow(ConflictException);
+    await expect(svc.updateRows('t1', 'a1', 'c1', 'imp9', { rows: [{ row: 2, deleted: true }] })).rejects.toThrow(NotFoundException);
+    s.tx.hrMovementImport.findFirst.mockResolvedValueOnce(pending([okRow]));
+    s.tx.hrEmployee.findMany.mockResolvedValueOnce([]);
+    await expect(svc.updateRows('t1', 'a1', 'c1', 'imp1', { rows: [{ row: 2, employeeId: 'zz' }] })).rejects.toThrow(BadRequestException);
+    expect(s.tx.hrMovementImport.update).not.toHaveBeenCalled();
+    setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MEAL_ORDER] }] });
+    await expect(svc.updateRows('t1', 'a1', 'c1', 'imp1', { rows: [{ row: 2, deleted: true }] })).rejects.toThrow(ForbiddenException);
+  });
+
+  it('confirm: устгасан мөр бичигдэхгүй; бүгд устгагдсан → 400', async () => {
+    s.tx.hrMovementImport.findFirst.mockResolvedValueOnce(pending([okRow, { ...badRow, deleted: true }]));
+    s.tx.hrMovement.createManyAndReturn.mockResolvedValueOnce([{ id: 'm1', employeeId: 'e1', movementDate: d('2026-10-07'), direction: 'ARRIVAL' }]);
+    await expect(svc.confirm('t1', 'a1', 'c1', 'imp1')).resolves.toMatchObject({ status: 'CONFIRMED', movements: 1 });
+    expect(s.tx.hrMovement.createManyAndReturn.mock.calls[0][0].data).toHaveLength(1);
+    s.tx.hrMovementImport.findFirst.mockResolvedValueOnce(pending([{ ...okRow, deleted: true }]));
+    await expect(svc.confirm('t1', 'a1', 'c1', 'imp1')).rejects.toThrow(BadRequestException);
   });
 
   it('cancel: зөвхөн PREVIEW → CANCELLED; бусад → 409', async () => {

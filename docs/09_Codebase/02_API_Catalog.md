@@ -2,7 +2,7 @@
 title: "API каталог (core-kernel)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-19
+last_updated: 2026-11-06
 tags: [codebase, api, generated]
 ---
 
@@ -10,7 +10,7 @@ tags: [codebase, api, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Нийт **218** endpoint, 30 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
+Нийт **220** endpoint, 30 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
 
 **Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). **OWNER·ADMIN** = зөвхөн системийн роль (`requireTenantAdmin` — хэрэглэгч / роль удирдах, SEC-009), `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].
 
@@ -31,7 +31,7 @@ tags: [codebase, api, generated]
 - [[#modules/core/feedback]] — 8
 - [[#modules/core/organizations]] — 3
 - [[#modules/health]] — 1
-- [[#modules/hr/attendance]] — 14
+- [[#modules/hr/attendance]] — 15
 - [[#modules/hr/employees]] — 9
 - [[#modules/hr/import]] — 7
 - [[#modules/hr/org]] — 7
@@ -43,7 +43,7 @@ tags: [codebase, api, generated]
 - [[#modules/tenant-admin]] — 1
 - [[#modules/vendor]] — 3
 - [[#modules/workflow]] — 7
-- [[#modules/camp/legacy]] — 43
+- [[#modules/camp/legacy]] — 44
 
 ## app
 
@@ -238,15 +238,16 @@ tags: [codebase, api, generated]
 | POST | `/api/v1/hr/sites/:campId/movement-imports/manual` | `HrAttendanceController.manual` → `HrAttendanceService.previewManual` | `camp.movement.import` | `hr-attendance.controller.ts:62` |
 | GET | `/api/v1/hr/sites/:campId/movement-imports` | `HrAttendanceController.listImports` → `HrAttendanceService.listImports` | `camp.movement.import` | `hr-attendance.controller.ts:68` |
 | GET | `/api/v1/hr/sites/:campId/movement-imports/:id` | `HrAttendanceController.getImport` → `HrAttendanceService.getImport` | `camp.movement.import` | `hr-attendance.controller.ts:74` |
-| POST | `/api/v1/hr/sites/:campId/movement-imports/:id/confirm` | `HrAttendanceController.confirm` → `HrAttendanceService.confirm` | `camp.movement.import` | `hr-attendance.controller.ts:81` |
-| POST | `/api/v1/hr/sites/:campId/movement-imports/:id/cancel` | `HrAttendanceController.cancel` → `HrAttendanceService.cancel` | `camp.movement.import` | `hr-attendance.controller.ts:88` |
-| GET | `/api/v1/hr/sites/:campId/movements` | `HrAttendanceController.listMovements` → `HrAttendanceService.listMovements` | гишүүн | `hr-attendance.controller.ts:95` |
-| POST | `/api/v1/hr/sites/:campId/movements` | `HrAttendanceController.createMovement` → `HrAttendanceService.createMovement` | `camp.movement.import` | `hr-attendance.controller.ts:102` |
-| DELETE | `/api/v1/hr/sites/:campId/movements/:id` | `HrAttendanceController.deleteMovement` → `HrAttendanceService.deleteMovement` | `camp.movement.import` | `hr-attendance.controller.ts:108` |
-| GET | `/api/v1/hr/sites/:campId/shift-adjustments` | `HrAttendanceController.listAdjustments` → `HrShiftsService.listAdjustments` | гишүүн | `hr-attendance.controller.ts:115` |
-| POST | `/api/v1/hr/sites/:campId/shift-adjustments` | `HrAttendanceController.createAdjustments` → `HrShiftsService.createAdjustments` | `camp.shift.adjust` | `hr-attendance.controller.ts:122` |
-| DELETE | `/api/v1/hr/sites/:campId/shift-adjustments/:id` | `HrAttendanceController.deleteAdjustment` → `HrShiftsService.deleteAdjustment` | `camp.shift.adjust` | `hr-attendance.controller.ts:128` |
-| GET | `/api/v1/hr/sites/:campId/shift-calendar` | `HrAttendanceController.calendar` → `HrShiftsService.calendar` | гишүүн | `hr-attendance.controller.ts:134` |
+| PATCH | `/api/v1/hr/sites/:campId/movement-imports/:id/rows` | `HrAttendanceController.updateRows` → `HrAttendanceService.updateRows` | `camp.movement.import` | `hr-attendance.controller.ts:81` |
+| POST | `/api/v1/hr/sites/:campId/movement-imports/:id/confirm` | `HrAttendanceController.confirm` → `HrAttendanceService.confirm` | `camp.movement.import` | `hr-attendance.controller.ts:88` |
+| POST | `/api/v1/hr/sites/:campId/movement-imports/:id/cancel` | `HrAttendanceController.cancel` → `HrAttendanceService.cancel` | `camp.movement.import` | `hr-attendance.controller.ts:95` |
+| GET | `/api/v1/hr/sites/:campId/movements` | `HrAttendanceController.listMovements` → `HrAttendanceService.listMovements` | гишүүн | `hr-attendance.controller.ts:102` |
+| POST | `/api/v1/hr/sites/:campId/movements` | `HrAttendanceController.createMovement` → `HrAttendanceService.createMovement` | `camp.movement.import` | `hr-attendance.controller.ts:109` |
+| DELETE | `/api/v1/hr/sites/:campId/movements/:id` | `HrAttendanceController.deleteMovement` → `HrAttendanceService.deleteMovement` | `camp.movement.import` | `hr-attendance.controller.ts:115` |
+| GET | `/api/v1/hr/sites/:campId/shift-adjustments` | `HrAttendanceController.listAdjustments` → `HrShiftsService.listAdjustments` | гишүүн | `hr-attendance.controller.ts:122` |
+| POST | `/api/v1/hr/sites/:campId/shift-adjustments` | `HrAttendanceController.createAdjustments` → `HrShiftsService.createAdjustments` | `camp.shift.adjust` | `hr-attendance.controller.ts:129` |
+| DELETE | `/api/v1/hr/sites/:campId/shift-adjustments/:id` | `HrAttendanceController.deleteAdjustment` → `HrShiftsService.deleteAdjustment` | `camp.shift.adjust` | `hr-attendance.controller.ts:135` |
+| GET | `/api/v1/hr/sites/:campId/shift-calendar` | `HrAttendanceController.calendar` → `HrShiftsService.calendar` | гишүүн | `hr-attendance.controller.ts:141` |
 
 ## modules/hr/employees
 
@@ -386,6 +387,7 @@ tags: [codebase, api, generated]
 | POST | `/api/v1/camp/camps/:campId/movement-imports/manual` | `CampHrAttendanceLegacyController (extends HrAttendanceController).manual` → `HrAttendanceService.previewManual` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
 | GET | `/api/v1/camp/camps/:campId/movement-imports` | `CampHrAttendanceLegacyController (extends HrAttendanceController).listImports` → `HrAttendanceService.listImports` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
 | GET | `/api/v1/camp/camps/:campId/movement-imports/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).getImport` → `HrAttendanceService.getImport` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
+| PATCH | `/api/v1/camp/camps/:campId/movement-imports/:id/rows` | `CampHrAttendanceLegacyController (extends HrAttendanceController).updateRows` → `HrAttendanceService.updateRows` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
 | POST | `/api/v1/camp/camps/:campId/movement-imports/:id/confirm` | `CampHrAttendanceLegacyController (extends HrAttendanceController).confirm` → `HrAttendanceService.confirm` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
 | POST | `/api/v1/camp/camps/:campId/movement-imports/:id/cancel` | `CampHrAttendanceLegacyController (extends HrAttendanceController).cancel` → `HrAttendanceService.cancel` | `camp.movement.import` | Deprecated `hr-legacy.controller.ts:31` |
 | GET | `/api/v1/camp/camps/:campId/movements` | `CampHrAttendanceLegacyController (extends HrAttendanceController).listMovements` → `HrAttendanceService.listMovements` | гишүүн | Deprecated `hr-legacy.controller.ts:31` |

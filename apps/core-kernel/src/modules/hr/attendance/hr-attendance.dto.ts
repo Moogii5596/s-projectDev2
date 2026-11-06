@@ -1,5 +1,5 @@
-import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsEnum, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { CampImportStatus, CampMealType, CampMovementDirection, CampShiftAdjustmentReason, CampShiftType } from '@prisma/client';
 import { ISO_DATE, trimOrNull } from '../../camp/common/camp-dto.util';
 
@@ -94,4 +94,22 @@ export class CreateShiftAdjustmentsDto {
 
 export class QueryImportsDto {
   @IsOptional() @IsEnum(CampImportStatus) status?: CampImportStatus;
+}
+
+/** v0.2.3 Блок R4.1 — PREVIEW мөр: ажилтан солих ЭСВЭЛ устгах / сэргээх (аль нэг нь) */
+export class ImportRowEditDto {
+  @IsInt() @Min(1)
+  row!: number;
+
+  @IsOptional() @IsUUID('all', { message: 'employeeId UUID байх ёстой' })
+  employeeId?: string;
+
+  /** true = устгах, false = сэргээх */
+  @IsOptional() @IsBoolean()
+  deleted?: boolean;
+}
+
+export class UpdateImportRowsDto {
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(5000) @ValidateNested({ each: true }) @Type(() => ImportRowEditDto)
+  rows!: ImportRowEditDto[];
 }

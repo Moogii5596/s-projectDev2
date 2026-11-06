@@ -27,6 +27,10 @@ export interface ParsedRow {
   source?: ShiftChangeSource;
   /** Анхааруулга — импортыг зогсоохгүй */
   warnings?: string[];
+  /** v0.2.3 Блок R4.1: PREVIEW-д устгасан (түүхэнд үлдэнэ, planner алгасна) */
+  deleted?: boolean;
+  /** v0.2.3 Блок R4.1: PREVIEW-д ажилтныг гараар сольсон — анхны код (файлын / тулгасан) */
+  edited?: { fromCode: string };
 }
 export interface ShiftChangeSource {
   sheet: string;

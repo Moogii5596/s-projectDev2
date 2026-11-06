@@ -10,21 +10,31 @@ import { assertDate, assertRange } from './range';
 import { buildAttendanceTemplate, parseAttendanceXlsx, ParsedRow } from './import-parser';
 import { planImport, PlannedRow } from './import-planner';
 import { applyPlan, loadPlannerState, lockCampAttendance } from './attendance-state';
-import { CreateMovementDto, ManualMovementsDto, QueryImportsDto, RangeQueryDto } from './hr-attendance.dto';
+import { CreateMovementDto, ManualMovementsDto, QueryImportsDto, RangeQueryDto, UpdateImportRowsDto } from './hr-attendance.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { HrAttendanceHooks } from './stay-store';
 import { collectShiftChange, isAttendanceTemplate, loadXlsx, SkippedSheet } from './shiftchange-parser';
 import { loadResolverEmployees, resolveShiftChange } from './shiftchange-resolver';
+import { applyRowEdits, planWithDeleted } from './import-edits';
+import { loadRosterGaps, RosterGap } from './roster-gaps';
+import type { Tx } from '../../camp/common/camp-tx';
 
 const P = CAMP_PERMISSIONS;
 const CONFIRM_TX = { timeout: 120_000, maxWait: 10_000 };
 const MAX_RANGE_DAYS = 93;
+const IMPORT_SELECT = { id: true, fileName: true, status: true, totalRows: true, okRows: true, errorRows: true, createdAt: true } as const;
 
 /** PREVIEW-ийн нэмэлт мэдээлэл (v0.2.3 Блок R) */
 interface PreviewMeta {
   format: 'TEMPLATE' | 'SHIFTCHANGE' | 'MANUAL';
   skippedSheets?: SkippedSheet[];
 }
+
+/** Хуучин импорт ('{}') → TEMPLATE */
+const readMeta = (v: unknown): PreviewMeta => {
+  const m = (v ?? {}) as Partial<PreviewMeta>;
+  return { format: m.format ?? 'TEMPLATE', skippedSheets: m.skippedSheets ?? [] };
+};
 
 const rowErrors = (rows: PlannedRow[]) =>
   rows
@@ -93,19 +103,78 @@ export class HrAttendanceService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorId = await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
         await getCampOr404(tx, tenantId, campId);
-        const state = await loadPlannerState(tx, tenantId, campId, parsed.map((r) => r.employeeCode), parsed.map((r) => r.date ?? ''), this.hooks.stays);
-        const plan = planImport(parsed, state);
+        const planned = await this.planPreview(tx, tenantId, campId, parsed);
+        const gaps = await this.rosterGaps(tx, tenantId, campId, parsed, meta);
         const imp = await tx.hrMovementImport.create({
           data: {
             tenantId, campId, fileName: fileName.slice(0, 200) || 'import.xlsx', status: CampImportStatus.PREVIEW,
-            totalRows: plan.rows.length, okRows: plan.rows.length - plan.errorRows, errorRows: plan.errorRows,
-            errors: rowErrors(plan.rows) as unknown as Prisma.InputJsonValue,
+            ...this.counts(planned.plan),
             parsedRows: parsed as unknown as Prisma.InputJsonValue,
+            previewMeta: { format: meta.format, skippedSheets: meta.skippedSheets ?? [] } as unknown as Prisma.InputJsonValue,
             uploadedBy: actorId,
           },
-          select: { id: true, fileName: true, status: true, totalRows: true, okRows: true, errorRows: true, createdAt: true },
+          select: IMPORT_SELECT,
         });
-        return { import: imp, rows: plan.rows, summary: this.summary(plan), format: meta.format, skippedSheets: meta.skippedSheets ?? [] };
+        return this.previewResponse(imp, planned, meta, gaps);
+      }),
+    );
+  }
+
+  private async planPreview(tx: Tx, tenantId: string, campId: string, parsed: ParsedRow[]) {
+    const active = parsed.filter((r) => !r.deleted);
+    const state = await loadPlannerState(tx, tenantId, campId, active.map((r) => r.employeeCode), active.map((r) => r.date ?? ''), this.hooks.stays);
+    return planWithDeleted(parsed, state);
+  }
+
+  /** totalRows = устгаагүй мөр (ok + error = total) */
+  private counts(plan: ReturnType<typeof planImport>) {
+    return {
+      totalRows: plan.rows.length, okRows: plan.rows.length - plan.errorRows, errorRows: plan.errorRows,
+      errors: rowErrors(plan.rows) as unknown as Prisma.InputJsonValue,
+    };
+  }
+
+  /** R4.2 — зөвхөн ShiftChange: ростероор ирэх / явах ёстой боловч файлд алга (анхааруулга) */
+  private rosterGaps(tx: Tx, tenantId: string, campId: string, parsed: ParsedRow[], meta: PreviewMeta): Promise<RosterGap[]> {
+    return meta.format === 'SHIFTCHANGE' ? loadRosterGaps(tx, tenantId, campId, parsed, this.hooks.stays) : Promise.resolve([]);
+  }
+
+  private previewResponse(imp: unknown, planned: ReturnType<typeof planWithDeleted>, meta: PreviewMeta, rosterGaps: RosterGap[]) {
+    return {
+      import: imp,
+      rows: planned.rows,
+      summary: { ...this.summary(planned.plan), deletedRows: planned.deletedRows },
+      format: meta.format,
+      skippedSheets: meta.skippedSheets ?? [],
+      rosterGaps,
+    };
+  }
+
+  /**
+   * v0.2.3 Блок R4.1 (R-10…R-12) — PREVIEW-ийн мөрийг засах / устгах → дахин төлөвлөж шинэ PREVIEW буцаана.
+   * Зөвхөн PREVIEW (бусад төлөвт 409); ажилтан = энэ кемпийн ажилтан. Ирцийн lock-оор CONFIRM-тэй дараалуулна.
+   */
+  async updateRows(tenantId: string, authId: string, campId: string, id: string, dto: UpdateImportRowsDto) {
+    return withCampErrors(() =>
+      inTenantTx(this.prisma, tenantId, async (tx) => {
+        await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
+        await lockCampAttendance(tx, campId);
+        const imp = await tx.hrMovementImport.findFirst({ where: { id, tenantId, campId }, select: { status: true, parsedRows: true, previewMeta: true } });
+        if (!imp) throw notFound('camp.err.attendance.2');
+        if (imp.status !== CampImportStatus.PREVIEW) throw conflict('camp.err.attendance.11', { status: imp.status });
+        const ids = [...new Set(dto.rows.map((r) => r.employeeId).filter((x): x is string => !!x))];
+        const emps = ids.length
+          ? await tx.hrEmployee.findMany({ where: { tenantId, campId, id: { in: ids } }, select: { id: true, employeeCode: true } })
+          : [];
+        const parsed = applyRowEdits(imp.parsedRows as unknown as ParsedRow[], dto.rows, new Map(emps.map((e) => [e.id, e.employeeCode])));
+        const planned = await this.planPreview(tx, tenantId, campId, parsed);
+        const updated = await tx.hrMovementImport.update({
+          where: { id },
+          data: { ...this.counts(planned.plan), parsedRows: parsed as unknown as Prisma.InputJsonValue },
+          select: IMPORT_SELECT,
+        });
+        const meta = readMeta(imp.previewMeta);
+        return this.previewResponse(updated, planned, meta, await this.rosterGaps(tx, tenantId, campId, parsed, meta));
       }),
     );
   }
@@ -139,7 +208,7 @@ export class HrAttendanceService {
       await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
       const imp = await tx.hrMovementImport.findFirst({
         where: { id, tenantId, campId },
-        select: { id: true, fileName: true, status: true, totalRows: true, okRows: true, errorRows: true, errors: true, parsedRows: true, createdAt: true, confirmedAt: true },
+        select: { id: true, fileName: true, status: true, totalRows: true, okRows: true, errorRows: true, errors: true, parsedRows: true, previewMeta: true, createdAt: true, confirmedAt: true },
       });
       if (!imp) throw notFound('camp.err.attendance.2');
       return imp;
@@ -158,7 +227,8 @@ export class HrAttendanceService {
           const imp = await tx.hrMovementImport.findFirst({ where: { id, tenantId, campId }, select: { id: true, status: true, fileName: true, parsedRows: true } });
           if (!imp) throw notFound('camp.err.attendance.2');
           if (imp.status !== CampImportStatus.PREVIEW) throw conflict('camp.err.attendance.3', { status: imp.status });
-          const parsed = imp.parsedRows as unknown as ParsedRow[];
+          const parsed = (imp.parsedRows as unknown as ParsedRow[]).filter((r) => !r.deleted); // R4.1: устгасан мөр бичигдэхгүй
+          if (parsed.length === 0) throw badRequest('camp.err.attendance.10');
           const state = await loadPlannerState(tx, tenantId, campId, parsed.map((r) => r.employeeCode), parsed.map((r) => r.date ?? ''), this.hooks.stays);
           const plan = planImport(parsed, state);
           if (plan.errorRows > 0) {

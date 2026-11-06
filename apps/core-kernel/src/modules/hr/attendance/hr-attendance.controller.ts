@@ -1,10 +1,10 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { reqUser } from '../../camp/common/camp-request';
 import { badRequest, payloadTooLarge } from '../../../common/i18n/app-error';
 import { HrAttendanceService } from './hr-attendance.service';
 import { HrShiftsService } from './hr-shifts.service';
-import { CalendarQueryDto, CreateMovementDto, CreateShiftAdjustmentsDto, ManualMovementsDto, QueryImportsDto, RangeQueryDto } from './hr-attendance.dto';
+import { CalendarQueryDto, CreateMovementDto, CreateShiftAdjustmentsDto, ManualMovementsDto, QueryImportsDto, RangeQueryDto, UpdateImportRowsDto } from './hr-attendance.dto';
 
 const uuid = () => new ParseUUIDPipe();
 
@@ -74,6 +74,13 @@ export class HrAttendanceController {
   getImport(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Param('id', uuid()) id: string) {
     const u = reqUser(req);
     return this.attendance.getImport(u.tenantId, u.id, campId, id);
+  }
+
+  /** v0.2.3 Блок R4.1 — PREVIEW-ийн мөрийг засах / устгах → шинэ PREVIEW */
+  @Patch('movement-imports/:id/rows')
+  updateRows(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Param('id', uuid()) id: string, @Body() dto: UpdateImportRowsDto) {
+    const u = reqUser(req);
+    return this.attendance.updateRows(u.tenantId, u.id, campId, id, dto);
   }
 
   @Post('movement-imports/:id/confirm')

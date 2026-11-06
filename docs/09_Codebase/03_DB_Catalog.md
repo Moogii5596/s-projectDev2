@@ -10,7 +10,7 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (53 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **68** хүснэгт, 38 enum, 25 функц, 57 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (54 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **68** хүснэгт, 38 enum, 25 функц, 57 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
@@ -1032,7 +1032,7 @@ Trigger: `trg_camp_meal_orders_guard` · `trg_camp_meal_orders_updated_at`
 
 ### camp_movement_imports
 
-🔒🔒 · үүсгэсэн `20261009003_camp_attendance.sql` · өөрчлөлт: +parsed_rows (`20261010001_camp_attendance_import.sql`)
+🔒🔒 · үүсгэсэн `20261009003_camp_attendance.sql` · өөрчлөлт: +parsed_rows (`20261010001_camp_attendance_import.sql`), +preview_meta (`20261106003_hr_movement_import_meta.sql`)
 
 | Багана | Төрөл | Шинж | FK |
 |---|---|---|---|
@@ -1051,6 +1051,7 @@ Trigger: `trg_camp_meal_orders_guard` · `trg_camp_meal_orders_updated_at`
 | created_at | TIMESTAMPTZ | NN |  |
 | updated_at | TIMESTAMPTZ | NN |  |
 | parsed_rows | JSONB | NN |  |
+| preview_meta | JSONB | NN |  |
 
 Constraint: `UNIQUE (tenant_id, camp_id, id)` · `CHECK (ok_rows + error_rows = total_rows)` · `CHECK ( (status = 'CONFIRMED') = (confirmed_by IS NOT NULL AND confirmed_at IS NOT NULL))` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id)` · `FOREIGN KEY (tenant_id, uploaded_by) REFERENCES core_users (tenant_id, id)` · `FOREIGN KEY (tenant_id, confirmed_by) REFERENCES core_users (tenant_id, id)`
 
