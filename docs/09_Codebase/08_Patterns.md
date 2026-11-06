@@ -69,7 +69,7 @@ CREATE TABLE camp_example (
 SELECT camp_apply_tenant_rls('camp_example');  -- ENABLE + FORCE + policy + GRANT app_user + updated_at trigger
 ```
 
-- Дараа нь: `apps/core-kernel/prisma/schema.prisma`-д model (`@db.Uuid` бүрт) → `pnpm db:generate` → `pnpm supabase:reset` (local) → `pnpm docs:gen` ([[03_DB_Catalog]]).
+- Дараа нь: `apps/core-kernel/prisma/schema/<модуль>.prisma`-д model (R22) (`@db.Uuid` бүрт) → `pnpm db:generate` → `pnpm supabase:reset` (local) → `pnpm docs:gen` ([[03_DB_Catalog]]).
 - Пилот/staging-д өгөгдөлтэй хүснэгт өөрчлөх → `camp:snapshot` A = B ([[04_Pilot_Camp_Windows]]).
 - RLS аудит: `supabase/dev/rls_audit.sql`.
 

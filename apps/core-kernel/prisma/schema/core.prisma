@@ -1,0 +1,245 @@
+// Үндсэн: tenant, хэрэглэгч, байгууллага, урилга, орчуулга — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
+
+// ── Tenants ─────────────────────────────────────────────────
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  tier      TierType @default(TIER1)
+  isActive  Boolean  @default(true) @map("is_active")
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  maxUsers    Int       @default(5)  @map("max_users")
+  maxMfes     Int       @default(1)  @map("max_mfes")
+  onboardedAt DateTime? @map("onboarded_at") @db.Timestamptz
+
+  users            CoreUser[]
+  mrHeaders        MrHeader[]
+  mrItems          MrItem[]
+  outboxEvents     OutboxEvent[]
+  approvalLogs     ApprovalLog[]
+  installedModules InstalledModule[]  // Sprint 0
+  tenantRoutes         TenantRoute[]         // Sprint 1
+  workflowDefinitions  WorkflowDefinition[]  // Sprint 2
+  workflowInstances    WorkflowInstance[]    // Sprint 2
+  workflowStepLogs     WorkflowStepLog[]     // Sprint 2
+  idempotencyKeys      IdempotencyKey[]      // Sprint 2
+  workflowDelegations  WorkflowDelegation[] // Sprint 7
+  workflowSlaLogs      WorkflowSlaLog[]     // Sprint 7
+  dlqEvents            DlqEvent[]           // Sprint 3
+  budgetPeriods        BudgetPeriod[]       // Phase 4.1
+  budgetAllocations    BudgetAllocation[]   // Phase 4.1
+  budgetCommitments    BudgetCommitment[]   // Phase 4.1
+  campEmployeePhones          HrEmployeePhone[]
+  inventoryItems       InventoryItem[]      // Phase 4.2
+  vendors              Vendor[]             // Phase 4.3
+  // Camp Module (20261009001..006)
+  campRoles                   CampRole[]
+  campRolePermissions         CampRolePermission[]
+  campUserRoles               CampUserRole[]
+  camps                       Camp[]
+  campMealLocations           CampMealLocation[]
+  campSettings                CampSetting[]
+  campDepartments             HrDepartment[]
+  campDepartmentShiftPatterns HrDepartmentShiftPattern[]
+  campBuildings               CampBuilding[]
+  campRooms                   CampRoom[]
+  campOrganizations           CoreOrganization[]
+  campCrews                   HrCrew[]
+  campEmployees               HrEmployee[]
+  campShiftAdjustments        HrShiftAdjustment[]
+  campMovementImports         HrMovementImport[]
+  campMovements               HrMovement[]
+  campStays                   CampStay[]
+  campRoomAllocations         CampRoomAllocation[]
+  campAssetCategories         CampAssetCategory[]
+  campAssets                  CampAsset[]
+  campAssetMovements          CampAssetMovement[]
+  campMaintenanceRequests     CampMaintenanceRequest[]
+  campMaintenanceParts        CampMaintenancePart[]
+  campContracts               CampContract[]
+  campContractItems           CampContractItem[]
+  campContractItemPrices      CampContractItemPrice[]
+  campHaulRecords             CampHaulRecord[]
+  campMealOrders              CampMealOrder[]
+  campMealOrderLines          CampMealOrderLine[]
+  campCostEntries             CampCostEntry[]
+
+  @@map("tenants")
+}
+
+enum TierType {
+  TIER1 @map("tier1")
+  TIER2 @map("tier2")
+  TIER3 @map("tier3")
+}
+
+// ── Core Users ──────────────────────────────────────────────
+model CoreUser {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  authId    String   @unique @map("auth_id") @db.Uuid
+  email     String
+  fullName  String?  @map("full_name")
+  role      UserRole @default(REQUESTER)
+  isActive  Boolean  @default(true) @map("is_active")
+  /// v0.2.0 §0.7 (20261011004) — mn | en | zh
+  locale    String   @default("mn")
+  /// v0.2.2 (20261013004) — Монгол 8 оронтой утас (нормчилсон); идэвхтэй хэрэглэгчдийн дунд давтагдашгүй (partial unique — зөвхөн migration-д)
+  phone              String?
+  /// v0.2.2 — нэвтрэх нэр (D-13, ажилтны кодоос)
+  username           String?
+  /// v0.2.2 D-06 — true бол бусад API 403 PASSWORD_CHANGE_REQUIRED
+  mustChangePassword Boolean  @default(false) @map("must_change_password")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mrHeaders          MrHeader[]    @relation("MrRequester")
+  approvedMrHeaders  MrHeader[]    @relation("MrApprover")
+  approvalLogs       ApprovalLog[] @relation("ApproverLogs")
+
+  superAdmin         SuperAdmin?          // Sprint 4
+
+  // Camp Module — (tenant_id, id) composite FK-ууд (D2)
+  campUserRoles             CampUserRole[]           @relation("CampUserRoleUser")
+  campUserPermissions       CampUserPermission[]     @relation("CampUserPermissionUser")
+  campEmployees             HrEmployee[]           @relation("CampEmployeeUser")
+  piiViews                  CampPiiAccessLog[]     @relation("CampPiiViewer")
+  invites                   CoreUserInvite[]
+  // v0.2.3 Блок F (20261019004) — санал хүсэлт
+  feedbacks                 CoreFeedback[]       @relation("CoreFeedbackAuthor")
+  feedbackReplies           CoreFeedback[]       @relation("CoreFeedbackReplier")
+  feedbackVotes             CoreFeedbackVote[]
+  campShiftAdjustments      HrShiftAdjustment[]    @relation("CampShiftAdjustmentCreatedBy")
+  campImportsUploaded       HrMovementImport[]     @relation("CampMovementImportUploadedBy")
+  campImportsConfirmed      HrMovementImport[]     @relation("CampMovementImportConfirmedBy")
+  campMovementsCreated      HrMovement[]           @relation("CampMovementCreatedBy")
+  campAssetMovements        CampAssetMovement[]      @relation("CampAssetMovementMovedBy")
+  campMaintenanceReported   CampMaintenanceRequest[] @relation("CampMaintenanceReportedBy")
+  campMaintenanceClosed     CampMaintenanceRequest[] @relation("CampMaintenanceClosedBy")
+  campMaintenanceParts      CampMaintenancePart[]    @relation("CampMaintenancePartCreatedBy")
+  campHaulCreated           CampHaulRecord[]         @relation("CampHaulCreatedBy")
+  campHaulReviewed          CampHaulRecord[]         @relation("CampHaulReviewedBy")
+  campMealOrdersOrdered     CampMealOrder[]          @relation("CampMealOrderOrderedBy")
+  campMealOrdersReviewed    CampMealOrder[]          @relation("CampMealOrderReviewedBy")
+  campCostEntries           CampCostEntry[]          @relation("CampCostEntryCreatedBy")
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, id], map: "uq_core_users_tenant_id") // Camp D2 (20261009001)
+  @@map("core_users")
+}
+
+enum UserRole {
+  REQUESTER @map("requester")
+  APPROVER  @map("approver")
+  ADMIN     @map("admin")
+  VIEWER    @map("viewer")
+  OWNER     @map("owner")   // Sprint 4 — Tenant admin
+}
+
+enum CampOrgType {
+  MAIN
+  SUBCONTRACTOR
+  CONTRACTOR
+}
+
+/// Байгууллагын үйлчилгээний төрөл (олон байж болно) — 20261010002
+enum CampOrgServiceType {
+  CATERING
+  WASTE_TRANSPORT
+  SEWAGE_TRANSPORT
+  WASTE_DISPOSAL
+  SEWAGE_DISPOSAL
+  OTHER
+}
+
+/// reg_number давхардал → partial unique index (migration: uq_camp_organizations_reg)
+model CoreOrganization {
+  id              String      @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId        String      @map("tenant_id") @db.Uuid
+  name            String
+  regNumber       String?     @map("reg_number")
+  orgType         CampOrgType @map("org_type")
+  /// Катеринг / хог-бохир ус тээвэрлэгч / хүлээн авах цэг … (is_disposal_point-ийг орлосон)
+  serviceTypes    CampOrgServiceType[] @default([]) @map("service_types")
+  contactName     String?     @map("contact_name")
+  phone           String?
+  email           String?
+  isActive        Boolean     @default(true) @map("is_active")
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employees       HrEmployee[]
+  contracts       CampContract[]
+  costEntries     CampCostEntry[]
+  cateringForCamps CampSetting[]
+
+  @@unique([tenantId, id], map: "uq_camp_organizations_tenant_id")
+  @@index([tenantId, isActive, name], map: "idx_camp_organizations_list")
+  @@index([serviceTypes], type: Gin, map: "idx_camp_organizations_services")
+  @@map("camp_organizations")
+}
+
+// ── v0.2.0 §0.7 — Байгууллагын орчуулгын засвар (20261011005) ─────
+model I18nOverride {
+  tenantId  String   @map("tenant_id") @db.Uuid
+  key       String
+  lang      String
+  text      String
+  updatedBy String   @map("updated_by") @db.Uuid
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@id([tenantId, key, lang])
+  @@map("i18n_overrides")
+}
+
+/// Append-only (app_user: SELECT, INSERT)
+model I18nOverrideHistory {
+  id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  key       String
+  lang      String
+  oldText   String?  @map("old_text")
+  newText   String?  @map("new_text")
+  source    String
+  changedBy String   @map("changed_by") @db.Uuid
+  changedAt DateTime @default(now()) @map("changed_at") @db.Timestamptz
+
+  @@index([tenantId, changedAt(sort: Desc), id(sort: Desc)], map: "idx_i18n_history")
+  @@index([tenantId, key, changedAt(sort: Desc)], map: "idx_i18n_history_key")
+  @@map("i18n_override_history")
+}
+
+/// v0.2.2 Блок 3 (20261013005) — урилга / нууц үг сэргээх
+enum CoreInvitePurpose {
+  INVITE
+  RESET
+}
+
+enum CoreInviteChannel {
+  LINK
+  EMAIL
+}
+
+/// v0.2.2 Блок 3 (ADR-003 §2.3, D-03) — токены SHA-256 hash л хадгална (токен өөрөө хэзээ ч үгүй)
+model CoreUserInvite {
+  id        String            @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String            @map("tenant_id") @db.Uuid
+  userId    String            @map("user_id") @db.Uuid
+  tokenHash String            @unique(map: "uq_core_user_invites_token") @map("token_hash")
+  purpose   CoreInvitePurpose
+  channel   CoreInviteChannel
+  expiresAt DateTime          @map("expires_at") @db.Timestamptz
+  usedAt    DateTime?         @map("used_at") @db.Timestamptz
+  revokedAt DateTime?         @map("revoked_at") @db.Timestamptz
+  createdBy String?           @map("created_by") @db.Uuid
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  user CoreUser @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_core_user_invites_user")
+
+  @@map("core_user_invites")
+}

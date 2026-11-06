@@ -1,0 +1,195 @@
+// HR: хэлтэс, бригад, ажилтан, албан тушаал, утас — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
+
+enum CampShiftType {
+  DAY
+  NIGHT
+}
+
+enum CampEmployeeStatus {
+  ACTIVE
+  INACTIVE
+  /// v0.2.2 Блок 5 (20261017001) — ажлаас гарсан; дахин орвол ШИНЭ бүртгэл (Q8)
+  TERMINATED
+}
+
+/// v0.2.2 Блок 5 (20261017002, B5-Q4) — ажлаас гарсан шалтгаан; OTHER бол тайлбар заавал
+enum CampTerminationReason {
+  RESIGNED
+  DISMISSED
+  CONTRACT_END
+  OTHER
+}
+
+model HrDepartment {
+  id             String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  campId         String   @map("camp_id") @db.Uuid
+  code           String
+  name           String
+  /// v0.2.1-ээс ашиглагдахгүй (ажилтан / албан тушаал) — v0.2.2-т устгана
+  mealLocationId String?  @map("meal_location_id") @db.Uuid
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant        Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp          Camp                         @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_departments_camp")
+  mealLocation  CampMealLocation?            @relation(fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_departments_location")
+  shiftPatterns HrDepartmentShiftPattern[]
+  employees     HrEmployee[]
+
+  @@unique([tenantId, id], map: "uq_camp_departments_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_departments_camp_id")
+  @@unique([tenantId, campId, code], map: "uq_camp_departments_code")
+  @@index([tenantId, mealLocationId], map: "idx_camp_departments_location")
+  @@map("camp_departments")
+}
+
+/// Ээлжийн өдрийн дугаар 1..roster_on_days. Давхцал → EXCLUDE (migration); цоорхойгүй бүрхэлт → app
+model HrDepartmentShiftPattern {
+  id           String        @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId     String        @map("tenant_id") @db.Uuid
+  departmentId String        @map("department_id") @db.Uuid
+  dayFrom      Int           @map("day_from") @db.SmallInt
+  dayTo        Int           @map("day_to") @db.SmallInt
+  shift        CampShiftType
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  department HrDepartment @relation(fields: [tenantId, departmentId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_shift_patterns_department")
+
+  @@index([tenantId, departmentId, dayFrom], map: "idx_camp_shift_patterns_department")
+  @@map("camp_department_shift_patterns")
+}
+
+model HrCrew {
+  id               String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  campId           String   @map("camp_id") @db.Uuid
+  code             String
+  name             String?
+  /// Энэ багийн ирэх нэг өдөр (солигдох гараг) — мөчлөгийн эхлэл
+  rosterAnchorDate DateTime @map("roster_anchor_date") @db.Date
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp      Camp           @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_crews_camp")
+  employees HrEmployee[]
+
+  @@unique([tenantId, id], map: "uq_camp_crews_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_crews_camp_id")
+  @@unique([tenantId, campId, code], map: "uq_camp_crews_code")
+  @@map("camp_crews")
+}
+
+model HrEmployee {
+  id             String             @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId       String             @map("tenant_id") @db.Uuid
+  campId         String             @map("camp_id") @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  departmentId   String             @map("department_id") @db.Uuid
+  /// NULL = ростергүй (ээлжийн бус)
+  crewId         String?            @map("crew_id") @db.Uuid
+  employeeCode   String             @map("employee_code")
+  /// v0.2.3 Блок D (20261019002): trigger `trg_camp_employees_names` = «овог нэр» (last_name + first_name). Шууд бичихгүй — овог/нэрийг бич.
+  fullName       String             @map("full_name")
+  /// Ургийн овог
+  familyName     String?            @map("family_name")
+  /// Овог (эцэг/эхийн нэр)
+  lastName       String?            @map("last_name")
+  /// Нэр. DB-д NOT NULL — өгөөгүй бол trigger `full_name`-ээс салгаж бөглөнө (тиймээс Prisma-д optional)
+  firstName      String?            @map("first_name")
+  position       String?
+  phone          String?
+  /// v0.2.0 (20261011003) — ADR-003 нэвтрэх нэрийн бэлтгэл
+  email          String?
+  status         CampEmployeeStatus @default(ACTIVE)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp             Camp                  @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_camp")
+  organization     CoreOrganization      @relation(fields: [tenantId, organizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_org")
+  department       HrDepartment        @relation(fields: [tenantId, campId, departmentId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_department")
+  crew             HrCrew?             @relation(fields: [tenantId, campId, crewId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_crew")
+  shiftAdjustments HrShiftAdjustment[]
+  movements        HrMovement[]
+  stays            CampStay[]
+  roomAllocations  CampRoomAllocation[]
+  /// v0.2.1 (C-01): каталог; `position` текст v0.2.2 хүртэл зэрэгцээ
+  positionId       String?               @map("position_id") @db.Uuid
+  /// Ажлын хоолны байршил — ЭЦСИЙН утга (NULL → албан тушаал → кемпийн анхдагч)
+  mealLocationId   String?               @map("meal_location_id") @db.Uuid
+  /// Хоол авах эсэх — ЭЦСИЙН (NULL → албан тушаал → тийм)
+  mealsIncluded    Boolean?              @map("meals_included")
+  /// v0.2.2 (20261013004) — нэвтрэх эрх (1:1; uq_camp_employees_user — зөвхөн migration-д)
+  userId           String?               @map("user_id") @db.Uuid
+  user             CoreUser?             @relation("CampEmployeeUser", fields: [tenantId, userId], references: [tenantId, id], onDelete: SetNull, onUpdate: NoAction, map: "fk_camp_employees_user")
+  /// v0.2.2 Блок 5 (20261017002) — ажлаас гарсан огноо (TERMINATED ⇔ огноо + шалтгаан, ck_camp_employees_terminated)
+  terminatedAt      DateTime?              @map("terminated_at") @db.Date
+  terminationReason CampTerminationReason? @map("termination_reason")
+  terminationNote   String?                @map("termination_note")
+  /// Дахин ажилд авсан бол хуучин бүртгэл (нэгээс нэг — uq_camp_employees_rehired_from, зөвхөн migration-д)
+  rehiredFromId     String?                @map("rehired_from_id") @db.Uuid
+  rehiredFrom       HrEmployee?            @relation("HrEmployeeRehire", fields: [tenantId, rehiredFromId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_rehired_from")
+  rehiredAs         HrEmployee[]           @relation("HrEmployeeRehire")
+  piiAccessLogs     CampPiiAccessLog[]
+  /// v0.2.3 Блок D: нэмэлт утас (үндсэн = `phone`)
+  extraPhones       HrEmployeePhone[]
+  /// v0.2.3 Блок D (S9, 20261019003): «Мэдээлэл дутуу» — [{ field, code, value }] (импортын буруу утга; талбарыг засахад арилна)
+  dataIssues        Json                   @default("[]") @map("data_issues")
+  positionRef      HrPosition?         @relation(fields: [tenantId, positionId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_position")
+  workMealLocation CampMealLocation?     @relation("CampEmployeeWorkMealLocation", fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_employees_meal_location")
+
+  @@unique([tenantId, id], map: "uq_camp_employees_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_employees_camp_id")
+  /// uq_camp_employees_code = partial unique (status <> 'TERMINATED', Q-C2) — Prisma дэмжихгүй тул зөвхөн migration-д (20261017002)
+  @@index([tenantId, employeeCode], map: "idx_camp_employees_code")
+  @@index([tenantId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_employees_cursor")
+  @@index([tenantId, departmentId], map: "idx_camp_employees_department")
+  @@index([tenantId, organizationId], map: "idx_camp_employees_org")
+  @@map("camp_employees")
+}
+
+// ── v0.2.1 (C-01, C-04, C-12) ────────────────────────────────
+
+/// Албан тушаалын каталог — байгууллагын нийтийн (Q2)
+model HrPosition {
+  id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  /// v0.2.3 Блок D (20261019002): ажлын байрны индекс (жнь 1322-11) — давхардаж болно
+  code      String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  employees HrEmployee[]
+  settings  CampPositionSetting[]
+  roleTemplates CampPositionRoleTemplate[]
+  autoUserRoles CampUserRole[] @relation("CampUserRoleSourcePosition")
+
+  @@unique([tenantId, id], map: "uq_camp_positions_tenant_id")
+  @@map("camp_positions")
+}
+
+/// v0.2.3 Блок D (20261019002) — ажилтны НЭМЭЛТ утас (үндсэн дугаар = camp_employees.phone)
+model HrEmployeePhone {
+  id         String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  phone      String
+  sortOrder  Int      @default(0) @map("sort_order") @db.SmallInt
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employee HrEmployee @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "camp_employee_phones_tenant_id_employee_id_fkey")
+
+  @@unique([tenantId, employeeId, phone], map: "uq_camp_employee_phones")
+  @@index([tenantId, employeeId, sortOrder], map: "idx_camp_employee_phones_employee")
+  @@map("camp_employee_phones")
+}

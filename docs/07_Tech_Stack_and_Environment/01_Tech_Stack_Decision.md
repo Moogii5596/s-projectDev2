@@ -17,15 +17,15 @@ tags: [stack, architecture]
 | Хэл | TypeScript ^5.4 | Backend + frontend нэг хэл |
 | Runtime | Node ≥ 20 (Docker image Node 22) | — |
 | Monorepo | pnpm 9.12 workspaces + Turborepo ^2.3 | `apps/*`, `packages/*`; pnpm strict (RULE-09) |
-| Backend | NestJS ^10.4 + **Fastify** (`@nestjs/platform-fastify`) | DI, guard/interceptor; Fastify — хурд, multipart |
+| Backend | NestJS ^11.2 + **Fastify 5** (`@nestjs/platform-fastify`) | DI, guard/interceptor; Fastify — хурд, multipart |
 | Validation | class-validator ^0.14 (DTO), zod ^3.23 (env) | — |
-| ORM | Prisma ^5.22 (**client л**; schema = SQL migration, MIG-001) | `@db.Uuid` бүрт (RULE-05) |
+| ORM | Prisma ^5.22 (**client л**; schema = SQL migration, MIG-001; `prisma/schema/*.prisma` модулиар, R22) | `@db.Uuid` бүрт (RULE-05) |
 | DB | PostgreSQL (Supabase local / self-hosted, Docker) | RLS ([[01_PostgreSQL_MultiTenant_RLS_Spec]]) |
 | Auth | Supabase Auth (GoTrue) + `@supabase/supabase-js` ^2.46 | JWT, нууц үгийн hook |
 | Cache / queue | Redis + ioredis ^5.4 | Membership cache, rate limit, outbox publish |
 | Cron | `@nestjs/schedule` ^4.1 | Outbox poller (5 сек), escalation (15 мин) |
 | Excel | exceljs 4.4.0 | Импорт/экспорт (ирц, ажилтан, хэлтэс, орчуулга) |
-| Имэйл | nodemailer 6.10.1 | SMTP (урилга, нууц үг) |
+| Имэйл | nodemailer 10.1.7 | SMTP (урилга, нууц үг) |
 | Frontend | React ^18.3 + Vite ^6.0 | SPA `web-shell` ([[ARCH-05_UI_UX_Architecture_Spec]]) |
 | Server state | TanStack Query ^5.62 (+ react-virtual) · axios ^1.7 | Глобал store алга |
 | Routing | react-router-dom ^6.28 | — |

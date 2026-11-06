@@ -1,0 +1,190 @@
+// MR (материалын хүсэлт) + workflow engine — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
+
+// ── Material Requisition Header ──────────────────────────────
+model MrHeader {
+  id                 String    @id @default(uuid()) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  mrNumber           String    @map("mr_number")
+  title              String
+  status             MrStatus  @default(DRAFT)
+  requesterId        String    @map("requester_id") @db.Uuid
+  department         String?
+  requiredDate       DateTime? @map("required_date") @db.Date
+  totalAmount        Decimal   @default(0) @map("total_amount") @db.Decimal(18, 2)
+  currency           String    @default("MNT")
+  notes              String?
+  version            Int       @default(1)
+  approvedBy         String?   @map("approved_by") @db.Uuid
+  approvedAt         DateTime? @map("approved_at")
+  workflowInstanceId String?   @map("workflow_instance_id") @db.Uuid  // Sprint 0 — RULE-05
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requester     CoreUser    @relation("MrRequester", fields: [requesterId], references: [id])
+  approver      CoreUser?   @relation("MrApprover", fields: [approvedBy], references: [id])
+  items         MrItem[]
+  approvalLogs     ApprovalLog[]
+  budgetCommitment BudgetCommitment?  // Phase 4.1
+  workflowInstance WorkflowInstance? @relation(fields: [workflowInstanceId], references: [id])  // Sprint 2
+
+  @@unique([tenantId, mrNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_mr_headers_cursor") // Phase 3.6.1 (20261010003)
+  @@map("mr_headers")
+}
+
+enum MrStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CANCELLED
+  PROVISIONALLY_APPROVED
+}
+
+// ── Material Requisition Items ───────────────────────────────
+model MrItem {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  headerId      String   @map("header_id") @db.Uuid
+  lineNumber    Int      @map("line_number")
+  description   String
+  unitOfMeasure String   @default("EA") @map("unit_of_measure")
+  quantity      Decimal  @db.Decimal(18, 4)
+  unitPrice     Decimal  @default(0) @map("unit_price") @db.Decimal(18, 2)
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  header        MrHeader @relation(fields: [headerId], references: [id], onDelete: Cascade)
+
+  @@unique([headerId, lineNumber])
+  @@index([tenantId])
+  @@map("mr_items")
+}
+
+// ── Approval Logs ────────────────────────────────────────────
+model ApprovalLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  mrId        String   @map("mr_id") @db.Uuid
+  approverId  String   @map("approver_id") @db.Uuid
+  action      String   // 'APPROVED' | 'REJECTED'
+  reason      String?
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mr          MrHeader @relation(fields: [mrId], references: [id], onDelete: Cascade)
+  approver    CoreUser @relation("ApproverLogs", fields: [approverId], references: [id])
+
+  @@unique([mrId, approverId, action])
+  @@index([tenantId])
+  @@map("approval_logs")
+}
+
+// ── Workflow Definitions ──────────────────────────────────────
+// Sprint 2: Workflow Engine — definition (steps_config JSONB)
+model WorkflowDefinition {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String
+  stepsConfig Json     @map("steps_config")
+  isActive    Boolean  @default(true) @map("is_active")
+  slaHours    Int      @default(48) @map("sla_hours")
+  escalationEnabled Boolean @default(false) @map("escalation_enabled")
+  delegationEnabled Boolean @default(false) @map("delegation_enabled")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  instances WorkflowInstance[]
+
+  @@map("workflow_definitions")
+}
+
+// ── Workflow Instances ────────────────────────────────────────
+// Sprint 2: Pessimistic lock (lockedBy → core_users.id, RULE-13)
+model WorkflowInstance {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  definitionId String    @map("definition_id") @db.Uuid
+  entityType   String    @default("MATERIAL_REQUISITION") @map("entity_type")
+  entityId     String    @map("entity_id") @db.Uuid
+  currentStep  Int       @default(0) @map("current_step")
+  resolvedSteps Json?    @map("resolved_steps")
+  status       String    @default("PENDING")
+  lockedBy     String?   @map("locked_by") @db.Uuid   // core_users.id — RULE-13
+  lockedAt     DateTime? @map("locked_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  definition WorkflowDefinition @relation(fields: [definitionId], references: [id])
+  stepLogs   WorkflowStepLog[]
+  slaLogs    WorkflowSlaLog[]
+  mrHeaders  MrHeader[]
+  escalationCount Int @default(0) @map("escalation_count")
+
+  @@index([tenantId, entityType, entityId])
+  @@map("workflow_instances")
+}
+
+// ── Workflow Step Logs ────────────────────────────────────────
+// Sprint 2: actorId → core_users.id (RULE-13, resolveUserId() дамжуулна)
+model WorkflowStepLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  instanceId String   @map("instance_id") @db.Uuid
+  stepOrder  Int      @map("step_order")
+  actorId    String   @map("actor_id") @db.Uuid   // core_users.id — RULE-13
+  action     String   // 'APPROVED' | 'REJECTED' | 'DELEGATED'
+  comment    String?
+  actedAt    DateTime @default(now()) @map("acted_at") @db.Timestamptz
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  instance WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, instanceId])
+  @@map("workflow_step_logs")
+}
+
+// ── Advanced Workflow ───────────────────────────────────────
+model WorkflowDelegation {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  delegatorId String   @map("delegator_id") @db.Uuid
+  delegateId  String   @map("delegate_id") @db.Uuid
+  validFrom   DateTime @default(now()) @map("valid_from") @db.Timestamptz
+  validUntil  DateTime @map("valid_until") @db.Timestamptz
+  reason      String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, delegatorId, isActive, validUntil])
+  @@map("workflow_delegations")
+}
+
+model WorkflowSlaLog {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  instanceId    String    @map("instance_id") @db.Uuid
+  stepOrder     Int       @map("step_order")
+  assignedToId  String    @map("assigned_to_id") @db.Uuid
+  dueAt         DateTime  @map("due_at") @db.Timestamptz
+  escalatedAt   DateTime? @map("escalated_at") @db.Timestamptz
+  escalatedToId String?   @map("escalated_to_id") @db.Uuid
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz
+  status        String    @default("PENDING")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  instance WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, dueAt, status])
+  @@map("workflow_sla_logs")
+}

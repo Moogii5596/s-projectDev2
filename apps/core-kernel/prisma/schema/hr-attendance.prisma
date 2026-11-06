@@ -1,0 +1,112 @@
+// HR: ээлжийн тохируулга, ирц/хөдөлгөөн — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
+
+enum CampShiftAdjustmentReason {
+  EARLY_ARRIVAL
+  SHIFT_CHANGE
+  OTHER
+}
+
+enum CampImportStatus {
+  PREVIEW
+  CONFIRMED
+  CANCELLED
+}
+
+enum CampMovementDirection {
+  ARRIVAL
+  DEPARTURE
+}
+
+enum CampMovementKind {
+  ROSTER
+  OFF_ROSTER
+}
+
+enum CampMealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  NIGHT
+}
+
+// ── 1.3 Цагийн бүртгэл, ирц, өрөө ────────────────────────────
+
+/// Давхцал → EXCLUDE (employee, daterange) — migration
+model HrShiftAdjustment {
+  id         String                    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String                    @map("tenant_id") @db.Uuid
+  employeeId String                    @map("employee_id") @db.Uuid
+  startDate  DateTime                  @map("start_date") @db.Date
+  endDate    DateTime                  @map("end_date") @db.Date
+  shift      CampShiftType
+  reasonType CampShiftAdjustmentReason @map("reason_type")
+  reason     String?
+  createdBy  String                    @map("created_by") @db.Uuid
+  createdAt  DateTime                  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime                  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employee      HrEmployee @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_shift_adj_employee")
+  createdByUser CoreUser     @relation("CampShiftAdjustmentCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_shift_adj_created_by")
+
+  @@index([tenantId, startDate, endDate], map: "idx_camp_shift_adj_dates")
+  @@map("camp_shift_adjustments")
+}
+
+model HrMovementImport {
+  id          String           @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId    String           @map("tenant_id") @db.Uuid
+  campId      String           @map("camp_id") @db.Uuid
+  fileName    String           @map("file_name")
+  status      CampImportStatus @default(PREVIEW)
+  totalRows   Int              @default(0) @map("total_rows")
+  okRows      Int              @default(0) @map("ok_rows")
+  errorRows   Int              @default(0) @map("error_rows")
+  /// [{ row, column, message }]
+  errors      Json             @default("[]")
+  /// PREVIEW-д задалсан мөрүүд (20261010001) — CONFIRM эндээс уншина
+  parsedRows  Json             @default("[]") @map("parsed_rows")
+  uploadedBy  String           @map("uploaded_by") @db.Uuid
+  confirmedBy String?          @map("confirmed_by") @db.Uuid
+  confirmedAt DateTime?        @map("confirmed_at") @db.Timestamptz
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp            Camp           @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movement_imports_camp")
+  uploadedByUser  CoreUser       @relation("CampMovementImportUploadedBy", fields: [tenantId, uploadedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movement_imports_uploaded_by")
+  confirmedByUser CoreUser?      @relation("CampMovementImportConfirmedBy", fields: [tenantId, confirmedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movement_imports_confirmed_by")
+  movements       HrMovement[]
+
+  @@unique([tenantId, campId, id], map: "uq_camp_movement_imports_camp_id")
+  @@index([tenantId, campId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_movement_imports_cursor")
+  @@map("camp_movement_imports")
+}
+
+/// ROSTER ирэлт → [DINNER], ROSTER явалт → [BREAKFAST], OFF_ROSTER → сонгосон хоол
+model HrMovement {
+  id           String                @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId     String                @map("tenant_id") @db.Uuid
+  campId       String                @map("camp_id") @db.Uuid
+  employeeId   String                @map("employee_id") @db.Uuid
+  movementDate DateTime              @map("movement_date") @db.Date
+  direction    CampMovementDirection
+  kind         CampMovementKind
+  meals        CampMealType[]        @default([])
+  importId     String?               @map("import_id") @db.Uuid
+  createdBy    String?               @map("created_by") @db.Uuid
+  createdAt    DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employee        HrEmployee        @relation(fields: [tenantId, campId, employeeId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movements_employee")
+  import          HrMovementImport? @relation(fields: [tenantId, campId, importId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movements_import")
+  createdByUser   CoreUser?           @relation("CampMovementCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_movements_created_by")
+  arrivalStays    CampStay[]          @relation("CampStayArrival")
+  departureStays  CampStay[]          @relation("CampStayDeparture")
+
+  @@unique([tenantId, id], map: "uq_camp_movements_tenant_id")
+  @@unique([tenantId, employeeId, movementDate, direction], map: "uq_camp_movements_unique")
+  @@index([tenantId, campId, movementDate], map: "idx_camp_movements_date")
+  @@map("camp_movements")
+}

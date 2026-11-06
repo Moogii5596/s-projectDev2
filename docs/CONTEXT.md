@@ -44,7 +44,7 @@ S Project — гаднаа нийгмийн сүлжээ, цаанаа ERP; бү
 
 ## 4. Хатуу кодын дүрэм (бүтэн текст [[00_rules_and_context]])
 
-- **DB:** schema = `supabase/migrations/*.sql` (`prisma db push` ✖, MIG-001) · ID `uuid_generate_v7()` (R11) · UUID бүрт `@db.Uuid` (R05) · enum өөрчлөх дараалал (R15) · migration дугаарыг хэрэгжүүлэх үед өгнө (MIG-002).
+- **DB:** schema = `supabase/migrations/*.sql` (`prisma db push` ✖, MIG-001) · ID `uuid_generate_v7()` (R11) · Prisma model → `prisma/schema/<модуль>.prisma` (R22) · UUID бүрт `@db.Uuid` (R05) · enum өөрчлөх дараалал (R15) · migration дугаарыг хэрэгжүүлэх үед өгнө (MIG-002).
 - **RLS:** tenant өгөгдөл үргэлж `inTenantTx(prisma, tenantId, tx => …)` дотор (R03/R04; `SET LOCAL` ✖) · шинэ хүснэгт → `SELECT camp_apply_tenant_rls('t')` (R12) · `SYSTEM_DATABASE_URL` зөвхөн системийн ажилд.
 - **NestJS:** глобал guard → `APP_GUARD` + `useExisting` (R07) · Prisma enum `@prisma/client`-ээс (R02) · `import type` (R09) · FK-д `core_users.id` (`resolveUserId`, `req.user.id` = authId) (R13) · `$use` raw guard (R14).
 - **API:** DTO нэр frontend-тэй ТАМ АДИЛ (R20) · pagination type (R17) · алдаа = `code` + `params`, мессеж mn/en/zh.

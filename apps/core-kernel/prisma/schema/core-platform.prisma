@@ -1,0 +1,119 @@
+// Платформ: outbox, модуль, route, idempotency, DLQ, super admin — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
+
+// ── Outbox Events ────────────────────────────────────────────
+model OutboxEvent {
+  id            String       @id @default(uuid()) @db.Uuid
+  tenantId      String       @map("tenant_id") @db.Uuid
+  eventType     String       @map("event_type")
+  aggregateType String       @map("aggregate_type")
+  aggregateId   String       @map("aggregate_id")
+  payload       Json         @default("{}")
+  status        OutboxStatus @default(PENDING)
+  retryCount    Int          @default(0) @map("retry_count")
+  nextRetryAt   DateTime     @default(now()) @map("next_retry_at")
+  errorMessage     String?      @map("error_message")
+  cloudEventId     String?      @map("cloud_event_id")
+  cloudEventSource String?      @map("cloud_event_source")
+  cloudEventType   String?      @map("cloud_event_type")
+  lastError        String?      @map("last_error")
+  publishedAt      DateTime?    @map("published_at")
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextRetryAt])
+  @@map("outbox_events")
+}
+
+enum OutboxStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+  DLQ           // Sprint 0: DEAD_LETTERED → DLQ (0006 migration-тай нийцнэ)
+}
+
+// ── Installed Modules ─────────────────────────────────────────
+// Sprint 0: Tenant-д суулгасан модулиудыг хадгалах
+model InstalledModule {
+  id               String    @id @default(uuid()) @db.Uuid  // RULE-05
+  tenantId         String    @map("tenant_id") @db.Uuid     // RULE-05
+  moduleId         String    @map("module_id")
+  version          String
+  status           String    @default("INSTALLED")
+  drainStartedAt   DateTime? @map("drain_started_at") @db.Timestamptz
+  manifestSnapshot Json      @default("{}") @map("manifest_snapshot")
+  installedAt      DateTime  @default(now()) @map("installed_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, moduleId])
+  @@index([tenantId, status])
+  @@map("installed_modules")
+}
+
+// ── Tenant Routes ─────────────────────────────────────────────
+// Sprint 1: Dynamic Route Ingress — module route бүртгэл
+model TenantRoute {
+  id           String   @id @default(uuid()) @db.Uuid    // RULE-05
+  tenantId     String   @map("tenant_id") @db.Uuid       // RULE-05
+  path         String
+  method       String
+  targetModule String   @map("target_module")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, path, method])
+  @@index([tenantId, isActive])
+  @@map("tenant_routes")
+}
+
+// ── Idempotency Keys ──────────────────────────────────────────
+// Sprint 2: 24 цагийн idempotency cache (key + tenant_id → composite PK)
+model IdempotencyKey {
+  key          String
+  tenantId     String   @map("tenant_id") @db.Uuid
+  responseCode Int      @map("response_code")
+  responseBody Json     @map("response_body")
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([key, tenantId])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+// ── DLQ Events ────────────────────────────────────────────────
+// Sprint 3: Dead Letter Queue — MAX_RETRIES давсан event архив
+model DlqEvent {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  originalEvent Json      @map("original_event")
+  errorMessage  String    @map("error_message")
+  retryCount    Int       @default(0) @map("retry_count")
+  maxRetries    Int       @default(3) @map("max_retries")
+  nextRetryAt   DateTime? @map("next_retry_at") @db.Timestamptz
+  status        String    @default("PENDING")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("dlq_events")
+}
+
+// ── Super Admins (Platform-level) ───────────────────────────
+// Sprint 4: Platform-level admin — RLS bypass, backend service layer шалгана
+model SuperAdmin {
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user CoreUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId])
+  @@map("super_admins")
+}

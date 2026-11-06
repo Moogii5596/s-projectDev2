@@ -1,0 +1,103 @@
+// Кемп: өөрчлөлтийн түүх, импорт, PII лог — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
+
+enum CampAuditAction {
+  CREATE
+  UPDATE
+  DEACTIVATE
+  IMPORT
+  /// v0.2.2 Блок 5 (20261017001)
+  TERMINATE
+  REHIRE
+}
+
+enum CampDataImportType {
+  EMPLOYEES
+  DEPARTMENTS
+  /// v0.2.3 Блок D (20261019001)
+  POSITIONS
+  FORMER_EMPLOYEES
+  BUILDING_TYPES
+  BUILDINGS
+  ROOMS
+  ROOM_ALLOCATIONS
+}
+
+enum CampDataImportStatus {
+  PREVIEW
+  CONFIRMED
+  CANCELLED
+}
+
+enum CampDataImportSource {
+  XLSX
+  GRID
+}
+
+// ── v0.2.0 §0.4 — Кемпийн өөрчлөлтийн түүх (20261011001) ─────
+/// Append-only (app_user: SELECT, INSERT). FK (tenant, actor → core_users; tenant, camp → camps) нь DB-д;
+/// Prisma relation-гүй — хуучин model-уудыг өөрчлөхгүйн тулд (зөвхөн нэмэлт).
+model CampAuditLog {
+  id            String          @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId      String          @map("tenant_id") @db.Uuid
+  campId        String?         @map("camp_id") @db.Uuid
+  entityType    String          @map("entity_type")
+  entityId      String          @map("entity_id") @db.Uuid
+  action        CampAuditAction
+  actorUserId   String          @map("actor_user_id") @db.Uuid
+  /// Орчуулгын түлхүүр (жнь audit.employee.update) + параметр
+  summaryKey    String          @map("summary_key")
+  summaryParams Json            @default("{}") @map("summary_params")
+  /// { талбар: { from, to } }
+  diff          Json            @default("{}")
+  importId      String?         @map("import_id") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([tenantId, entityType, entityId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_audit_entity")
+  @@index([tenantId, campId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_audit_camp")
+  @@map("camp_audit_log")
+}
+
+// ── v0.2.0 §0.5 — Мастер өгөгдлийн импорт (20261011002) ─────
+/// Ажилтан/хэлтэс: PREVIEW → CONFIRMED | CANCELLED. FK (camp, uploaded_by, confirmed_by) нь DB-д; Prisma relation-гүй.
+model CampDataImport {
+  id            String               @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId      String               @map("tenant_id") @db.Uuid
+  campId        String               @map("camp_id") @db.Uuid
+  type          CampDataImportType
+  source        CampDataImportSource
+  fileName      String?              @map("file_name")
+  status        CampDataImportStatus @default(PREVIEW)
+  totalRows     Int                  @default(0) @map("total_rows")
+  createRows    Int                  @default(0) @map("create_rows")
+  updateRows    Int                  @default(0) @map("update_rows")
+  unchangedRows Int                  @default(0) @map("unchanged_rows")
+  errorRows     Int                  @default(0) @map("error_rows")
+  /// [{ row, values, errors: [{ column, code, params }] }]
+  parsedRows    Json                 @default("[]") @map("parsed_rows")
+  uploadedBy    String               @map("uploaded_by") @db.Uuid
+  confirmedBy   String?              @map("confirmed_by") @db.Uuid
+  confirmedAt   DateTime?            @map("confirmed_at") @db.Timestamptz
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, campId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_data_imports_cursor")
+  @@map("camp_data_imports")
+}
+
+/// v0.2.2 Блок 5 (20261017003, PIL-03, D-08) — ажилтны хувийн мэдээлэл (профайл) үзсэн лог. Зөвхөн нэмэх (app_user: SELECT, INSERT).
+model CampPiiAccessLog {
+  id           String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  viewerUserId String   @map("viewer_user_id") @db.Uuid
+  employeeId   String   @map("employee_id") @db.Uuid
+  /// 'profile'
+  context      String
+  viewedAt     DateTime @default(now()) @map("viewed_at") @db.Timestamptz
+
+  viewer   CoreUser   @relation("CampPiiViewer", fields: [tenantId, viewerUserId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_pii_viewer")
+  employee HrEmployee @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_pii_employee")
+
+  @@index([tenantId, employeeId, viewedAt(sort: Desc)], map: "idx_camp_pii_access_employee")
+  @@index([tenantId, viewerUserId, employeeId, viewedAt(sort: Desc)], map: "idx_camp_pii_access_viewer")
+  @@map("camp_pii_access_log")
+}

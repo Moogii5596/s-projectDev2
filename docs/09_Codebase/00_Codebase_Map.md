@@ -26,7 +26,7 @@ tags: [codebase, moc, onboarding]
 
 | Зам | Юу | Дэлгэрэнгүй |
 |---|---|---|
-| `apps/core-kernel/` | Backend — NestJS + Fastify, Prisma 5 (`prisma/schema.prisma` = client л), угтвар `/api/v1` | [[01_Backend_Modules]] |
+| `apps/core-kernel/` | Backend — NestJS + Fastify, Prisma 5 (`prisma/schema/*.prisma` — модуль бүр тусдаа файл, R22; = client л), угтвар `/api/v1` | [[01_Backend_Modules]] |
 | `apps/web-shell/` | Frontend — React 18, Vite 6, TanStack Query v5, axios | [[04_Frontend_Map]] |
 | `apps/mfe-requisitions/` | Module Federation remote (MR) — `/mfe/*` | [[04_Frontend_Map]] §5 |
 | `apps/e2e/` | Playwright E2E + `load-test.ts`, `cluster-check.ts` | [[07_Test_Map]] |

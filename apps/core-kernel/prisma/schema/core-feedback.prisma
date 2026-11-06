@@ -1,0 +1,63 @@
+// Санал хүсэлт (FB-SYS-01a) — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
+
+/// v0.2.3 Блок F (20261019004, FB-SYS-01a) — санал хүсэлтийн төрөл
+enum CoreFeedbackKind {
+  BUG
+  IDEA
+  REQUEST
+}
+
+/// v0.2.3 Блок F — NEW → ACCEPTED → PLANNED → DONE (+ REJECTED)
+enum CoreFeedbackStatus {
+  NEW
+  ACCEPTED
+  PLANNED
+  DONE
+  REJECTED
+}
+
+/// v0.2.3 Блок F (20261019004) — санал хүсэлт / хөгжүүлэлтийн захиалга. Бүгд харна, төлөв/хариу — OWNER/ADMIN.
+model CoreFeedback {
+  id          String             @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId    String             @map("tenant_id") @db.Uuid
+  authorId    String             @map("author_id") @db.Uuid
+  kind        CoreFeedbackKind
+  title       String
+  body        String             @default("")
+  pagePath    String?            @map("page_path")
+  appVersion  String?            @map("app_version")
+  status      CoreFeedbackStatus @default(NEW)
+  adminReply  String?            @map("admin_reply")
+  repliedBy   String?            @map("replied_by") @db.Uuid
+  repliedAt   DateTime?          @map("replied_at") @db.Timestamptz
+  doneVersion String?            @map("done_version")
+  voteCount   Int                @default(0) @map("vote_count")
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  author  CoreUser           @relation("CoreFeedbackAuthor", fields: [tenantId, authorId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_core_feedback_author")
+  replier CoreUser?          @relation("CoreFeedbackReplier", fields: [tenantId, repliedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_core_feedback_replied_by")
+  votes   CoreFeedbackVote[]
+
+  @@unique([tenantId, id], map: "uq_core_feedback_tenant_id")
+  @@index([tenantId, status, createdAt(sort: Desc)], map: "idx_core_feedback_list")
+  @@index([tenantId, authorId], map: "idx_core_feedback_author")
+  @@map("core_feedback")
+}
+
+/// v0.2.3 Блок F (20261019004) — «+1» (хэрэглэгч бүр нэг удаа)
+model CoreFeedbackVote {
+  id         String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  feedbackId String   @map("feedback_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  feedback CoreFeedback @relation(fields: [tenantId, feedbackId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_core_feedback_votes_feedback")
+  user     CoreUser     @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_core_feedback_votes_user")
+
+  @@unique([feedbackId, userId], map: "uq_core_feedback_votes")
+  @@index([tenantId, userId], map: "idx_core_feedback_votes_user")
+  @@map("core_feedback_votes")
+}

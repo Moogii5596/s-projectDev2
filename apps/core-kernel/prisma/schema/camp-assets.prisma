@@ -1,0 +1,171 @@
+// Кемп: үндсэн хөрөнгө, засвар — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
+
+enum CampAssetCondition {
+  GOOD
+  DAMAGED
+  WRITTEN_OFF
+}
+
+enum CampMaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum CampMaintenanceStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CLOSED
+  CANCELLED
+}
+
+enum CampPartSource {
+  MINE_SUPPLIED
+  CATERING_PURCHASED
+}
+
+// ── 1.4 Үндсэн хөрөнгө, засвар ───────────────────────────────
+model CampAssetCategory {
+  id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  assets CampAsset[]
+
+  @@unique([tenantId, id], map: "uq_camp_asset_categories_tenant_id")
+  @@unique([tenantId, name], map: "uq_camp_asset_categories_name")
+  @@map("camp_asset_categories")
+}
+
+model CampAsset {
+  id           String             @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId     String             @map("tenant_id") @db.Uuid
+  campId       String             @map("camp_id") @db.Uuid
+  categoryId   String             @map("category_id") @db.Uuid
+  inventoryNo  String             @map("inventory_no")
+  name         String
+  serialNo     String?            @map("serial_no")
+  /// NULL = агуулахад
+  roomId       String?            @map("room_id") @db.Uuid
+  condition    CampAssetCondition @default(GOOD)
+  acquiredDate DateTime?          @map("acquired_date") @db.Date
+  acquiredCost Decimal?           @map("acquired_cost") @db.Decimal(18, 2)
+  note         String?
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant      Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp        Camp                     @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_assets_camp")
+  category    CampAssetCategory        @relation(fields: [tenantId, categoryId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_assets_category")
+  room        CampRoom?                @relation(fields: [tenantId, campId, roomId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_assets_room")
+  /// v0.2.1 (C-12): өрөөгүй, байранд (room_id-тай зэрэг байхгүй)
+  buildingId  String?                  @map("building_id") @db.Uuid
+  building    CampBuilding?            @relation("CampAssetBuilding", fields: [tenantId, campId, buildingId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_assets_building")
+  movements   CampAssetMovement[]
+  maintenance CampMaintenanceRequest[]
+
+  @@unique([tenantId, id], map: "uq_camp_assets_tenant_id")
+  @@unique([tenantId, campId, id], map: "uq_camp_assets_camp_id")
+  @@unique([tenantId, inventoryNo], map: "uq_camp_assets_inventory")
+  @@index([tenantId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_assets_cursor")
+  @@map("camp_assets")
+}
+
+model CampAssetMovement {
+  id         String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  campId     String   @map("camp_id") @db.Uuid
+  assetId    String   @map("asset_id") @db.Uuid
+  /// NULL = агуулах
+  fromRoomId String?  @map("from_room_id") @db.Uuid
+  /// NULL = агуулах
+  toRoomId   String?  @map("to_room_id") @db.Uuid
+  /// v0.2.1: байранд (өрөөгүй)
+  fromBuildingId String? @map("from_building_id") @db.Uuid
+  toBuildingId   String? @map("to_building_id") @db.Uuid
+  movedAt    DateTime @default(now()) @map("moved_at") @db.Timestamptz
+  movedBy    String   @map("moved_by") @db.Uuid
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  asset       CampAsset @relation(fields: [tenantId, campId, assetId], references: [tenantId, campId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_asset_movements_asset")
+  fromRoom    CampRoom? @relation("CampAssetMovementFrom", fields: [tenantId, campId, fromRoomId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_asset_movements_from")
+  toRoom      CampRoom? @relation("CampAssetMovementTo", fields: [tenantId, campId, toRoomId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_asset_movements_to")
+  fromBuilding CampBuilding? @relation("CampAssetMovementFromBuilding", fields: [tenantId, campId, fromBuildingId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_asset_movements_from_building")
+  toBuilding   CampBuilding? @relation("CampAssetMovementToBuilding", fields: [tenantId, campId, toBuildingId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_asset_movements_to_building")
+  movedByUser CoreUser  @relation("CampAssetMovementMovedBy", fields: [tenantId, movedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_asset_movements_moved_by")
+
+  @@index([tenantId, assetId, movedAt(sort: Desc)], map: "idx_camp_asset_movements_asset")
+  @@map("camp_asset_movements")
+}
+
+/// CLOSED болсны дараа өөрчлөгдөхгүй (trigger); сэлбэг нь мөн түгжигдэнэ
+model CampMaintenanceRequest {
+  id           String                  @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId     String                  @map("tenant_id") @db.Uuid
+  campId       String                  @map("camp_id") @db.Uuid
+  requestNo    String                  @map("request_no")
+  roomId       String?                 @map("room_id") @db.Uuid
+  assetId      String?                 @map("asset_id") @db.Uuid
+  title        String
+  description  String?
+  priority     CampMaintenancePriority @default(MEDIUM)
+  status       CampMaintenanceStatus   @default(OPEN)
+  reportedBy   String                  @map("reported_by") @db.Uuid
+  startedAt    DateTime?               @map("started_at") @db.Timestamptz
+  completedAt  DateTime?               @map("completed_at") @db.Timestamptz
+  closedBy     String?                 @map("closed_by") @db.Uuid
+  closedAt     DateTime?               @map("closed_at") @db.Timestamptz
+  cancelReason String?                 @map("cancel_reason")
+  /// true = өрөөг засварт оруулна (MAINTENANCE), DONE/CANCELLED болоход буцаана (20261010002)
+  blocksRoom   Boolean                 @default(false) @map("blocks_room")
+  createdAt    DateTime                @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime                @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp           Camp                  @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_maintenance_camp")
+  room           CampRoom?             @relation(fields: [tenantId, campId, roomId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_maintenance_room")
+  asset          CampAsset?            @relation(fields: [tenantId, campId, assetId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_maintenance_asset")
+  reportedByUser CoreUser              @relation("CampMaintenanceReportedBy", fields: [tenantId, reportedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_maintenance_reported_by")
+  closedByUser   CoreUser?             @relation("CampMaintenanceClosedBy", fields: [tenantId, closedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_maintenance_closed_by")
+  parts          CampMaintenancePart[]
+
+  @@unique([tenantId, id], map: "uq_camp_maintenance_requests_tenant_id")
+  @@unique([tenantId, requestNo], map: "uq_camp_maintenance_requests_no")
+  @@index([tenantId, campId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_camp_maintenance_cursor")
+  @@index([tenantId, campId, status], map: "idx_camp_maintenance_status")
+  @@map("camp_maintenance_requests")
+}
+
+/// CATERING_PURCHASED → unitPrice заавал; хүсэлт CLOSED болоход зардалд орно
+model CampMaintenancePart {
+  id          String         @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId    String         @map("tenant_id") @db.Uuid
+  requestId   String         @map("request_id") @db.Uuid
+  partName    String         @map("part_name")
+  quantity    Decimal        @db.Decimal(15, 3)
+  unit        String         @default("ш")
+  unitPrice   Decimal?       @map("unit_price") @db.Decimal(18, 2)
+  vatIncluded Boolean        @default(true) @map("vat_included")
+  source      CampPartSource
+  createdBy   String         @map("created_by") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  request       CampMaintenanceRequest @relation(fields: [tenantId, requestId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_parts_request")
+  createdByUser CoreUser               @relation("CampMaintenancePartCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_parts_created_by")
+  costEntries   CampCostEntry[]
+
+  @@unique([tenantId, id], map: "uq_camp_maintenance_parts_tenant_id")
+  @@index([tenantId, requestId], map: "idx_camp_parts_request")
+  @@map("camp_maintenance_parts")
+}

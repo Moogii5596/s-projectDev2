@@ -1,0 +1,29 @@
+// ============================================================
+// S Project — Prisma Schema
+// Multi-Tenant Supply Chain Platform
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// Олон файлт schema (v0.2.3 Блок 1б, ARC-04) — `prisma/schema/*.prisma`
+// Шинэ model → тухайн модулийн файлд; файл ~400 мөрөөс хэтэрвэл хуваана.
+// Enum нь түүнийг хэрэглэдэг (эхний) model-той нэг файлд.
+// ============================================================
+
+// ============================================================
+// Camp Module — Шат 1 (supabase/migrations/20261009001..006_camp_*.sql) — 2026-10-09
+// ⚠️ Schema өөрчлөлт = ЗӨВХӨН supabase migration [MIG-001]. `prisma db push` ХОРИОТОЙ:
+//    EXCLUDE (daterange/int4range), NULLS NOT DISTINCT unique, partial index, CHECK, trigger, RLS — Prisma-д илэрхийлэгдэхгүй.
+// D2: tenant хоорондын холбоос → (tenantId, x) composite FK. id-г DB үүсгэнэ (uuid_generate_v7, RULE-11).
+// D1: enum утга = Prisma нэр (UPPERCASE, @map хэрэггүй) → `import { CampHaulStatus } from '@prisma/client'` (RULE-02).
+// ============================================================

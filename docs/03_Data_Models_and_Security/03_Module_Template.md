@@ -34,7 +34,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON <items> TO app_user;                 -- 
 
 Хэрэглэх: `pnpm exec supabase migration up` → `pnpm db:generate`. **`prisma db push` хориотой** [MIG-001].
 
-## 2. Prisma model — `apps/core-kernel/prisma/schema.prisma`
+## 2. Prisma model — `apps/core-kernel/prisma/schema/<модуль>.prisma` (шинэ модуль → шинэ файл, R22)
 
 - UUID талбар бүрт `@db.Uuid`, snake_case → `@map(...)`, `@@map("<items>")`
 - `Tenant` model-д back-relation нэмэх (`<items> <Item>[]`)

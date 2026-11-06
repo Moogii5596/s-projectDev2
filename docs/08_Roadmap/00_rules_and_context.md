@@ -27,6 +27,7 @@ tags: [rules]
 - **RULE-03** RLS тохируулга → `SELECT set_config('app.tenant_id', ${tenantId}, true)` — `SET LOCAL` ХОРИГЛОНО.
 - **RULE-04** `$executeRaw` + model query → ЗААВАЛ нэгдсэн `$transaction(async tx => { ... })` дотор.
 - **RULE-05** UUID талбар БҮРТ → `@db.Uuid` annotation (id, tenantId, authId, FK бүгд).
+- **RULE-22** Prisma schema олон файлтай (`apps/core-kernel/prisma/schema/*.prisma`, `prismaSchemaFolder`, ARC-04): шинэ model → тухайн модулийн файлд (`core`, `hr`, `camp-*` …); enum → түүнийг хэрэглэдэг model-той нэг файлд; файл ~400 мөрөөс хэтэрвэл хуваана. Ганц `schema.prisma` дахин үүсгэхгүй (байвал Prisma түүнийг түрүүлж уншина).
 - **RULE-14** Prisma `$use` middleware → `executeRaw`/`queryRaw` action guard ЗААВАЛ:
   ```typescript
   if (params.action === 'executeRaw' || params.action === 'queryRaw') return next(params);

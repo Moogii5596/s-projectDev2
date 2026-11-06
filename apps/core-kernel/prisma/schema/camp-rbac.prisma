@@ -1,0 +1,140 @@
+// Кемп RBAC (ADR-007-оор core_* руу шилжинэ) — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
+
+enum CampRoleCode {
+  CAMP_ADMIN
+  CAMP_MANAGER
+  CATERING_ADMIN
+  EMPLOYEE // v0.2.2 (20261013002) — "Ажилтан" загвар
+}
+
+/// v0.2.2 (20261013001) — эрхийн эх сурвалж
+enum CampPermissionSource {
+  TEMPLATE
+  DIRECT
+}
+
+/// v0.2.2 (20261013002) — албан тушаалын загварын хамрах хүрээ
+enum CampTemplateScope {
+  ALL_CAMPS
+  EMPLOYEE_CAMP
+}
+
+// ── 1.1 RBAC ─────────────────────────────────────────────────
+
+/// Permission каталог — tenant-гүй, migration-аар л нэмэгдэнэ (app_user: зөвхөн SELECT)
+model CampPermission {
+  code      String   @id
+  name      String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  rolePermissions CampRolePermission[]
+  userPermissions CampUserPermission[]
+
+  @@map("camp_permissions")
+}
+
+/// Системийн роль (isSystem) устгагдахгүй, systemCode солигдохгүй (trigger)
+model CampRole {
+  id          String        @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId    String        @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  isSystem    Boolean       @default(false) @map("is_system")
+  systemCode  CampRoleCode? @map("system_code")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  permissions CampRolePermission[]
+  userRoles   CampUserRole[]
+  positionTemplates CampPositionRoleTemplate[]
+
+  @@unique([tenantId, id], map: "uq_camp_roles_tenant_id")
+  @@unique([tenantId, name], map: "uq_camp_roles_tenant_name")
+  @@unique([tenantId, systemCode], map: "uq_camp_roles_tenant_code")
+  @@map("camp_roles")
+}
+
+model CampRolePermission {
+  tenantId       String   @map("tenant_id") @db.Uuid
+  roleId         String   @map("role_id") @db.Uuid
+  permissionCode String   @map("permission_code")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  role       CampRole       @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_role_permissions_role")
+  permission CampPermission @relation(fields: [permissionCode], references: [code], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([roleId, permissionCode], map: "pk_camp_role_permissions")
+  @@index([tenantId, roleId], map: "idx_camp_role_permissions_tenant")
+  @@map("camp_role_permissions")
+}
+
+/// campId NULL = бүх кемп. UNIQUE (tenant, user, role, camp) NULLS NOT DISTINCT — зөвхөн migration-д (uq_camp_user_roles)
+model CampUserRole {
+  id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  campId    String?  @map("camp_id") @db.Uuid
+  /// v0.2.2 D-11 — албан тушаалын загвараас автоматаар үүссэн бол тэр албан тушаал; NULL = гараар
+  sourcePositionId String? @map("source_position_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  sourcePosition HrPosition? @relation("CampUserRoleSourcePosition", fields: [tenantId, sourcePositionId], references: [tenantId, id], onDelete: SetNull, onUpdate: NoAction, map: "fk_camp_user_roles_source_position")
+  tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user   CoreUser @relation("CampUserRoleUser", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_roles_user")
+  role   CampRole @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_roles_role")
+  camp   Camp?    @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_roles_camp")
+  /// v0.2.2 D-09: энэ олголтоос хуулагдсан TEMPLATE эрхүүд (trigger)
+  permissions CampUserPermission[]
+
+  @@unique([tenantId, id], map: "uq_camp_user_roles_tenant_id")
+  @@index([tenantId, roleId], map: "idx_camp_user_roles_role")
+  @@map("camp_user_roles")
+}
+
+/// v0.2.2 (ADR-003 §2.4, D-01) — хэрэглэгчийн ЭЦСИЙН эрх, guard зөвхөн үүнийг уншина.
+/// TEMPLATE мөрийг camp_user_roles-ийн trigger үүсгэнэ (гараар бүү бич); DIRECT = шууд олголт.
+/// uq_camp_user_permissions (NULLS NOT DISTINCT) — зөвхөн migration-д.
+model CampUserPermission {
+  id             String               @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId       String               @map("tenant_id") @db.Uuid
+  userId         String               @map("user_id") @db.Uuid
+  permissionCode String               @map("permission_code")
+  campId         String?              @map("camp_id") @db.Uuid
+  source         CampPermissionSource
+  userRoleId     String?              @map("user_role_id") @db.Uuid
+  createdBy      String?              @map("created_by") @db.Uuid
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+
+  user       CoreUser       @relation("CampUserPermissionUser", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_permissions_user")
+  camp       Camp?          @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_permissions_camp")
+  userRole   CampUserRole?  @relation(fields: [tenantId, userRoleId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_user_permissions_user_role")
+  permission CampPermission @relation(fields: [permissionCode], references: [code], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenantId, userId], map: "idx_camp_user_permissions_user")
+  @@index([userRoleId], map: "idx_camp_user_permissions_user_role")
+  @@map("camp_user_permissions")
+}
+
+/// v0.2.2 (D-02) — албан тушаал → роль-загвар
+model CampPositionRoleTemplate {
+  tenantId   String            @map("tenant_id") @db.Uuid
+  positionId String            @map("position_id") @db.Uuid
+  roleId     String            @map("role_id") @db.Uuid
+  scope      CampTemplateScope @default(EMPLOYEE_CAMP)
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  position HrPosition @relation(fields: [tenantId, positionId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_position_role_templates_position")
+  role     CampRole     @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_position_role_templates_role")
+
+  @@id([positionId, roleId], map: "pk_camp_position_role_templates")
+  @@index([tenantId, positionId], map: "idx_camp_position_role_templates_tenant")
+  @@map("camp_position_role_templates")
+}

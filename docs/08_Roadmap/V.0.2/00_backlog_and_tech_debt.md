@@ -161,7 +161,7 @@ tags: [roadmap, v0.2]
 | QA-10 | HR frontend Кемпээс хамаарна (`ui.tsx`, `useCampMutation`, `campKeys`, `types.ts`, `ImportDialog`, `EmployeePicker`, `CatalogPage`; «Ирц» → Кемпийн `stays`) → `modules/shared` руу салгах | v0.2.2 H2 (H2-Q3) | P2 | M | 📋 v0.3 |
 | QA-11 | e2e API helper-ууд хуучин `/api/v1/camp/...` (Deprecation) замыг дууддаг → хуучин зам устгахаас **өмнө** `/hr`, `/core` руу | v0.2.2 H2 | P1 | S | 📋 v0.2.3 |
 | QA-12 | Хуучин `/api/v1/camp/...` HR controller 6-г устгах (`camp/legacy/hr-legacy.controller.ts`, H-Q4) — **QA-11-ийн дараа** | v0.2.2 H1 | P1 | S | 📋 v0.2.3 |
-| QA-13 | Хамаарал цэвэрлэх: ашиглагдаагүй `@nestjs/throttler`, `@s-project/prisma-rls-extension` (core-kernel), `@tanstack/react-query` (mfe); жагсаалтгүй (hoisting-оор л ажилладаг) `dotenv`, `@nestjs/schematics` (core-kernel), `exceljs` (e2e) → package.json-д | knip 2026-10-18; project-status §3 | P2 | S | 📋 v0.2.3 |
+| QA-13 | Хамаарал цэвэрлэх: ашиглагдаагүй `@nestjs/throttler`, `@s-project/prisma-rls-extension` (core-kernel), `@tanstack/react-query` (mfe); жагсаалтгүй (hoisting-оор л ажилладаг) `dotenv`, `@nestjs/schematics` (core-kernel), `exceljs` (e2e) → package.json-д | knip 2026-10-18; project-status §3 | P2 | S | ✅ v0.2.3 Блок 1 (2026-10-19) |
 | QA-14 | HR замын параметр `/hr/sites/:campId` → `siteId` (утга = ажлын байр, H-Q1) | v0.2.2 H1 | P3 | S | 📋 v0.3 |
 | QA-15 | Repo цэвэрлэгээ: root-ийн `_tmp_*` (~45), `a`, хоосон `outputs_tmp/`, root-ийн хуучин `lessons_learned.md` stub; `.gitattributes` (`*.ps1`, `Caddyfile` — LF/CRLF) | 2026-10-18 | P3 | S | 📋 v0.2.2.1 (`.gitattributes`; бусад — дараа) |
 | QA-16 | Frontend-д **ErrorBoundary алга** — нэг компонент унахад цагаан дэлгэц (route `errorElement` + глобал boundary, i18n мессеж) | кодын анализ 2026-10-18 | P1 | S | 📋 v0.2.2.1 (hotfix) |
@@ -179,12 +179,15 @@ tags: [roadmap, v0.2]
 
 | ID | Ажил | Эх сурвалж | Урьдч. | Хэмжээ | Төлөв |
 |---|---|---|---|---|---|
-| DEP-01 | `nodemailer 6.10.1` → сүүлийн хувилбар (урилгын имэйл: хүлээн авагчийн домэйн шалгалт тойрох, addressparser DoS, CRLF) | audit | P1 | S | 📋 v0.2.2.1 (hotfix) |
-| DEP-02 | NestJS 10.4 → 11 + Fastify 4.28 → 5 (v4 дэмжлэг дууссан; эвдэрсэн URL-ээр auth тойрох, body validation тойрох; `@fastify/middie` critical — Nest middleware ашиглаагүй тул бодит эрсдэл бага; `find-my-way`) | audit | P1 | M | 📋 v0.2.3 |
+| DEP-01 | `nodemailer 6.10.1` → сүүлийн хувилбар (урилгын имэйл: хүлээн авагчийн домэйн шалгалт тойрох, addressparser DoS, CRLF) | audit | P1 | S | ✅ v0.2.3 Блок 1 — nodemailer 10.1.7 (2026-10-19) |
+| DEP-02 | NestJS 10.4 → 11 + Fastify 4.28 → 5 (v4 дэмжлэг дууссан; эвдэрсэн URL-ээр auth тойрох, body validation тойрох; `@fastify/middie` critical — Nest middleware ашиглаагүй тул бодит эрсдэл бага; `find-my-way`) | audit | P1 | M | ✅ v0.2.3 Блок 1 — Nest 11.2.7, Fastify 5.12.7 (2026-10-19) |
 | DEP-03 | `react-router` 6.30 → 7 (open redirect, moderate) | audit | P2 | M | 📋 v0.2.4 |
 | ARC-01 | Backend HR ↔ Кемп хоёр тийш хамааралтай: `hr` → `camp/common` ~80 import (camp-tx, permissions, errors, access, audit…), `camp` → `hr` 15 файл → `camp/common`-ийг `common/tenant` руу зөөх (QA-10-ийн backend тал) | madge/grep | P1 | M | 📋 v0.3 |
 | ARC-02 | Frontend API type гараар (`camp/api/types.ts` 88 type, 703 мөр; R20-оор гар синк) → `@nestjs/swagger` OpenAPI + type codegen | кодын анализ | P1 | M | 📋 v0.3 |
 | ARC-03 | Унтаа модулиуд (MR, workflow, budget, inventory, vendor, report, event-bus, route-ingress, mr-lifecycle) — backend ~3.7k, frontend ~630 мөр; lint анхааруулгын 65/70 → WF-05-тай хамт: хадгалах / хасах | кодын анализ | P2 | M | 📋 v0.2.4 — Debug цэсэнд (Q17); хадгалах/устгах — v0.3 |
+| ARC-04 | `schema.prisma` 1953 мөр (67 model, 38 enum) → модулиар `prisma/schema/*.prisma` (16 файл, `prismaSchemaFolder` preview, R22) | хэрэглэгч 2026-10-19 | P2 | S | ✅ v0.2.3 Блок 1б (2026-10-19) |
+| DEP-04 | Prisma 5.22 → 6.x (олон файлт schema GA, `prismaSchemaFolder` preview-г хасах) | Блок 1б | P2 | M | 📋 v0.2.4 |
+| DEP-05 | Хөгжүүлэлтийн хэрэгслийн эмзэг хамаарал (audit 2026-10-19, runtime-д хамаарахгүй): `vitest` 1.6 → 3.2+ (tinypool, vite, source-map-js), `@playwright/test` 1.48 → 1.55+, `@module-federation/vite` (adm-zip, undici), `@typescript-eslint` 7 (braces) | Блок 1 audit | P2 | M | 📋 v0.2.4 |
 
 ## 5. Баримт
 
