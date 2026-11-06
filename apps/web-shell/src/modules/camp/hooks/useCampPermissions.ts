@@ -19,6 +19,10 @@ export const campKeys = {
   organizations: ['camp', 'organizations'] as const,
   settings: (campId: string) => ['camp', campId, 'settings'] as const,
   mealLocations: (campId: string) => ['camp', campId, 'meal-locations'] as const,
+  /** v0.2.3 Блок 6а — өдөр бүр / бүгд (prefix) */
+  mealOrder: (campId: string, date: string) => ['camp', campId, 'meal-order', date] as const,
+  mealOrderAll: (campId: string) => ['camp', campId, 'meal-order'] as const,
+  mealTemplate: (campId: string) => ['camp', campId, 'meal-template'] as const,
   buildings: (campId: string) => ['camp', campId, 'buildings'] as const,
   rooms: (campId: string) => ['camp', campId, 'rooms'] as const,
   departments: (campId: string) => ['camp', campId, 'departments'] as const,

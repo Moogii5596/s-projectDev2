@@ -1,4 +1,4 @@
-import { IsBoolean, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { HHMM, toBool, trim } from '../common/camp-dto.util';
 
@@ -33,6 +33,25 @@ export class UpdateCampSettingsDto {
   @IsOptional() @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value)) @IsString()
   @Matches(/^[A-Z]{1,3}$/, { message: 'autoCodePrefix 1–3 латин том үсэг' })
   autoCodePrefix?: string;
+
+  /** v0.2.3 Блок 6а — хоолны захиалгын урсгал (G-8). Өгөөгүй = өөрчлөхгүй */
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(30)
+  mealOrderLeadDays?: number;
+
+  @IsOptional() @IsIn(['BLOCK', 'APPROVAL', 'FREE'])
+  mealOrderAfterCutoff?: 'BLOCK' | 'APPROVAL' | 'FREE';
+
+  @IsOptional() @Transform(toBool) @IsBoolean()
+  mealOrderRequiresAccept?: boolean;
+
+  @IsOptional() @IsIn(['FORBID', 'ALLOW', 'TWO_SIDED'])
+  mealOrderEditAfterAccept?: 'FORBID' | 'ALLOW' | 'TWO_SIDED';
+
+  @IsOptional() @IsIn(['EMPTY', 'COPY_PREV', 'TEMPLATE'])
+  mealOrderDefaultFill?: 'EMPTY' | 'COPY_PREV' | 'TEMPLATE';
+
+  @IsOptional() @Transform(toBool) @IsBoolean()
+  mealOrderAllowSelfAccept?: boolean;
 }
 
 export class CreateMealLocationDto {

@@ -32,6 +32,7 @@ model Camp {
   contracts       CampContract[]
   haulRecords     CampHaulRecord[]
   mealOrders      CampMealOrder[]
+  mealOrderTemplates CampMealOrderTemplate[]
   costEntries     CampCostEntry[]
 
   @@unique([tenantId, id], map: "uq_camps_tenant_id")
@@ -55,6 +56,8 @@ model CampMealLocation {
   employees       HrEmployee[]        @relation("CampEmployeeWorkMealLocation")
   positionSettings CampPositionSetting[]
   mealOrderLines  CampMealOrderLine[]
+  mealOrderExtras CampMealOrderExtra[]
+  mealOrderTemplates CampMealOrderTemplate[]
 
   @@unique([tenantId, id], map: "uq_camp_meal_locations_tenant_id")
   @@unique([tenantId, campId, id], map: "uq_camp_meal_locations_camp_id")
@@ -76,6 +79,16 @@ model CampSetting {
   /// v0.2.3 R7 (20261106004): кодгүй ажилтны автомат кодын угтвар (Z → Z0001)
   autoCodePrefix        String    @default("Z") @map("auto_code_prefix")
   mealOrderCutoffTime   DateTime? @map("meal_order_cutoff_time") @db.Time(6)
+  /// 20261107003 (Блок 6а): хоолны захиалгын урсгал — бүгд тохиргоо (G-8)
+  mealOrderLeadDays        Int     @default(1) @map("meal_order_lead_days") @db.SmallInt
+  /// BLOCK | APPROVAL | FREE
+  mealOrderAfterCutoff     String  @default("BLOCK") @map("meal_order_after_cutoff")
+  mealOrderRequiresAccept  Boolean @default(true) @map("meal_order_requires_accept")
+  /// FORBID | ALLOW | TWO_SIDED
+  mealOrderEditAfterAccept String  @default("FORBID") @map("meal_order_edit_after_accept")
+  /// EMPTY | COPY_PREV | TEMPLATE
+  mealOrderDefaultFill     String  @default("EMPTY") @map("meal_order_default_fill")
+  mealOrderAllowSelfAccept Boolean @default(false) @map("meal_order_allow_self_accept")
   defaultMealLocationId String?   @map("default_meal_location_id") @db.Uuid
   /// Катерингийн үйлчилгээ үзүүлэгч (CATERING төрөлтэй) — сэлбэгийн зардал үүнд бүртгэгдэнэ (20261010002)
   cateringOrganizationId String?  @map("catering_organization_id") @db.Uuid

@@ -38,7 +38,10 @@ describe('permission-registry (ADR-007)', () => {
 
   it('availableIn: V2 код нуугдана, үл мэдэгдэх → v2', () => {
     expect(permissionAvailableIn('hr.employee.manage')).toBe('v1');
-    expect(permissionAvailableIn('camp.meal.order')).toBe('v2');
+    // v0.2.3 Блок 6а: хоолны захиалга гарсан → v1
+    expect(permissionAvailableIn('camp.meal.order')).toBe('v1');
+    expect(permissionAvailableIn('camp.meal.accept')).toBe('v1');
+    expect(permissionAvailableIn('camp.contract.manage')).toBe('v2');
     expect(permissionAvailableIn('core.unknown.x')).toBe('v2');
   });
 });

@@ -2,7 +2,7 @@
 title: "CONTEXT — агентын эхлэх цэг (нэг хуудас)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 tags: [context, rules, moc]
 ---
 
@@ -95,3 +95,8 @@ S Project — гаднаа нийгмийн сүлжээ, цаанаа ERP; бү
 3. Зэрэгцэх агент migration, `prisma/schema/`, local Supabase DB (migration, integration тест) ✖ — DB нэг.
 4. Зэрэгцэх агент [[project-status]], спринтийн progress, tech plan-д ✖ бичнэ — явцаа commit мессежид; merge хийхдээ гол агент баримтыг нэгтгэнэ.
 5. Шалгалт: tsc + eslint + хөндсөн файлын unit; merge-ийн дараа гол агент нэг удаа шалгана.
+6. **Гэрээ эхлээд** (2026-11-07, Блок 5-ын сургамж): зэрэгцээ ажлыг өгөхөөс өмнө гол агент DTO / `types.ts` / props-ийг repo-д бичнэ (эсвэл даалгаварт яг кодоор нь өгнө) — туслах таамаглахгүй, merge-д props тааруулахгүй.
+7. **Зөвхөн «навч» ажил:** өөрийн хавтастай, бусдаас хамааралгүй (компонент, цэвэр service, тест, скрипт, release notes, туршилтын заавар). Хуваалцдаг файл — `packages/i18n/*.json`, `App.tsx` / цэс / route, `package.json` (боломжтой бол), **автомат баримт** (`09_Codebase/02,03,05,06,07,09`, `lessons_learned.md` — эх нь код / `*.env.example` / `lessons/LL-*`) — гол агентад. Туслахын шинэ текст → `modules/<x>/i18n-pending.json` (`<x>.ui.*`), гол агент merge-д нэгтгэнэ.
+8. **Даалгаврын толгой (заавал):** хавтас (`modules/<name>/…` — төслийн бүтцийг [[04_Frontend_Map]] / [[01_Backend_Modules]]-ээс шалгаж бичнэ), ЗӨВХӨН хөндөх файлууд, ХОРИГЛОХ жагсаалт, worktree-ийн зам + branch, commit хийх эсэх, шалгалтын команд.
+9. **Worktree-д л ажиллана:** туслах үндсэн хавтаст (`s-project`) бичихгүй — гол агентын commit хийгээгүй өөрчлөлттэй холилдоно. Commit-ийг worktree-д хийнэ.
+10. **Merge:** туслах дуусахад гол агент diff-ийг шалгаад хэрэглэгчид нэг PowerShell команд өгнө (`git merge --no-ff <branch>` → `pnpm install` → `git worktree remove …`). Хэрэглэгчийн машины VM-ийн git CRLF-ийг өөрчлөлт гэж харуулдаг (Windows `autocrlf`) — `git diff --ignore-cr-at-eol`-оор шалгана.

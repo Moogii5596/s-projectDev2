@@ -15,7 +15,7 @@ import PageSuspense from '../../../components/PageSuspense'
  * FB-05 (v0.2.0): Байр/Хэлтэс/Ростер нь "Тохиргоо" каталог руу шилжсэн (settings/:section).
  * v0.2.2 H2: зөвхөн кемпийнх (өрөө, хоол, засвар, хөрөнгө, тохиргоо); ажилтан/ирц/ээлж → «Хүний нөөц».
  */
-export const CAMP_SECTIONS = ['rooms', 'meals', 'maintenance', 'assets', 'settings'] as const
+export const CAMP_SECTIONS = ['rooms', 'meals', 'meal-orders', 'maintenance', 'assets', 'settings'] as const
 export const CAMP_DEFAULT_SECTION = 'rooms'
 
 export default function CampLayout() {

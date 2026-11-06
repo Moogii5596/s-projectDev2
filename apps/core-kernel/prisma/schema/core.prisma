@@ -64,6 +64,8 @@ model Tenant {
   campHaulRecords             CampHaulRecord[]
   campMealOrders              CampMealOrder[]
   campMealOrderLines          CampMealOrderLine[]
+  campMealOrderExtras         CampMealOrderExtra[]
+  campMealOrderTemplates      CampMealOrderTemplate[]
   campCostEntries             CampCostEntry[]
 
   @@map("tenants")
@@ -135,6 +137,7 @@ model CoreUser {
   campHaulReviewed          CampHaulRecord[]         @relation("CampHaulReviewedBy")
   campMealOrdersOrdered     CampMealOrder[]          @relation("CampMealOrderOrderedBy")
   campMealOrdersReviewed    CampMealOrder[]          @relation("CampMealOrderReviewedBy")
+  campMealExtrasCreated     CampMealOrderExtra[]     @relation("CampMealExtraCreatedBy")
   campCostEntries           CampCostEntry[]          @relation("CampCostEntryCreatedBy")
 
   @@unique([tenantId, email])

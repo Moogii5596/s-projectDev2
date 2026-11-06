@@ -10,7 +10,7 @@ tags: [codebase, api, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Нийт **221** endpoint, 32 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
+Нийт **236** endpoint, 33 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
 
 **Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). **OWNER·ADMIN** = зөвхөн системийн роль (`requireTenantAdmin` — хэрэглэгч / роль удирдах, SEC-009), `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].
 
@@ -26,6 +26,7 @@ tags: [codebase, api, generated]
 - [[#modules/camp/catalog]] — 5
 - [[#modules/camp/maintenance]] — 12
 - [[#modules/camp/master]] — 11
+- [[#modules/camp/meal-orders]] — 15
 - [[#modules/camp/rbac]] — 25
 - [[#modules/camp/settings]] — 5
 - [[#modules/core/feedback]] — 11
@@ -165,6 +166,26 @@ tags: [codebase, api, generated]
 | GET | `/api/v1/camp/camps/:campId/rooms` | `CampMasterController.listRooms` → `CampFacilitiesService.listRooms` | гишүүн | `camp-master.controller.ts:78` |
 | POST | `/api/v1/camp/camps/:campId/rooms` | `CampMasterController.createRoom` → `CampFacilitiesService.createRoom` | гишүүн | `camp-master.controller.ts:85` |
 | PATCH | `/api/v1/camp/camps/:campId/rooms/:id` | `CampMasterController.updateRoom` → `CampFacilitiesService.updateRoom` | гишүүн | `camp-master.controller.ts:91` |
+
+## modules/camp/meal-orders
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/camp/camps/:campId/meal-orders` | `MealOrdersController.list` → `MealOrdersService.list` | гишүүн | `meal-orders.controller.ts:13` |
+| GET | `/api/v1/camp/camps/:campId/meal-orders/:date` | `MealOrdersController.get` → `MealOrdersService.get` | `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:19` |
+| PUT | `/api/v1/camp/camps/:campId/meal-orders/:date` | `MealOrdersController.upsert` → `MealOrdersService.upsert` | `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:25` |
+| DELETE | `/api/v1/camp/camps/:campId/meal-orders/:date` | `MealOrdersController.remove` → `MealOrdersService.remove` | `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:32` |
+| POST | `/api/v1/camp/camps/:campId/meal-orders/:date/extras` | `MealOrdersController.addExtra` → `MealOrdersService.addExtra` | `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:39` |
+| DELETE | `/api/v1/camp/camps/:campId/meal-orders/:date/extras/:extraId` | `MealOrdersController.removeExtra` → `MealOrdersService.removeExtra` | `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:45` |
+| POST | `/api/v1/camp/camps/:campId/meal-orders/:date/submit` | `MealOrdersController.submit` → `MealOrdersService.submit` | `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:57` |
+| POST | `/api/v1/camp/camps/:campId/meal-orders/:date/accept` | `MealOrdersController.accept` → `MealOrdersService.accept` | `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:64` |
+| POST | `/api/v1/camp/camps/:campId/meal-orders/:date/reject` | `MealOrdersController.reject` → `MealOrdersService.reject` | `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:71` |
+| POST | `/api/v1/camp/camps/:campId/meal-orders/:date/request-change` | `MealOrdersController.requestChange` → `MealOrdersService.requestChange` | `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:78` |
+| POST | `/api/v1/camp/camps/:campId/meal-orders/:date/withdraw-change` | `MealOrdersController.withdrawChange` → `MealOrdersService.withdrawChange` | `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:85` |
+| POST | `/api/v1/camp/camps/:campId/meal-orders/:date/approve-change` | `MealOrdersController.approveChange` → `MealOrdersService.approveChange` | `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:92` |
+| POST | `/api/v1/camp/camps/:campId/meal-orders/:date/reject-change` | `MealOrdersController.rejectChange` → `MealOrdersService.rejectChange` | `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:99` |
+| GET | `/api/v1/camp/camps/:campId/meal-order-template` | `MealOrdersController.getTemplate` → `MealOrdersService.getTemplate` | гишүүн | `meal-orders.controller.ts:106` |
+| PUT | `/api/v1/camp/camps/:campId/meal-order-template` | `MealOrdersController.putTemplate` → `MealOrdersService.putTemplate` | `camp.settings.manage` `camp.meal.order` `camp.meal.accept` | `meal-orders.controller.ts:112` |
 
 ## modules/camp/rbac
 

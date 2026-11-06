@@ -10,7 +10,7 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (58 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **76** хүснэгт, 41 enum, 30 функц, 67 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (61 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **78** хүснэгт, 41 enum, 31 функц, 70 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
@@ -18,7 +18,7 @@ tags: [codebase, database, rls, generated]
 
 **Бусад (tenant, MR, workflow, event bus, модулиуд):** [[#approval_logs]] · [[#auth_guard.password_failures]] · [[#budget_allocations]] · [[#budget_commitments]] · [[#budget_periods]] · [[#dlq_events]] · [[#feed_comments]] · [[#feed_post_media]] · [[#feed_posts]] · [[#feed_reactions]] · [[#feed_reports]] · [[#feed_revisions]] · [[#i18n_override_history]] · [[#i18n_overrides]] · [[#idempotency_keys]] · [[#installed_modules]] · [[#inventory_items]] · [[#mr_headers]] · [[#mr_items]] · [[#outbox_events]] · [[#super_admins]] · [[#tenant_routes]] · [[#tenants]] · [[#vendors]] · [[#workflow_definitions]] · [[#workflow_delegations]] · [[#workflow_instances]] · [[#workflow_sla_logs]] · [[#workflow_step_logs]]
 
-**Кемп (`camp_*`):** [[#camp_asset_categories]] · [[#camp_asset_movements]] · [[#camp_assets]] · [[#camp_audit_log]] · [[#camp_building_types]] · [[#camp_buildings]] · [[#camp_contract_item_prices]] · [[#camp_contract_items]] · [[#camp_contracts]] · [[#camp_cost_entries]] · [[#camp_crews]] · [[#camp_data_imports]] · [[#camp_department_shift_patterns]] · [[#camp_departments]] · [[#camp_employee_phones]] · [[#camp_employees]] · [[#camp_haul_records]] · [[#camp_maintenance_parts]] · [[#camp_maintenance_requests]] · [[#camp_meal_locations]] · [[#camp_meal_order_lines]] · [[#camp_meal_orders]] · [[#camp_movement_imports]] · [[#camp_movements]] · [[#camp_organizations]] · [[#camp_pii_access_log]] · [[#camp_position_settings]] · [[#camp_position_shift_patterns]] · [[#camp_positions]] · [[#camp_room_allocations]] · [[#camp_rooms]] · [[#camp_settings]] · [[#camp_shift_adjustments]] · [[#camp_stays]] · [[#camps]]
+**Кемп (`camp_*`):** [[#camp_asset_categories]] · [[#camp_asset_movements]] · [[#camp_assets]] · [[#camp_audit_log]] · [[#camp_building_types]] · [[#camp_buildings]] · [[#camp_contract_item_prices]] · [[#camp_contract_items]] · [[#camp_contracts]] · [[#camp_cost_entries]] · [[#camp_crews]] · [[#camp_data_imports]] · [[#camp_department_shift_patterns]] · [[#camp_departments]] · [[#camp_employee_phones]] · [[#camp_employees]] · [[#camp_haul_records]] · [[#camp_maintenance_parts]] · [[#camp_maintenance_requests]] · [[#camp_meal_locations]] · [[#camp_meal_order_extras]] · [[#camp_meal_order_lines]] · [[#camp_meal_order_templates]] · [[#camp_meal_orders]] · [[#camp_movement_imports]] · [[#camp_movements]] · [[#camp_organizations]] · [[#camp_pii_access_log]] · [[#camp_position_settings]] · [[#camp_position_shift_patterns]] · [[#camp_positions]] · [[#camp_room_allocations]] · [[#camp_rooms]] · [[#camp_settings]] · [[#camp_shift_adjustments]] · [[#camp_stays]] · [[#camps]]
 
 **Үндсэн (`core_*`):** [[#core_feedback]] · [[#core_feedback_attachments]] · [[#core_feedback_votes]] · [[#core_permission_aliases]] · [[#core_permissions]] · [[#core_position_role_templates]] · [[#core_role_permissions]] · [[#core_roles]] · [[#core_user_invites]] · [[#core_user_permissions]] · [[#core_user_roles]] · [[#core_users]]
 
@@ -1121,6 +1121,30 @@ Policy: `tenant_isolation_camp_meal_locations` (permissive ALL → app_user (cam
 
 Trigger: `trg_camp_meal_locations_updated_at`
 
+### camp_meal_order_extras
+
+🔒🔒 · үүсгэсэн `20261107003_camp_meal_orders_configurable.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK NN |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| camp_id | UUID | NN |  |
+| order_id | UUID | NN |  |
+| meal_type | "CampMealType" | NN |  |
+| meal_location_id | UUID | NN |  |
+| guest_count | INTEGER | NN |  |
+| note | TEXT | NN |  |
+| created_by | UUID | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `CHECK (guest_count > 0)` · `CHECK (btrim(note) <> '')` · `FOREIGN KEY (tenant_id, camp_id, order_id) REFERENCES camp_meal_orders (tenant_id, camp_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, camp_id, meal_location_id) REFERENCES camp_meal_locations (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, created_by) REFERENCES core_users (tenant_id, id)`
+
+Policy: `tenant_isolation_camp_meal_order_extras` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_camp_meal_order_extras_updated_at` · `trg_camp_meal_order_extras_guard`
+
 ### camp_meal_order_lines
 
 🔒🔒 · үүсгэсэн `20261009006_camp_operations.sql`
@@ -1145,9 +1169,30 @@ Policy: `tenant_isolation_camp_meal_order_lines` (permissive ALL → app_user (c
 
 Trigger: `trg_camp_meal_order_lines_guard` · `trg_camp_meal_order_lines_updated_at`
 
+### camp_meal_order_templates
+
+🔒🔒 · үүсгэсэн `20261107003_camp_meal_orders_configurable.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK NN |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| camp_id | UUID | NN |  |
+| meal_type | "CampMealType" | NN |  |
+| meal_location_id | UUID | NN |  |
+| base_count | INTEGER | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `CHECK (base_count >= 0)` · `UNIQUE (tenant_id, camp_id, meal_type, meal_location_id)` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, camp_id, meal_location_id) REFERENCES camp_meal_locations (tenant_id, camp_id, id)`
+
+Policy: `tenant_isolation_camp_meal_order_templates` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_camp_meal_order_templates_updated_at`
+
 ### camp_meal_orders
 
-🔒🔒 · үүсгэсэн `20261009006_camp_operations.sql`
+🔒🔒 · үүсгэсэн `20261009006_camp_operations.sql` · өөрчлөлт: +is_late (`20261107003_camp_meal_orders_configurable.sql`), +pending_lines (`20261107003_camp_meal_orders_configurable.sql`), +change_reason (`20261107003_camp_meal_orders_configurable.sql`), +revision_no (`20261107003_camp_meal_orders_configurable.sql`), +revised_at (`20261107003_camp_meal_orders_configurable.sql`)
 
 | Багана | Төрөл | Шинж | FK |
 |---|---|---|---|
@@ -1165,8 +1210,13 @@ Trigger: `trg_camp_meal_order_lines_guard` · `trg_camp_meal_order_lines_updated
 | reject_reason | TEXT |  |  |
 | created_at | TIMESTAMPTZ | NN |  |
 | updated_at | TIMESTAMPTZ | NN |  |
+| is_late | BOOLEAN | NN |  |
+| pending_lines | JSONB |  |  |
+| change_reason | TEXT |  |  |
+| revision_no | SMALLINT | NN |  |
+| revised_at | TIMESTAMPTZ |  |  |
 
-Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, camp_id, id)` · `UNIQUE (tenant_id, camp_id, order_date)` · `CHECK (status = 'DRAFT' OR meal_contract_item_id IS NOT NULL)` · `CHECK ( status = 'DRAFT' OR (ordered_by IS NOT NULL AND ordered_at IS NOT NULL))` · `CHECK ( (status IN ('ACCEPTED', 'REJECTED')) = (reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL))` · `CHECK (status <> 'REJECTED' OR btrim(coalesce(reject_reason, '')) <> '')` · `CHECK (reviewed_by IS NULL OR reviewed_by <> ordered_by)` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, meal_contract_item_id) REFERENCES camp_contract_items (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, ordered_by) REFERENCES core_users (tenant_id, id)` · `FOREIGN KEY (tenant_id, reviewed_by) REFERENCES core_users (tenant_id, id)`
+Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, camp_id, id)` · `UNIQUE (tenant_id, camp_id, order_date)` · `CHECK (status = 'DRAFT' OR meal_contract_item_id IS NOT NULL)` · `CHECK ( status = 'DRAFT' OR (ordered_by IS NOT NULL AND ordered_at IS NOT NULL))` · `CHECK ( (status IN ('ACCEPTED', 'REJECTED')) = (reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL))` · `CHECK (status <> 'REJECTED' OR btrim(coalesce(reject_reason, '')) <> '')` · `CHECK (reviewed_by IS NULL OR reviewed_by <> ordered_by)` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id)` · `FOREIGN KEY (tenant_id, camp_id, meal_contract_item_id) REFERENCES camp_contract_items (tenant_id, camp_id, id)` · `FOREIGN KEY (tenant_id, ordered_by) REFERENCES core_users (tenant_id, id)` · `FOREIGN KEY (tenant_id, reviewed_by) REFERENCES core_users (tenant_id, id)` · `CHECK ( (status IN ('ACCEPTED', 'REJECTED', 'CHANGE_REQUESTED')) = (reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL))` · `CHECK ( (status = 'CHANGE_REQUESTED') = (pending_lines IS NOT NULL))` · `CHECK ( pending_lines IS NULL OR jsonb_typeof(pending_lines) = 'array')`
 
 Policy: `tenant_isolation_camp_meal_orders` (permissive ALL → app_user (camp_apply_tenant_rls))
 
@@ -1378,7 +1428,7 @@ Trigger: `trg_camp_rooms_updated_at`
 
 ### camp_settings
 
-🔒🔒 · үүсгэсэн `20261009002_camp_master.sql` · өөрчлөлт: +catering_organization_id (`20261010002_camp_org_services_maintenance.sql`), +extension_default_days (`20261106002_camp_extension_days.sql`), +auto_code_prefix (`20261106004_camp_auto_code_prefix.sql`)
+🔒🔒 · үүсгэсэн `20261009002_camp_master.sql` · өөрчлөлт: +catering_organization_id (`20261010002_camp_org_services_maintenance.sql`), +extension_default_days (`20261106002_camp_extension_days.sql`), +auto_code_prefix (`20261106004_camp_auto_code_prefix.sql`), +meal_order_lead_days (`20261107003_camp_meal_orders_configurable.sql`), +meal_order_after_cutoff (`20261107003_camp_meal_orders_configurable.sql`), +meal_order_requires_accept (`20261107003_camp_meal_orders_configurable.sql`), +meal_order_edit_after_accept (`20261107003_camp_meal_orders_configurable.sql`), +meal_order_default_fill (`20261107003_camp_meal_orders_configurable.sql`), +meal_order_allow_self_accept (`20261107003_camp_meal_orders_configurable.sql`)
 
 | Багана | Төрөл | Шинж | FK |
 |---|---|---|---|
@@ -1396,8 +1446,14 @@ Trigger: `trg_camp_rooms_updated_at`
 | catering_organization_id | UUID |  |  |
 | extension_default_days | SMALLINT | NN |  |
 | auto_code_prefix | TEXT | NN |  |
+| meal_order_lead_days | SMALLINT | NN |  |
+| meal_order_after_cutoff | TEXT | NN |  |
+| meal_order_requires_accept | BOOLEAN | NN |  |
+| meal_order_edit_after_accept | TEXT | NN |  |
+| meal_order_default_fill | TEXT | NN |  |
+| meal_order_allow_self_accept | BOOLEAN | NN |  |
 
-Constraint: `UNIQUE (tenant_id, camp_id)` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, camp_id, default_meal_location_id) REFERENCES camp_meal_locations (tenant_id, camp_id, id)` · `CHECK (roster_off_days BETWEEN 2 AND 28)` · `FOREIGN KEY (tenant_id, catering_organization_id) REFERENCES camp_organizations (tenant_id, id)`
+Constraint: `UNIQUE (tenant_id, camp_id)` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, camp_id, default_meal_location_id) REFERENCES camp_meal_locations (tenant_id, camp_id, id)` · `CHECK (roster_off_days BETWEEN 2 AND 28)` · `FOREIGN KEY (tenant_id, catering_organization_id) REFERENCES camp_organizations (tenant_id, id)` · `CHECK (meal_order_lead_days BETWEEN 0 AND 30)` · `CHECK (meal_order_after_cutoff IN ('BLOCK', 'APPROVAL', 'FREE'))` · `CHECK (meal_order_edit_after_accept IN ('FORBID', 'ALLOW', 'TWO_SIDED'))` · `CHECK (meal_order_default_fill IN ('EMPTY', 'COPY_PREV', 'TEMPLATE'))`
 
 Policy: `tenant_isolation_camp_settings` (permissive ALL → app_user (camp_apply_tenant_rls))
 
@@ -1745,7 +1801,7 @@ Trigger: `update_core_users_updated_at`
 | CampImportStatus | PREVIEW, CONFIRMED, CANCELLED | `20261009003_camp_attendance.sql` |
 | CampMaintenancePriority | LOW, MEDIUM, HIGH, URGENT | `20261009004_camp_assets_maintenance.sql` |
 | CampMaintenanceStatus | OPEN, IN_PROGRESS, DONE, CLOSED, CANCELLED | `20261009004_camp_assets_maintenance.sql` |
-| CampMealOrderStatus | DRAFT, ORDERED, ACCEPTED, REJECTED | `20261009006_camp_operations.sql` |
+| CampMealOrderStatus | DRAFT, ORDERED, ACCEPTED, REJECTED, CHANGE_REQUESTED | `20261009006_camp_operations.sql` |
 | CampMealType | BREAKFAST, LUNCH, DINNER, NIGHT | `20261009003_camp_attendance.sql` |
 | CampMovementDirection | ARRIVAL, DEPARTURE | `20261009003_camp_attendance.sql` |
 | CampMovementKind | ROSTER, OFF_ROSTER | `20261009003_camp_attendance.sql` |
@@ -1786,8 +1842,9 @@ Trigger: `update_core_users_updated_at`
 | `camp_haul_records_guard` |  | `20261009006_camp_operations.sql` |
 | `camp_maintenance_parts_protect` |  | `20261010002_camp_org_services_maintenance.sql` |
 | `camp_maintenance_requests_protect` |  | `20261009004_camp_assets_maintenance.sql` |
-| `camp_meal_order_lines_guard` |  | `20261009006_camp_operations.sql` |
-| `camp_meal_orders_guard` |  | `20261009006_camp_operations.sql` |
+| `camp_meal_edit_allowed` |  | `20261107003_camp_meal_orders_configurable.sql` |
+| `camp_meal_order_lines_guard` |  | `20261107003_camp_meal_orders_configurable.sql` |
+| `camp_meal_orders_guard` |  | `20261107003_camp_meal_orders_configurable.sql` |
 | `camp_roles_protect_system` |  | `20261009001_camp_rbac.sql` |
 | `camp_seed_default_roles` | p_tenant_id uuid | `20261017002_camp_employees_termination.sql` |
 | `camp_stays_validate` |  | `20261009003_camp_attendance.sql` |

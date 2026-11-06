@@ -1,4 +1,5 @@
 import apiClient from '../../../api/client'
+import type { MealOrderLineView, MealOrderListItem, MealOrderView } from './meal-order-types'
 import type {
   Asset,
   AssetCategory,
@@ -16,6 +17,7 @@ import type {
   PositionTemplates,
   UserPermissions,
   MealLocation,
+  MealType,
   MaintenanceAction,
   MaintenanceDetail,
   MaintenanceMutationResult,
@@ -117,6 +119,21 @@ export const campApi = {
   settings: (campId: string) => get<CampSettings>(campUrl(campId, '/settings')),
   saveSettings: (campId: string, body: SettingsInput) => put<CampSettings>(campUrl(campId, '/settings'), body),
   mealLocations: (campId: string) => get<MealLocation[]>(campUrl(campId, '/meal-locations')),
+
+  // ── Хоолны захиалга (v0.2.3 Блок 6а, V2-03) ─────────────────
+  mealOrders: (campId: string, q: { from: string; to: string }) => get<MealOrderListItem[]>(campUrl(campId, '/meal-orders'), q),
+  mealOrder: (campId: string, date: string) => get<MealOrderView>(campUrl(campId, `/meal-orders/${date}`)),
+  saveMealOrder: (campId: string, date: string, body: { note?: string | null; lines: MealOrderLineView[] }) =>
+    put<MealOrderView>(campUrl(campId, `/meal-orders/${date}`), body),
+  deleteMealOrder: (campId: string, date: string) => del<void>(campUrl(campId, `/meal-orders/${date}`)),
+  addMealExtra: (campId: string, date: string, body: { mealType: MealType; mealLocationId: string; guestCount: number; note: string }) =>
+    post<MealOrderView>(campUrl(campId, `/meal-orders/${date}/extras`), body),
+  removeMealExtra: (campId: string, date: string, extraId: string) => del<MealOrderView>(campUrl(campId, `/meal-orders/${date}/extras/${extraId}`)),
+  /** submit | accept | reject{reason} | request-change{reason,lines} | withdraw-change | approve-change | reject-change{reason} */
+  mealOrderAction: (campId: string, date: string, action: MealOrderApiAction, body?: unknown) =>
+    post<MealOrderView>(campUrl(campId, `/meal-orders/${date}/${action}`), body),
+  mealTemplate: (campId: string) => get<{ lines: MealOrderLineView[] }>(campUrl(campId, '/meal-order-template')),
+  saveMealTemplate: (campId: string, lines: MealOrderLineView[]) => put<{ lines: MealOrderLineView[] }>(campUrl(campId, '/meal-order-template'), { lines }),
   createMealLocation: (campId: string, name: string) => post<MealLocation>(campUrl(campId, '/meal-locations'), { name }),
   updateMealLocation: (campId: string, id: string, body: { name?: string; isActive?: boolean }) =>
     patch<MealLocation>(campUrl(campId, `/meal-locations/${id}`), body),
@@ -227,6 +244,15 @@ export interface OrganizationInput {
   email?: string | null
 }
 
+export type MealOrderApiAction =
+  | 'submit'
+  | 'accept'
+  | 'reject'
+  | 'request-change'
+  | 'withdraw-change'
+  | 'approve-change'
+  | 'reject-change'
+
 export interface SettingsInput {
   vatRate: number
   changeoverWeekday: number
@@ -237,6 +263,13 @@ export interface SettingsInput {
   cateringOrganizationId?: string | null
   /** v0.2.3 R7 — өгөөгүй бол өөрчлөхгүй */
   autoCodePrefix?: string
+  /** v0.2.3 Блок 6а — өгөөгүй бол өөрчлөхгүй */
+  mealOrderLeadDays?: number
+  mealOrderAfterCutoff?: 'BLOCK' | 'APPROVAL' | 'FREE'
+  mealOrderRequiresAccept?: boolean
+  mealOrderEditAfterAccept?: 'FORBID' | 'ALLOW' | 'TWO_SIDED'
+  mealOrderDefaultFill?: 'EMPTY' | 'COPY_PREV' | 'TEMPLATE'
+  mealOrderAllowSelfAccept?: boolean
 }
 
 export interface RoomInput {

@@ -93,8 +93,12 @@ ALTER TABLE "camp_maintenance_requests" ALTER COLUMN "created_at" SET DEFAULT CU
 ALTER TABLE "camp_maintenance_requests" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_meal_locations" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_meal_locations" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_meal_order_extras" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_meal_order_extras" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_meal_order_lines" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_meal_order_lines" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_meal_order_templates" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_meal_order_templates" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_meal_orders" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_meal_orders" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_movement_imports" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP

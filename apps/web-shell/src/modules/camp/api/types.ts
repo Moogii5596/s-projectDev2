@@ -44,6 +44,13 @@ export interface CampSettings {
   cateringOrganizationId: string | null
   /** v0.2.3 R7: кодгүй ажилтны автомат кодын угтвар (Z → Z0001) */
   autoCodePrefix?: string
+  /** v0.2.3 Блок 6а — хоолны захиалгын урсгал (G-8) */
+  mealOrderLeadDays?: number
+  mealOrderAfterCutoff?: 'BLOCK' | 'APPROVAL' | 'FREE'
+  mealOrderRequiresAccept?: boolean
+  mealOrderEditAfterAccept?: 'FORBID' | 'ALLOW' | 'TWO_SIDED'
+  mealOrderDefaultFill?: 'EMPTY' | 'COPY_PREV' | 'TEMPLATE'
+  mealOrderAllowSelfAccept?: boolean
   updatedAt: string | null
 }
 

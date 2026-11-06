@@ -21,6 +21,12 @@ export const CAMP_SETTINGS_DEFAULTS = {
   defaultMealLocationId: null as string | null,
   cateringOrganizationId: null as string | null,
   autoCodePrefix: 'Z',
+  mealOrderLeadDays: 1,
+  mealOrderAfterCutoff: 'BLOCK',
+  mealOrderRequiresAccept: true,
+  mealOrderEditAfterAccept: 'FORBID',
+  mealOrderDefaultFill: 'EMPTY',
+  mealOrderAllowSelfAccept: false,
 };
 
 type SettingsRow = {
@@ -32,6 +38,12 @@ type SettingsRow = {
   defaultMealLocationId: string | null;
   cateringOrganizationId: string | null;
   autoCodePrefix: string;
+  mealOrderLeadDays: number;
+  mealOrderAfterCutoff: string;
+  mealOrderRequiresAccept: boolean;
+  mealOrderEditAfterAccept: string;
+  mealOrderDefaultFill: string;
+  mealOrderAllowSelfAccept: boolean;
   updatedAt: Date;
 };
 
@@ -48,6 +60,12 @@ const toSettingsView = (campId: string, s: SettingsRow | null) =>
         defaultMealLocationId: s.defaultMealLocationId,
         cateringOrganizationId: s.cateringOrganizationId,
         autoCodePrefix: s.autoCodePrefix,
+        mealOrderLeadDays: s.mealOrderLeadDays,
+        mealOrderAfterCutoff: s.mealOrderAfterCutoff,
+        mealOrderRequiresAccept: s.mealOrderRequiresAccept,
+        mealOrderEditAfterAccept: s.mealOrderEditAfterAccept,
+        mealOrderDefaultFill: s.mealOrderDefaultFill,
+        mealOrderAllowSelfAccept: s.mealOrderAllowSelfAccept,
         updatedAt: s.updatedAt,
       }
     : { campId, configured: false, ...CAMP_SETTINGS_DEFAULTS, updatedAt: null };
@@ -61,6 +79,12 @@ const SETTINGS_SELECT = {
   defaultMealLocationId: true,
   cateringOrganizationId: true,
   autoCodePrefix: true,
+  mealOrderLeadDays: true,
+  mealOrderAfterCutoff: true,
+  mealOrderRequiresAccept: true,
+  mealOrderEditAfterAccept: true,
+  mealOrderDefaultFill: true,
+  mealOrderAllowSelfAccept: true,
   updatedAt: true,
 } as const;
 
@@ -100,6 +124,12 @@ export class CampSettingsService {
           defaultMealLocationId: dto.defaultMealLocationId,
           ...(dto.cateringOrganizationId !== undefined ? { cateringOrganizationId: dto.cateringOrganizationId } : {}),
           ...(dto.autoCodePrefix !== undefined ? { autoCodePrefix: dto.autoCodePrefix } : {}),
+          ...(dto.mealOrderLeadDays !== undefined ? { mealOrderLeadDays: dto.mealOrderLeadDays } : {}),
+          ...(dto.mealOrderAfterCutoff !== undefined ? { mealOrderAfterCutoff: dto.mealOrderAfterCutoff } : {}),
+          ...(dto.mealOrderRequiresAccept !== undefined ? { mealOrderRequiresAccept: dto.mealOrderRequiresAccept } : {}),
+          ...(dto.mealOrderEditAfterAccept !== undefined ? { mealOrderEditAfterAccept: dto.mealOrderEditAfterAccept } : {}),
+          ...(dto.mealOrderDefaultFill !== undefined ? { mealOrderDefaultFill: dto.mealOrderDefaultFill } : {}),
+          ...(dto.mealOrderAllowSelfAccept !== undefined ? { mealOrderAllowSelfAccept: dto.mealOrderAllowSelfAccept } : {}),
         };
         const s = await tx.campSetting.upsert({
           where: { tenantId_campId: { tenantId, campId } },

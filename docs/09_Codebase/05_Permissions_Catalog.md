@@ -18,7 +18,7 @@ tags: [codebase, auth, rbac, generated]
 
 | Код | Нэр | Хувилбар | CAMP_ADMIN | CAMP_MANAGER | CATERING_ADMIN | EMPLOYEE | Ашигласан файл |
 |---|---|---|---|---|---|---|---|
-| `camp.settings.manage` | Кемпийн тохиргоо (НӨАТ, ростер, хоол идэх байршил) | V1 | ✅ |  |  |  | `camp-settings.service.ts` |
+| `camp.settings.manage` | Кемпийн тохиргоо (НӨАТ, ростер, хоол идэх байршил) | V1 | ✅ |  |  |  | `meal-orders.service.ts` `camp-settings.service.ts` |
 | `camp.master.manage` | Мастер өгөгдөл (кемп, байр, өрөө, хэлтэс, баг, байгууллага) | V1 | ✅ |  |  |  | `camp-catalog.service.ts` `facilities.handlers.ts` `camp-facilities.service.ts` `camps.service.ts` `core-organizations.service.ts` `departments.handler.ts` `positions.handler.ts` `hr-crews.service.ts` `hr-departments.service.ts` `hr-positions.service.ts` |
 | `camp.contract.manage` | Гэрээ, ажил, үнэ | V2 | ✅ |  |  |  | — |
 | `hr.employee.manage` | Ажилтан бүртгэл | V1 | ✅ |  | ✅ |  | `hr-attendance.service.ts` `hr-employees.service.ts` `employees.handler.ts` |
@@ -32,8 +32,8 @@ tags: [codebase, auth, rbac, generated]
 | `camp.maintenance.close` | Засвар хаах (сэлбэгийн зардал батлах) | V1 | ✅ | ✅ |  |  | `camp-maintenance.service.ts` `maintenance-flow.ts` `camp-snapshot.ts` |
 | `camp.haul.create` | Бохир ус / хог бүртгэх | V2 |  |  | ✅ |  | — |
 | `camp.haul.approve` | Бохир ус / хог батлах | V2 |  | ✅ |  |  | — |
-| `camp.meal.order` | Хоолны захиалга өгөх | V2 |  | ✅ |  |  | — |
-| `camp.meal.accept` | Хоолны захиалга хүлээн авах | V2 |  |  | ✅ |  | — |
+| `camp.meal.order` | Хоолны захиалга өгөх | V1 |  | ✅ |  |  | `meal-orders.service.ts` |
+| `camp.meal.accept` | Хоолны захиалга хүлээн авах | V1 |  |  | ✅ |  | `meal-orders.service.ts` |
 | `camp.report.view` | Зардлын тайлан харах | V2 | ✅ | ✅ | ✅ |  | — |
 | `feed.content.moderate` | Feed модерац (пост, сэтгэгдэл устгах, report) | V1 |  |  |  |  | `feed.service.ts` |
 

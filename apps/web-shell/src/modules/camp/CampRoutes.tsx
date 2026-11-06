@@ -10,6 +10,7 @@ const CampSettingsPage = lazy(() => import('./pages/CampSettingsPage'))
 const SystemSettingsPage = lazy(() => import('./pages/SystemSettingsPage'))
 const RoomBoardPage = lazy(() => import('./pages/RoomBoardPage'))
 const PresencePage = lazy(() => import('./pages/PresencePage'))
+const MealOrdersPage = lazy(() => import('./pages/MealOrdersPage'))
 const AssetsPage = lazy(() => import('./pages/AssetsPage'))
 const MaintenanceListPage = lazy(() => import('./pages/MaintenanceListPage'))
 const MaintenanceDetailPage = lazy(() => import('./pages/MaintenanceDetailPage'))
@@ -34,6 +35,7 @@ export default function CampRoutes() {
         <Route index element={<Navigate to={CAMP_DEFAULT_SECTION} replace />} />
         <Route path="rooms" element={<RoomBoardPage />} />
         <Route path="meals" element={<PresencePage />} />
+        <Route path="meal-orders" element={<MealOrdersPage />} />
         <Route path="maintenance" element={<MaintenanceListPage />} />
         <Route path="maintenance/:id" element={<MaintenanceDetailPage />} />
         <Route path="assets" element={<AssetsPage />} />

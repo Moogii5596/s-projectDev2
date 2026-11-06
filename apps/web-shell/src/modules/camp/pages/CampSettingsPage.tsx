@@ -11,18 +11,19 @@ import { weekdayName, weekdayNames } from '../lib/labels'
 import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Table, inputCls, td } from '../components/ui'
 import FacilitiesPage from './FacilitiesPage'
 import PositionSettingsPage from './PositionSettingsPage'
+import MealOrderSettings from '../components/MealOrderSettings'
 
 /**
  * /camp/:campId/settings/:section — кемпийн тохиргооны каталог (FB-05, v0.2.0):
  * зүүн цэс (Ерөнхий · Хоолны байршил · Албан тушаалын хоол/ээлж · Байр, өрөө) → баруун талд тухайн хэсэг.
  * Хуучин /facilities → энд redirect. v0.2.2 H2: хэлтэс, бригад → «Хүний нөөц» (/hr/:campId/...) (CampRoutes).
  */
-export const SETTINGS_SECTIONS = ['general', 'meal-locations', 'positions', 'facilities'] as const
+export const SETTINGS_SECTIONS = ['general', 'meal-locations', 'meal-orders', 'positions', 'facilities'] as const
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number]
 
 export default function CampSettingsPage() {
   const { t } = useTranslation()
-  const { section = 'general' } = useParams()
+  const { section = 'general', campId = '' } = useParams()
   // relative="path": "..", URL-ийн нэг сегмент (route-relative бол :campId хүртэл гарч буруу хаяг болдог)
   if (!(SETTINGS_SECTIONS as readonly string[]).includes(section)) return <Navigate to="../general" relative="path" replace />
   return (
@@ -44,6 +45,7 @@ export default function CampSettingsPage() {
       <div className="min-w-0 flex-1">
         {section === 'general' && <GeneralSection />}
         {section === 'meal-locations' && <MealLocationsSection />}
+        {section === 'meal-orders' && <MealOrderSettings campId={campId} />}
         {section === 'positions' && <PositionSettingsPage />}
         {section === 'facilities' && <FacilitiesPage />}
       </div>

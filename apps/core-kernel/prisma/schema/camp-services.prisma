@@ -22,6 +22,7 @@ enum CampMealOrderStatus {
   ORDERED
   ACCEPTED
   REJECTED
+  CHANGE_REQUESTED
 }
 
 enum CampCostSource {
@@ -73,7 +74,7 @@ model CampHaulRecord {
   @@map("camp_haul_records")
 }
 
-/// ACCEPTED → өөрчлөгдөхгүй (trigger); reviewedBy ≠ orderedBy (CHECK). Хүн-өдөр = Σ(base + extra) ÷ 3
+/// ACCEPTED/CHANGE_REQUESTED → өөрчлөгдөхгүй (trigger, service тойрно); хэн хүлээн авах = camp_settings.meal_order_*. Хүн-өдөр = Σ(base + extra) ÷ 3
 model CampMealOrder {
   id                 String              @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId           String              @map("tenant_id") @db.Uuid
@@ -88,6 +89,13 @@ model CampMealOrder {
   reviewedBy         String?             @map("reviewed_by") @db.Uuid
   reviewedAt         DateTime?           @map("reviewed_at") @db.Timestamptz
   rejectReason       String?             @map("reject_reason")
+  /// 20261107003: cutoff-оос хойш илгээсэн (APPROVAL горим)
+  isLate             Boolean             @default(false) @map("is_late")
+  /// TWO_SIDED: санал болгосон мөрүүд [{mealType, mealLocationId, baseCount}] (CHANGE_REQUESTED үед л)
+  pendingLines       Json?               @map("pending_lines")
+  changeReason       String?             @map("change_reason")
+  revisionNo         Int                 @default(0) @map("revision_no") @db.SmallInt
+  revisedAt          DateTime?           @map("revised_at") @db.Timestamptz
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -97,6 +105,7 @@ model CampMealOrder {
   orderedByUser    CoreUser?           @relation("CampMealOrderOrderedBy", fields: [tenantId, orderedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_meal_orders_ordered_by")
   reviewedByUser   CoreUser?           @relation("CampMealOrderReviewedBy", fields: [tenantId, reviewedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_meal_orders_reviewed_by")
   lines            CampMealOrderLine[]
+  extras           CampMealOrderExtra[]
   costEntries      CampCostEntry[]
 
   @@unique([tenantId, id], map: "uq_camp_meal_orders_tenant_id")
@@ -169,4 +178,46 @@ model CampCostEntry {
   @@index([tenantId, campId, costDate], map: "idx_camp_cost_report")
   @@index([tenantId, organizationId, costDate], map: "idx_camp_cost_org")
   @@map("camp_cost_entries")
+}
+
+/// Зочин / нэмэлт хоол — гараар (G-2). Тайлбар заавал, хэн оруулсан (createdBy). Хүн-өдөр = Σ(base) + Σ(guest) ÷ 3
+model CampMealOrderExtra {
+  id             String       @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId       String       @map("tenant_id") @db.Uuid
+  campId         String       @map("camp_id") @db.Uuid
+  orderId        String       @map("order_id") @db.Uuid
+  mealType       CampMealType @map("meal_type")
+  mealLocationId String       @map("meal_location_id") @db.Uuid
+  guestCount     Int          @map("guest_count")
+  note           String
+  createdBy      String       @map("created_by") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  order        CampMealOrder    @relation(fields: [tenantId, campId, orderId], references: [tenantId, campId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_meal_extras_order")
+  mealLocation CampMealLocation @relation(fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_meal_extras_location")
+  createdByUser CoreUser        @relation("CampMealExtraCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_meal_extras_created_by")
+
+  @@index([tenantId, orderId], map: "idx_camp_meal_extras_order")
+  @@map("camp_meal_order_extras")
+}
+
+/// Тогтмол загвар — meal_order_default_fill = TEMPLATE үед шинэ захиалгын анхдагч тоо
+model CampMealOrderTemplate {
+  id             String       @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId       String       @map("tenant_id") @db.Uuid
+  campId         String       @map("camp_id") @db.Uuid
+  mealType       CampMealType @map("meal_type")
+  mealLocationId String       @map("meal_location_id") @db.Uuid
+  baseCount      Int          @map("base_count")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp         Camp             @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_meal_tpl_camp")
+  mealLocation CampMealLocation @relation(fields: [tenantId, campId, mealLocationId], references: [tenantId, campId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_meal_tpl_location")
+
+  @@unique([tenantId, campId, mealType, mealLocationId], map: "uq_camp_meal_tpl")
+  @@map("camp_meal_order_templates")
 }
