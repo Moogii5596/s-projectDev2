@@ -17,11 +17,16 @@ tags: [release]
 
 ## [Unreleased]
 
+### v0.2.3 Блок 4б — нэвтэрсэн төхөөрөмжүүд, нууц үг солих (PIL-15, [[ADR-003_Users_Login_Permissions]] «Session бодлого»)
+- **Нэмэгдсэн:** «Төхөөрөмжүүд» (`/account/devices`) — миний бүртгэлээр нэвтэрсэн төхөөрөмжүүд (браузер, ҮС, IP, сүүлд ашигласан), нэгийг эсвэл бусад бүгдийг нь өөрөө гаргана. API: `GET /api/v1/auth/sessions`, `DELETE /auth/sessions/:id`, `DELETE /auth/sessions/others`.
+- **Өөрчлөгдсөн:** нууц үг солихдоо хэрэглэгчийн өөрийн токеноор GoTrue-д солино → **одоогийн төхөөрөмж логинтой үлдэнэ** (өмнө нь админ API-аар солиход энэ төхөөрөмж ч логоут болдог байв). GoTrue-ийн бодлогоор бусад төхөөрөмж логоут болно (OPS-013). Шалгалтын нэмэлт session үлдэхгүй.
+- **Тест:** unit (`session-revoke`, `sign-in`, `auth.controller`), web-shell `devices`; integration `camp-v023-auth` (төхөөрөмж жагсаах / гаргах / өөр хүний 404, нууц үг солиход одоогийн session үлдэх).
+
 ### v0.2.3 Блок 4 — цэвэрлэгээ ба нэвтрэлт (QA-11, QA-12, PIL-15, PIL-16, [[09_v0.2.3_tech_plan]])
 - **Хассан (API):** хуучин `/api/v1/camp/...` HR/Core controller-ууд (`hr-legacy.controller.ts`) — frontend `/hr`, `/core/rbac` замууд руу шилжсэн; хуучин зам → 404. RBAC legacy (`/camp` RBAC) — `Deprecation`-тай, v0.2.4-т устгана.
-- **Өөрчлөгдсөн:** нууц үг солиход / урилга хүлээн авахад GoTrue бүх session-ыг цуцална (`auth.sessions` шууд устгах `SessionRevokeService` нэмэгдсэн — баталгаажуулалт, `auth.refresh_tokens` цэвэрлэгээ). Migration `20261106006`: `core_users.last_sign_in_at` — амжилттай нэвтрэлт бүрт бичигдэнэ, `auth.users`-аас нөхнө.
+- **Өөрчлөгдсөн:** урилга хүлээн авахад бүх session цуцлагдана (`SessionRevokeService`). Migration `20261106006`: `core_users.last_sign_in_at` — амжилттай нэвтрэлт бүрт бичигдэнэ, `auth.users`-аас нөхнө.
 - **Нэмэгдсэн:** HR «Хэрэглэгч» жагсаалтад «Сүүлийн нэвтрэлт» багана (mn/en/zh; «Хэзээ ч нэвтрээгүй»).
-- **Тест:** e2e `helpers/api.ts` (нэг 곳 — 8 spec шилжсэн), integration `camp-v023-auth` (session цуцлах, last sign-in), `camp-master` R7 spec `/hr` зам руу.
+- **Тест:** e2e `helpers/api.ts` (нэг газар — 8 spec шилжсэн), integration `camp-v023-auth` (last sign-in), `camp-master` R7 spec `/hr` зам руу.
 
 ### v0.2.3 Блок 3 — «Системийн тохиргоо», эрхгүй цэс нуух ([[ADR-007_System_Roles_Permissions]] §6б)
 - **Нэмэгдсэн:** «Системийн тохиргоо» дээд цэс (`/settings`) — роль ба эрх, хэрэглэгчийн роль, байгууллага, орчуулга (OWNER / ADMIN; байгууллага — бүх кемпийн мастер өгөгдлийн эрхтэй хүнд).

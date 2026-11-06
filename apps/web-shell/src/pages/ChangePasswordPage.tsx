@@ -57,6 +57,7 @@ export default function ChangePasswordPage() {
         {done ? (
           <div className="space-y-4">
             <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{t('auth.change.success')}</p>
+            <p className="text-sm text-gray-600">{t('auth.change.others_signed_out')}</p>
             <button type="button" onClick={() => navigate(HOME_PATH, { replace: true })} className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700">
               {t('auth.change.continue')}
             </button>

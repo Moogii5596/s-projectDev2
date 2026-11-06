@@ -20,6 +20,8 @@ export const MESSAGES = {
   'auth.password_same': { mn: 'Шинэ нууц үг одоогийнхоос өөр байх ёстой', en: 'The new password must differ from the current one', zh: '新密码必须与当前密码不同' },
   'auth.password_current_wrong': { mn: 'Одоогийн нууц үг буруу', en: 'The current password is incorrect', zh: '当前密码不正确' },
   'auth.password_weak': { mn: 'Шинэ нууц үг шаардлага хангахгүй (хамгийн багадаа 12 тэмдэгт)', en: 'The new password does not meet the requirements (at least 12 characters)', zh: '新密码不符合要求（至少 12 个字符）' },
+  'auth.session_current': { mn: 'Энэ төхөөрөмжөөс «Гарах» товчоор гарна уу', en: 'Use “Sign out” to leave this device', zh: '请使用“退出登录”退出此设备' },
+  'auth.session_not_found': { mn: 'Төхөөрөмж олдсонгүй (аль хэдийн гарсан байж магадгүй)', en: 'Device not found (it may have already signed out)', zh: '未找到设备（可能已退出）' },
   // v0.2.2 Блок 3 — урилга, хэрэглэгч үүсгэх
   'auth.user_exists': { mn: 'Энэ имэйлтэй хэрэглэгч аль хэдийн байна', en: 'A user with this email already exists', zh: '使用该邮箱的用户已存在' },
   'auth.user_invalid': { mn: 'Хэрэглэгч үүсгэх боломжгүй ({reason})', en: 'The user could not be created ({reason})', zh: '无法创建用户（{reason}）' },

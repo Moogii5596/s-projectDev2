@@ -39,3 +39,39 @@ describe('AuthController.register [SEC-005]', () => {
     expect(m.authService.register).toHaveBeenCalledWith(dto, T);
   });
 });
+
+describe('AuthController — төхөөрөмжүүд, нууц үг солих (PIL-15)', () => {
+  const SID = '223e4567-e89b-42d3-a456-426614174001';
+  const jwt = `x.${Buffer.from(JSON.stringify({ session_id: SID })).toString('base64url')}.y`;
+  const req = { user: { id: 'auth-1', tenantId: T }, headers: { authorization: `Bearer ${jwt}` } };
+  function build() {
+    const signIn = { changePassword: vi.fn(async () => ({ changed: true })) };
+    const sessionRevoke = {
+      list: vi.fn(async () => [{ id: SID, current: true }]),
+      revokeOthers: vi.fn(async () => 2),
+      revokeOne: vi.fn(async () => undefined),
+    };
+    const ctrl = new (AuthController as unknown as new (...a: unknown[]) => AuthController)({}, signIn, {}, sessionRevoke);
+    return { ctrl, signIn, sessionRevoke };
+  }
+
+  it('change-password: хэрэглэгчийн ӨӨРИЙН access token-ыг дамжуулна (одоогийн session үлдэнэ)', async () => {
+    const { ctrl, signIn } = build();
+    await ctrl.changePassword({ currentPassword: 'a', newPassword: 'b' } as never, req as never);
+    expect(signIn.changePassword).toHaveBeenCalledWith(T, 'auth-1', 'a', 'b', jwt);
+  });
+
+  it('sessions: өөрийн authId + одоогийн session_id-аар жагсаана', async () => {
+    const { ctrl, sessionRevoke } = build();
+    expect(await ctrl.sessions(req as never)).toEqual([{ id: SID, current: true }]);
+    expect(sessionRevoke.list).toHaveBeenCalledWith('auth-1', SID);
+  });
+
+  it('sessions/others, sessions/:id: өөрийн authId-ээр, одоогийн session хамгаалагдана', async () => {
+    const { ctrl, sessionRevoke } = build();
+    expect(await ctrl.revokeOtherSessions(req as never)).toEqual({ revoked: 2 });
+    expect(sessionRevoke.revokeOthers).toHaveBeenCalledWith('auth-1', SID);
+    expect(await ctrl.revokeSession('s2', req as never)).toEqual({ revoked: true });
+    expect(sessionRevoke.revokeOne).toHaveBeenCalledWith('auth-1', 's2', SID);
+  });
+});

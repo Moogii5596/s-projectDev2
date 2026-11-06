@@ -211,10 +211,15 @@ export class SignInService {
   }
 
   /**
-   * D-06: нууц үг солих. Одоогийн нууц үгийг GoTrue-ээр шалгана (түгжээ үйлчилнэ) → admin API-аар шинэчилнэ →
+   * D-06: нууц үг солих. Одоогийн нууц үгийг GoTrue-ээр шалгана (түгжээ үйлчилнэ) → шинэчилнэ →
    * must_change_password = false → membership cache цэвэрлэнэ.
+   *
+   * PIL-15 / D-1 (OPS-013): GoTrue нууц үг солиход дуудагчийн session-оос БУСАД бүгдийг устгадаг (admin API бүгдийг нь).
+   * Тиймээс хэрэглэгчийн ӨӨРИЙН access token-оор (`PUT /auth/v1/user`) солино → одоогийн төхөөрөмж логинтой үлдэнэ.
+   * Шалгалтын `signInWithPassword` үүсгэсэн нэмэлт session-ыг цэвэрлэнэ (төхөөрөмжийн жагсаалтад «сүнс» гарахгүй).
+   * `accessToken` алга (тооцоолоогүй) → admin API (бүх session устна).
    */
-  async changePassword(tenantId: string, authId: string, currentPassword: string, newPassword: string, keepSessionId: string | null = null): Promise<{ changed: true }> {
+  async changePassword(tenantId: string, authId: string, currentPassword: string, newPassword: string, accessToken: string | null = null): Promise<{ changed: true }> {
     if (currentPassword === newPassword) throw new AppError(HttpStatus.BAD_REQUEST, 'auth.password_same');
     const rows = await this.system.$queryRaw<{ id: string; email: string }[]>`
       SELECT id, email FROM core_users WHERE tenant_id = ${tenantId}::uuid AND auth_id = ${authId}::uuid AND is_active LIMIT 1`;
@@ -227,21 +232,46 @@ export class SignInService {
       throw new AppError(HttpStatus.BAD_REQUEST, 'auth.password_current_wrong');
     }
     if (check.data.user?.id !== authId) throw invalid();
+    // Шалгалтын session — амжилттай бол GoTrue өөрөө устгана; алдаатай бол доор гараар
+    const verifySessionId = SessionRevokeService.sessionIdFromJwt(check.data.session?.access_token);
 
-    const { error } = await this.admin().auth.admin.updateUserById(authId, { password: newPassword });
-    if (error) {
+    const failure = accessToken ? await this.updateOwnPassword(accessToken, newPassword) : await this.updatePasswordAsAdmin(authId, newPassword);
+    if (failure) {
+      await this.sessions?.dropQuietly(authId, verifySessionId);
       // GoTrue-ийн нууц үгийн бодлого (урт г.м.) → 400
-      if (error.status === 422 || error.status === 400) throw new AppError(HttpStatus.BAD_REQUEST, 'auth.password_weak');
-      this.logger.error(`updateUserById алдаа: ${error.message}`);
+      if (failure.status === 422 || failure.status === 400) throw new AppError(HttpStatus.BAD_REQUEST, 'auth.password_weak');
+      this.logger.error(`нууц үг солих алдаа (${failure.status}): ${failure.message}`);
       throw new AppError(HttpStatus.SERVICE_UNAVAILABLE, 'auth.service_unavailable');
     }
     await this.system.$executeRaw`
       UPDATE core_users SET must_change_password = false, updated_at = now()
       WHERE tenant_id = ${tenantId}::uuid AND id = ${rows[0].id}::uuid`;
     await this.tenantCache.invalidateMember(tenantId, authId);
-    // PIL-15: нууц үг солигдсон → одоогийн session л үлдэнэ, бусад төхөөрөмжийн session-ууд цуцлагдана
-    await this.sessions?.revokeOthers(authId, keepSessionId);
     return { changed: true };
+  }
+
+  /** Хэрэглэгчийн өөрийн токеноор — дуудагчийн session үлдэнэ. Алдаа → {status,message}, амжилт → null */
+  private async updateOwnPassword(accessToken: string, password: string): Promise<{ status: number; message: string } | null> {
+    const base = this.config?.get<string>('SUPABASE_URL') ?? process.env['SUPABASE_URL'] ?? 'https://mock.supabase.co';
+    const anon = this.config?.get<string>('SUPABASE_ANON_KEY') ?? process.env['SUPABASE_ANON_KEY'] ?? 'mock-anon-key';
+    let res: Response;
+    try {
+      res = await fetch(`${base.replace(/\/$/, '')}/auth/v1/user`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ password }),
+      });
+    } catch (err) {
+      return { status: 503, message: (err as Error).message };
+    }
+    if (res.ok) return null;
+    const body = (await res.json().catch(() => null)) as { msg?: string; message?: string } | null;
+    return { status: res.status, message: body?.msg ?? body?.message ?? res.statusText };
+  }
+
+  private async updatePasswordAsAdmin(authId: string, password: string): Promise<{ status: number; message: string } | null> {
+    const { error } = await this.admin().auth.admin.updateUserById(authId, { password });
+    return error ? { status: error.status ?? 503, message: error.message } : null;
   }
 
   private admin(): SupabaseClient {

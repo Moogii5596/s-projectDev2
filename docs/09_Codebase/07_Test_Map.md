@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 31 файл, ~279 тест
+## Integration (бодит PG + RLS) — 31 файл, ~282 тест
 
 Команд: `pnpm test:integration`
 
@@ -33,7 +33,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/camp-v022-perms.integration.spec.ts` | 7 | v0.2.2 Блок 1 — camp_user_permissions (integration) |
 | `core-kernel/test/camp-v022-terminate.integration.spec.ts` | 7 | v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд авах, PII лог (integration) |
 | `core-kernel/test/camp-v022-users.integration.spec.ts` | 3 | v0.2.2 Блок 4 — хэрэглэгч удирдах (integration) |
-| `core-kernel/test/camp-v023-auth.integration.spec.ts` | 3 | PIL-16 — сүүлийн нэвтрэлт · PIL-15 — нууц үг солих: бүх session цуцлагдана · PIL-15 — урилга accept: бүх session цуцлагдана |
+| `core-kernel/test/camp-v023-auth.integration.spec.ts` | 6 | PIL-16 — сүүлийн нэвтрэлт · PIL-15 — нэвтэрсэн төхөөрөмжүүд (D-3) · PIL-15 — нууц үг солих: одоогийн төхөөрөмж үлдэнэ (D-1, OPS-013) · PIL-15 — урилга accept: бүх session цуцлагдана |
 | `core-kernel/test/camp-v023-data-import.integration.spec.ts` | 12 | S1 + S2 — нэр, нэмэлт утас · S4 — албан тушаал · S5 — өрөөний тохиргоо · S6 — өрөөнд байрлуулалт (түүх) · S7 — ажлаас гарсан ажилтан · S9 — «Мэдээлэл дутуу» (буруу имэйл / утас) · S11 — гарсан огноо т |
 | `core-kernel/test/core-feedback.integration.spec.ts` | 8 | v0.2.3 Блок F — санал хүсэлт (integration) |
 | `core-kernel/test/core-rbac-adr007.integration.spec.ts` | 7 | v0.2.3 Блок 2 — ADR-007 core RBAC (integration) |
@@ -50,22 +50,22 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 89 файл, ~679 тест
+## Unit — core-kernel — 89 файл, ~692 тест
 
 Команд: `pnpm --filter core-kernel test`
 
 | Файл | Тест | describe |
 |---|---|---|
 | `core-kernel/src/app/app.service.spec.ts` | 4 | AppService |
-| `core-kernel/src/auth/auth.controller.spec.ts` | 3 | AuthController.register [SEC-005] |
+| `core-kernel/src/auth/auth.controller.spec.ts` | 6 | AuthController.register [SEC-005] · AuthController — төхөөрөмжүүд, нууц үг солих (PIL-15) |
 | `core-kernel/src/auth/auth.service.rls.spec.ts` | 2 | AuthService — RLS холболтууд |
 | `core-kernel/src/auth/auth.service.spec.ts` | 7 | AuthService |
 | `core-kernel/src/auth/invite-token.spec.ts` | 4 | invite-token (v0.2.2 Блок 3) · auth-mail (D-04) |
 | `core-kernel/src/auth/invite.service.spec.ts` | 9 | InviteService (v0.2.2 Блок 3) |
 | `core-kernel/src/auth/login-identifier.spec.ts` | 4 | login-identifier (v0.2.2 D-13) |
 | `core-kernel/src/auth/pilot-auth-config.spec.ts` | 7 | пилотын GoTrue тохиргоо (deploy/pilot/supabase/config.toml) |
-| `core-kernel/src/auth/session-revoke.service.spec.ts` | 3 | SessionRevokeService (v0.2.3 Блок 4, PIL-15) |
-| `core-kernel/src/auth/sign-in.service.spec.ts` | 14 | SignInService (v0.2.2 D-10) |
+| `core-kernel/src/auth/session-revoke.service.spec.ts` | 11 | SessionRevokeService (v0.2.3 Блок 4б, PIL-15) |
+| `core-kernel/src/auth/sign-in.service.spec.ts` | 16 | SignInService (v0.2.2 D-10) |
 | `core-kernel/src/auth/tenant-auth.guard.spec.ts` | 24 | TenantAuthGuard |
 | `core-kernel/src/auth/tenant-cache.service.spec.ts` | 19 | TenantCacheService · TenantCacheService.isMember() · Auth token cache (PERF-003) |
 | `core-kernel/src/auth/tenant-rate-limit.guard.test.ts` | 7 | TenantRateLimitGuard |
@@ -146,7 +146,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/storage/tests/image-processor.service.test.ts` | 9 | ImageProcessorService |
 | `core-kernel/src/storage/tests/local-disk.storage.test.ts` | 7 | LocalDiskStorage · contentTypeOf |
 
-## Unit — web-shell — 25 файл, ~132 тест
+## Unit — web-shell — 26 файл, ~137 тест
 
 Команд: `pnpm --filter web-shell test`
 
@@ -154,6 +154,7 @@ tags: [codebase, testing, generated]
 |---|---|---|
 | `web-shell/src/i18n/tests/i18n.test.ts` | 4 | орчуулгын каталог · i18n ажиллагаа |
 | `web-shell/src/lib/tests/access.test.ts` | 5 | access (PIL-19, ADR-007 B3-3) |
+| `web-shell/src/lib/tests/devices.test.ts` | 5 | describeUserAgent · deviceTitle · sortDevices / otherDevices |
 | `web-shell/src/lib/tests/modules.test.ts` | 8 | parseModules · homePath · resolveSupabaseUrl |
 | `web-shell/src/lib/tests/mr-approval.test.ts` | 8 | approvalState [SEC-004] — backend approvalDenial-тэй ижил · stepViews |
 | `web-shell/src/lib/tests/password-change.test.ts` | 4 | password-change (v0.2.2 D-06) · displayLogin |

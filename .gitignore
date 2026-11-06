@@ -84,3 +84,4 @@ _tmp_*
 
 # Сургалтын материал — тусдаа private repo (s-project-learning)
 /docs/_learning/
+.devin/

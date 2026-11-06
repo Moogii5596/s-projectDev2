@@ -95,6 +95,7 @@ export default function Layout() {
           >
             {displayLogin(me, user?.email)}
           </button>
+          <button onClick={() => navigate('/account/devices')} className={navCls('/account')}>{t('devices.nav')}</button>
           <button
             onClick={handleSignOut}
             className="text-sm text-red-600 hover:text-red-700 font-medium"

@@ -21,7 +21,7 @@ tags: [codebase, frontend, camp, i18n]
 | `hooks/` | `useAuth`, `useMe`, `useMR`, `useMRRealtime` (Supabase Realtime — амжилтгүй бол чимээгүй), `useI18nSync` |
 | `lib/` | `access.ts` (v0.2.3 Блок 3, PIL-19 — цэс/хэсэг/ажлын байр харагдах дүрмийн ганц эх сурвалж, [[ADR-007_System_Roles_Permissions]] §6б) · `supabase.ts` (session; пилотод same-origin `/auth/v1`) · `modules.ts` (`APP_MODULES`, `VITE_MODULES` задлах, `MODULE_REQUIRES` — `camp` → `hr`, нүүр зам) · `roles.ts` (core role, `canWrite` = OWNER/ADMIN) · `mr-approval.ts` · (Кемп) `modules/camp/lib/permissions.ts` — `isSystemAdmin(perms)`: хэрэглэгч / роль удирдах UI зөвхөн OWNER / ADMIN (SEC-009), `RETIRED_PERMISSIONS` (`camp.roles.manage` матрицад харагдахгүй) |
 | `config/enabled-modules.ts` | `ENABLED_MODULES`, `HOME_PATH`, `isEnabled()` |
-| `pages/` | MR (`MRList/Create/DetailPage`), workflow админ (`ApprovalSla`, `WorkflowDefinition`, `Delegation`), auth (`Login`, `SetPassword`, `ForgotPassword`, `ChangePassword`) |
+| `pages/` | MR (`MRList/Create/DetailPage`), workflow админ (`ApprovalSla`, `WorkflowDefinition`, `Delegation`), auth (`Login`, `SetPassword`, `ForgotPassword`, `ChangePassword`), `DevicesPage` (`/account/devices` — нэвтэрсэн төхөөрөмжүүд харах / гаргах; `api/sessions.ts`, `lib/devices.ts`, v0.2.3 Блок 4б) |
 | `modules/<name>/` | Модуль бүр өөрийн `api`, хуудас, `lib` — §2–§3 |
 | `i18n/index.ts` | i18next тохиргоо — §4 |
 | `test/setup.ts` | vitest setup (тест: [[07_Test_Map]]) |

@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Body,
   UseGuards,
   UseInterceptors,
@@ -39,6 +40,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly signInService: SignInService,
     private readonly inviteService: InviteService,
+    private readonly sessionRevoke: SessionRevokeService,
   ) {}
 
   /**
@@ -115,9 +117,36 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async changePassword(@Body() dto: ChangePasswordDto, @Req() req: FastifyRequest) {
     const u = req.user!;
-    // PIL-15: одоогийн session үлдэх — JWT payload-ийн session_id
-    const keepSessionId = SessionRevokeService.sessionIdFromAuthHeader(req.headers.authorization);
-    return this.signInService.changePassword(u.tenantId, u.id, dto.currentPassword, dto.newPassword, keepSessionId);
+    // PIL-15 / D-1: хэрэглэгчийн өөрийн токеноор солино → одоогийн төхөөрөмж логинтой үлдэнэ (OPS-013)
+    const accessToken = SessionRevokeService.bearerToken(req.headers.authorization);
+    return this.signInService.changePassword(u.tenantId, u.id, dto.currentPassword, dto.newPassword, accessToken);
+  }
+
+  /** GET /api/v1/auth/sessions — нэвтэрсэн төхөөрөмжүүд (PIL-15, D-3) */
+  @Get('sessions')
+  @AllowPasswordChangeRequired()
+  async sessions(@Req() req: FastifyRequest) {
+    const current = SessionRevokeService.sessionIdFromAuthHeader(req.headers.authorization);
+    return this.sessionRevoke.list(req.user!.id, current);
+  }
+
+  /** DELETE /api/v1/auth/sessions/others — одоогийнхоос бусад бүх төхөөрөмжөөс гаргах */
+  @Delete('sessions/others')
+  @AllowPasswordChangeRequired()
+  @HttpCode(HttpStatus.OK)
+  async revokeOtherSessions(@Req() req: FastifyRequest) {
+    const current = SessionRevokeService.sessionIdFromAuthHeader(req.headers.authorization);
+    return { revoked: await this.sessionRevoke.revokeOthers(req.user!.id, current) };
+  }
+
+  /** DELETE /api/v1/auth/sessions/:id — нэг төхөөрөмжөөс гаргах (өөрийнх биш) */
+  @Delete('sessions/:id')
+  @AllowPasswordChangeRequired()
+  @HttpCode(HttpStatus.OK)
+  async revokeSession(@Param('id') id: string, @Req() req: FastifyRequest) {
+    const current = SessionRevokeService.sessionIdFromAuthHeader(req.headers.authorization);
+    await this.sessionRevoke.revokeOne(req.user!.id, id, current);
+    return { revoked: true };
   }
 
   @Get('me')

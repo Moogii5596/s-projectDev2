@@ -10,14 +10,14 @@ tags: [codebase, api, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Нийт **198** endpoint, 31 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
+Нийт **201** endpoint, 31 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
 
 **Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). **OWNER·ADMIN** = зөвхөн системийн роль (`requireTenantAdmin` — хэрэглэгч / роль удирдах, SEC-009), `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].
 
 ## Агуулга
 
 - [[#app]] — 1
-- [[#auth]] — 8
+- [[#auth]] — 11
 - [[#common/i18n]] — 7
 - [[#modules/budget]] — 6
 - [[#modules/camp/assets]] — 10
@@ -55,14 +55,17 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| POST | `/api/v1/auth/register` | `AuthController.register` → `AuthService.getMe` | — | `auth.controller.ts:54` |
-| POST | `/api/v1/auth/login` | `AuthController.login` → `AuthService.login` | — | `auth.controller.ts:69` |
-| POST | `/api/v1/auth/sign-in` | `AuthController.signIn` → `SignInService.signIn` | — | 🌐 `auth.controller.ts:85` |
-| GET | `/api/v1/auth/invites/:token` | `AuthController.inspectInvite` → `InviteService.inspect` | — | 🌐 `auth.controller.ts:92` |
-| POST | `/api/v1/auth/invites/:token/accept` | `AuthController.acceptInvite` → `InviteService.accept` | — | 🌐 `auth.controller.ts:100` |
-| POST | `/api/v1/auth/forgot-password` | `AuthController.forgotPassword` → `InviteService.forgot` | — | 🌐 `auth.controller.ts:108` |
-| POST | `/api/v1/auth/change-password` | `AuthController.changePassword` → `SignInService.changePassword` | — | AllowPasswordChangeRequired `auth.controller.ts:116` |
-| GET | `/api/v1/auth/me` | `AuthController.me` → `AuthService.getMe` | — | AllowPasswordChangeRequired UseGuards(TenantAuthGuard) UseInterceptors `auth.controller.ts:127` |
+| POST | `/api/v1/auth/register` | `AuthController.register` → `AuthService.getMe` | — | `auth.controller.ts:56` |
+| POST | `/api/v1/auth/login` | `AuthController.login` → `AuthService.login` | — | `auth.controller.ts:71` |
+| POST | `/api/v1/auth/sign-in` | `AuthController.signIn` → `SignInService.signIn` | — | 🌐 `auth.controller.ts:87` |
+| GET | `/api/v1/auth/invites/:token` | `AuthController.inspectInvite` → `InviteService.inspect` | — | 🌐 `auth.controller.ts:94` |
+| POST | `/api/v1/auth/invites/:token/accept` | `AuthController.acceptInvite` → `InviteService.accept` | — | 🌐 `auth.controller.ts:102` |
+| POST | `/api/v1/auth/forgot-password` | `AuthController.forgotPassword` → `InviteService.forgot` | — | 🌐 `auth.controller.ts:110` |
+| POST | `/api/v1/auth/change-password` | `AuthController.changePassword` → `SignInService.changePassword` | — | AllowPasswordChangeRequired `auth.controller.ts:118` |
+| GET | `/api/v1/auth/sessions` | `AuthController.sessions` → `SessionRevokeService.list` | — | AllowPasswordChangeRequired `auth.controller.ts:128` |
+| DELETE | `/api/v1/auth/sessions/others` | `AuthController.revokeOtherSessions` → `SessionRevokeService.revokeOthers` | — | AllowPasswordChangeRequired `auth.controller.ts:137` |
+| DELETE | `/api/v1/auth/sessions/:id` | `AuthController.revokeSession` → `SessionRevokeService.revokeOne` | — | AllowPasswordChangeRequired `auth.controller.ts:146` |
+| GET | `/api/v1/auth/me` | `AuthController.me` → `AuthService.getMe` | — | AllowPasswordChangeRequired UseGuards(TenantAuthGuard) UseInterceptors `auth.controller.ts:156` |
 
 ## common/i18n
 

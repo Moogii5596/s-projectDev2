@@ -11,6 +11,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 // v0.2.2 Блок 6 (PIL-10): нэвтэрсний дараах хуудас/модуль бүр тусдаа chunk
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
+const DevicesPage = lazy(() => import('./pages/DevicesPage'));
 const MRListPage = lazy(() => import('./pages/MRListPage'));
 const MRCreatePage = lazy(() => import('./pages/MRCreatePage'));
 const MRDetailPage = lazy(() => import('./pages/MRDetailPage'));
@@ -51,6 +52,8 @@ export default function App() {
         <Route element={<Layout />}>
           {/* v0.1.6: VITE_MODULES-оор шүүнэ (пилот = зөвхөн camp → нүүр /camp) */}
           <Route path="/" element={<HomeRedirect />} />
+          {/* v0.2.3 Блок 4б (PIL-15): нэвтэрсэн төхөөрөмжүүд */}
+          <Route path="/account/devices" element={<DevicesPage />} />
           <Route path="/feedback" element={<FeedbackPage />} />
           <Route path="/whats-new" element={<WhatsNewPage />} />
           {isEnabled('mr') && (

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SIGN_IN_LIMITS, SignInService, clientIpOf } from './sign-in.service';
 
 const session = { access_token: 'at', refresh_token: 'rt', expires_in: 3600, expires_at: 99, token_type: 'bearer' };
@@ -26,7 +26,7 @@ function setup(opts: { tenantId?: string | null; rows?: Record<string, unknown[]
     del: vi.fn(async (k: string) => { counters.delete(k); return 1; }),
   };
   const config = { get: (k: string) => ({ DEPLOYMENT_MODE: 'dedicated', DEDICATED_TENANT_SLUG: 'sino' } as Record<string, string>)[k] };
-  const sessions = { revokeOthers: vi.fn().mockResolvedValue(undefined), revokeAll: vi.fn().mockResolvedValue(undefined) };
+  const sessions = { dropQuietly: vi.fn().mockResolvedValue(undefined), revokeAll: vi.fn().mockResolvedValue(undefined) };
   const svc = new SignInService(config as never, system as never, tenantCache as never, redis as never, () => gotrue as never, sessions as never);
   return { svc, signInWithPassword, updateUserById, queryRaw, system, tenantCache, redis, sessions };
 }
@@ -137,32 +137,59 @@ describe('SignInService (v0.2.2 D-10)', () => {
     });
   });
 
-  describe('changePassword (D-06)', () => {
+  describe('changePassword (D-06, PIL-15 D-1)', () => {
+    const VERIFY_SID = '323e4567-e89b-42d3-a456-426614174002';
+    const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
+    const verifySession = { ...session, access_token: `${b64({ alg: 'HS256' })}.${b64({ session_id: VERIFY_SID })}.sig` };
+    const fetchMock = vi.fn();
+
     beforeEach(() => {
       s = setup({ rows: { self: [{ id: 'cu1', email: 'bat@sino.mn' }] } });
+      fetchMock.mockReset();
+      vi.stubGlobal('fetch', fetchMock);
     });
+    afterEach(() => { vi.unstubAllGlobals(); });
 
-    it('одоогийнх зөв → admin update → must_change_password = false → cache цэвэрлэнэ → PIL-15: бусад session цуцлах', async () => {
-      s.signInWithPassword.mockResolvedValue({ data: { session, user: { id: 'auth-1' } }, error: null });
-      await expect(s.svc.changePassword('t1', 'auth-1', 'old-password', 'new-password-123', 'sess-keep')).resolves.toEqual({ changed: true });
-      expect(s.updateUserById).toHaveBeenCalledWith('auth-1', { password: 'new-password-123' });
+    it('хэрэглэгчийн өөрийн токеноор PUT /auth/v1/user → must_change_password = false → cache цэвэрлэнэ; бусад session-д хүрэхгүй', async () => {
+      s.signInWithPassword.mockResolvedValue({ data: { session: verifySession, user: { id: 'auth-1' } }, error: null });
+      fetchMock.mockResolvedValue({ ok: true, status: 200 });
+      await expect(s.svc.changePassword('t1', 'auth-1', 'old-password', 'new-password-123', 'my-access-token')).resolves.toEqual({ changed: true });
+      const [url, init] = fetchMock.mock.calls[0] as [string, { method: string; headers: Record<string, string>; body: string }];
+      expect(url).toMatch(/\/auth\/v1\/user$/);
+      expect(init.method).toBe('PUT');
+      expect(init.headers['Authorization']).toBe('Bearer my-access-token');
+      expect(JSON.parse(init.body)).toEqual({ password: 'new-password-123' });
+      expect(s.updateUserById).not.toHaveBeenCalled(); // admin API бүх session устгадаг (OPS-013)
       expect((s.system.$executeRaw.mock.calls[0][0] as TemplateStringsArray).join('?')).toContain('must_change_password = false');
       expect(s.tenantCache.invalidateMember).toHaveBeenCalledWith('t1', 'auth-1');
-      expect(s.sessions.revokeOthers).toHaveBeenCalledWith('auth-1', 'sess-keep');
+      expect(s.sessions.dropQuietly).not.toHaveBeenCalled(); // GoTrue шалгалтын session-ыг өөрөө устгасан
     });
 
-    it('ижил нууц үг → 400; одоогийнх буруу → 400 (update хийхгүй); түгжээ → 429; бодлого → 400 weak', async () => {
-      await expect(s.svc.changePassword('t1', 'auth-1', 'same-password-1', 'same-password-1')).rejects.toMatchObject({ status: 400, code: 'auth.password_same' });
+    it('токен алга → admin API (нөөц зам)', async () => {
+      s.signInWithPassword.mockResolvedValue({ data: { session: verifySession, user: { id: 'auth-1' } }, error: null });
+      await expect(s.svc.changePassword('t1', 'auth-1', 'old-password', 'new-password-123')).resolves.toEqual({ changed: true });
+      expect(s.updateUserById).toHaveBeenCalledWith('auth-1', { password: 'new-password-123' });
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('ижил нууц үг → 400; одоогийнх буруу → 400 (update хийхгүй); түгжээ → 429', async () => {
+      await expect(s.svc.changePassword('t1', 'auth-1', 'same-password-1', 'same-password-1', 'tok')).rejects.toMatchObject({ status: 400, code: 'auth.password_same' });
       s.signInWithPassword.mockResolvedValueOnce({ data: {}, error: { status: 400, message: 'x' } });
-      await expect(s.svc.changePassword('t1', 'auth-1', 'bad', 'new-password-123')).rejects.toMatchObject({ code: 'auth.password_current_wrong' });
+      await expect(s.svc.changePassword('t1', 'auth-1', 'bad', 'new-password-123', 'tok')).rejects.toMatchObject({ code: 'auth.password_current_wrong' });
       s.signInWithPassword.mockResolvedValueOnce({ data: {}, error: { status: 429, message: 'x' } });
-      await expect(s.svc.changePassword('t1', 'auth-1', 'bad', 'new-password-123')).rejects.toMatchObject({ status: 429 });
+      await expect(s.svc.changePassword('t1', 'auth-1', 'bad', 'new-password-123', 'tok')).rejects.toMatchObject({ status: 429 });
+      expect(fetchMock).not.toHaveBeenCalled();
       expect(s.updateUserById).not.toHaveBeenCalled();
-      s.signInWithPassword.mockResolvedValueOnce({ data: { session, user: { id: 'auth-1' } }, error: null });
-      s.updateUserById.mockResolvedValueOnce({ error: { status: 422, message: 'weak' } });
-      await expect(s.svc.changePassword('t1', 'auth-1', 'old', 'new-password-123')).rejects.toMatchObject({ code: 'auth.password_weak' });
+    });
+
+    it('бодлого (422) → 400 weak; шалгалтын session устгагдана; DB бичихгүй. GoTrue унасан → 503', async () => {
+      s.signInWithPassword.mockResolvedValue({ data: { session: verifySession, user: { id: 'auth-1' } }, error: null });
+      fetchMock.mockResolvedValueOnce({ ok: false, status: 422, statusText: 'x', json: async () => ({ msg: 'weak' }) });
+      await expect(s.svc.changePassword('t1', 'auth-1', 'old', 'new-password-123', 'tok')).rejects.toMatchObject({ code: 'auth.password_weak' });
+      expect(s.sessions.dropQuietly).toHaveBeenCalledWith('auth-1', VERIFY_SID);
       expect(s.system.$executeRaw).not.toHaveBeenCalled();
-      expect(s.sessions.revokeOthers).not.toHaveBeenCalled();
+      fetchMock.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+      await expect(s.svc.changePassword('t1', 'auth-1', 'old', 'new-password-123', 'tok')).rejects.toMatchObject({ code: 'auth.service_unavailable' });
     });
   });
 
