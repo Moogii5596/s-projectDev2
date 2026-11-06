@@ -2,7 +2,7 @@
 title: "DB каталог (migration-аас)"
 type: "Database"
 status: "Active"
-last_updated: 2026-10-19
+last_updated: 2026-11-06
 tags: [codebase, database, rls, generated]
 ---
 
@@ -10,7 +10,7 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (51 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **68** хүснэгт, 38 enum, 25 функц, 57 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (53 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **68** хүснэгт, 38 enum, 25 функц, 57 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
@@ -1304,7 +1304,7 @@ Trigger: `trg_camp_rooms_updated_at`
 
 ### camp_settings
 
-🔒🔒 · үүсгэсэн `20261009002_camp_master.sql` · өөрчлөлт: +catering_organization_id (`20261010002_camp_org_services_maintenance.sql`)
+🔒🔒 · үүсгэсэн `20261009002_camp_master.sql` · өөрчлөлт: +catering_organization_id (`20261010002_camp_org_services_maintenance.sql`), +extension_default_days (`20261106002_camp_extension_days.sql`)
 
 | Багана | Төрөл | Шинж | FK |
 |---|---|---|---|
@@ -1320,6 +1320,7 @@ Trigger: `trg_camp_rooms_updated_at`
 | created_at | TIMESTAMPTZ | NN |  |
 | updated_at | TIMESTAMPTZ | NN |  |
 | catering_organization_id | UUID |  |  |
+| extension_default_days | SMALLINT | NN |  |
 
 Constraint: `UNIQUE (tenant_id, camp_id)` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, camp_id, default_meal_location_id) REFERENCES camp_meal_locations (tenant_id, camp_id, id)` · `CHECK (roster_off_days BETWEEN 2 AND 28)` · `FOREIGN KEY (tenant_id, catering_organization_id) REFERENCES camp_organizations (tenant_id, id)`
 
@@ -1569,7 +1570,7 @@ Trigger: `update_core_users_updated_at`
 | CampRoleCode | CAMP_ADMIN, CAMP_MANAGER, CATERING_ADMIN, EMPLOYEE | `20261009001_camp_rbac.sql` |
 | CampRoomStatus | ACTIVE, MAINTENANCE, INACTIVE | `20261009002_camp_master.sql` |
 | CampServiceType | SEWAGE_TRANSPORT, SEWAGE_DISPOSAL, WASTE_TRANSPORT, WASTE_DISPOSAL, MEAL | `20261009005_camp_contracts.sql` |
-| CampShiftAdjustmentReason | EARLY_ARRIVAL, SHIFT_CHANGE, OTHER | `20261009003_camp_attendance.sql` |
+| CampShiftAdjustmentReason | EARLY_ARRIVAL, SHIFT_CHANGE, OTHER, EXTENSION | `20261009003_camp_attendance.sql` |
 | CampShiftType | DAY, NIGHT | `20261009002_camp_master.sql` |
 | CampTemplateScope | ALL_CAMPS, EMPLOYEE_CAMP | `20261013002_camp_position_role_templates.sql` |
 | CampTerminationReason | RESIGNED, DISMISSED, CONTRACT_END, OTHER | `20261017002_camp_employees_termination.sql` |

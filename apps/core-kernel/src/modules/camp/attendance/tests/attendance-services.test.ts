@@ -64,9 +64,38 @@ describe('HrAttendanceService — импорт (Шат 3.3)', () => {
       { row: 4, employeeCode: 'NOPE', messages: ['Ажилтан олдсонгүй: NOPE'] },
     ]);
     expect(data.parsedRows).toHaveLength(3);
-    expect(res.summary).toEqual({ arrivals: 1, departures: 0, offRoster: 0, shiftAdjustments: 0, errorRows: 2 });
+    expect(res.summary).toEqual({ arrivals: 1, departures: 0, offRoster: 0, shiftAdjustments: 0, extensions: 0, warningRows: 0, errorRows: 2 });
+    expect([res.format, res.skippedSheets]).toEqual(['TEMPLATE', []]);
     expect(res.rows[0]).toMatchObject({ employeeCode: 'E1', kind: 'ROSTER', meals: ['DINNER'], errors: [] });
     expect(s.tx.hrMovement.createManyAndReturn).not.toHaveBeenCalled();
+  });
+
+  it('preview: HR ShiftChange файл (Блок R) — автоматаар таньж, нэрээр тулгаж, ЗОХИЦУУЛАЛТ алгасна', async () => {
+    s.tx.hrMovementImport.create.mockImplementation(async (a: { data: Record<string, unknown> }) => ({ id: 'imp2', ...a.data }));
+    s.tx.hrEmployee.findMany.mockResolvedValue([
+      { id: 'e1', campId: 'c1', status: CampEmployeeStatus.ACTIVE, employeeCode: '10001', departmentId: 'd1', lastName: 'Бат', firstName: 'Болд', fullName: 'Бат Болд', crew: { rosterAnchorDate: d('2026-10-07') } },
+      { id: 'e2', campId: 'c1', status: CampEmployeeStatus.ACTIVE, employeeCode: 'Z0001', departmentId: 'd1', lastName: 'Харуул', firstName: 'Эрдэнэ', fullName: 'Харуул Эрдэнэ', crew: null },
+    ]);
+    const wb = new ExcelJS.Workbook();
+    const add = (name: string, title: string, rows: unknown[][]) => {
+      const ws = wb.addWorksheet(name);
+      ws.addRow([title]);
+      ws.addRow(['Д/д', 'Shift', 'ID', 'Ажилтны овог', 'Ажилтны нэр', 'Албан тушаал', 'Хэлтэс']);
+      rows.forEach((r) => ws.addRow(r));
+    };
+    add('2026.10.07 A ирэх', '2026.10.07-нд ирэх', [[1, 'A', 10001, 'Бат', 'Болд', 'x', 'y'], [2, '', 'TIRE', 'Харуул', 'Эрдэнэ (12)', 'x', 'y'], [3, '', 'NEW', 'Шинэ', 'Хүн', 'x', 'y']]);
+    add('ЗОХИЦУУЛАЛТ 2026.10.07', 'СУНАЖ АЖИЛЛАХ /OVERTIME/', [[1, 'A', 10001, 'Бат', 'Болд', 'x', 'y']]);
+    const res = await svc.preview('t1', 'a1', 'c1', '20261007_ShiftChange.xlsx', Buffer.from(await wb.xlsx.writeBuffer()));
+    expect(res.format).toBe('SHIFTCHANGE');
+    expect(res.skippedSheets).toEqual([{ sheet: 'ЗОХИЦУУЛАЛТ 2026.10.07', reason: 'LEGACY_ADJUSTMENT' }]);
+    expect(res.rows.map((r) => [r.employeeCode, r.kind, r.errors])).toEqual([
+      ['10001', 'ROSTER', []],
+      ['Z0001', 'OFF_ROSTER', []], // R-8: хоол анхдагч, алдаагүй
+      ['', null, ['Шинэ ажилтан (Шинэ Хүн, ID «NEW») бүртгэлд алга']],
+    ]);
+    expect(res.rows[2].source).toMatchObject({ sheet: '2026.10.07 A ирэх', row: 5, idType: 'NEW' });
+    const data = s.tx.hrMovementImport.create.mock.calls[0][0].data;
+    expect(data.errors).toEqual([{ row: 3, employeeCode: '', messages: ['Шинэ ажилтан (Шинэ Хүн, ID «NEW») бүртгэлд алга'], sheet: '2026.10.07 A ирэх', sheetRow: 5 }]);
   });
 
   const pending = (rows: unknown[]) => ({ id: 'imp1', status: CampImportStatus.PREVIEW, fileName: 'irts.xlsx', parsedRows: rows });

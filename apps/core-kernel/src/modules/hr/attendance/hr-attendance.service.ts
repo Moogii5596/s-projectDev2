@@ -13,12 +13,23 @@ import { applyPlan, loadPlannerState, lockCampAttendance } from './attendance-st
 import { CreateMovementDto, ManualMovementsDto, QueryImportsDto, RangeQueryDto } from './hr-attendance.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { HrAttendanceHooks } from './stay-store';
+import { collectShiftChange, isAttendanceTemplate, loadXlsx, SkippedSheet } from './shiftchange-parser';
+import { loadResolverEmployees, resolveShiftChange } from './shiftchange-resolver';
 
 const P = CAMP_PERMISSIONS;
 const CONFIRM_TX = { timeout: 120_000, maxWait: 10_000 };
 const MAX_RANGE_DAYS = 93;
 
-const rowErrors = (rows: PlannedRow[]) => rows.filter((r) => r.errors.length > 0).map((r) => ({ row: r.row, employeeCode: r.employeeCode, messages: r.errors }));
+/** PREVIEW-ийн нэмэлт мэдээлэл (v0.2.3 Блок R) */
+interface PreviewMeta {
+  format: 'TEMPLATE' | 'SHIFTCHANGE' | 'MANUAL';
+  skippedSheets?: SkippedSheet[];
+}
+
+const rowErrors = (rows: PlannedRow[]) =>
+  rows
+    .filter((r) => r.errors.length > 0)
+    .map((r) => ({ row: r.row, employeeCode: r.employeeCode, messages: r.errors, ...(r.source ? { sheet: r.source.sheet, sheetRow: r.source.row } : {}) }));
 
 /**
  * Ирц (Шат 3.3): xlsx импорт PREVIEW → CONFIRM (нэг transaction, бүх мөр зөв үед л), гараар бүртгэл, байх хугацаа.
@@ -36,9 +47,23 @@ export class HrAttendanceService {
     return buildAttendanceTemplate();
   }
 
+  /**
+   * xlsx PREVIEW — загварыг автоматаар таньна: «Ирц» загвар (employee_code / date / direction) эсвэл
+   * HR-ийн ShiftChange (v0.2.3 Блок R: ирэх / буух / Сунах хуудас → ажилтантай тулгаж planner руу).
+   */
   async preview(tenantId: string, authId: string, campId: string, fileName: string, buffer: Buffer) {
-    const parsed = await parseAttendanceXlsx(buffer);
-    return this.previewParsed(tenantId, authId, campId, fileName, parsed);
+    const wb = await loadXlsx(buffer);
+    const sc = isAttendanceTemplate(wb) ? null : collectShiftChange(wb);
+    if (!sc || sc.rows.length === 0) {
+      const parsed = await parseAttendanceXlsx(buffer); // «Ирц» загварын алдаа (багана алга г.м.) эндээс
+      return this.previewParsed(tenantId, authId, campId, fileName, parsed, { format: 'TEMPLATE' });
+    }
+    const employees = await inTenantTx(this.prisma, tenantId, async (tx) => {
+      await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
+      return loadResolverEmployees(tx, tenantId, campId);
+    });
+    const parsed = resolveShiftChange(sc.rows, employees);
+    return this.previewParsed(tenantId, authId, campId, fileName, parsed, { format: 'SHIFTCHANGE', skippedSheets: sc.skipped });
   }
 
   /**
@@ -60,10 +85,10 @@ export class HrAttendanceService {
       shift: dto.shift ?? null,
       errors: [],
     }));
-    return this.previewParsed(tenantId, authId, campId, `manual-${dto.date}-${dto.direction.toLowerCase()}-${employees.length}`, parsed);
+    return this.previewParsed(tenantId, authId, campId, `manual-${dto.date}-${dto.direction.toLowerCase()}-${employees.length}`, parsed, { format: 'MANUAL' });
   }
 
-  private async previewParsed(tenantId: string, authId: string, campId: string, fileName: string, parsed: ParsedRow[]) {
+  private async previewParsed(tenantId: string, authId: string, campId: string, fileName: string, parsed: ParsedRow[], meta: PreviewMeta) {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorId = await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
@@ -80,7 +105,7 @@ export class HrAttendanceService {
           },
           select: { id: true, fileName: true, status: true, totalRows: true, okRows: true, errorRows: true, createdAt: true },
         });
-        return { import: imp, rows: plan.rows, summary: this.summary(plan) };
+        return { import: imp, rows: plan.rows, summary: this.summary(plan), format: meta.format, skippedSheets: meta.skippedSheets ?? [] };
       }),
     );
   }
@@ -90,7 +115,9 @@ export class HrAttendanceService {
       arrivals: plan.movements.filter((m) => m.direction === CampMovementDirection.ARRIVAL).length,
       departures: plan.movements.filter((m) => m.direction === CampMovementDirection.DEPARTURE).length,
       offRoster: plan.movements.filter((m) => m.kind === 'OFF_ROSTER').length,
-      shiftAdjustments: plan.adjustments.length,
+      shiftAdjustments: plan.adjustments.filter((a) => a.reasonType !== 'EXTENSION').length,
+      extensions: plan.adjustments.filter((a) => a.reasonType === 'EXTENSION').length,
+      warningRows: plan.rows.filter((r) => (r.warnings?.length ?? 0) > 0).length,
       errorRows: plan.errorRows,
     };
   }

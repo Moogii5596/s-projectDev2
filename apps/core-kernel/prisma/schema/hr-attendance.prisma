@@ -4,6 +4,8 @@ enum CampShiftAdjustmentReason {
   EARLY_ARRIVAL
   SHIFT_CHANGE
   OTHER
+  /// v0.2.3 Блок R (20261106001) — ShiftChange «Сунах» (PIL-24)
+  EXTENSION
 }
 
 enum CampImportStatus {

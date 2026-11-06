@@ -22,7 +22,7 @@ export async function loadPlannerState(
   const maxDate = valid[valid.length - 1] ?? '1970-01-01';
   const employees = await tx.hrEmployee.findMany({
     where: { tenantId, employeeCode: { in: uniqCodes } },
-    select: { id: true, campId: true, status: true, employeeCode: true, crew: { select: { rosterAnchorDate: true } } },
+    select: { id: true, campId: true, status: true, employeeCode: true, departmentId: true, crew: { select: { rosterAnchorDate: true } } },
   });
   const ids = employees.map((e) => e.id);
   const [stays, movements, adjustments] = await Promise.all([
@@ -33,9 +33,15 @@ export async function loadPlannerState(
     }),
     tx.hrShiftAdjustment.findMany({
       where: { tenantId, employeeId: { in: ids }, endDate: { gte: toDbDate(minDate) }, startDate: { lte: toDbDate(addDays(maxDate, settings.rosterOnDays)) } },
-      select: { employeeId: true, startDate: true, endDate: true },
+      select: { employeeId: true, startDate: true, endDate: true, reasonType: true },
     }),
   ]);
+  const deptIds = [...new Set(employees.map((e) => e.departmentId))];
+  const patternRows = deptIds.length
+    ? await tx.hrDepartmentShiftPattern.findMany({ where: { tenantId, departmentId: { in: deptIds } }, select: { departmentId: true, dayFrom: true, dayTo: true, shift: true } })
+    : [];
+  const patterns = new Map<string, { dayFrom: number; dayTo: number; shift: (typeof patternRows)[number]['shift'] }[]>();
+  for (const p of patternRows) patterns.set(p.departmentId, [...(patterns.get(p.departmentId) ?? []), { dayFrom: p.dayFrom, dayTo: p.dayTo, shift: p.shift }]);
   const group = <T extends { employeeId: string }, R>(rows: T[], map: (r: T) => R) => {
     const m = new Map<string, R[]>();
     for (const r of rows) m.set(r.employeeId, [...(m.get(r.employeeId) ?? []), map(r)]);
@@ -48,11 +54,12 @@ export async function loadPlannerState(
     employees: new Map(
       [...employees]
         .sort((x, y) => Number(x.status !== CampEmployeeStatus.TERMINATED) - Number(y.status !== CampEmployeeStatus.TERMINATED))
-        .map((e) => [e.employeeCode, { id: e.id, campId: e.campId, status: e.status, crewAnchor: e.crew ? fromDbDate(e.crew.rosterAnchorDate) : null }]),
+        .map((e) => [e.employeeCode, { id: e.id, campId: e.campId, status: e.status, crewAnchor: e.crew ? fromDbDate(e.crew.rosterAnchorDate) : null, departmentId: e.departmentId }]),
     ),
     stays: group(stays, (s) => ({ id: s.id, startDate: fromDbDate(s.startDate), endDate: s.endDate ? fromDbDate(s.endDate) : null })),
     movementKeys: new Set(movements.map((m) => movementKey(m.employeeId, fromDbDate(m.movementDate), m.direction))),
-    adjustments: group(adjustments, (a) => ({ startDate: fromDbDate(a.startDate), endDate: fromDbDate(a.endDate) })),
+    adjustments: group(adjustments, (a) => ({ startDate: fromDbDate(a.startDate), endDate: fromDbDate(a.endDate), reasonType: a.reasonType })),
+    patterns,
   };
 }
 
@@ -100,7 +107,7 @@ export async function applyPlan(
     await tx.hrShiftAdjustment.createMany({
       data: plan.adjustments.map((a) => ({
         tenantId, employeeId: a.employeeId, startDate: toDbDate(a.startDate), endDate: toDbDate(a.endDate), shift: a.shift,
-        reasonType: CampShiftAdjustmentReason.OTHER, reason, createdBy: actorId,
+        reasonType: a.reasonType ?? CampShiftAdjustmentReason.OTHER, reason, createdBy: actorId,
       })),
     });
   }

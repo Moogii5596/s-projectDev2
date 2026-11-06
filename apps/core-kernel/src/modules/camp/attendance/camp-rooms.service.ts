@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CampAssetCondition, CampEmployeeStatus, CampRoomStatus } from '@prisma/client';
+import { CampAssetCondition, CampEmployeeStatus, CampRoomStatus, CampShiftAdjustmentReason, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
@@ -22,11 +22,21 @@ export interface OccupantPlan {
   crewAnchor: string | null;
   startDate: string;
   endDate: string | null;
+  /** v0.2.3 Блок R (R-7): сунгалт (EXTENSION зохицуулалт) — ростерын бус ч кемпэд хононо */
+  extensions?: { startDate: string; endDate: string }[];
 }
+
+/** Багтаамжийн цонхтой давхцах сунгалтууд (R-7) */
+const extensionSelect = (from: Date, to: Date) =>
+  ({
+    where: { reasonType: CampShiftAdjustmentReason.EXTENSION, startDate: { lte: to }, endDate: { gte: from } },
+    select: { startDate: true, endDate: true },
+  }) satisfies Prisma.HrEmployee$shiftAdjustmentsArgs;
+const extensionsOf = (rows: { startDate: Date; endDate: Date }[] | undefined) => (rows ?? []).map((a) => ({ startDate: fromDbDate(a.startDate), endDate: fromDbDate(a.endDate) }));
 
 /**
  * Өрөөний багтаамж — "хоног"-оор (Шат 3.4): d өдрийн ШӨНӨ өрөөнд хонох хүн = хуваарилалт d-г хамарсан ба ростерын дагуу
- * тэр шөнө кемпэд (expectedNight). Багагүй ажилтан шөнө бүр тоологдоно. Хэтэрсэн эхний шөнийг буцаана.
+ * тэр шөнө кемпэд (expectedNight эсвэл сунгалт — R-7). Багагүй ажилтан шөнө бүр тоологдоно. Хэтэрсэн эхний шөнийг буцаана.
  */
 export function firstOverCapacityNight(
   occupants: OccupantPlan[],
@@ -37,7 +47,9 @@ export function firstOverCapacityNight(
 ): { date: string; count: number; codes: string[] } | null {
   for (let i = 0; i < nights; i++) {
     const d = addDays(from, i);
-    const here = occupants.filter((o) => coversDay(o.startDate, o.endDate, d) && expectedNight(o.crewAnchor, d, settings));
+    const here = occupants.filter(
+      (o) => coversDay(o.startDate, o.endDate, d) && (expectedNight(o.crewAnchor, d, settings) || (o.extensions ?? []).some((x) => coversDay(x.startDate, x.endDate, d))),
+    );
     if (here.length > capacity) return { date: d, count: here.length, codes: here.map((o) => o.employeeCode).sort() };
   }
   return null;
@@ -89,7 +101,14 @@ export class CampRoomsService {
             tenantId, roomId: room.id, startDate: { lte: toDbDate(windowEnd) }, OR: [{ endDate: null }, { endDate: { gte: start } }],
             ...(replacedId ? { NOT: { id: replacedId } } : {}),
           },
-          select: { startDate: true, endDate: true, employee: { select: { employeeCode: true, crew: { select: { rosterAnchorDate: true } } } } },
+          select: {
+            startDate: true, endDate: true,
+            employee: { select: { employeeCode: true, crew: { select: { rosterAnchorDate: true } }, shiftAdjustments: extensionSelect(start, toDbDate(windowEnd)) } },
+          },
+        });
+        const own = await tx.hrShiftAdjustment.findMany({
+          where: { tenantId, employeeId: emp.id, ...extensionSelect(start, toDbDate(windowEnd)).where },
+          select: { startDate: true, endDate: true },
         });
         const occupants: OccupantPlan[] = [
           ...others.map((o) => ({
@@ -97,8 +116,12 @@ export class CampRoomsService {
             crewAnchor: o.employee.crew ? fromDbDate(o.employee.crew.rosterAnchorDate) : null,
             startDate: fromDbDate(o.startDate),
             endDate: o.endDate ? fromDbDate(o.endDate) : null,
+            extensions: extensionsOf(o.employee.shiftAdjustments),
           })),
-          { employeeCode: emp.employeeCode, crewAnchor: emp.crew ? fromDbDate(emp.crew.rosterAnchorDate) : null, startDate: dto.startDate, endDate: null },
+          {
+            employeeCode: emp.employeeCode, crewAnchor: emp.crew ? fromDbDate(emp.crew.rosterAnchorDate) : null, startDate: dto.startDate, endDate: null,
+            extensions: extensionsOf(own),
+          },
         ];
         const over = firstOverCapacityNight(occupants, room.capacity, dto.startDate, CAPACITY_WINDOW_NIGHTS, settings);
         if (over) {

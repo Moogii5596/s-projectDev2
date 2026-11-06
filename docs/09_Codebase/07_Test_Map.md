@@ -2,7 +2,7 @@
 title: "Тестийн зураглал"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-19
+last_updated: 2026-11-06
 tags: [codebase, testing, generated]
 ---
 
@@ -48,7 +48,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 79 файл, ~609 тест
+## Unit — core-kernel — 82 файл, ~632 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -86,7 +86,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/budget/tests/budget.service.test.ts` | 18 | BudgetService — ledger (MR transaction дотор) · BudgetService — CRUD / эрх · budgetDate() |
 | `core-kernel/src/modules/camp/assets/tests/camp-assets.service.test.ts` | 21 | CampAssetsService — ангилал (Шат 4.3) · CampAssetsService — хөрөнгө (Шат 4.3) |
 | `core-kernel/src/modules/camp/attendance/tests/attendance-rules.test.ts` | 18 | camp-date · roster — 14 ажил, замын хоног амралтад (Лхагва ирж, Пүрэв явна) · ShiftResolver · Хоолны дүрэм · Presence — D өдрийн суурь тоо (ERD v4 жишээнүүд) |
-| `core-kernel/src/modules/camp/attendance/tests/attendance-services.test.ts` | 26 | HrAttendanceService — импорт (Шат 3.3) · HrShiftsService (Шат 3.2) · Өрөөний багтаамж — хоногоор (Шат 3.4) · CampRoomsService (Шат 3.4) · CampPresenceService (Шат 3.5) — DB → тооцоо |
+| `core-kernel/src/modules/camp/attendance/tests/attendance-services.test.ts` | 27 | HrAttendanceService — импорт (Шат 3.3) · HrShiftsService (Шат 3.2) · Өрөөний багтаамж — хоногоор (Шат 3.4) · CampRoomsService (Шат 3.4) · CampPresenceService (Шат 3.5) — DB → тооцоо |
 | `core-kernel/src/modules/camp/attendance/tests/presence-golden.test.ts` | 3 | Хоолны тооцоо — golden (§0.6) |
 | `core-kernel/src/modules/camp/attendance/tests/presence-v021.test.ts` | 5 | effectiveEmployee · computePresence — v0.2.1 |
 | `core-kernel/src/modules/camp/catalog/tests/camp-catalog.service.test.ts` | 4 | v0.2.1 CampCatalogService — байрны төрөл, кемп × албан тушаал |
@@ -105,6 +105,9 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/event-bus/event-bus.service.spec.ts` | 2 | EventBusService.emit (Phase 5.1 [EVT-003]) |
 | `core-kernel/src/modules/event-bus/outbox-poller.service.spec.ts` | 10 | OutboxPollerService |
 | `core-kernel/src/modules/hr/attendance/tests/import.test.ts` | 15 | import-parser · import-planner |
+| `core-kernel/src/modules/hr/attendance/tests/shiftchange-parser.test.ts` | 9 | shiftchange-parser — туслах функц · shiftchange-parser — файл |
+| `core-kernel/src/modules/hr/attendance/tests/shiftchange-planner.test.ts` | 7 | planImport — Сунах (R-6) · firstOverCapacityNight — сунгалт (R-7) |
+| `core-kernel/src/modules/hr/attendance/tests/shiftchange-resolver.test.ts` | 6 | shiftchange-resolver |
 | `core-kernel/src/modules/hr/employees/tests/data-issues.test.ts` | 2 | v0.2.3 Блок D (S9) — data-issues |
 | `core-kernel/src/modules/hr/employees/tests/employee-names.test.ts` | 3 | v0.2.3 Блок D — employee-names |
 | `core-kernel/src/modules/hr/employees/tests/hr-employee-lifecycle.test.ts` | 19 | цэвэр функц · HrEmployeeLifecycleService · HrEmployeesService — ажлаас гарсан бүртгэл (v0.2.2 Блок 5) |

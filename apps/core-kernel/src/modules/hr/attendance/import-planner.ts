@@ -1,9 +1,10 @@
-import { CampEmployeeStatus, CampMealType, CampMovementDirection, CampMovementKind, CampShiftType } from '@prisma/client';
+import { CampEmployeeStatus, CampMealType, CampMovementDirection, CampMovementKind, CampShiftAdjustmentReason, CampShiftType } from '@prisma/client';
 import { t } from '../../../common/i18n/translate';
 import { addDays } from '../../camp/common/camp-date';
 import { ROSTER_ARRIVAL_MEALS, ROSTER_DEPARTURE_MEALS } from './meal-rules';
-import { classifyMovement, RosterSettings } from './roster';
-import type { ParsedRow } from './import-parser';
+import { classifyMovement, rosterDayNo, RosterSettings } from './roster';
+import { PatternSegment, uniformShift } from './shift-resolver';
+import type { ParsedRow, ShiftChangeSource } from './import-parser';
 
 /**
  * Ирэлт/явалтын төлөвлөгч (Шат 3.3) — ЦЭВЭР функц: DB төлөв + мөрүүд → мөрийн алдаа + бичих үйлдлүүд.
@@ -15,6 +16,8 @@ export interface PlannerEmployee {
   campId: string;
   status: CampEmployeeStatus;
   crewAnchor: string | null;
+  /** v0.2.3 Блок R: сунгалтын ээлж (хэлтсийн загвар) */
+  departmentId?: string;
 }
 export interface PlannerStay {
   id: string;
@@ -23,11 +26,13 @@ export interface PlannerStay {
 }
 export interface PlannerState {
   campId: string;
-  settings: RosterSettings;
+  settings: RosterSettings & { extensionDefaultDays?: number };
   employees: Map<string, PlannerEmployee>; // employee_code → ажилтан
   stays: Map<string, PlannerStay[]>; // employeeId → байх хугацаанууд
   movementKeys: Set<string>; // `${employeeId}|${date}|${direction}`
-  adjustments: Map<string, { startDate: string; endDate: string }[]>; // employeeId → зохицуулалт
+  adjustments: Map<string, { startDate: string; endDate: string; reasonType?: CampShiftAdjustmentReason }[]>; // employeeId → зохицуулалт
+  /** v0.2.3 Блок R: departmentId → ээлжийн загвар (сунгалтын ээлж) */
+  patterns?: Map<string, PatternSegment[]>;
 }
 
 export interface PlannedRow {
@@ -40,6 +45,13 @@ export interface PlannedRow {
   meals: CampMealType[] | null;
   shift: CampShiftType | null;
   errors: string[];
+  /** v0.2.3 Блок R */
+  action?: 'EXTEND';
+  /** EXTEND: сунгалтын сүүлийн өдөр */
+  extendTo?: string;
+  warnings?: string[];
+  /** ShiftChange эх мөр (хуудас, мөр, нэр) */
+  source?: ShiftChangeSource;
 }
 export interface PlannedMovement {
   key: string;
@@ -56,7 +68,7 @@ export interface ImportPlan {
   newStays: { employeeId: string; arrivalKey: string; departureKey: string | null; startDate: string; endDate: string | null }[];
   /** DB-д байгаа нээлттэй байх хугацааг хаах */
   closeStays: { stayId: string; departureKey: string; endDate: string }[];
-  adjustments: { employeeId: string; startDate: string; endDate: string; shift: CampShiftType }[];
+  adjustments: { employeeId: string; startDate: string; endDate: string; shift: CampShiftType; reasonType?: CampShiftAdjustmentReason }[];
   errorRows: number;
 }
 
@@ -77,11 +89,19 @@ export function planImport(input: ParsedRow[], state: PlannerState): ImportPlan 
 
   for (const r of sorted) {
     const out: PlannedRow = { row: r.row, employeeCode: r.employeeCode, employeeId: null, date: r.date, direction: r.direction, kind: null, meals: r.meals, shift: r.shift, errors: [...r.errors] };
+    if (r.warnings?.length) out.warnings = [...r.warnings];
+    if (r.action) out.action = r.action;
+    if (r.source) out.source = r.source;
     plan.rows.push(out);
     const emp = r.employeeCode ? state.employees.get(r.employeeCode) : undefined;
     if (r.employeeCode && !emp) out.errors.push(t('camp.row.employee_not_found', { code: r.employeeCode }));
     else if (emp && emp.campId !== state.campId) out.errors.push(t('camp.row.other_camp'));
     else if (emp && emp.status !== CampEmployeeStatus.ACTIVE) out.errors.push(t('camp.row.employee_inactive'));
+    if (r.action === 'EXTEND') {
+      if (emp) out.employeeId = emp.id;
+      if (out.errors.length === 0 && emp && r.date) planExtension(plan, state, out, emp, r.date, r.source?.extendDays ?? null, work);
+      continue;
+    }
     if (out.errors.length > 0 || !emp || !r.date || !r.direction) {
       if (emp) out.employeeId = emp.id;
       continue;
@@ -96,7 +116,8 @@ export function planImport(input: ParsedRow[], state: PlannerState): ImportPlan 
     if (state.movementKeys.has(key)) out.errors.push(t('camp.row.already_registered'));
     const kind = classifyMovement(emp.crewAnchor, date, r.direction, state.settings);
     out.kind = kind;
-    if (kind === CampMovementKind.OFF_ROSTER && r.meals === null) {
+    // R-8: ShiftChange (HR файл)-д хоолны багана алга → анхдагч хоол
+    if (kind === CampMovementKind.OFF_ROSTER && r.meals === null && !r.source) {
       out.errors.push(t('camp.row.meals_required'));
     }
     const meals = r.meals ?? (r.direction === CampMovementDirection.ARRIVAL ? ROSTER_ARRIVAL_MEALS : ROSTER_DEPARTURE_MEALS);
@@ -145,4 +166,54 @@ export function planImport(input: ParsedRow[], state: PlannerState): ImportPlan 
   plan.rows.sort((a, b) => a.row - b.row);
   plan.errorRows = plan.rows.filter((r) => r.errors.length > 0).length;
   return plan;
+}
+
+type WorkStays = Map<string, { endDate: string | null }[]>;
+
+/** Ажлын сүүлийн өдрийн (ростерын өдөр on) ээлж: хэлтсийн загвар → нэг ээлжтэй загвар → null */
+function lastWorkdayShift(state: PlannerState, emp: PlannerEmployee): CampShiftType | null {
+  const pattern = (emp.departmentId && state.patterns?.get(emp.departmentId)) || [];
+  const on = state.settings.rosterOnDays;
+  return pattern.find((p) => on >= p.dayFrom && on <= p.dayTo)?.shift ?? uniformShift(pattern);
+}
+
+/**
+ * R-6 — «Сунах»: явалт үүсгэхгүй, ростерын явах өдрөөс N хоногийн EXTENSION зохицуулалт.
+ * Өмнөх сунгалт энэ өдрийг хамарвал түүний дараа үргэлжилнэ; бусад зохицуулалттай давхцвал алдаа.
+ */
+function planExtension(plan: ImportPlan, state: PlannerState, out: PlannedRow, emp: PlannerEmployee, date: string, days: number | null, work: WorkStays) {
+  const warn = (code: string, params?: Record<string, string | number>) => (out.warnings ??= []).push(t(code, params));
+  if (emp.crewAnchor === null) {
+    warn('camp.row.sc_extend_no_crew');
+    return;
+  }
+  const s = state.settings;
+  const departDay = s.rosterOnDays + 1;
+  const n = rosterDayNo(emp.crewAnchor, date, s);
+  if (n !== departDay) warn('camp.row.sc_extend_not_departure_day', { date: addDays(date, departDay - n) });
+  const stays = work.get(emp.id) ?? (state.stays.get(emp.id) ?? []);
+  if (!stays.some((x) => x.endDate === null)) warn('camp.row.sc_extend_not_in_camp');
+
+  const adjs = [...(state.adjustments.get(emp.id) ?? []), ...plan.adjustments.filter((a) => a.employeeId === emp.id)];
+  let start = date;
+  for (let guard = 0; guard < 50; guard++) {
+    const prev = adjs.find((a) => a.reasonType === CampShiftAdjustmentReason.EXTENSION && a.startDate <= start && a.endDate >= start);
+    if (!prev) break;
+    start = addDays(prev.endDate, 1);
+  }
+  const end = addDays(start, (days ?? s.extensionDefaultDays ?? 7) - 1);
+  const busy = adjs.find((a) => a.startDate <= end && start <= a.endDate);
+  if (busy) {
+    out.errors.push(t('camp.row.adjustment_overlap', { from: busy.startDate, to: busy.endDate }));
+    return;
+  }
+  let shift = lastWorkdayShift(state, emp);
+  if (!shift) {
+    warn('camp.row.sc_extend_shift_unknown');
+    shift = CampShiftType.DAY;
+  }
+  out.shift = shift;
+  out.date = start;
+  out.extendTo = end;
+  plan.adjustments.push({ employeeId: emp.id, startDate: start, endDate: end, shift, reasonType: CampShiftAdjustmentReason.EXTENSION });
 }

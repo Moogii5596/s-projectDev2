@@ -21,6 +21,23 @@ export interface ParsedRow {
   meals: CampMealType[] | null;
   shift: CampShiftType | null;
   errors: string[];
+  /** v0.2.3 Блок R: ShiftChange «Сунах» мөр (direction = null) — planner зохицуулалт үүсгэнэ (R-6) */
+  action?: 'EXTEND';
+  /** v0.2.3 Блок R: ShiftChange эх мөр (PREVIEW-д харуулах; анхдагч хоол R-8) */
+  source?: ShiftChangeSource;
+  /** Анхааруулга — импортыг зогсоохгүй */
+  warnings?: string[];
+}
+export interface ShiftChangeSource {
+  sheet: string;
+  row: number;
+  idRaw: string;
+  idType: 'CODE' | 'NEW' | 'CONTRACTOR' | 'EMPTY';
+  lastName: string;
+  firstName: string;
+  crew: string | null;
+  /** EXTEND: «N хоног» — null бол кемпийн анхдагч */
+  extendDays: number | null;
 }
 
 const norm = (s: string) => s.trim().toUpperCase().replace(/\s+/g, ' ');
