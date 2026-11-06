@@ -14,6 +14,7 @@ import { BulkEmployeesDto, CreateEmployeeDto, QueryEmployeesDto, UpdateEmployeeD
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { normalizeExtraPhones, phonesOut, replaceExtraPhones, resolveNames } from './employee-names';
 import { applyIssues, clearedBy, readIssues, toJson } from './data-issues';
+import { allocateEmployeeCode } from './employee-code';
 
 const P = CAMP_PERMISSIONS;
 const EMPLOYEE_SELECT = {
@@ -188,7 +189,8 @@ export class HrEmployeesService {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_MANAGE);
         await getCampOr404(tx, tenantId, campId);
         await this.assertRefs(tx, tenantId, campId, { organizationId: dto.organizationId, departmentId: dto.departmentId, crewId: dto.crewId ?? null, mealLocationId: dto.mealLocationId });
-        await this.assertCodeUnique(tx, tenantId, dto.employeeCode);
+        const employeeCode = dto.employeeCode ?? (await allocateEmployeeCode(tx, tenantId, campId)); // R7
+        await this.assertCodeUnique(tx, tenantId, employeeCode);
         const pos = await this.resolvePosition(tx, tenantId, dto);
         const names = resolveNames(dto);
         if (!names || !names.firstName) throw badRequest('camp.err.employees.name_required');
@@ -199,7 +201,7 @@ export class HrEmployeesService {
             organizationId: dto.organizationId,
             departmentId: dto.departmentId,
             crewId: dto.crewId ?? null,
-            employeeCode: dto.employeeCode,
+            employeeCode,
             ...names,
             position: pos.position ?? null,
             positionId: pos.positionId ?? null,

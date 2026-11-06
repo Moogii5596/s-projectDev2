@@ -10,7 +10,7 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (54 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **68** хүснэгт, 38 enum, 25 функц, 57 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (55 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **68** хүснэгт, 38 enum, 25 функц, 57 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
@@ -1305,7 +1305,7 @@ Trigger: `trg_camp_rooms_updated_at`
 
 ### camp_settings
 
-🔒🔒 · үүсгэсэн `20261009002_camp_master.sql` · өөрчлөлт: +catering_organization_id (`20261010002_camp_org_services_maintenance.sql`), +extension_default_days (`20261106002_camp_extension_days.sql`)
+🔒🔒 · үүсгэсэн `20261009002_camp_master.sql` · өөрчлөлт: +catering_organization_id (`20261010002_camp_org_services_maintenance.sql`), +extension_default_days (`20261106002_camp_extension_days.sql`), +auto_code_prefix (`20261106004_camp_auto_code_prefix.sql`)
 
 | Багана | Төрөл | Шинж | FK |
 |---|---|---|---|
@@ -1322,6 +1322,7 @@ Trigger: `trg_camp_rooms_updated_at`
 | updated_at | TIMESTAMPTZ | NN |  |
 | catering_organization_id | UUID |  |  |
 | extension_default_days | SMALLINT | NN |  |
+| auto_code_prefix | TEXT | NN |  |
 
 Constraint: `UNIQUE (tenant_id, camp_id)` · `FOREIGN KEY (tenant_id, camp_id) REFERENCES camps (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, camp_id, default_meal_location_id) REFERENCES camp_meal_locations (tenant_id, camp_id, id)` · `CHECK (roster_off_days BETWEEN 2 AND 28)` · `FOREIGN KEY (tenant_id, catering_organization_id) REFERENCES camp_organizations (tenant_id, id)`
 

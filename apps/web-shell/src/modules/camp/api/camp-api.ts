@@ -233,6 +233,8 @@ export interface SettingsInput {
   mealOrderCutoffTime: string | null
   defaultMealLocationId: string | null
   cateringOrganizationId?: string | null
+  /** v0.2.3 R7 — өгөөгүй бол өөрчлөхгүй */
+  autoCodePrefix?: string
 }
 
 export interface RoomInput {

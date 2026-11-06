@@ -385,3 +385,31 @@ describe('🔒 RLS leakage (app_user)', () => {
     expect(await prismaAdmin.camp.count({ where: { tenantId, code: 'HACK' } })).toBe(0);
   });
 });
+
+describe('🆔 [R7] Кодгүй ажилтан — автомат код (PIL-25)', () => {
+  const c2 = (path = '') => `${V1}/camps/${ids.c2}${path}`;
+  const mkEmp = (path: string, dept: string, body: object = {}) =>
+    api().post(path).set(as('admin')).send({ organizationId: ids.org, departmentId: dept, lastName: 'Автобус', firstName: 'Жолооч', ...body });
+
+  it('код өгөөгүй → Z0001, Z0002 (зэрэг үүсгэхэд давхардахгүй); код солих → дараагийнх түүнээс; угтвар тохиргоо (кемп бүр)', async () => {
+    const dept = (await api().post(c2('/departments')).set(as('admin')).send({ code: 'GRD', name: 'Харуул', mealLocationId: ids.locC2 })).body.id;
+    const r = await Promise.all([mkEmp(c2('/employees'), dept), mkEmp(c2('/employees'), dept), mkEmp(c2('/employees'), dept)]);
+    expect(r.map((x) => x.status)).toEqual([201, 201, 201]);
+    expect(r.map((x) => x.body.employeeCode).sort()).toEqual(['Z0001', 'Z0002', 'Z0003']);
+
+    // HR ID ирсэн / гараар солих (R7.4) — Z0003 → Z0007 → дараагийн автомат Z0008
+    const third = r.find((x) => x.body.employeeCode === 'Z0003')!.body.id;
+    expect((await api().patch(c2(`/employees/${third}`)).set(as('admin')).send({ employeeCode: 'Z0007' })).status).toBe(200);
+    expect((await mkEmp(c2('/employees'), dept)).body.employeeCode).toBe('Z0008');
+
+    const base = { vatRate: 10, changeoverWeekday: 3, rosterOnDays: 14, rosterOffDays: 14, mealOrderCutoffTime: null, defaultMealLocationId: null };
+    expect((await api().put(c2('/settings')).set(as('admin')).send({ ...base, autoCodePrefix: 'Z1' })).status).toBe(400);
+    const st = await api().put(c2('/settings')).set(as('admin')).send({ ...base, autoCodePrefix: 'gr' });
+    expect([st.status, st.body.autoCodePrefix]).toEqual([200, 'GR']);
+    expect((await mkEmp(c2('/employees'), dept)).body.employeeCode).toBe('GR0001');
+    // C1-ийн угтвар Z хэвээр, дугаарлалт tenant даяар
+    expect((await mkEmp(camp('/employees'), ids.deptAdm)).body.employeeCode).toBe('Z0009');
+    // угтвар өгөөгүй PUT → өөрчлөхгүй
+    expect((await api().put(c2('/settings')).set(as('admin')).send(base)).body.autoCodePrefix).toBe('GR');
+  });
+});

@@ -683,6 +683,8 @@
   "camp.section.rooms": "Room board",
   "camp.section.settings": "Settings",
   "camp.section.shifts": "Shifts",
+  "camp.settings.auto_code_prefix": "Auto-code prefix for employees without an ID",
+  "camp.settings.auto_code_prefix_hint": "Employees without an HR ID (guards, shuttle drivers, temporary records) get a system code like {example}. 1–3 Latin letters.",
   "camp.settings.camp_info": "Camp details",
   "camp.settings.camp_settings": "Camp settings",
   "camp.settings.catering": "Catering provider",

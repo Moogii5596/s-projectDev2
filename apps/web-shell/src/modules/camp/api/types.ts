@@ -42,6 +42,8 @@ export interface CampSettings {
   mealOrderCutoffTime: string | null
   defaultMealLocationId: string | null
   cateringOrganizationId: string | null
+  /** v0.2.3 R7: кодгүй ажилтны автомат кодын угтвар (Z → Z0001) */
+  autoCodePrefix?: string
   updatedAt: string | null
 }
 

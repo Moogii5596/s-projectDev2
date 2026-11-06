@@ -683,6 +683,8 @@
   "camp.section.rooms": "房间看板",
   "camp.section.settings": "设置",
   "camp.section.shifts": "班次",
+  "camp.settings.auto_code_prefix": "无编号员工的自动编号前缀",
+  "camp.settings.auto_code_prefix_hint": "没有 HR 编号的员工（保安、班车司机、临时登记）将获得 {example} 形式的系统编号。1–3 个拉丁字母。",
   "camp.settings.camp_info": "营地信息",
   "camp.settings.camp_settings": "营地设置",
   "camp.settings.catering": "餐饮服务商",

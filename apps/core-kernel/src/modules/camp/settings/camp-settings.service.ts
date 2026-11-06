@@ -20,6 +20,7 @@ export const CAMP_SETTINGS_DEFAULTS = {
   mealOrderCutoffTime: null as string | null,
   defaultMealLocationId: null as string | null,
   cateringOrganizationId: null as string | null,
+  autoCodePrefix: 'Z',
 };
 
 type SettingsRow = {
@@ -30,6 +31,7 @@ type SettingsRow = {
   mealOrderCutoffTime: Date | null;
   defaultMealLocationId: string | null;
   cateringOrganizationId: string | null;
+  autoCodePrefix: string;
   updatedAt: Date;
 };
 
@@ -45,6 +47,7 @@ const toSettingsView = (campId: string, s: SettingsRow | null) =>
         mealOrderCutoffTime: s.mealOrderCutoffTime ? fromDbTime(s.mealOrderCutoffTime) : null,
         defaultMealLocationId: s.defaultMealLocationId,
         cateringOrganizationId: s.cateringOrganizationId,
+        autoCodePrefix: s.autoCodePrefix,
         updatedAt: s.updatedAt,
       }
     : { campId, configured: false, ...CAMP_SETTINGS_DEFAULTS, updatedAt: null };
@@ -57,6 +60,7 @@ const SETTINGS_SELECT = {
   mealOrderCutoffTime: true,
   defaultMealLocationId: true,
   cateringOrganizationId: true,
+  autoCodePrefix: true,
   updatedAt: true,
 } as const;
 
@@ -95,6 +99,7 @@ export class CampSettingsService {
           mealOrderCutoffTime: dto.mealOrderCutoffTime === null ? null : toDbTime(dto.mealOrderCutoffTime),
           defaultMealLocationId: dto.defaultMealLocationId,
           ...(dto.cateringOrganizationId !== undefined ? { cateringOrganizationId: dto.cateringOrganizationId } : {}),
+          ...(dto.autoCodePrefix !== undefined ? { autoCodePrefix: dto.autoCodePrefix } : {}),
         };
         const s = await tx.campSetting.upsert({
           where: { tenantId_campId: { tenantId, campId } },

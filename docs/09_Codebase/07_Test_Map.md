@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 29 файл, ~266 тест
+## Integration (бодит PG + RLS) — 29 файл, ~267 тест
 
 Команд: `pnpm test:integration`
 
@@ -24,7 +24,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/camp-attendance.integration.spec.ts` | 17 | 📥 Ирцийн xlsx импорт · 🍽️ Хоолны суурь тоо (presence) · ✍️ Гараар бүртгэл · 🛏️ Өрөө (хоногоор) · 🔒 Validation ба RLS · 📥 [R4] HR ShiftChange — PREVIEW, ростерын зөрүү, мөр засах |
 | `core-kernel/test/camp-audit.integration.spec.ts` | 6 | 📜 camp_audit_log |
 | `core-kernel/test/camp-data-import.integration.spec.ts` | 14 | 📥 Загвар · 👥 Ажилтан — хүснэгтээр · 🏢 Хэлтэс ба өрөөний экспорт · 🔒 RLS |
-| `core-kernel/test/camp-master.integration.spec.ts` | 25 | 🔑 Каталог ба анхдагч роль · 🏕️ Кемп, тохиргоо, байршил · 🏢 Хэлтэс + ээлжийн загвар, баг, байр/өрөө, байгууллага · 👷 Ажилтан · 👥 Кемпийн роль → эрх (зөвхөн тэр кемпэд) · 🧯 camp-errors — БОДИТ Pri |
+| `core-kernel/test/camp-master.integration.spec.ts` | 26 | 🔑 Каталог ба анхдагч роль · 🏕️ Кемп, тохиргоо, байршил · 🏢 Хэлтэс + ээлжийн загвар, баг, байр/өрөө, байгууллага · 👷 Ажилтан · 👥 Кемпийн роль → эрх (зөвхөн тэр кемпэд) · 🧯 camp-errors — БОДИТ Pri |
 | `core-kernel/test/camp-snapshot.integration.spec.ts` | 3 | 📸 camp:snapshot |
 | `core-kernel/test/camp-v020-ux.integration.spec.ts` | 10 | 🏠 FB-07 олон өрөө · 👥 FB-03 хэлтсийн тоо · 🗓 FB-14 ирц · 🛏 FB-12 өрөөний самбар |
 | `core-kernel/test/camp-v021.integration.spec.ts` | 11 | 🍽️ Хоолны байршил / хоол авах / ээлж — ажилтан ?? албан тушаал ?? анхдагч · 📋 C-14 ирцийн жагсаалт — тооцоолсон ээлжээр · 🏢 C-12 байрны төрөл, байранд хөрөнгө, өрөөний самбар · 🔒 RLS — шинэ хүснэг |
@@ -48,7 +48,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 84 файл, ~644 тест
+## Unit — core-kernel — 85 файл, ~648 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -111,6 +111,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/hr/attendance/tests/shiftchange-planner.test.ts` | 7 | planImport — Сунах (R-6) · firstOverCapacityNight — сунгалт (R-7) |
 | `core-kernel/src/modules/hr/attendance/tests/shiftchange-resolver.test.ts` | 6 | shiftchange-resolver |
 | `core-kernel/src/modules/hr/employees/tests/data-issues.test.ts` | 2 | v0.2.3 Блок D (S9) — data-issues |
+| `core-kernel/src/modules/hr/employees/tests/employee-code.test.ts` | 4 | nextAutoCode (R7) · HrEmployeesService.create — автомат код (R7) |
 | `core-kernel/src/modules/hr/employees/tests/employee-names.test.ts` | 3 | v0.2.3 Блок D — employee-names |
 | `core-kernel/src/modules/hr/employees/tests/hr-employee-lifecycle.test.ts` | 19 | цэвэр функц · HrEmployeeLifecycleService · HrEmployeesService — ажлаас гарсан бүртгэл (v0.2.2 Блок 5) |
 | `core-kernel/src/modules/hr/employees/tests/hr-employees-v021.test.ts` | 5 | v0.2.1 HrEmployeesService — албан тушаал, хоолны байршил, хоол авах |

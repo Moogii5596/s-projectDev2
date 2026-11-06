@@ -73,6 +73,8 @@ model CampSetting {
   rosterOffDays         Int       @default(14) @map("roster_off_days") @db.SmallInt
   /// v0.2.3 Блок R (20261106002) — «Сунах» мөрөнд хоног заагаагүй үед
   extensionDefaultDays  Int       @default(7) @map("extension_default_days") @db.SmallInt
+  /// v0.2.3 R7 (20261106004): кодгүй ажилтны автомат кодын угтвар (Z → Z0001)
+  autoCodePrefix        String    @default("Z") @map("auto_code_prefix")
   mealOrderCutoffTime   DateTime? @map("meal_order_cutoff_time") @db.Time(6)
   defaultMealLocationId String?   @map("default_meal_location_id") @db.Uuid
   /// Катерингийн үйлчилгээ үзүүлэгч (CATERING төрөлтэй) — сэлбэгийн зардал үүнд бүртгэгдэнэ (20261010002)

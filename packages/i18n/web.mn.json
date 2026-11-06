@@ -683,6 +683,8 @@
   "camp.section.rooms": "Өрөөний самбар",
   "camp.section.settings": "Тохиргоо",
   "camp.section.shifts": "Ээлж",
+  "camp.settings.auto_code_prefix": "Кодгүй ажилтны автомат кодын угтвар",
+  "camp.settings.auto_code_prefix_hint": "HR ID-гүй ажилтанд (харуул, ээлжийн унаа, түр бүртгэл) систем {example} хэлбэрийн код олгоно. 1–3 латин үсэг.",
   "camp.settings.camp_info": "Кемпийн мэдээлэл",
   "camp.settings.camp_settings": "Кемпийн тохиргоо",
   "camp.settings.catering": "Катерингийн үйлчилгээ үзүүлэгч",

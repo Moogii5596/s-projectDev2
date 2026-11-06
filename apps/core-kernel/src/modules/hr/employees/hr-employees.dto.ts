@@ -17,8 +17,9 @@ export class CreateEmployeeDto {
   @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'crewId UUID байх ёстой' })
   crewId?: string | null;
 
-  @Transform(trim) @IsString() @IsNotEmpty({ message: 'employeeCode шаардлагатай' }) @MaxLength(50)
-  employeeCode!: string;
+  /** v0.2.3 R7: өгөөгүй бол систем `<угтвар>0001` код олгоно (ID-гүй гүйцэтгэгч, түр бүртгэл) */
+  @IsOptional() @Transform(trim) @IsString() @IsNotEmpty({ message: 'employeeCode хоосон байж болохгүй (өгөхгүй бол автоматаар)' }) @MaxLength(50)
+  employeeCode?: string;
 
   @Transform(trim) @ValidateIf((o: { firstName?: string }) => o.firstName === undefined) @IsString() @IsNotEmpty({ message: 'firstName эсвэл fullName шаардлагатай' }) @MaxLength(200)
   fullName?: string;

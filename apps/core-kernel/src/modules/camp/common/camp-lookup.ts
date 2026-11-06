@@ -19,7 +19,7 @@ export async function assertMealLocation(tx: Tx, tenantId: string, campId: strin
 export async function getRosterSettings(tx: Tx, tenantId: string, campId: string) {
   const s = await tx.campSetting.findFirst({
     where: { tenantId, campId },
-    select: { rosterOnDays: true, rosterOffDays: true, changeoverWeekday: true, defaultMealLocationId: true, extensionDefaultDays: true },
+    select: { rosterOnDays: true, rosterOffDays: true, changeoverWeekday: true, defaultMealLocationId: true, extensionDefaultDays: true, autoCodePrefix: true },
   });
   return {
     rosterOnDays: s?.rosterOnDays ?? 14,
@@ -28,5 +28,7 @@ export async function getRosterSettings(tx: Tx, tenantId: string, campId: string
     defaultMealLocationId: s?.defaultMealLocationId ?? null,
     /** v0.2.3 Блок R (R-6) — «Сунах» хоног заагаагүй үед */
     extensionDefaultDays: s?.extensionDefaultDays ?? 7,
+    /** v0.2.3 Блок R7 — кодгүй ажилтны автомат кодын угтвар */
+    autoCodePrefix: s?.autoCodePrefix ?? 'Z',
   };
 }

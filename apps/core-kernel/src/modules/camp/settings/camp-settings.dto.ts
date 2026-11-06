@@ -28,6 +28,11 @@ export class UpdateCampSettingsDto {
   /** Катерингийн үйлчилгээ үзүүлэгч (CATERING төрөлтэй байгууллага). Өгөөгүй = өөрчлөхгүй, null = арилгах */
   @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUUID('all', { message: 'cateringOrganizationId UUID байх ёстой' })
   cateringOrganizationId?: string | null;
+
+  /** v0.2.3 R7: кодгүй ажилтны автомат кодын угтвар (1–3 латин том үсэг). Өгөөгүй = өөрчлөхгүй */
+  @IsOptional() @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value)) @IsString()
+  @Matches(/^[A-Z]{1,3}$/, { message: 'autoCodePrefix 1–3 латин том үсэг' })
+  autoCodePrefix?: string;
 }
 
 export class CreateMealLocationDto {

@@ -144,6 +144,7 @@ function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: Ca
     mealOrderCutoffTime: s.mealOrderCutoffTime ?? '',
     defaultMealLocationId: s.defaultMealLocationId ?? '',
     cateringOrganizationId: s.cateringOrganizationId ?? '',
+    autoCodePrefix: s.autoCodePrefix ?? 'Z',
   })
   const [f, setF] = useState(init)
   // сервер дээр хадгалагдсан утга өөрчлөгдвөл (хадгалсны дараа) формыг шинэчилнэ
@@ -160,6 +161,7 @@ function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: Ca
         mealOrderCutoffTime: f.mealOrderCutoffTime || null,
         defaultMealLocationId: f.defaultMealLocationId || null,
         cateringOrganizationId: f.cateringOrganizationId || null,
+        autoCodePrefix: f.autoCodePrefix.trim().toUpperCase(),
       }),
     [campKeys.settings(campId)],
   )
@@ -231,6 +233,18 @@ function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: Ca
               <option value={f.cateringOrganizationId}>{t('camp.settings.catering_current_invalid')}</option>
             )}
           </select>
+        )}
+      </Field>
+      <Field label={t('camp.settings.auto_code_prefix')} hint={t('camp.settings.auto_code_prefix_hint', { example: `${(f.autoCodePrefix || 'Z').toUpperCase()}0001` })}>
+        {(id) => (
+          <input
+            id={id}
+            className={`${inputCls} font-mono uppercase`}
+            maxLength={3}
+            value={f.autoCodePrefix}
+            onChange={(e) => set('autoCodePrefix', e.target.value.replace(/[^a-zA-Z]/g, ''))}
+            disabled={!canEdit}
+          />
         )}
       </Field>
       <ErrorBox error={m.error ?? catering.error} />
