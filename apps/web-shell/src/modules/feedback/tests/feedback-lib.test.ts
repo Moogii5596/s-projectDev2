@@ -3,11 +3,18 @@
  */
 import { describe, expect, it } from 'vitest'
 import type { FeedbackItemDto } from '../api'
-import { groupDoneByVersion, isVersion, sourcePath } from '../lib'
+import {
+  filesWithinAttachmentLimit,
+  groupDoneByVersion,
+  isVersion,
+  MAX_FEEDBACK_ATTACHMENT_BYTES,
+  remainingAttachmentSlots,
+  sourcePath,
+} from '../lib'
 
 const fb = (id: string, status: FeedbackItemDto['status'], doneVersion: string | null): FeedbackItemDto => ({
   id, status, doneVersion, kind: 'IDEA', title: id, body: '', pagePath: null, appVersion: null, adminReply: null, repliedAt: null,
-  voteCount: 0, votedByMe: false, isMine: false, canEdit: false, authorName: 'x', createdAt: '', updatedAt: '',
+  voteCount: 0, votedByMe: false, isMine: false, canEdit: false, authorName: 'x', createdAt: '', updatedAt: '', attachments: [],
 })
 
 describe('feedback lib', () => {
@@ -30,5 +37,13 @@ describe('feedback lib', () => {
     expect(sourcePath('/feedback')).toBeNull()
     expect(sourcePath('https://x')).toBeNull()
     expect(sourcePath(undefined)).toBeNull()
+  })
+
+  it('хавсралтын тоо 3-аас хэтрүүлэхгүй, 15 MB хүртэл файл зөвшөөрнө', () => {
+    expect(remainingAttachmentSlots(0)).toBe(3)
+    expect(remainingAttachmentSlots(2)).toBe(1)
+    expect(remainingAttachmentSlots(3)).toBe(0)
+    expect(filesWithinAttachmentLimit([{ size: MAX_FEEDBACK_ATTACHMENT_BYTES }])).toBe(true)
+    expect(filesWithinAttachmentLimit([{ size: MAX_FEEDBACK_ATTACHMENT_BYTES + 1 }])).toBe(false)
   })
 })

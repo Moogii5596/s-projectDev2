@@ -6,6 +6,8 @@ import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader
 import { useCampMutation } from '../camp/hooks/useCampMutation'
 import { downloadBlob } from '../camp/lib/download'
 import { currentLang, INTL_LOCALE } from '../../i18n'
+import FeedImageGrid from '../feed/components/FeedImageGrid'
+import { useDataSaver } from '../feed/lib/data-saver'
 import {
   FEEDBACK_KINDS,
   FEEDBACK_STATUSES,
@@ -16,7 +18,8 @@ import {
   type FeedbackStatus,
   type QueryFeedbackDto,
 } from './api'
-import { KIND_TONE, STATUS_TONE, isVersion, sourcePath } from './lib'
+import { filesWithinAttachmentLimit, KIND_TONE, STATUS_TONE, isVersion, sourcePath } from './lib'
+import FeedbackAttachments from './FeedbackAttachments'
 
 /**
  * v0.2.3 Блок F (FB-SYS-01a) — «Санал хүсэлт»: бүгд харна, «+1»; зохиогч «Шинэ» үед засна; OWNER/ADMIN төлөв, хариу.
@@ -189,6 +192,7 @@ function FeedbackRow({
   onManage: () => void
 }) {
   const { t } = useTranslation()
+  const [dataSaver] = useDataSaver()
   return (
     <li className="bg-white rounded-xl border border-gray-200 p-4 flex gap-4" data-testid="feedback-item">
       <div className="flex flex-col items-center shrink-0">
@@ -216,6 +220,7 @@ function FeedbackRow({
         </div>
         <h3 className="font-medium text-gray-900 break-words">{it.title}</h3>
         {it.body && <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{it.body}</p>}
+        {!!it.attachments?.length && <FeedImageGrid images={it.attachments} dataSaver={dataSaver} />}
         <p className="text-xs text-gray-400">
           {it.authorName}
           {it.isMine && ` (${t('feedback.me')})`} · {fmtDate(it.createdAt)}
@@ -244,12 +249,58 @@ function FeedbackForm({ item, pagePath, onClose }: { item: FeedbackItemDto | nul
   const [kind, setKind] = useState<FeedbackKind>(item?.kind ?? 'IDEA')
   const [title, setTitle] = useState(item?.title ?? '')
   const [body, setBody] = useState(item?.body ?? '')
-  const save = useCampMutation(
-    () => (item ? feedbackApi.update(item.id, { kind, title: title.trim(), body: body.trim() }) : feedbackApi.create({ kind, title: title.trim(), body: body.trim(), pagePath })),
+  const [attachments, setAttachments] = useState(item?.attachments ?? [])
+  const [files, setFiles] = useState<File[]>([])
+  const [createdItem, setCreatedItem] = useState<FeedbackItemDto | null>(null)
+  const upload = useCampMutation(
+    ({ id, selected }: { id: string; selected: File[] }) => feedbackApi.addAttachments(id, selected),
     [feedbackKeys.all],
-    onClose,
+    (result) => {
+      setAttachments(result)
+      setFiles([])
+    },
   )
+  const removeAttachment = useCampMutation(
+    async (attId: string) => {
+      await feedbackApi.removeAttachment(attId)
+      return attId
+    },
+    [feedbackKeys.all],
+    (attId) => setAttachments((current) => current.filter((attachment) => attachment.id !== attId)),
+  )
+  const saveText = useCampMutation(
+    ({ id, dto }: { id: string; dto: { kind: FeedbackKind; title: string; body: string } }) =>
+      feedbackApi.update(id, dto),
+    [feedbackKeys.all],
+    (result) => setCreatedItem(result),
+  )
+  const create = useCampMutation(
+    (dto: { kind: FeedbackKind; title: string; body: string; pagePath: string | null }) => feedbackApi.create(dto),
+    [feedbackKeys.all],
+    (result) => setCreatedItem(result),
+  )
+  const dto = { kind, title: title.trim(), body: body.trim() }
+  const busy = upload.isPending || removeAttachment.isPending || saveText.isPending || create.isPending
+  const submit = () => {
+    const saveAttachments = (id: string) => {
+      if (files.length > 0) upload.mutate({ id, selected: files }, { onSuccess: onClose })
+      else onClose()
+    }
+
+    if (item) {
+      saveText.mutate({ id: item.id, dto }, { onSuccess: (result) => saveAttachments(result.id) })
+    } else if (createdItem) {
+      if (createdItem.title !== dto.title || createdItem.body !== dto.body || createdItem.kind !== dto.kind) {
+        saveText.mutate({ id: createdItem.id, dto }, { onSuccess: (result) => saveAttachments(result.id) })
+      } else {
+        saveAttachments(createdItem.id)
+      }
+    } else {
+      create.mutate({ ...dto, pagePath }, { onSuccess: (result) => saveAttachments(result.id) })
+    }
+  }
   const valid = title.trim().length > 0
+  const error = create.error ?? saveText.error ?? upload.error ?? removeAttachment.error
   return (
     <Modal
       title={item ? t('feedback.edit_title') : t('feedback.new')}
@@ -257,7 +308,9 @@ function FeedbackForm({ item, pagePath, onClose }: { item: FeedbackItemDto | nul
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>{t('camp.common.cancel')}</Button>
-          <Button disabled={!valid} loading={save.isPending} onClick={() => save.mutate(undefined)}>{item ? t('camp.common.save') : t('feedback.send')}</Button>
+          <Button disabled={!valid || !filesWithinAttachmentLimit(files) || busy} loading={busy} onClick={submit}>
+            {item ? t('camp.common.save') : t('feedback.send')}
+          </Button>
         </>
       }
     >
@@ -284,7 +337,14 @@ function FeedbackForm({ item, pagePath, onClose }: { item: FeedbackItemDto | nul
           {t('feedback.page')}: <span className="font-mono">{pagePath}</span>
         </p>
       )}
-      <ErrorBox error={save.error} />
+      <FeedbackAttachments
+        attachments={attachments}
+        files={files}
+        disabled={busy}
+        onFilesChange={setFiles}
+        onRemove={(id) => removeAttachment.mutate(id)}
+      />
+      <ErrorBox error={error} />
     </Modal>
   )
 }
