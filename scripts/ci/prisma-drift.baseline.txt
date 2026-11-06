@@ -103,12 +103,8 @@ ALTER TABLE "camp_movements" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMES
 ALTER TABLE "camp_movements" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_organizations" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_organizations" ALTER COLUMN "updated_at" DROP DEFAULT
-ALTER TABLE "camp_permissions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_pii_access_log" ALTER COLUMN "viewed_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_pii_access_log" DROP CONSTRAINT "camp_pii_access_log_tenant_id_fkey"
-ALTER TABLE "camp_position_role_templates" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
-ALTER TABLE "camp_position_role_templates" ALTER COLUMN "updated_at" DROP DEFAULT
-ALTER TABLE "camp_position_role_templates" DROP CONSTRAINT "camp_position_role_templates_tenant_id_fkey"
 ALTER TABLE "camp_position_settings" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_position_settings" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_position_settings" DROP CONSTRAINT "camp_position_settings_tenant_id_fkey"
@@ -119,10 +115,6 @@ ALTER TABLE "camp_position_shift_patterns" DROP CONSTRAINT "camp_position_shift_
 ALTER TABLE "camp_positions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_positions" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_positions" DROP CONSTRAINT "camp_positions_tenant_id_fkey"
-ALTER TABLE "camp_role_permissions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
-ALTER TABLE "camp_role_permissions" ALTER COLUMN "updated_at" DROP DEFAULT
-ALTER TABLE "camp_roles" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
-ALTER TABLE "camp_roles" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_room_allocations" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_room_allocations" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_rooms" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
@@ -133,11 +125,6 @@ ALTER TABLE "camp_shift_adjustments" ALTER COLUMN "created_at" SET DEFAULT CURRE
 ALTER TABLE "camp_shift_adjustments" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_stays" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_stays" ALTER COLUMN "updated_at" DROP DEFAULT
-ALTER TABLE "camp_user_permissions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
-ALTER TABLE "camp_user_permissions" ALTER COLUMN "updated_at" DROP DEFAULT
-ALTER TABLE "camp_user_permissions" DROP CONSTRAINT "camp_user_permissions_tenant_id_fkey"
-ALTER TABLE "camp_user_roles" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
-ALTER TABLE "camp_user_roles" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camps" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camps" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_feedback" ADD CONSTRAINT "fk_core_feedback_replied_by" FOREIGN KEY ("tenant_id", "replied_by") REFERENCES "core_users"("tenant_id", "id") ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -148,9 +135,25 @@ ALTER TABLE "core_feedback" DROP CONSTRAINT "fk_core_feedback_replied_by"
 ALTER TABLE "core_feedback_votes" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "core_feedback_votes" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_feedback_votes" DROP CONSTRAINT "core_feedback_votes_tenant_id_fkey"
+ALTER TABLE "core_permission_aliases" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_permissions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_position_role_templates" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_position_role_templates" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_position_role_templates" DROP CONSTRAINT "core_position_role_templates_tenant_id_fkey"
+ALTER TABLE "core_role_permissions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_role_permissions" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_roles" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_roles" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_user_invites" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "core_user_invites" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_user_invites" DROP CONSTRAINT "core_user_invites_tenant_id_fkey"
+ALTER TABLE "core_user_permissions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_user_permissions" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_user_permissions" DROP COLUMN "scope_type"
+ALTER TABLE "core_user_permissions" DROP CONSTRAINT "core_user_permissions_tenant_id_fkey"
+ALTER TABLE "core_user_roles" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_user_roles" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_user_roles" DROP COLUMN "scope_type"
 ALTER TABLE "core_users" ADD CONSTRAINT "core_users_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
 ALTER TABLE "core_users" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMP(3)
 ALTER TABLE "core_users" ALTER COLUMN "id" DROP DEFAULT
@@ -261,7 +264,7 @@ ALTER TABLE "workflow_step_logs" DROP CONSTRAINT "workflow_step_logs_tenant_id_f
 CREATE INDEX "outbox_events_status_next_retry_at_idx" ON "outbox_events"("status", "next_retry_at")
 CREATE INDEX "workflow_sla_logs_tenant_id_due_at_status_idx" ON "workflow_sla_logs"("tenant_id", "due_at", "status")
 DROP INDEX "idx_approval_logs_mr"
-DROP INDEX "idx_camp_user_roles_source_position"
+DROP INDEX "idx_core_user_roles_source_position"
 DROP INDEX "idx_core_users_auth_id"
 DROP INDEX "idx_core_users_tenant_id"
 DROP INDEX "idx_mr_headers_requester"
@@ -269,5 +272,12 @@ DROP INDEX "idx_mr_headers_tenant_id"
 DROP INDEX "idx_mr_headers_tenant_status_created"
 DROP INDEX "idx_mr_items_header_id"
 DROP INDEX "idx_outbox_events_tenant"
-DROP INDEX "uq_camp_user_permissions"
-DROP INDEX "uq_camp_user_roles"
+DROP INDEX "uq_core_user_permissions"
+DROP INDEX "uq_core_user_roles"
+DROP TABLE "legacy_camp_permissions"
+DROP TABLE "legacy_camp_position_role_templates"
+DROP TABLE "legacy_camp_role_permissions"
+DROP TABLE "legacy_camp_roles"
+DROP TABLE "legacy_camp_user_permissions"
+DROP TABLE "legacy_camp_user_roles"
+DROP TYPE "CampRoleCode"
