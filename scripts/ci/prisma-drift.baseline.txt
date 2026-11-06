@@ -1,0 +1,273 @@
+# QA-21: prisma migrate diff (DB ← migrations → prisma/schema) — зөвшөөрсөн зөрүү. Гараар биш: --update
+ALTER INDEX "idx_approval_logs_tenant" RENAME TO "approval_logs_tenant_id_idx"
+ALTER INDEX "idx_budget_allocations_period" RENAME TO "budget_allocations_tenant_id_period_id_idx"
+ALTER INDEX "idx_budget_commitments_allocation" RENAME TO "budget_commitments_tenant_id_allocation_id_status_idx"
+ALTER INDEX "idx_budget_periods_tenant_active" RENAME TO "budget_periods_tenant_id_is_active_start_date_end_date_idx"
+ALTER INDEX "idx_dlq_events_tenant" RENAME TO "dlq_events_tenant_id_status_idx"
+ALTER INDEX "idx_idempotency_expiry" RENAME TO "idempotency_keys_expires_at_idx"
+ALTER INDEX "idx_installed_modules_tenant" RENAME TO "installed_modules_tenant_id_status_idx"
+ALTER INDEX "idx_mr_headers_status" RENAME TO "mr_headers_tenant_id_status_idx"
+ALTER INDEX "idx_mr_items_tenant_id" RENAME TO "mr_items_tenant_id_idx"
+ALTER INDEX "idx_tenant_routes_tenant_active" RENAME TO "tenant_routes_tenant_id_is_active_idx"
+ALTER INDEX "idx_workflow_delegations_active" RENAME TO "workflow_delegations_tenant_id_delegator_id_is_active_valid_idx"
+ALTER INDEX "idx_workflow_instances_entity" RENAME TO "workflow_instances_tenant_id_entity_type_entity_id_idx"
+ALTER INDEX "idx_workflow_step_logs_instance" RENAME TO "workflow_step_logs_tenant_id_instance_id_idx"
+ALTER INDEX "uq_approval_logs_idempotency" RENAME TO "approval_logs_mr_id_approver_id_action_key"
+ALTER INDEX "uq_budget_commitments_mr" RENAME TO "budget_commitments_mr_header_id_key"
+ALTER INDEX "uq_tenant_module" RENAME TO "installed_modules_tenant_id_module_id_key"
+ALTER INDEX "uq_tenant_route" RENAME TO "tenant_routes_tenant_id_path_method_key"
+ALTER TABLE "approval_logs" ADD CONSTRAINT "approval_logs_approver_id_fkey" FOREIGN KEY ("approver_id") REFERENCES "core_users"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+ALTER TABLE "approval_logs" ADD CONSTRAINT "approval_logs_mr_id_fkey" FOREIGN KEY ("mr_id") REFERENCES "mr_headers"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "approval_logs" ADD CONSTRAINT "approval_logs_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "approval_logs" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "approval_logs" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "approval_logs" DROP CONSTRAINT "approval_logs_approver_id_fkey"
+ALTER TABLE "approval_logs" DROP CONSTRAINT "approval_logs_mr_id_fkey"
+ALTER TABLE "approval_logs" DROP CONSTRAINT "approval_logs_tenant_id_fkey"
+ALTER TABLE "budget_allocations" ADD CONSTRAINT "budget_allocations_period_id_fkey" FOREIGN KEY ("period_id") REFERENCES "budget_periods"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "budget_allocations" ADD CONSTRAINT "budget_allocations_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "budget_allocations" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "budget_allocations" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "budget_allocations" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "budget_allocations" DROP CONSTRAINT "budget_allocations_period_id_fkey"
+ALTER TABLE "budget_allocations" DROP CONSTRAINT "budget_allocations_tenant_id_fkey"
+ALTER TABLE "budget_commitments" ADD CONSTRAINT "budget_commitments_allocation_id_fkey" FOREIGN KEY ("allocation_id") REFERENCES "budget_allocations"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+ALTER TABLE "budget_commitments" ADD CONSTRAINT "budget_commitments_mr_header_id_fkey" FOREIGN KEY ("mr_header_id") REFERENCES "mr_headers"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "budget_commitments" ADD CONSTRAINT "budget_commitments_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "budget_commitments" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "budget_commitments" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "budget_commitments" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "budget_commitments" DROP CONSTRAINT "budget_commitments_allocation_id_fkey"
+ALTER TABLE "budget_commitments" DROP CONSTRAINT "budget_commitments_mr_header_id_fkey"
+ALTER TABLE "budget_commitments" DROP CONSTRAINT "budget_commitments_tenant_id_fkey"
+ALTER TABLE "budget_periods" ADD CONSTRAINT "budget_periods_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "budget_periods" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "budget_periods" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "budget_periods" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "budget_periods" DROP CONSTRAINT "budget_periods_tenant_id_fkey"
+ALTER TABLE "camp_asset_categories" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_asset_categories" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_asset_movements" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_asset_movements" ALTER COLUMN "moved_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_asset_movements" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_assets" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_assets" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_audit_log" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_audit_log" DROP CONSTRAINT "camp_audit_log_tenant_id_fkey"
+ALTER TABLE "camp_audit_log" DROP CONSTRAINT "fk_camp_audit_actor"
+ALTER TABLE "camp_audit_log" DROP CONSTRAINT "fk_camp_audit_camp"
+ALTER TABLE "camp_building_types" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_building_types" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_building_types" DROP CONSTRAINT "camp_building_types_tenant_id_fkey"
+ALTER TABLE "camp_buildings" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_buildings" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_contract_item_prices" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_contract_item_prices" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_contract_items" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_contract_items" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_contracts" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_contracts" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_cost_entries" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_cost_entries" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_crews" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_crews" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_data_imports" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_data_imports" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_data_imports" DROP CONSTRAINT "camp_data_imports_tenant_id_fkey"
+ALTER TABLE "camp_data_imports" DROP CONSTRAINT "fk_camp_data_imports_camp"
+ALTER TABLE "camp_data_imports" DROP CONSTRAINT "fk_camp_data_imports_confirmed_by"
+ALTER TABLE "camp_data_imports" DROP CONSTRAINT "fk_camp_data_imports_uploaded_by"
+ALTER TABLE "camp_department_shift_patterns" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_department_shift_patterns" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_departments" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_departments" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_employee_phones" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_employees" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_employees" ALTER COLUMN "first_name" DROP NOT NULL
+ALTER TABLE "camp_employees" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_haul_records" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_haul_records" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_maintenance_parts" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_maintenance_parts" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_maintenance_requests" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_maintenance_requests" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_meal_locations" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_meal_locations" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_meal_order_lines" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_meal_order_lines" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_meal_orders" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_meal_orders" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_movement_imports" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_movement_imports" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_movements" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_movements" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_organizations" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_organizations" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_permissions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_pii_access_log" ALTER COLUMN "viewed_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_pii_access_log" DROP CONSTRAINT "camp_pii_access_log_tenant_id_fkey"
+ALTER TABLE "camp_position_role_templates" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_position_role_templates" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_position_role_templates" DROP CONSTRAINT "camp_position_role_templates_tenant_id_fkey"
+ALTER TABLE "camp_position_settings" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_position_settings" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_position_settings" DROP CONSTRAINT "camp_position_settings_tenant_id_fkey"
+ALTER TABLE "camp_position_settings" DROP CONSTRAINT "fk_camp_position_settings_camp"
+ALTER TABLE "camp_position_shift_patterns" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_position_shift_patterns" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_position_shift_patterns" DROP CONSTRAINT "camp_position_shift_patterns_tenant_id_fkey"
+ALTER TABLE "camp_positions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_positions" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_positions" DROP CONSTRAINT "camp_positions_tenant_id_fkey"
+ALTER TABLE "camp_role_permissions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_role_permissions" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_roles" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_roles" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_room_allocations" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_room_allocations" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_rooms" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_rooms" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_settings" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_settings" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_shift_adjustments" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_shift_adjustments" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_stays" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_stays" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_user_permissions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_user_permissions" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_user_permissions" DROP CONSTRAINT "camp_user_permissions_tenant_id_fkey"
+ALTER TABLE "camp_user_roles" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camp_user_roles" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camps" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "camps" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_feedback" ADD CONSTRAINT "fk_core_feedback_replied_by" FOREIGN KEY ("tenant_id", "replied_by") REFERENCES "core_users"("tenant_id", "id") ON DELETE NO ACTION ON UPDATE NO ACTION
+ALTER TABLE "core_feedback" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_feedback" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_feedback" DROP CONSTRAINT "core_feedback_tenant_id_fkey"
+ALTER TABLE "core_feedback" DROP CONSTRAINT "fk_core_feedback_replied_by"
+ALTER TABLE "core_feedback_votes" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_feedback_votes" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_feedback_votes" DROP CONSTRAINT "core_feedback_votes_tenant_id_fkey"
+ALTER TABLE "core_user_invites" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_user_invites" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_user_invites" DROP CONSTRAINT "core_user_invites_tenant_id_fkey"
+ALTER TABLE "core_users" ADD CONSTRAINT "core_users_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "core_users" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "core_users" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "core_users" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_users" ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "core_users" DROP CONSTRAINT "core_users_tenant_id_fkey"
+ALTER TABLE "dlq_events" ADD CONSTRAINT "dlq_events_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "dlq_events" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "dlq_events" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "dlq_events" DROP CONSTRAINT "dlq_events_tenant_id_fkey"
+ALTER TABLE "i18n_override_history" ALTER COLUMN "changed_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "i18n_override_history" DROP CONSTRAINT "fk_i18n_history_user"
+ALTER TABLE "i18n_override_history" DROP CONSTRAINT "i18n_override_history_tenant_id_fkey"
+ALTER TABLE "i18n_overrides" ALTER COLUMN "updated_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "i18n_overrides" DROP CONSTRAINT "fk_i18n_overrides_user"
+ALTER TABLE "i18n_overrides" DROP CONSTRAINT "i18n_overrides_tenant_id_fkey"
+ALTER TABLE "idempotency_keys" ADD CONSTRAINT "idempotency_keys_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "idempotency_keys" ALTER COLUMN "expires_at" DROP DEFAULT
+ALTER TABLE "idempotency_keys" DROP CONSTRAINT "idempotency_keys_tenant_id_fkey"
+ALTER TABLE "installed_modules" ADD CONSTRAINT "installed_modules_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "installed_modules" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "installed_modules" ALTER COLUMN "installed_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "installed_modules" ALTER COLUMN "module_id" SET DATA TYPE TEXT
+ALTER TABLE "installed_modules" ALTER COLUMN "status" SET DATA TYPE TEXT
+ALTER TABLE "installed_modules" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "installed_modules" ALTER COLUMN "version" SET DATA TYPE TEXT
+ALTER TABLE "installed_modules" DROP CONSTRAINT "installed_modules_tenant_id_fkey"
+ALTER TABLE "inventory_items" ADD CONSTRAINT "inventory_items_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "inventory_items" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "inventory_items" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "inventory_items" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "inventory_items" DROP CONSTRAINT "inventory_items_tenant_id_fkey"
+ALTER TABLE "mr_headers" ADD CONSTRAINT "mr_headers_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "core_users"("id") ON DELETE SET NULL ON UPDATE CASCADE
+ALTER TABLE "mr_headers" ADD CONSTRAINT "mr_headers_requester_id_fkey" FOREIGN KEY ("requester_id") REFERENCES "core_users"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+ALTER TABLE "mr_headers" ADD CONSTRAINT "mr_headers_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "mr_headers" ADD CONSTRAINT "mr_headers_workflow_instance_id_fkey" FOREIGN KEY ("workflow_instance_id") REFERENCES "workflow_instances"("id") ON DELETE SET NULL ON UPDATE CASCADE
+ALTER TABLE "mr_headers" ALTER COLUMN "approved_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "mr_headers" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "mr_headers" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "mr_headers" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "mr_headers" ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "mr_headers" DROP CONSTRAINT "fk_mr_headers_workflow"
+ALTER TABLE "mr_headers" DROP CONSTRAINT "mr_headers_approved_by_fkey"
+ALTER TABLE "mr_headers" DROP CONSTRAINT "mr_headers_requester_id_fkey"
+ALTER TABLE "mr_headers" DROP CONSTRAINT "mr_headers_tenant_id_fkey"
+ALTER TABLE "mr_items" ADD CONSTRAINT "mr_items_header_id_fkey" FOREIGN KEY ("header_id") REFERENCES "mr_headers"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "mr_items" ADD CONSTRAINT "mr_items_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "mr_items" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "mr_items" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "mr_items" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "mr_items" ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "mr_items" DROP COLUMN "total_price"
+ALTER TABLE "mr_items" DROP CONSTRAINT "mr_items_header_id_fkey"
+ALTER TABLE "mr_items" DROP CONSTRAINT "mr_items_tenant_id_fkey"
+ALTER TABLE "outbox_events" ADD CONSTRAINT "outbox_events_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "outbox_events" ALTER COLUMN "aggregate_id" SET DATA TYPE TEXT
+ALTER TABLE "outbox_events" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "outbox_events" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "outbox_events" ALTER COLUMN "next_retry_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "outbox_events" ALTER COLUMN "published_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "outbox_events" DROP CONSTRAINT "outbox_events_tenant_id_fkey"
+ALTER TABLE "super_admins" ADD CONSTRAINT "super_admins_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "core_users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "super_admins" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "super_admins" DROP CONSTRAINT "super_admins_user_id_fkey"
+ALTER TABLE "tenant_routes" ADD CONSTRAINT "tenant_routes_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "tenant_routes" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "tenant_routes" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "tenant_routes" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "tenant_routes" DROP CONSTRAINT "tenant_routes_tenant_id_fkey"
+ALTER TABLE "tenants" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "tenants" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "tenants" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "tenants" ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMP(3)
+ALTER TABLE "vendors" ADD CONSTRAINT "vendors_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "vendors" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "vendors" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "vendors" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "vendors" DROP CONSTRAINT "vendors_tenant_id_fkey"
+ALTER TABLE "workflow_definitions" ADD CONSTRAINT "workflow_definitions_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "workflow_definitions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "workflow_definitions" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "workflow_definitions" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "workflow_definitions" DROP CONSTRAINT "workflow_definitions_tenant_id_fkey"
+ALTER TABLE "workflow_delegations" ADD CONSTRAINT "workflow_delegations_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "workflow_delegations" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "workflow_delegations" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "workflow_delegations" ALTER COLUMN "valid_from" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "workflow_delegations" DROP CONSTRAINT "workflow_delegations_tenant_id_fkey"
+ALTER TABLE "workflow_instances" ADD CONSTRAINT "workflow_instances_definition_id_fkey" FOREIGN KEY ("definition_id") REFERENCES "workflow_definitions"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+ALTER TABLE "workflow_instances" ADD CONSTRAINT "workflow_instances_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "workflow_instances" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "workflow_instances" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "workflow_instances" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "workflow_instances" DROP CONSTRAINT "workflow_instances_definition_id_fkey"
+ALTER TABLE "workflow_instances" DROP CONSTRAINT "workflow_instances_tenant_id_fkey"
+ALTER TABLE "workflow_sla_logs" ADD CONSTRAINT "workflow_sla_logs_instance_id_fkey" FOREIGN KEY ("instance_id") REFERENCES "workflow_instances"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "workflow_sla_logs" ADD CONSTRAINT "workflow_sla_logs_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "workflow_sla_logs" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "workflow_sla_logs" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "workflow_sla_logs" DROP CONSTRAINT "workflow_sla_logs_instance_id_fkey"
+ALTER TABLE "workflow_sla_logs" DROP CONSTRAINT "workflow_sla_logs_tenant_id_fkey"
+ALTER TABLE "workflow_step_logs" ADD CONSTRAINT "workflow_step_logs_instance_id_fkey" FOREIGN KEY ("instance_id") REFERENCES "workflow_instances"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "workflow_step_logs" ADD CONSTRAINT "workflow_step_logs_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "workflow_step_logs" ALTER COLUMN "acted_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "workflow_step_logs" ALTER COLUMN "id" DROP DEFAULT
+ALTER TABLE "workflow_step_logs" DROP CONSTRAINT "workflow_step_logs_instance_id_fkey"
+ALTER TABLE "workflow_step_logs" DROP CONSTRAINT "workflow_step_logs_tenant_id_fkey"
+CREATE INDEX "outbox_events_status_next_retry_at_idx" ON "outbox_events"("status", "next_retry_at")
+CREATE INDEX "workflow_sla_logs_tenant_id_due_at_status_idx" ON "workflow_sla_logs"("tenant_id", "due_at", "status")
+DROP INDEX "idx_approval_logs_mr"
+DROP INDEX "idx_camp_user_roles_source_position"
+DROP INDEX "idx_core_users_auth_id"
+DROP INDEX "idx_core_users_tenant_id"
+DROP INDEX "idx_mr_headers_requester"
+DROP INDEX "idx_mr_headers_tenant_id"
+DROP INDEX "idx_mr_headers_tenant_status_created"
+DROP INDEX "idx_mr_items_header_id"
+DROP INDEX "idx_outbox_events_tenant"
+DROP INDEX "uq_camp_user_permissions"
+DROP INDEX "uq_camp_user_roles"

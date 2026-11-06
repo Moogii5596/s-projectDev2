@@ -78,6 +78,10 @@ jobs:
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
 
+      # QA-21 [MIG-001]: migration-ууд ажилласан DB ↔ prisma/schema — baseline-аас өөр зөрүү гарвал унана
+      - name: Prisma schema drift
+        run: node scripts/ci/prisma-drift.mjs --url "$DIRECT_URL"
+
       - name: Lint
         run: pnpm turbo lint
 
