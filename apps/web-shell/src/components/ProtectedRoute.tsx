@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 
 export default function ProtectedRoute() {
   const { user, loading } = useAuth()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   // v0.2.2 D-06: me.mustChangePassword → /change-password (backend бусад API-г 403-аар хаадаг)
   const { me } = useMe({ enabled: !!user })
   const { t } = useTranslation()
@@ -20,7 +20,8 @@ export default function ProtectedRoute() {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />
+    // v0.2.3 Блок 5 (M-0): нэвтэрсний дараа энэ зам руу буцна (LoginPage → postLoginPath)
+    return <Navigate to="/login" replace state={{ from: pathname + search }} />
   }
 
   if (me?.mustChangePassword && pathname !== CHANGE_PASSWORD_PATH) {

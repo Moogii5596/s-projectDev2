@@ -7,16 +7,16 @@ import { REPO_ROOT } from '../helpers/fixture-paths';
 const ROOT_VERSION = (JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf8')) as { version: string }).version;
 
 test.describe('Auth flow', () => {
-  test('login → /requisitions руу чиглүүлнэ', async ({ page }) => {
+  test('login → /feed руу чиглүүлнэ (v0.2.3 M-0)', async ({ page }) => {
     await loginAs(page);
-    await expect(page).toHaveURL(/.*requisitions.*/);
+    await expect(page).toHaveURL(/\/feed/);
   });
 
   test('login хийсний дараа /login давтан очвол redirect болно', async ({ page }) => {
     await loginAs(page);
     await page.goto('/login');
-    // Нэвтэрсэн хэрэглэгчийг /requisitions руу чиглүүлнэ
-    await expect(page).toHaveURL(/.*requisitions.*/);
+    // Нэвтэрсэн хэрэглэгчийг Feed руу чиглүүлнэ (v0.2.3 M-0)
+    await expect(page).toHaveURL(/\/feed/);
   });
 
   test('буруу нууц үгтэй login амжилтгүй болно', async ({ page }) => {

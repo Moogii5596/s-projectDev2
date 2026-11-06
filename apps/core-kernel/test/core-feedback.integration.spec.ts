@@ -10,12 +10,16 @@ import { randomUUID } from 'crypto';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CoreFeedbackKind, CoreFeedbackStatus, PrismaClient, UserRole } from '@prisma/client';
 import { CoreFeedbackService } from '../src/modules/core/feedback/core-feedback.service';
+import { CoreFeedbackAttachmentsService } from '../src/modules/core/feedback/core-feedback-attachments.service';
+import { MediaUrlSigner } from '../src/storage/media-url';
 import { ADMIN_DB_URL, APP_USER_DB_URL } from './helpers/db-urls';
 
 describe('v0.2.3 Блок F — санал хүсэлт (integration)', () => {
   const admin = new PrismaClient({ datasources: { db: { url: ADMIN_DB_URL } } });
   const rls = new PrismaClient({ datasources: { db: { url: APP_USER_DB_URL } } });
-  const svc = new CoreFeedbackService(rls as never);
+  // v0.2.3 Блок 5: хавсралтын service (файлын хадгалалт энд хэрэггүй — mock)
+  const attachments = new CoreFeedbackAttachmentsService(rls as never, { remove: async () => undefined } as never, new MediaUrlSigner('x'.repeat(32)));
+  const svc = new CoreFeedbackService(rls as never, attachments);
 
   const sfx = randomUUID().slice(0, 8);
   const tenantIds: string[] = [];

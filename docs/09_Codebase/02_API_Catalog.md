@@ -10,7 +10,7 @@ tags: [codebase, api, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Нийт **201** endpoint, 31 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
+Нийт **221** endpoint, 32 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
 
 **Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). **OWNER·ADMIN** = зөвхөн системийн роль (`requireTenantAdmin` — хэрэглэгч / роль удирдах, SEC-009), `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].
 
@@ -28,8 +28,9 @@ tags: [codebase, api, generated]
 - [[#modules/camp/master]] — 11
 - [[#modules/camp/rbac]] — 25
 - [[#modules/camp/settings]] — 5
-- [[#modules/core/feedback]] — 8
+- [[#modules/core/feedback]] — 11
 - [[#modules/core/organizations]] — 3
+- [[#modules/feed]] — 17
 - [[#modules/health]] — 1
 - [[#modules/hr/attendance]] — 15
 - [[#modules/hr/employees]] — 9
@@ -209,14 +210,17 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| GET | `/api/v1/core/feedback` | `CoreFeedbackController.list` → `CoreFeedbackService.list` | — | `core-feedback.controller.ts:16` |
-| GET | `/api/v1/core/feedback/export` | `CoreFeedbackController.export` → `CoreFeedbackService.exportXlsx` | — | `core-feedback.controller.ts:23` |
-| POST | `/api/v1/core/feedback` | `CoreFeedbackController.create` → `CoreFeedbackService.create` | — | `core-feedback.controller.ts:32` |
-| PATCH | `/api/v1/core/feedback/:id` | `CoreFeedbackController.update` → `CoreFeedbackService.update` | — | `core-feedback.controller.ts:38` |
-| PATCH | `/api/v1/core/feedback/:id/status` | `CoreFeedbackController.setStatus` → `CoreFeedbackService.setStatus` | — | `core-feedback.controller.ts:44` |
-| DELETE | `/api/v1/core/feedback/:id` | `CoreFeedbackController.remove` → `CoreFeedbackService.remove` | — | `core-feedback.controller.ts:50` |
-| POST | `/api/v1/core/feedback/:id/vote` | `CoreFeedbackController.vote` → `CoreFeedbackService.vote` | — | `core-feedback.controller.ts:57` |
-| DELETE | `/api/v1/core/feedback/:id/vote` | `CoreFeedbackController.unvote` → `CoreFeedbackService.vote` | — | `core-feedback.controller.ts:63` |
+| GET | `/api/v1/core/feedback/attachments/:attId/:w` | `CoreFeedbackController.attachment` → `CoreFeedbackAttachmentsService.variant` | — | 🌐 `core-feedback.controller.ts:27` |
+| DELETE | `/api/v1/core/feedback/attachments/:attId` | `CoreFeedbackController.removeAttachment` → `CoreFeedbackAttachmentsService.remove` | — | `core-feedback.controller.ts:48` |
+| POST | `/api/v1/core/feedback/:id/attachments` | `CoreFeedbackController.addAttachments` → `CoreFeedbackAttachmentsService.add` | — | `core-feedback.controller.ts:56` |
+| GET | `/api/v1/core/feedback` | `CoreFeedbackController.list` → `CoreFeedbackService.list` | — | `core-feedback.controller.ts:64` |
+| GET | `/api/v1/core/feedback/export` | `CoreFeedbackController.export` → `CoreFeedbackService.exportXlsx` | — | `core-feedback.controller.ts:71` |
+| POST | `/api/v1/core/feedback` | `CoreFeedbackController.create` → `CoreFeedbackService.create` | — | `core-feedback.controller.ts:80` |
+| PATCH | `/api/v1/core/feedback/:id` | `CoreFeedbackController.update` → `CoreFeedbackService.update` | — | `core-feedback.controller.ts:86` |
+| PATCH | `/api/v1/core/feedback/:id/status` | `CoreFeedbackController.setStatus` → `CoreFeedbackService.setStatus` | — | `core-feedback.controller.ts:92` |
+| DELETE | `/api/v1/core/feedback/:id` | `CoreFeedbackController.remove` → `CoreFeedbackService.remove` | — | `core-feedback.controller.ts:98` |
+| POST | `/api/v1/core/feedback/:id/vote` | `CoreFeedbackController.vote` → `CoreFeedbackService.vote` | — | `core-feedback.controller.ts:105` |
+| DELETE | `/api/v1/core/feedback/:id/vote` | `CoreFeedbackController.unvote` → `CoreFeedbackService.vote` | — | `core-feedback.controller.ts:111` |
 
 ## modules/core/organizations
 
@@ -225,6 +229,28 @@ tags: [codebase, api, generated]
 | GET | `/api/v1/core/organizations` | `CoreOrganizationsController.list` → `CoreOrganizationsService.list` | гишүүн | `core-organizations.controller.ts:15` |
 | POST | `/api/v1/core/organizations` | `CoreOrganizationsController.create` → `CoreOrganizationsService.create` | `camp.master.manage` | `core-organizations.controller.ts:22` |
 | PATCH | `/api/v1/core/organizations/:id` | `CoreOrganizationsController.update` → `CoreOrganizationsService.update` | `camp.master.manage` | `core-organizations.controller.ts:28` |
+
+## modules/feed
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/core/feed/media/:mediaId/:w` | `FeedController.media` → `FeedService.mediaVariant` | — | 🌐 `feed.controller.ts:55` |
+| POST | `/api/v1/core/feed/reports` | `FeedController.report` → `FeedReportsService.create` | — | `feed.controller.ts:77` |
+| GET | `/api/v1/core/feed/reports` | `FeedController.listReports` → `FeedReportsService.list` | — | `feed.controller.ts:83` |
+| PATCH | `/api/v1/core/feed/reports/:id` | `FeedController.resolveReport` → `FeedReportsService.resolve` | — | `feed.controller.ts:89` |
+| PATCH | `/api/v1/core/feed/comments/:id` | `FeedController.updateComment` → `FeedService.updateComment` | `feed.content.moderate` | `feed.controller.ts:96` |
+| DELETE | `/api/v1/core/feed/comments/:id` | `FeedController.removeComment` → `FeedService.removeComment` | `feed.content.moderate` | `feed.controller.ts:103` |
+| GET | `/api/v1/core/feed/comments/:id/revisions` | `FeedController.commentRevisions` → `FeedService.revisions` | `feed.content.moderate` | `feed.controller.ts:109` |
+| GET | `/api/v1/core/feed` | `FeedController.list` → `FeedService.list` | `feed.content.moderate` | `feed.controller.ts:116` |
+| POST | `/api/v1/core/feed` | `FeedController.create` → `FeedService.create` | `feed.content.moderate` | `feed.controller.ts:124` |
+| GET | `/api/v1/core/feed/:id` | `FeedController.get` → `FeedService.get` | `feed.content.moderate` | `feed.controller.ts:136` |
+| PATCH | `/api/v1/core/feed/:id` | `FeedController.update` → `FeedService.update` | `feed.content.moderate` | `feed.controller.ts:142` |
+| DELETE | `/api/v1/core/feed/:id` | `FeedController.remove` → `FeedService.remove` | `feed.content.moderate` | `feed.controller.ts:149` |
+| GET | `/api/v1/core/feed/:id/revisions` | `FeedController.revisions` → `FeedService.revisions` | `feed.content.moderate` | `feed.controller.ts:155` |
+| POST | `/api/v1/core/feed/:id/like` | `FeedController.like` → `FeedService.like` | `feed.content.moderate` | `feed.controller.ts:162` |
+| DELETE | `/api/v1/core/feed/:id/like` | `FeedController.unlike` → `FeedService.like` | `feed.content.moderate` | `feed.controller.ts:168` |
+| GET | `/api/v1/core/feed/:id/comments` | `FeedController.comments` → `FeedService.listComments` | `feed.content.moderate` | `feed.controller.ts:174` |
+| POST | `/api/v1/core/feed/:id/comments` | `FeedController.addComment` → `FeedService.addComment` | `feed.content.moderate` | `feed.controller.ts:181` |
 
 ## modules/health
 

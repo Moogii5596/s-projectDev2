@@ -1,7 +1,8 @@
 import { useState, FormEvent, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { HOME_PATH } from '../config/enabled-modules'
+import { FEED_ENABLED, HOME_PATH } from '../config/enabled-modules'
+import { postLoginPath } from '../lib/home'
 import { CHANGE_PASSWORD_PATH } from '../lib/password-change'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from '../components/LanguageSwitcher'
@@ -12,6 +13,9 @@ export default function LoginPage() {
   const navigate = useNavigate()
   /** v0.2.2 D-10: утас / нэвтрэх нэр / имэйл */
   const [identifier, setIdentifier] = useState('')
+  // v0.2.3 Блок 5 (M-0): өмнөх зам эсвэл /feed
+  const location = useLocation()
+  const target = postLoginPath((location.state as { from?: unknown } | null)?.from, { feedEnabled: FEED_ENABLED, homePath: HOME_PATH })
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -19,9 +23,9 @@ export default function LoginPage() {
   // Нэвтэрсэн хэрэглэгч /login-д ирвэл нүүр (HOME_PATH) руу чиглүүлнэ
   useEffect(() => {
     if (!loading && user) {
-      navigate(HOME_PATH, { replace: true })
+      navigate(target, { replace: true })
     }
-  }, [user, loading, navigate])
+  }, [user, loading, navigate, target])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -30,7 +34,7 @@ export default function LoginPage() {
 
     try {
       const r = await signIn(identifier, password, t('auth.error'))
-      navigate(r.mustChangePassword ? CHANGE_PASSWORD_PATH : HOME_PATH)
+      navigate(r.mustChangePassword ? CHANGE_PASSWORD_PATH : target)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth.error'))
     } finally {

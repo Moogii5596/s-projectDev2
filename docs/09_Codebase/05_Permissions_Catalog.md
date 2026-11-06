@@ -14,7 +14,7 @@ tags: [codebase, auth, rbac, generated]
 
 Шинэ эрх: (1) migration-д `INSERT INTO core_permissions`, (2) `permission-registry.ts`, (3) хэрэгтэй бол seed роль → `pnpm docs:gen`. Хэрэглэгчийн эцсийн эрх = `core_user_permissions` (ганц эх сурвалж). Роль, эрх системийн түвшинд — [[ADR-007_System_Roles_Permissions]]. Үндсэн (core) роль — [[03_DB_Catalog]] → Enum. Загвар: [[ADR-003_Users_Login_Permissions]].
 
-## Эрх (17)
+## Эрх (18)
 
 | Код | Нэр | Хувилбар | CAMP_ADMIN | CAMP_MANAGER | CATERING_ADMIN | EMPLOYEE | Ашигласан файл |
 |---|---|---|---|---|---|---|---|
@@ -35,6 +35,7 @@ tags: [codebase, auth, rbac, generated]
 | `camp.meal.order` | Хоолны захиалга өгөх | V2 |  | ✅ |  |  | — |
 | `camp.meal.accept` | Хоолны захиалга хүлээн авах | V2 |  |  | ✅ |  | — |
 | `camp.report.view` | Зардлын тайлан харах | V2 | ✅ | ✅ | ✅ |  | — |
+| `feed.content.moderate` | Feed модерац (пост, сэтгэгдэл устгах, report) | V1 |  |  |  |  | `feed.service.ts` |
 
 ## Анхдагч роль
 

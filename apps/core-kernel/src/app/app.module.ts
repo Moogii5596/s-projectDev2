@@ -34,6 +34,7 @@ import { ReportModule }        from '../modules/report/report.module';
 // Camp Module (ERD v4, Шат 2)
 import { CampModule }          from '../modules/camp/camp.module';
 import { CoreModule }          from '../modules/core/core.module';
+import { FeedModule }          from '../modules/feed/feed.module';
 import { HrModule }            from '../modules/hr/hr.module';
 // v0.2.0 §0.7 — олон хэл
 import { I18nModule }          from '../common/i18n/i18n.module';
@@ -69,6 +70,7 @@ import { I18nInterceptor }     from '../common/i18n/i18n.interceptor';
     VendorModule,              // Phase 4.3 (lite)
     ReportModule,              // Phase 4.4 (lite)
     CoreModule,                // v0.2.2 H1 — байгууллагууд (ADR-006)
+    FeedModule,                // v0.2.3 Блок 5 — Feed v0 (FEED-01)
     HrModule,                  // v0.2.2 H1 — HR суурь модуль (ADR-006)
     CampModule,                // Camp Module — Шат 2
   ],

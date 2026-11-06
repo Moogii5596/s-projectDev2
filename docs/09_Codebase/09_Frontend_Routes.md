@@ -14,30 +14,32 @@ tags: [codebase, frontend, generated]
 
 | Зам | Компонент | Нөхцөл | Файл |
 |---|---|---|---|
-| `/login` | `LoginPage` |  | `App.tsx:42` |
-| `/invite/:token` | `SetPasswordPage` |  | `App.tsx:44` |
-| `/reset/:token` | `SetPasswordPage` |  | `App.tsx:45` |
-| `/forgot` | `ForgotPasswordPage` |  | `App.tsx:46` |
-| `/change-password` | `ChangePasswordPage` |  | `App.tsx:51` |
-| `/` | `HomeRedirect` |  | `App.tsx:54` |
-| `/account/devices` | `DevicesPage` |  | `App.tsx:56` |
-| `/feedback` | `FeedbackPage` |  | `App.tsx:57` |
-| `/whats-new` | `WhatsNewPage` |  | `App.tsx:58` |
-| `/requisitions` | `MRListPage` |  | `App.tsx:61` |
-| `/requisitions/new` | `MRCreatePage` |  | `App.tsx:62` |
-| `/requisitions/:id` | `MRDetailPage` |  | `App.tsx:63` |
-| `/admin/approval-sla` | `ApprovalSlaPage` |  | `App.tsx:64` |
-| `/admin/workflow-definitions` | `WorkflowDefinitionPage` |  | `App.tsx:65` |
-| `/admin/delegations` | `DelegationPage` |  | `App.tsx:66` |
-| `/inventory` | `InventoryPage` | модуль `inventory` | `App.tsx:71` |
-| `/vendors` | `VendorsPage` | модуль `vendors` | `App.tsx:72` |
-| `/reports` | `ReportPage` | модуль `reports` | `App.tsx:73` |
-| `/camp/*` | `ModuleGate` | модуль `camp` | `App.tsx:76` |
-| `/hr/*` | `ModuleGate` | модуль `hr` | `App.tsx:78` |
-| `/settings` | `SettingsPage` | модуль `hr` | `App.tsx:80` |
-| `/settings/:section` | `SettingsPage` | модуль `hr` | `App.tsx:81` |
-| `/mfe/*` | `Suspense` |  | `App.tsx:85` |
-| `*` | `Navigate` |  | `App.tsx:98` |
+| `/login` | `LoginPage` |  | `App.tsx:44` |
+| `/invite/:token` | `SetPasswordPage` |  | `App.tsx:46` |
+| `/reset/:token` | `SetPasswordPage` |  | `App.tsx:47` |
+| `/forgot` | `ForgotPasswordPage` |  | `App.tsx:48` |
+| `/change-password` | `ChangePasswordPage` |  | `App.tsx:53` |
+| `/` | `HomeRedirect` |  | `App.tsx:56` |
+| `/account/devices` | `DevicesPage` |  | `App.tsx:58` |
+| `/feedback` | `FeedbackPage` |  | `App.tsx:59` |
+| `/whats-new` | `WhatsNewPage` |  | `App.tsx:60` |
+| `/feed` | `FeedPage` |  | `App.tsx:62` |
+| `/feed/reports` | `FeedReportsPage` |  | `App.tsx:63` |
+| `/requisitions` | `MRListPage` |  | `App.tsx:66` |
+| `/requisitions/new` | `MRCreatePage` |  | `App.tsx:67` |
+| `/requisitions/:id` | `MRDetailPage` |  | `App.tsx:68` |
+| `/admin/approval-sla` | `ApprovalSlaPage` |  | `App.tsx:69` |
+| `/admin/workflow-definitions` | `WorkflowDefinitionPage` |  | `App.tsx:70` |
+| `/admin/delegations` | `DelegationPage` |  | `App.tsx:71` |
+| `/inventory` | `InventoryPage` | модуль `inventory` | `App.tsx:76` |
+| `/vendors` | `VendorsPage` | модуль `vendors` | `App.tsx:77` |
+| `/reports` | `ReportPage` | модуль `reports` | `App.tsx:78` |
+| `/camp/*` | `ModuleGate` | модуль `camp` | `App.tsx:81` |
+| `/hr/*` | `ModuleGate` | модуль `hr` | `App.tsx:83` |
+| `/settings` | `SettingsPage` | модуль `hr` | `App.tsx:85` |
+| `/settings/:section` | `SettingsPage` | модуль `hr` | `App.tsx:86` |
+| `/mfe/*` | `Suspense` |  | `App.tsx:90` |
+| `*` | `Navigate` |  | `App.tsx:103` |
 | `(index)` | `CampHomePage` |  | `modules/camp/CampRoutes.tsx:24` |
 | `system` | `Navigate` |  | `modules/camp/CampRoutes.tsx:26` |
 | `system/positions` | `Navigate` |  | `modules/camp/CampRoutes.tsx:27` |
@@ -84,6 +86,6 @@ tags: [codebase, frontend, generated]
 
 | Файл | Түлхүүр |
 |---|---|
-| `web.en.json` | 1065 |
-| `web.mn.json` | 1065 |
-| `web.zh.json` | 1065 |
+| `web.en.json` | 1137 |
+| `web.mn.json` | 1137 |
+| `web.zh.json` | 1137 |

@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import i18n from '../../../../i18n'
-import pending from '../../i18n-pending.json'
+import '../../../../i18n' // i18next эхлүүлэх (side effect)
+import mnCat from '@s-project/i18n/web.mn.json'
+import enCat from '@s-project/i18n/web.en.json'
+import zhCat from '@s-project/i18n/web.zh.json'
 import FeedImage from '../FeedImage'
 import FeedImageGrid from '../FeedImageGrid'
 import ImagePicker from '../ImagePicker'
@@ -12,10 +14,6 @@ import ReportDialog from '../ReportDialog'
 import RevisionsDialog from '../RevisionsDialog'
 import type { FeedImageDto } from '../../types'
 
-// Каталогт нэгтгэгдэх хүртэл feed.ui.* түлхүүрийг i18n-pending.json-оос ачаална
-beforeAll(() => {
-  for (const [lang, msgs] of Object.entries(pending)) i18n.addResourceBundle(lang, 'translation', msgs, true, true)
-})
 
 afterEach(() => {
   cleanup()
@@ -155,32 +153,34 @@ describe('RevisionsDialog', () => {
   })
 })
 
-describe('i18n-pending.json', () => {
+describe('Feed i18n (packages/i18n каталог — v0.2.3 Блок 5)', () => {
+  const cat = { mn: mnCat, en: enCat, zh: zhCat } as Record<'mn' | 'en' | 'zh', Record<string, string>>
+  const feedKeys = Object.keys(cat.mn).filter((k) => k.startsWith('feed.')).sort()
   const src = (dir: string): string =>
-    readdirSync(dir)
-      .filter((f) => f.endsWith('.tsx'))
-      .map((f) => readFileSync(join(dir, f), 'utf8'))
+    readdirSync(dir, { withFileTypes: true })
+      .flatMap((e) => (e.isDirectory() ? (e.name === 'tests' ? [] : [src(join(dir, e.name))]) : e.name.endsWith('.tsx') || e.name.endsWith('.ts') ? [readFileSync(join(dir, e.name), 'utf8')] : []))
       .join('\n')
 
-  it('mn/en/zh түлхүүр ижил, feed.ui.* угтвартай, хувьсагч ижил', () => {
-    const keys = Object.keys(pending.mn).sort()
-    expect(keys.every((k) => k.startsWith('feed.ui.'))).toBe(true)
-    expect(Object.keys(pending.en).sort()).toEqual(keys)
-    expect(Object.keys(pending.zh).sort()).toEqual(keys)
+  it('mn/en/zh түлхүүр ижил, хувьсагч ижил', () => {
+    expect(feedKeys.length).toBeGreaterThan(50)
     const vars = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
-    for (const k of keys) {
-      const mn = (pending.mn as Record<string, string>)[k]
-      expect(vars((pending.en as Record<string, string>)[k]), k).toEqual(vars(mn))
-      expect(vars((pending.zh as Record<string, string>)[k]), k).toEqual(vars(mn))
+    for (const k of feedKeys) {
+      expect(cat.en[k], k).toBeTypeOf('string')
+      expect(cat.zh[k], k).toBeTypeOf('string')
+      expect(vars(cat.en[k]!), k).toEqual(vars(cat.mn[k]!))
+      expect(vars(cat.zh[k]!), k).toEqual(vars(cat.mn[k]!))
     }
   })
 
-  it("компонентод ашигласан t('feed.ui.…') түлхүүр бүр pending-д байна", () => {
-    const text = src(join(__dirname, '..'))
-    const used = [...text.matchAll(/\bt\(\s*['`](feed\.ui\.[\w.]+)['`]/g)].map((m) => m[1])
-    expect(used.length).toBeGreaterThan(10)
-    for (const k of used) expect(k in pending.mn, k).toBe(true)
-    // динамик: feed.ui.report.reason.${r}
-    for (const r of ['SPAM', 'OFFENSIVE', 'PRIVACY', 'OTHER']) expect(`feed.ui.report.reason.${r}` in pending.mn).toBe(true)
+  it("modules/feed-д ашигласан t('feed.…') түлхүүр бүр каталогт байна", () => {
+    const text = src(join(__dirname, '..', '..'))
+    const used = [...text.matchAll(/\bt\(\s*['`](feed\.[\w.]+)['`]/g)].map((m) => m[1]!)
+    expect(used.length).toBeGreaterThan(30)
+    for (const k of used) expect(k in cat.mn, k).toBe(true)
+    // динамик түлхүүрүүд
+    for (const r of ['SPAM', 'OFFENSIVE', 'PRIVACY', 'OTHER']) expect(`feed.ui.report.reason.${r}` in cat.mn).toBe(true)
+    for (const s of ['OPEN', 'DISMISSED', 'REMOVED']) expect(`feed.reports.status.${s}` in cat.mn).toBe(true)
+    for (const s of ['POST', 'COMMENT']) expect(`feed.reports.target.${s}` in cat.mn).toBe(true)
+    for (const s of ['now', 'min', 'hour', 'day', 'date']) expect(`feed.time.${s}` in cat.mn).toBe(true)
   })
 })

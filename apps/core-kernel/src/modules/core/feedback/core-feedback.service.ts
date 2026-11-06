@@ -16,6 +16,7 @@ import {
   UpdateFeedbackDto,
 } from './core-feedback.dto';
 import { canEditFeedback, displayAuthor, isFeedbackAdmin, resolveDoneVersion } from './feedback-rules';
+import { CoreFeedbackAttachmentsService } from './core-feedback-attachments.service';
 
 interface Actor {
   userId: string;
@@ -27,6 +28,7 @@ const AUTHOR_SELECT = { fullName: true, username: true, email: true } as const;
 type Row = CoreFeedback & {
   author: { fullName: string | null; username: string | null; email: string };
   votes: { id: string }[];
+  attachments: { id: string; width: number; height: number; thumbhash: string; variants: unknown }[];
 };
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString() : null);
@@ -39,7 +41,10 @@ const iso = (d: Date | null): string | null => (d ? d.toISOString() : null);
  */
 @Injectable()
 export class CoreFeedbackService {
-  constructor(private readonly prisma: PrismaTenantClientService) {}
+  constructor(
+    private readonly prisma: PrismaTenantClientService,
+    private readonly attachments: CoreFeedbackAttachmentsService,
+  ) {}
 
   /** authId → идэвхтэй core_users (RULE-13). Кемпийн эрхээс хамаарахгүй — системийн бүх хэрэглэгч. */
   private async actor(tx: Tx, tenantId: string, authId: string): Promise<Actor> {
@@ -65,6 +70,7 @@ export class CoreFeedbackService {
       isMine: r.authorId === a.userId,
       canEdit: canEditFeedback(r, a),
       authorName: displayAuthor(r.author),
+      attachments: r.attachments.map((x) => this.attachments.toDto(r.tenantId, x)),
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
     };
@@ -74,6 +80,7 @@ export class CoreFeedbackService {
     return {
       author: { select: AUTHOR_SELECT },
       votes: { where: { userId: a.userId }, select: { id: true } },
+      attachments: { orderBy: { sortOrder: 'asc' } }, // v0.2.3 Блок 5 (5.7)
     } as const;
   }
 
@@ -178,10 +185,14 @@ export class CoreFeedbackService {
         const a = await this.actor(tx, tenantId, authId);
         const cur = await this.load(tx, tenantId, id, a);
         if (!canEditFeedback(cur, a)) throw forbidden('core.err.feedback.edit_locked');
-        await tx.coreFeedback.delete({ where: { id: cur.id } });
-        return { id: cur.id };
+        const files = await this.attachments.variantsOf(tx, tenantId, cur.id);
+        await tx.coreFeedback.delete({ where: { id: cur.id } }); // хавсралтын мөр — cascade
+        return { id: cur.id, files };
       }),
-    );
+    ).then(async ({ id: removed, files }) => {
+      await this.attachments.removeFiles(files); // commit-ийн дараа (best-effort)
+      return { id: removed };
+    });
   }
 
   /** «+1» (on = true) / буцаах. Давхар дарах нь алдаагүй (idempotent); тоо = votes-ийн бодит тоо (нэг tx). */

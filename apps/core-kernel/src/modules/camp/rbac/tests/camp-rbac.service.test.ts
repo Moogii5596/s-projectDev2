@@ -209,10 +209,10 @@ describe('CampRbacService (Шат 2.2)', () => {
     s.cache.get.mockResolvedValue(null);
     // ADR-007 B2-6: 17 код + 4 хуучин alias (Блок 3-аас өмнөх frontend)
     const all = (await svc.myPermissions('t1', 'a1')).permissions;
-    expect(all).toHaveLength(21);
+    expect(all).toHaveLength(22); // + feed.content.moderate (v0.2.3 Блок 5)
     expect(all).toEqual(expect.arrayContaining(['hr.employee.manage', 'camp.employee.manage', 'hr.shift.adjust', 'camp.shift.adjust']));
     expect(all).not.toContain('camp.roles.manage');
-    expect((await svc.myPermissions('t1', 'a1')).modules).toEqual(['camp', 'hr']);
+    expect((await svc.myPermissions('t1', 'a1')).modules).toEqual(['camp', 'feed', 'hr']);
   });
 
   it('createRole BadRequest нь Forbidden-оос өмнө (validation) — эрхгүй ч үл мэдэгдэх код → 400', async () => {

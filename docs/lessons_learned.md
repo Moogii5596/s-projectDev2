@@ -13,7 +13,7 @@ tags: [lessons, index, generated]
 > **Шинэ алдаа:** тохирох `lessons/LL-*.md`-д `### [TAG-NNN] Гарчиг` + **Тохиолдсон / Шалтгаан / Дүрэм** → [[LL-99_Changelog]]-д мөр → `pnpm docs:gen`. Давтагдвал шинэ ID биш — `### [ID] (давтагдсан, огноо) …`.
 > Файл: [[LL-01_Backend_DB]] · [[LL-02_Test_CI]] · [[LL-03_Env_Ops_Pilot]] · [[LL-04_Architecture_RLS]] · [[LL-05_Frontend]] · [[LL-06_Camp_v02]] · [[LL-07_Docs]] · Хуучин нэгтгэсэн файл (архив): [[lessons_learned_MVP]]
 
-Нийт **180** сургамж.
+Нийт **183** сургамж.
 
 ## DB, Prisma, RLS, migration
 
@@ -23,6 +23,7 @@ tags: [lessons, index, generated]
 | CONC-001 | Эцэг мөрийн төлвөөс хамаарч дэд мөр бичихийг хориглох trigger/код → эцэг мөрийг `FOR SHARE` (эсвэл `FOR UPDATE`)-ээр унш.… | LL-06 §15 |
 | CONC-002 | "max+1" дугаарлалт бүр advisory lock эсвэл sequence-тэй байна; Prisma алдааны `meta`-д (target, modelName) найдахгүй —… | LL-05 §19 |
 | CURSOR-001 | Хэрэглэгчээс ирсэн утга DB-д cast (`::uuid`, `::timestamptz`) болж орох бол cast-ын өмнө форматыг шалгаж 400 буцаана. | LL-04 §16 |
+| CURSOR-002 | Шинэ cursor pagination → v7 `id`-аар (эсвэл timestamp-ийг мкс нарийвчлалтай текстээр). JS `Date`-ээр timestamp cursor ✖. | LL-04 §18 |
 | DATA-001 | Backfill-ийг бодит төстэй өгөгдлөөр (үсэг/зайн хувилбартай) A = B шалгаж, үүссэн нэрсийг нүдээр харна. Кирилл `lower()`… | LL-06 §22 |
 | DATA-002 | Байгууллагын Excel-ийг шууд импортлохгүй — хөрвүүлэх скрипт + толь + тайлан (хасагдсан мөр бүр шалтгаантай), хоосон… | LL-06 §24 |
 | ENUM-001 | `tier: TierType.TIER1` + `import { TierType } from '@prisma/client'` | LL-01 §2 |
@@ -173,6 +174,7 @@ tags: [lessons, index, generated]
 | FE-008 | Nested route-д харьцангуй линк → `relative="path"`; табын линк бүрийг e2e-д дарж URL-ийг шалгана. | LL-06 §21 |
 | FE-009 | Мөрөнд контрол нэмбэл тухайн хуудсын e2e-г заавал ажиллуулж, screenshot-ыг харна. | LL-06 §22 |
 | FE-010 | lazy хуудаснаас (`pages/*`, `modules/*/pages/*`) **юу ч** export хийж бусад файлд ашиглахгүй — хуваалцах тогтмол/функц →… | LL-06 §24 |
+| FE-011 | Bearer-тэй апп-д `<img>/<video>/<a download>`-ийн хамгаалагдсан файлд гарын үсэгтэй URL; blob fetch зөвхөн нэг удаагийн… | LL-06 §24 |
 
 ## Орчин, ops, PowerShell, пилот
 
@@ -234,3 +236,4 @@ tags: [lessons, index, generated]
 | ID | Дүрэм | Хаана |
 |---|---|---|
 | RBAC-001 | Автомат ба гарын эх сурвалжтай өгөгдөлд «гараар баталгаажуулах» үйлдэл автоматыг гарын болгож хувиргана (давхардлын алдаа… | LL-06 §24 |
+| RBAC-002 | Шинэ модулийн эрх нэмэхдээ нэг дор: migration (`INSERT` + CHECK-ийн модулийн жагсаалт), `permission-registry.ts`,… | LL-06 §24 |

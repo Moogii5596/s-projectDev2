@@ -27,7 +27,9 @@ const ReportPage = lazy(() => import('./modules/report/ReportPage'));
 // v0.2.3 Блок F — санал хүсэлт, шинэчлэлийн түүх (модулиас үл хамаарна)
 const FeedbackPage = lazy(() => import('./modules/feedback/FeedbackPage'));
 const WhatsNewPage = lazy(() => import('./modules/feedback/WhatsNewPage'));
-import { isEnabled } from './config/enabled-modules';
+const FeedPage = lazy(() => import('./modules/feed/FeedPage'));
+const FeedReportsPage = lazy(() => import('./modules/feed/FeedReportsPage'));
+import { FEED_ENABLED, isEnabled } from './config/enabled-modules';
 
 // Sprint 4: Module Federation — React.lazy + dynamic import
 // mfe-requisitions remote-оос ачаалагдана (port 5174)
@@ -56,6 +58,9 @@ export default function App() {
           <Route path="/account/devices" element={<DevicesPage />} />
           <Route path="/feedback" element={<FeedbackPage />} />
           <Route path="/whats-new" element={<WhatsNewPage />} />
+          {/* v0.2.3 Блок 5 (FEED-01) — модулиас үл хамаарна; M-0: «/» → /feed */}
+          {FEED_ENABLED && <Route path="/feed" element={<FeedPage />} />}
+          {FEED_ENABLED && <Route path="/feed/reports" element={<FeedReportsPage />} />}
           {isEnabled('mr') && (
             <>
               <Route path="/requisitions" element={<MRListPage />} />

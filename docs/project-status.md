@@ -2,7 +2,7 @@
 title: "Төслийн төлөв (одоо ба дараагийн алхам)"
 type: "Log"
 status: "Active"
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 tags: [status, v0.2.2]
 ---
 
@@ -31,6 +31,7 @@ tags: [status, v0.2.2]
 | **Release `v0.2.2`** — tag → staging → пилот | ✅ 2026-10-19 (staging A = B; пилот `upgrade` 00:47, нөөц `sinohydro-20261019-004700.7z`) |
 
 ## 2. Дараагийн алхам
+0ж. ✅ **v0.2.3 Блок 5 — Feed v0 (FEED-01) + M-0 + санал хүсэлтийн зураг** (2026-11-07): migration `20261107001` (6 `feed_*` + `core_feedback_attachments`, RLS, `feed.content.moderate`, автомат нуух босго), `/api/v1/core/feed` (пост ≤6 зураг, засах + түүх, лайк, сэтгэгдэл, report → 3 хүн мэдээлбэл түр нуух, модерац), зураг 480/1080/2048 WebP + thumbhash, гарын үсэгтэй URL (`MediaUrlSigner`), `/feed`, `/feed/reports`, M-0 («/» болон нэвтэрсний дараа `/feed`), `STORAGE_DIR` + pilot.ps1 нөөцлөлт, санал хүсэлтэд ≤3 зураг. `feed.post` хасагдсан (идэвхтэй бүх хэрэглэгч бичнэ). Тест: unit 808 + 168, integration 55/55, e2e 9/9, drift baseline шинэчилсэн, `docs:check` ✓. Дараагийнх — commit → CI → **Блок 6а** (хоолны захиалга, V2-03). Явц → [[09_v0.2.3_tech_plan]] Блок 5.
 0е. ✅ **v0.2.3 Блок 4 + 4б — цэвэрлэгээ, нэвтрэлт, төхөөрөмжүүд (QA-11, QA-12, PIL-15, PIL-16, PIL-29)** (2026-11-07): хуучин `/camp` HR controller устсан (e2e / integration шинэ зам руу), `core_users.last_sign_in_at` (migration `20261106006`, HR «Хэрэглэгч» багана), урилга / сэргээлтэд бүх session цуцлагдана, **нууц үг солихдоо хэрэглэгчийн өөрийн токеноор** (одоогийн төхөөрөмж үлдэнэ; GoTrue бусдыг устгана — OPS-013), «Төхөөрөмжүүд» (`/account/devices`: жагсаах, нэгийг / бусад бүгдийг гаргах). Тест: cloud — core-kernel `src/auth` unit 134, web-shell 137, tsc / eslint ✓; таны машин — integration `camp-v023-auth` + `hr-routes` 13/13, e2e `auth-session` 3/3, `docs:check` ✓. Drift baseline-ийг CI шалгана. Дараагийнх — **Блок 5** (Feed v0, FEED-01). Явц → [[09_v0.2.3_tech_plan]] Блок 4 / 4б.
 0д. ✅ **v0.2.3 Блок 3 — эрх: API, «Системийн тохиргоо», цэс нуух (PIL-13, PIL-19, PIL-18, V2-05)** (2026-11-06): ✅ код — `/api/v1/core/rbac/*` (хуучин `/camp` зам `Deprecation`, v0.2.4-т устгана), `/settings/:section` (роль ба эрх, хэрэглэгчийн роль, байгууллага, орчуулга), `/camp/system` = «Кемпийн тохиргоо», `lib/access.ts` (цэс/хэсэг нуух — backend-ийн дүрмээр), олгосон роль/эрх «олгогдсон», V2 эрх «удахгүй». core-kernel unit 738, integration **278/278** (cloud), web-shell 132, tsc / eslint / build ✓. Таны машин дээр e2e ногоон, commit `3091a90`. Дараагийнх — **Блок 4** (QA-11/12 хуучин зам, PIL-15, PIL-16). Явц → [[09_v0.2.3_tech_plan]] Блок 3.
 0г. ✅ **v0.2.3 Блок 2 — ADR-007 (роль, эрх системийн түвшинд, PIL-13)** (2026-11-06): ✅ код — [[ADR-007_System_Roles_Permissions]], migration `20261106005` (`camp_*` → `core_*` байранд нь, `site_id` + `scope_type`, код `hr.*`, `camp.roles.manage` устсан, `legacy_camp_*` хөлдөөсөн, migration доторх A = B тулгалт), `core/permissions/permission-registry.ts` (alias нэг хувилбар), `camp:snapshot` кодыг хөрвүүлж тулгана. unit **738**, integration **277/277** (cloud, PG16 + RLS), tsc / eslint цэвэр, `docs:check` ✓. Таны машин дээр тест ногоон, commit `8b86bfb`. Дараагийнх — **Блок 3** (guard/декоратор, «Роль ба эрх» → Системийн тохиргоо, PIL-19 цэс нуух, frontend шинэ код). Явц → [[09_v0.2.3_tech_plan]] Блок 2.

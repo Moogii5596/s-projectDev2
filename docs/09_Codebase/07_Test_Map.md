@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 31 файл, ~282 тест
+## Integration (бодит PG + RLS) — 32 файл, ~295 тест
 
 Команд: `pnpm test:integration`
 
@@ -38,6 +38,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/core-feedback.integration.spec.ts` | 8 | v0.2.3 Блок F — санал хүсэлт (integration) |
 | `core-kernel/test/core-rbac-adr007.integration.spec.ts` | 7 | v0.2.3 Блок 2 — ADR-007 core RBAC (integration) |
 | `core-kernel/test/event-bus.integration.spec.ts` | 5 | 🔗 5.2 Гинж: MR → Workflow → Budget → Outbox → Redis · 🔒 5.0 Зэрэгцээ poller — event бүр яг нэг удаа [EVT-001] · ♻️ 5.3 Retry + DLQ |
+| `core-kernel/test/feed.integration.spec.ts` | 13 | v0.2.3 Блок 5 — Feed v0 (integration) |
 | `core-kernel/test/hr-routes.integration.spec.ts` | 7 | 👥 HR ажилтан, бүтэц — шинэ зам; хуучин зам устсан (QA-12) · 🗓 HR ирц → Кемпийн байрлалт (H-Q2) · 📥 HR импорт / экспорт · 🔒 RLS (app_user) — HR model нэр солигдсон ч DB хүснэгт хэвээр |
 | `core-kernel/test/i18n-overrides.integration.spec.ts` | 7 | 🌐 Орчуулгын Excel · 🗣 Хэрэглэгчийн хэл · 🌐 Кемпийн алдаа 3 хэлээр (code + params + message) |
 | `core-kernel/test/modules-lite.integration.spec.ts` | 9 | 📦 Inventory-lite · 🏢 Vendor-lite · 📊 Report-lite · 🔒 RLS leakage (app_user) |
@@ -50,7 +51,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-auth-guard.integration.spec.ts` | 5 | 🔐 TenantAuthGuard — GET /api/v1/auth/me |
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 
-## Unit — core-kernel — 89 файл, ~692 тест
+## Unit — core-kernel — 92 файл, ~716 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -108,6 +109,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/event-bus/dlq.service.spec.ts` | 3 | DlqService |
 | `core-kernel/src/modules/event-bus/event-bus.service.spec.ts` | 2 | EventBusService.emit (Phase 5.1 [EVT-003]) |
 | `core-kernel/src/modules/event-bus/outbox-poller.service.spec.ts` | 10 | OutboxPollerService |
+| `core-kernel/src/modules/feed/tests/feed-rules.test.ts` | 6 | feed-rules — харагдах, засах, устгах, report · feed-rules — cursor, хуудас |
 | `core-kernel/src/modules/hr/attendance/tests/import-edits.test.ts` | 6 | applyRowEdits (R4.1) · planWithDeleted (R4.1) |
 | `core-kernel/src/modules/hr/attendance/tests/import.test.ts` | 15 | import-parser · import-planner |
 | `core-kernel/src/modules/hr/attendance/tests/roster-gaps.test.ts` | 3 | findRosterGaps (R4.2) |
@@ -143,10 +145,12 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/scripts/e2e-fixture.spec.ts` | 4 | setupFixture · teardownFixture |
 | `core-kernel/src/scripts/pilot-admin.spec.ts` | 7 | validate* · onboard · ensureUser |
 | `core-kernel/src/scripts/test-user.spec.ts` | 9 | ensureTestUser · assertLocalUrl · parseDotenv / parseArgs |
+| `core-kernel/src/storage/tests/image-processor.responsive.test.ts` | 7 | ImageProcessorService.processResponsive |
 | `core-kernel/src/storage/tests/image-processor.service.test.ts` | 9 | ImageProcessorService |
 | `core-kernel/src/storage/tests/local-disk.storage.test.ts` | 7 | LocalDiskStorage · contentTypeOf |
+| `core-kernel/src/storage/tests/media.test.ts` | 11 | MediaUrlSigner — гарын үсэгтэй зургийн URL · parseVariants / pickVariant / mediaImageDto · MediaService — хадгалах / устгах (LocalDiskStorage, бодит sharp) · storageDir |
 
-## Unit — web-shell — 26 файл, ~137 тест
+## Unit — web-shell — 33 файл, ~163 тест
 
 Команд: `pnpm --filter web-shell test`
 
@@ -155,8 +159,10 @@ tags: [codebase, testing, generated]
 | `web-shell/src/i18n/tests/i18n.test.ts` | 4 | орчуулгын каталог · i18n ажиллагаа |
 | `web-shell/src/lib/tests/access.test.ts` | 5 | access (PIL-19, ADR-007 B3-3) |
 | `web-shell/src/lib/tests/devices.test.ts` | 5 | describeUserAgent · deviceTitle · sortDevices / otherDevices |
+| `web-shell/src/lib/tests/home.test.ts` | 3 | M-0 — нэвтэрсний дараах зам (v0.2.3 Блок 5) |
 | `web-shell/src/lib/tests/modules.test.ts` | 8 | parseModules · homePath · resolveSupabaseUrl |
 | `web-shell/src/lib/tests/mr-approval.test.ts` | 8 | approvalState [SEC-004] — backend approvalDenial-тэй ижил · stepViews |
+| `web-shell/src/lib/tests/multipart.test.ts` | 1 | multipart (TEST-009) |
 | `web-shell/src/lib/tests/password-change.test.ts` | 4 | password-change (v0.2.2 D-06) · displayLogin |
 | `web-shell/src/lib/tests/unauthorized.test.ts` | 4 | handleUnauthorized [FE-007] · isSessionRevoked (v0.2.2 Блок 6б, №3) |
 | `web-shell/src/modules/camp/lib/tests/camp-lib.test.ts` | 11 | shift-pattern · permissions · apiErrorMessage · dates |
@@ -167,7 +173,12 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/camp/lib/tests/grid.test.ts` | 5 | grid (хүснэгтээр оруулах) · room-range (FB-07) |
 | `web-shell/src/modules/camp/lib/tests/last-camp.test.ts` | 3 | last-camp (FB-11) |
 | `web-shell/src/modules/camp/lib/tests/permission-label.test.ts` | 3 | permissionLabel |
-| `web-shell/src/modules/feedback/tests/feedback-lib.test.ts` | 3 | feedback lib |
+| `web-shell/src/modules/feed/components/tests/feed-components.test.tsx` | 10 | FeedImage · FeedImageGrid · ImagePicker · ReportDialog · RevisionsDialog · Feed i18n (packages/i18n каталог — v0.2.3 Блок 5) |
+| `web-shell/src/modules/feed/lib/tests/data-saver.test.ts` | 2 | readDataSaver |
+| `web-shell/src/modules/feed/lib/tests/feed.test.ts` | 5 | feed lib — кэш шинэчлэл · feed lib — цаг, урт текст |
+| `web-shell/src/modules/feedback/tests/feedback-api.test.ts` | 2 | feedback attachments API |
+| `web-shell/src/modules/feedback/tests/feedback-components.test.tsx` | 2 | FeedbackAttachments |
+| `web-shell/src/modules/feedback/tests/feedback-lib.test.ts` | 4 | feedback lib |
 | `web-shell/src/modules/hr/lib/tests/employee-form.test.ts` | 3 | employee-form (R8) |
 | `web-shell/src/modules/hr/lib/tests/hr-sections.test.ts` | 4 | hr-sections |
 | `web-shell/src/modules/hr/lib/tests/import-preview.test.ts` | 5 | previewBadges · rosterGapTotals · i18n түлхүүр |
@@ -179,7 +190,7 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/report/lib/tests/report.test.ts` | 5 | report lib |
 | `web-shell/src/release-notes/tests/release-notes.test.ts` | 7 | release notes — функц · release notes — өгөгдөл (notes.ts) |
 
-## E2E (Playwright) — 17 файл, ~84 тест
+## E2E (Playwright) — 18 файл, ~85 тест
 
 Команд: `pnpm test:e2e`
 
@@ -197,6 +208,7 @@ tags: [codebase, testing, generated]
 | `e2e/tests/camp-v023-shiftchange.spec.ts` | 5 |  |
 | `e2e/tests/camp.spec.ts` | 6 |  |
 | `e2e/tests/core-v023-access.spec.ts` | 3 |  |
+| `e2e/tests/core-v023-feed.spec.ts` | 1 |  |
 | `e2e/tests/core-v023-feedback.spec.ts` | 1 |  |
 | `e2e/tests/modules-lite.spec.ts` | 8 |  |
 | `e2e/tests/multi-tenant.spec.ts` | 5 |  |

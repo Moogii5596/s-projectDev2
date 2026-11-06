@@ -10,10 +10,10 @@ import { expectTenantTx, setActor, setup } from './camp-test-utils';
 const P = CAMP_PERMISSIONS;
 
 describe('Camp permission каталог (Шат 2.1)', () => {
-  it('17 эрх (ADR-007: camp.roles.manage устсан, hr.* 4), давхардалгүй, <модуль>.<x>.<y> хэлбэртэй (DB CHECK-тэй ижил regex)', () => {
-    expect(CAMP_PERMISSION_CODES).toHaveLength(17);
-    expect(new Set(CAMP_PERMISSION_CODES).size).toBe(17);
-    for (const c of CAMP_PERMISSION_CODES) expect(c).toMatch(/^(camp|hr|core)\.[a-z_]+\.[a-z_]+$/);
+  it('18 эрх (ADR-007: camp.roles.manage устсан, hr.* 4; v0.2.3 Блок 5: feed.content.moderate), давхардалгүй, <модуль>.<x>.<y> хэлбэртэй (DB CHECK-тэй ижил regex)', () => {
+    expect(CAMP_PERMISSION_CODES).toHaveLength(18);
+    expect(new Set(CAMP_PERMISSION_CODES).size).toBe(18);
+    for (const c of CAMP_PERMISSION_CODES) expect(c).toMatch(/^(camp|hr|core|feed)\.[a-z_]+\.[a-z_]+$/);
     expect(CAMP_PERMISSION_CODES).not.toContain('camp.roles.manage');
   });
   it('isCampPermission', () => {

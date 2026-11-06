@@ -447,6 +447,29 @@ export const MESSAGES = {
   'core.err.feedback.edit_locked': { mn: 'Зөвхөн өөрийн, «Шинэ» төлөвтэй саналаа засах / устгах боломжтой', en: 'You can only edit or delete your own feedback while it is "New"', zh: '只能在"新建"状态下编辑或删除自己的反馈' },
   'core.err.feedback.admin_only': { mn: 'Төлөв, хариуг зөвхөн системийн админ өөрчилнө', en: 'Only a system administrator can change the status or reply', zh: '只有系统管理员可以更改状态或回复' },
   'core.err.feedback.done_version': { mn: '«Хийгдсэн» төлөвт хэрэгжсэн хувилбарыг (жнь v0.2.3) заавал оруулна', en: 'Enter the version in which it was delivered (e.g. v0.2.3) for "Done"', zh: '"已完成"时必须填写实现版本（如 v0.2.3）' },
+  'core.err.feedback.attach_locked': { mn: 'Зөвхөн өөрийн, «Шинэ» төлөвтэй саналдаа зураг хавсаргана', en: 'You can only attach images to your own feedback while it is "New"', zh: '只能为自己"新建"状态的反馈添加图片' },
+  'core.err.feedback.attach_not_found': { mn: 'Хавсралт олдсонгүй', en: 'Attachment not found', zh: '未找到附件' },
+  // ── v0.2.3 Блок 5 — зураг (StorageService / ImageProcessorService) ──
+  'media.too_large': { mn: 'Зураг {max} MB-ээс их байна', en: 'The image is larger than {max} MB', zh: '图片超过 {max} MB' },
+  'media.too_many_pixels': { mn: 'Зургийн хэмжээ хэт том (> {max} MP)', en: 'The image resolution is too large (> {max} MP)', zh: '图片分辨率过大（> {max} MP）' },
+  'media.unsupported_type': { mn: 'Энэ төрлийн файл зураг биш эсвэл дэмжигдэхгүй ({type})', en: 'This file is not a supported image ({type})', zh: '不支持的图片格式（{type}）' },
+  'media.unreadable': { mn: 'Зургийг уншиж чадсангүй — файл гэмтсэн байж магадгүй', en: 'The image could not be read — the file may be damaged', zh: '无法读取图片 — 文件可能已损坏' },
+  // ── v0.2.3 Блок 5 — Feed v0 (FEED-01) ──
+  'feed.err.not_found': { mn: 'Пост олдсонгүй', en: 'Post not found', zh: '未找到帖子' },
+  'feed.err.comment_not_found': { mn: 'Сэтгэгдэл олдсонгүй', en: 'Comment not found', zh: '未找到评论' },
+  'feed.err.media_not_found': { mn: 'Зураг олдсонгүй', en: 'Image not found', zh: '未找到图片' },
+  'feed.err.empty': { mn: 'Текст эсвэл зураг оруулна уу', en: 'Write something or add an image', zh: '请输入文字或添加图片' },
+  'feed.err.body': { mn: 'Текст {max} тэмдэгтээс урт байна', en: 'The text is longer than {max} characters', zh: '文字超过 {max} 个字符' },
+  'feed.err.too_many_images': { mn: 'Хамгийн ихдээ {max} зураг', en: 'At most {max} images', zh: '最多 {max} 张图片' },
+  'feed.err.upload': { mn: 'Файл илгээхэд алдаа гарлаа', en: 'The upload is invalid', zh: '上传无效' },
+  'feed.err.cursor': { mn: 'Хуудаслалтын утга буруу', en: 'Invalid page cursor', zh: '分页参数无效' },
+  'feed.err.edit_own': { mn: 'Зөвхөн өөрийн бичсэнээ засна', en: 'You can only edit your own posts and comments', zh: '只能编辑自己的内容' },
+  'feed.err.moderator_only': { mn: 'Зөвхөн Feed-ийн модератор', en: 'Feed moderators only', zh: '仅限动态管理员' },
+  'feed.err.report_target': { mn: 'Пост эсвэл сэтгэгдлийн аль нэгийг заана', en: 'Specify either a post or a comment', zh: '请指定帖子或评论之一' },
+  'feed.err.report_own': { mn: 'Өөрийн бичсэнийг мэдээлэх боломжгүй', en: 'You cannot report your own content', zh: '不能举报自己的内容' },
+  'feed.err.report_duplicate': { mn: 'Та үүнийг аль хэдийн мэдээлсэн', en: 'You have already reported this', zh: '您已举报过此内容' },
+  'feed.err.report_not_found': { mn: 'Мэдээлэл олдсонгүй', en: 'Report not found', zh: '未找到举报' },
+  'feed.err.report_resolved': { mn: 'Энэ мэдээллийг аль хэдийн шийдвэрлэсэн', en: 'This report has already been resolved', zh: '该举报已处理' },
 } satisfies Record<string, Entry>;
 
 export type MessageCode = keyof typeof MESSAGES;

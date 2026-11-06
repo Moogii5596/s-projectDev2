@@ -132,6 +132,9 @@ ALTER TABLE "core_feedback" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMEST
 ALTER TABLE "core_feedback" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_feedback" DROP CONSTRAINT "core_feedback_tenant_id_fkey"
 ALTER TABLE "core_feedback" DROP CONSTRAINT "fk_core_feedback_replied_by"
+ALTER TABLE "core_feedback_attachments" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_feedback_attachments" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_feedback_attachments" DROP CONSTRAINT "core_feedback_attachments_tenant_id_fkey"
 ALTER TABLE "core_feedback_votes" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "core_feedback_votes" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_feedback_votes" DROP CONSTRAINT "core_feedback_votes_tenant_id_fkey"
@@ -164,6 +167,30 @@ ALTER TABLE "dlq_events" ADD CONSTRAINT "dlq_events_tenant_id_fkey" FOREIGN KEY 
 ALTER TABLE "dlq_events" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "dlq_events" ALTER COLUMN "id" DROP DEFAULT
 ALTER TABLE "dlq_events" DROP CONSTRAINT "dlq_events_tenant_id_fkey"
+ALTER TABLE "feed_comments" ADD CONSTRAINT "fk_feed_comments_deleted_by" FOREIGN KEY ("tenant_id", "deleted_by") REFERENCES "core_users"("tenant_id", "id") ON DELETE NO ACTION ON UPDATE NO ACTION
+ALTER TABLE "feed_comments" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "feed_comments" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "feed_comments" DROP CONSTRAINT "feed_comments_tenant_id_fkey"
+ALTER TABLE "feed_comments" DROP CONSTRAINT "fk_feed_comments_deleted_by"
+ALTER TABLE "feed_post_media" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "feed_post_media" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "feed_post_media" DROP CONSTRAINT "feed_post_media_tenant_id_fkey"
+ALTER TABLE "feed_posts" ADD CONSTRAINT "fk_feed_posts_deleted_by" FOREIGN KEY ("tenant_id", "deleted_by") REFERENCES "core_users"("tenant_id", "id") ON DELETE NO ACTION ON UPDATE NO ACTION
+ALTER TABLE "feed_posts" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "feed_posts" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "feed_posts" DROP CONSTRAINT "feed_posts_tenant_id_fkey"
+ALTER TABLE "feed_posts" DROP CONSTRAINT "fk_feed_posts_deleted_by"
+ALTER TABLE "feed_reactions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "feed_reactions" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "feed_reactions" DROP CONSTRAINT "feed_reactions_tenant_id_fkey"
+ALTER TABLE "feed_reports" ADD CONSTRAINT "fk_feed_reports_resolved_by" FOREIGN KEY ("tenant_id", "resolved_by") REFERENCES "core_users"("tenant_id", "id") ON DELETE NO ACTION ON UPDATE NO ACTION
+ALTER TABLE "feed_reports" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "feed_reports" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "feed_reports" DROP CONSTRAINT "feed_reports_tenant_id_fkey"
+ALTER TABLE "feed_reports" DROP CONSTRAINT "fk_feed_reports_resolved_by"
+ALTER TABLE "feed_revisions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "feed_revisions" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "feed_revisions" DROP CONSTRAINT "feed_revisions_tenant_id_fkey"
 ALTER TABLE "i18n_override_history" ALTER COLUMN "changed_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "i18n_override_history" DROP CONSTRAINT "fk_i18n_history_user"
 ALTER TABLE "i18n_override_history" DROP CONSTRAINT "i18n_override_history_tenant_id_fkey"

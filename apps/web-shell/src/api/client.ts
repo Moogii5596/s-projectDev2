@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { handleUnauthorized, isSessionRevoked } from '../lib/unauthorized'
 import { handlePasswordChangeRequired, isPasswordChangeRequired } from '../lib/password-change'
 import { currentLang } from '../i18n'
+import { contentTypeFor } from '../lib/multipart'
 
 // VITE_API_BASE_URL хоосон бол '' (same origin) → Vite proxy '/api' → localhost:3000
 // Тиймээс CORS алдаа гарахгүй
@@ -23,6 +24,9 @@ apiClient.interceptors.request.use(async (config) => {
   }
   // v0.2.0 §0.7: backend-ийн алдааны мессеж, Excel загварын хэл
   config.headers['Accept-Language'] = currentLang()
+  // TEST-009: FormData → multipart (анхдагч JSON үлдвэл axios файлыг хаяна)
+  const ct = contentTypeFor(config.data, config.headers['Content-Type'] as string | undefined)
+  if (ct) config.headers['Content-Type'] = ct
 
   return config
 })

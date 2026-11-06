@@ -98,7 +98,8 @@ function permsIn(text, aliases = ['CAMP_PERMISSIONS']) {
   return [...out];
 }
 /** Файл дахь CAMP_PERMISSIONS-ийн alias (`const P = CAMP_PERMISSIONS` эсвэл `import { CAMP_PERMISSIONS as P }`). */
-const permAliases = (src) => ['CAMP_PERMISSIONS', ...[...src.matchAll(/(?:const\s+(\w+)\s*=\s*CAMP_PERMISSIONS\b|CAMP_PERMISSIONS\s+as\s+(\w+))/g)].map((m) => m[1] ?? m[2])];
+// v0.2.3 Блок 5: `PERMISSIONS.X` (core/permissions/permission-registry — feed г.м. шинэ код)
+const permAliases = (src) => ['CAMP_PERMISSIONS', 'PERMISSIONS', ...[...src.matchAll(/(?:const\s+(\w+)\s*=\s*CAMP_PERMISSIONS\b|CAMP_PERMISSIONS\s+as\s+(\w+))/g)].map((m) => m[1] ?? m[2])];
 /** Service методын эрх + гишүүнчлэлийн шалгалт; нэг түвшин гүнзгий (`this.helper(`). */
 /** `export const TABLE = { key: { … perms: [P.X] … } }` → тухайн key-ийн эрх (өгөгдлөөр удирдсан шалгалт). */
 function tablePerms(table, key) {
@@ -441,7 +442,7 @@ for (const f of migs) {
   for (const f of migs) {
     for (const st of splitSql(read(f))) {
       if (!/^INSERT INTO (camp|core)_permissions\b/i.test(st)) continue;
-      for (const m of st.matchAll(/\(\s*'((?:camp|hr|core)\.[a-z_]+\.[a-z_]+)',\s*'([^']+)'/g)) names.set(m[1], m[2]);
+      for (const m of st.matchAll(/\(\s*'((?:camp|hr|core|feed)\.[a-z_]+\.[a-z_]+)',\s*'([^']+)'/g)) names.set(m[1], m[2]);
     }
   }
   const v2 = new Set();

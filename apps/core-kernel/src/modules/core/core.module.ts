@@ -4,15 +4,17 @@ import { CoreOrganizationsController } from './organizations/core-organizations.
 import { CoreOrganizationsService } from './organizations/core-organizations.service';
 import { CoreFeedbackController } from './feedback/core-feedback.controller';
 import { CoreFeedbackService } from './feedback/core-feedback.service';
+import { CoreFeedbackAttachmentsService } from './feedback/core-feedback-attachments.service';
+import { StorageModule } from '../../storage/storage.module';
 
 /**
  * Core — бүх модулийн суурь өгөгдөл: байгууллагууд (v0.2.2 H1, ADR-006). Хүснэгт `camp_organizations` (v0.3 хүртэл).
- * Санал хүсэлт (v0.2.3 Блок F, FB-SYS-01a) — `core_feedback`.
+ * Санал хүсэлт (v0.2.3 Блок F, FB-SYS-01a) — `core_feedback`; дэлгэцийн зураг (Блок 5) — `core_feedback_attachments`.
  */
 @Module({
-  imports: [CampCommonModule],
+  imports: [CampCommonModule, StorageModule],
   controllers: [CoreOrganizationsController, CoreFeedbackController],
-  providers: [CoreOrganizationsService, CoreFeedbackService],
+  providers: [CoreOrganizationsService, CoreFeedbackService, CoreFeedbackAttachmentsService],
   exports: [CoreOrganizationsService],
 })
 export class CoreModule {}

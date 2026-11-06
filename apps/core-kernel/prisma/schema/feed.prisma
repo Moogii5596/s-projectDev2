@@ -1,0 +1,158 @@
+// Feed v0 (FEED-01) — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
+// Migration: 20261107001_feed_v0.sql. Тоолуурууд (like/comment/report/media) — app код нэг tx-д.
+
+/// v0.2.3 Блок 5 — реакц (v0: зөвхөн LIKE)
+enum FeedReactionKind {
+  LIKE
+}
+
+/// v0.2.3 Блок 5 — report-ын шалтгаан
+enum FeedReportReason {
+  SPAM
+  OFFENSIVE
+  PRIVACY
+  OTHER
+}
+
+/// v0.2.3 Блок 5 — OPEN → DISMISSED (агуулга хэвээр) | REMOVED (агуулга устсан)
+enum FeedReportStatus {
+  OPEN
+  DISMISSED
+  REMOVED
+}
+
+/// v0.2.3 Блок 5 (20261107001) — пост; tenant даяар харагдана. deleted_at = soft delete, hidden_at = report-оор түр нуусан
+model FeedPost {
+  id           String    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  authorId     String    @map("author_id") @db.Uuid
+  body         String    @default("")
+  mediaCount   Int       @default(0) @map("media_count") @db.SmallInt
+  likeCount    Int       @default(0) @map("like_count")
+  commentCount Int       @default(0) @map("comment_count")
+  reportCount  Int       @default(0) @map("report_count")
+  editedAt     DateTime? @map("edited_at") @db.Timestamptz
+  hiddenAt     DateTime? @map("hidden_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+  deletedBy    String?   @map("deleted_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  author    CoreUser        @relation("FeedPostAuthor", fields: [tenantId, authorId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_posts_author")
+  deleter   CoreUser?       @relation("FeedPostDeletedBy", fields: [tenantId, deletedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_feed_posts_deleted_by")
+  media     FeedPostMedia[]
+  comments  FeedComment[]
+  reactions FeedReaction[]
+  revisions FeedRevision[]
+  reports   FeedReport[]
+
+  @@unique([tenantId, id], map: "uq_feed_posts_tenant_id")
+  @@index([tenantId, authorId], map: "idx_feed_posts_author")
+  @@map("feed_posts")
+}
+
+/// v0.2.3 Блок 5 (20261107001) — постын зураг (≤6). variants = [{w,h,key,bytes,fmt,hash}] өргөнөөр өсөх
+model FeedPostMedia {
+  id         String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  postId     String   @map("post_id") @db.Uuid
+  sortOrder  Int      @map("sort_order") @db.SmallInt
+  width      Int
+  height     Int
+  thumbhash  String
+  variants   Json
+  totalBytes Int      @map("total_bytes")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  post FeedPost @relation(fields: [tenantId, postId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_post_media_post")
+
+  @@unique([tenantId, id], map: "uq_feed_post_media_tenant_id")
+  @@unique([postId, sortOrder], map: "uq_feed_post_media_order")
+  @@map("feed_post_media")
+}
+
+/// v0.2.3 Блок 5 (20261107001) — сэтгэгдэл (зохиогч засна — өмнөх нь feed_revisions-д)
+model FeedComment {
+  id          String    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  postId      String    @map("post_id") @db.Uuid
+  authorId    String    @map("author_id") @db.Uuid
+  body        String
+  reportCount Int       @default(0) @map("report_count")
+  editedAt    DateTime? @map("edited_at") @db.Timestamptz
+  hiddenAt    DateTime? @map("hidden_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+  deletedBy   String?   @map("deleted_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  post      FeedPost       @relation(fields: [tenantId, postId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_comments_post")
+  author    CoreUser       @relation("FeedCommentAuthor", fields: [tenantId, authorId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_comments_author")
+  deleter   CoreUser?      @relation("FeedCommentDeletedBy", fields: [tenantId, deletedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_feed_comments_deleted_by")
+  revisions FeedRevision[]
+  reports   FeedReport[]
+
+  @@unique([tenantId, id], map: "uq_feed_comments_tenant_id")
+  @@map("feed_comments")
+}
+
+/// v0.2.3 Блок 5 (20261107001) — лайк (хэрэглэгч бүр постод нэг)
+model FeedReaction {
+  id        String           @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String           @map("tenant_id") @db.Uuid
+  postId    String           @map("post_id") @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  kind      FeedReactionKind @default(LIKE)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  post FeedPost @relation(fields: [tenantId, postId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_reactions_post")
+  user CoreUser @relation("FeedReactionUser", fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_reactions_user")
+
+  @@unique([postId, userId, kind], map: "uq_feed_reactions")
+  @@index([tenantId, userId], map: "idx_feed_reactions_user")
+  @@map("feed_reactions")
+}
+
+/// v0.2.3 Блок 5 (20261107001) — засахаас ӨМНӨХ текст (пост эсвэл сэтгэгдэл — яг нэг нь); бүх уншигч харна
+model FeedRevision {
+  id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  postId    String?  @map("post_id") @db.Uuid
+  commentId String?  @map("comment_id") @db.Uuid
+  body      String
+  editedBy  String   @map("edited_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  post    FeedPost?    @relation(fields: [tenantId, postId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_revisions_post")
+  comment FeedComment? @relation(fields: [tenantId, commentId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_revisions_comment")
+  editor  CoreUser     @relation("FeedRevisionEditor", fields: [tenantId, editedBy], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_revisions_editor")
+
+  @@map("feed_revisions")
+}
+
+/// v0.2.3 Блок 5 (20261107001) — report (нэг хүн нэг зүйлийг нэг удаа — partial unique index, SQL-д)
+model FeedReport {
+  id         String           @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String           @map("tenant_id") @db.Uuid
+  postId     String?          @map("post_id") @db.Uuid
+  commentId  String?          @map("comment_id") @db.Uuid
+  reporterId String           @map("reporter_id") @db.Uuid
+  reason     FeedReportReason
+  note       String?
+  status     FeedReportStatus @default(OPEN)
+  resolvedBy String?          @map("resolved_by") @db.Uuid
+  resolvedAt DateTime?        @map("resolved_at") @db.Timestamptz
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  post     FeedPost?    @relation(fields: [tenantId, postId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_reports_post")
+  comment  FeedComment? @relation(fields: [tenantId, commentId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_reports_comment")
+  reporter CoreUser     @relation("FeedReportReporter", fields: [tenantId, reporterId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_reports_reporter")
+  resolver CoreUser?    @relation("FeedReportResolvedBy", fields: [tenantId, resolvedBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_feed_reports_resolved_by")
+
+  @@index([tenantId, status, createdAt(sort: Desc)], map: "idx_feed_reports_open")
+  @@map("feed_reports")
+}

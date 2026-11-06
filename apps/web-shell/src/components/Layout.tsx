@@ -2,7 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
-import { isEnabled } from '../config/enabled-modules'
+import { FEED_ENABLED, isEnabled } from '../config/enabled-modules'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from './LanguageSwitcher'
 import { useI18nSync } from '../hooks/useI18nSync'
@@ -63,6 +63,8 @@ export default function Layout() {
           S Project
         </span>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {/* v0.2.3 Блок 5 — Feed (бүх хэрэглэгч) */}
+          {FEED_ENABLED && <button onClick={() => navigate('/feed')} className={navCls('/feed')}>{t('nav.feed')}</button>}
           {isEnabled('hr') && canSeeModule(access, 'hr') && <button onClick={() => navigate('/hr')} className={navCls('/hr')}>{t('nav.hr')}</button>}
           {isEnabled('camp') && canSeeModule(access, 'camp') && <button onClick={() => navigate('/camp')} className={navCls('/camp')}>{t('nav.camp')}</button>}
           {showSettings && <button onClick={() => navigate('/settings')} className={navCls('/settings')}>{t('nav.settings')}</button>}

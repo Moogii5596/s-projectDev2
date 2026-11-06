@@ -6,7 +6,7 @@ export const TEST_CREDENTIALS = {
 } as const;
 
 /**
- * Login хийж /requisitions хуудас руу чиглүүлнэ.
+ * Login хийж Feed (/feed — v0.2.3 M-0) руу чиглүүлнэ.
  * Storage state ашиглан дахин login хийхээс зайлсхийнэ.
  *
  * NOTE: getByLabel ашиглахгүй — LoginPage дахь label нь Монгол текстийн
@@ -18,7 +18,7 @@ export async function loginAs(page: Page, email = TEST_CREDENTIALS.email, passwo
   await page.locator('#identifier').fill(email);
   await page.locator('input[type="password"]').fill(password);
   await page.getByRole('button', { name: /нэвтрэх|login/i }).click();
-  await page.waitForURL('**/requisitions**', { timeout: 10_000 });
+  await page.waitForURL('**/feed**', { timeout: 10_000 }); // v0.2.3 Блок 5 (M-0)
 }
 
 /**

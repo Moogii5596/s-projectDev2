@@ -20,7 +20,7 @@ test.describe('v0.2.3 — санал хүсэлт, шинэчлэлийн түү
     await dlg.getByText('Хөгжүүлэлтийн захиалга').click();
     await dlg.getByLabel('Гарчиг').fill(TITLE);
     await dlg.getByLabel('Тайлбар').fill('Хоолны сарын тайланг Excel-ээр');
-    await expect(dlg.getByText('/requisitions')).toBeVisible();
+    await expect(dlg.getByText('/feed')).toBeVisible(); // v0.2.3 M-0: нэвтэрсний дараа /feed (өмнө /requisitions)
     await dlg.getByRole('button', { name: 'Илгээх', exact: true }).click();
     await expect(dlg).toBeHidden();
     const mine = page.getByTestId('feedback-item').filter({ hasText: TITLE });

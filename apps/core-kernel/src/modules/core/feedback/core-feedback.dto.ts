@@ -2,6 +2,7 @@ import { IsEnum, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, 
 import { Transform, Type } from 'class-transformer';
 import { CoreFeedbackKind, CoreFeedbackStatus } from '@prisma/client';
 import { toBool, trim, trimOrNull } from '../../camp/common/camp-dto.util';
+import type { MediaImageDto } from '../../../storage/media.service';
 
 // ── Санал хүсэлт (v0.2.3 Блок F) ─────────────────────────────
 export class CreateFeedbackDto {
@@ -82,6 +83,8 @@ export interface FeedbackItemDto {
   isMine: boolean;
   canEdit: boolean;
   authorName: string;
+  /** v0.2.3 Блок 5 (5.7) — дэлгэцийн зураг (≤3) */
+  attachments: MediaImageDto[];
   createdAt: string;
   updatedAt: string;
 }

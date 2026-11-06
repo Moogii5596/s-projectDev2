@@ -25,6 +25,8 @@ export const PERMISSIONS = {
   MEAL_ORDER: 'camp.meal.order',
   MEAL_ACCEPT: 'camp.meal.accept',
   REPORT_VIEW: 'camp.report.view',
+  /** v0.2.3 Блок 5 (FEED-01): бусдын пост/сэтгэгдэл устгах, report шийдвэрлэх. OWNER/ADMIN — автоматаар */
+  FEED_MODERATE: 'feed.content.moderate',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

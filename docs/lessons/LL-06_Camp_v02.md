@@ -73,6 +73,7 @@ tags: [lessons]
 **Тохиолдсон:** Шат 8 багц 2 — xlsx upload-ийн mock шалгалт "file талбар/xlsx алга" гэж унасан; бодит алдаа биш (CDP файл blob-ийг interception-д өгдөггүй).
 **Шийдэл:** Upload-ийг `route.continue()`-ээр vite proxy → жижиг echo сервер (localhost:3000) руу бодитоор илгээж байт, boundary, файлын нэрийг шалгасан (6512 байт xlsx → 6750 байт multipart). UI урсгалын mock нь зөвхөн Content-Type-ийг шалгана. Мөн axios-ийн анхдагч `Content-Type: application/json` FormData-г JSON болгодог тул upload-д `'multipart/form-data'` гэж тодорхой өгсөн (boundary-г browser нэмнэ).
 **Дүрэм:** Файл илгээх хүсэлтийг mock interception-ээр биш бодит HTTP-ээр шалгана; axios-ийн JSON анхдагчтай client-ээр FormData илгээхдээ Content-Type-ийг тодорхой заана.
+**Давтагдсан (2026-11-07, v0.2.3 Блок 5):** Feed-ийн `feedApi.create` header-гүй FormData илгээж, зураг чимээгүй хаягдсан (пост зөвхөн текстээр үүссэн; e2e `core-v023-feed` барьсан). **Бүтцийн шийдэл:** `api/client.ts`-ийн request interceptor FormData бүрт `multipart/form-data` тавина (`lib/multipart.ts`, unit) — дуудлага бүрт заах шаардлагагүй.
 
 ### [FE-004] Шат 8 frontend — хуурамч API-тай браузерын шалгалтаар илэрсэн UI алдаанууд (хэрэглэгчид хүрэхээс өмнө зассан)
 **Тохиолдсон:** Шат 8 багц 1–2 (cloud дээр tsc/eslint + 1400px/390px браузер шалгалт).
@@ -362,3 +363,13 @@ tags: [lessons]
 - **Нөхцөл:** `camp_*` → `core_*` нэрлэхэд FK, RLS policy, trigger-ийн холбоос автоматаар шилждэг ч plpgsql функцийн бие (текст) хуучин нэрээр хэвээр → дараагийн дуудлагад `relation "camp_…" does not exist`.
 - **Шийдэл (`20261106005`):** нэрлэсэн хүснэгтийг хөндөх бүх функцийг (`*_apply_template`, `*_protect_system`, `*_seed_default_roles`, `camp_employees_sync_position_roles`) шинэ нэрээр дахин үүсгэж, trigger-ийг дахин холбож, хуучин функцийг DROP; constraint / index / policy / trigger-ийн нэрийг DO-блокоор солив; migration-ийн төгсгөлд legacy ↔ core эрхийн олонлогийг тулгаж зөрвөл `RAISE`.
 - **Дүрэм:** Хүснэгт нэрлэх migration-ийн өмнө `grep -l <хүснэгт> supabase/migrations/*.sql`-ээр түүнийг хэрэглэдэг бүх функцийг олж дахин үүсгэнэ; өгөгдөл хөндөх бол migration дотор A = B шалгалт.
+
+### [RBAC-002] Шинэ модулийн эрхийн код (`feed.*`) DB CHECK, тест, баримтын генераторт танигдаагүй (v0.2.3 Блок 5)
+**Тохиолдсон (2026-11-07):** `feed.moderate` нэмэхэд (1) `ck_core_permissions_code` нь `^(camp|hr|core)\.x\.y$` — 2 хэсэгтэй, `feed` модульгүй код migration-д унах байсан; (2) каталогийн тоо / regex тест (`camp-common`, `camp-rbac.service`) унасан; (3) `docs:gen` эрхийн нэрийг `(camp|hr|core)` regex-ээр, хэрэглээг зөвхөн `CAMP_PERMISSIONS.X`-ээр хайдаг тул нэр, файл хоосон гарсан.
+**Шийдэл:** код `feed.content.moderate` (3 хэсэг); migration-д CHECK-ийг `(camp|hr|core|feed)` болгож дахин үүсгэсэн; тест 18 код / модуль `feed`; генераторт `feed` ба `PERMISSIONS.X` alias.
+**Дүрэм:** Шинэ модулийн эрх нэмэхдээ нэг дор: migration (`INSERT` + CHECK-ийн модулийн жагсаалт), `permission-registry.ts`, каталогийн тест, `scripts/docs/gen-codebase-docs.mjs` (модулийн regex) → `pnpm docs:gen` → [[05_Permissions_Catalog]]-д нэр, файл бөглөгдсөнийг шалга. Код үргэлж `<модуль>.<объект>.<үйлдэл>`. Админы `me/permissions.modules`-д шинэ модуль автоматаар нэмэгдэнэ — unit (`camp-rbac.service.test`) ба integration (`camp-master.integration.spec` B3-1) хоёуланд нь хүлээлтийг засна (`grep "modules).toEqual"`; 2026-11-07-нд integration-д үлдэж унасан).
+
+### [FE-011] Хамгаалагдсан зураг: `<img src>` нь `Authorization: Bearer` илгээж чадахгүй (v0.2.3 Блок 5)
+**Тохиолдсон (2026-11-07, загварчлалд илэрсэн):** нэвтрэлт зөвхөн Bearer header (cookie ✖) тул backend proxy-той зургийн URL `<img>`-д 401 өгөх байсан; `fetch` → blob URL бол `srcset`, `loading="lazy"`, HTTP кэш, Lightbox-ийн том хувилбар бүгд гараар.
+**Шийдэл:** API харах эрхтэй хэрэглэгчид HMAC гарын үсэгтэй, хугацаатай URL өгнө (`MediaUrlSigner`; payload: tenant, төрөл, id, өргөн, хугацаа; 7 хоногийн хувин → URL тогтвортой, кэш онох), media route `@SkipAuth`, `Cache-Control: private, immutable` + ETag.
+**Дүрэм:** Bearer-тэй апп-д `<img>/<video>/<a download>`-ийн хамгаалагдсан файлд гарын үсэгтэй URL; blob fetch зөвхөн нэг удаагийн татахад. Гарын үсэгт tenant заавал (өөр tenant-ийн id-аар ✖ — integration шалгана).

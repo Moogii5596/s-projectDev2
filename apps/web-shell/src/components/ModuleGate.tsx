@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { campApi } from '../modules/camp/api/camp-api'
 import { campKeys } from '../modules/camp/hooks/useCampPermissions'
 import { canSeeModule, firstVisiblePath, type AppModuleKey } from '../lib/access'
-import { HOME_PATH, isEnabled } from '../config/enabled-modules'
+import { FEED_ENABLED, HOME_PATH, isEnabled } from '../config/enabled-modules'
+import { FEED_PATH } from '../lib/home'
 import LoadingSpinner from './LoadingSpinner'
 
 const useAccess = () =>
@@ -27,8 +28,16 @@ export function ModuleGate({ mod, children }: { mod: AppModuleKey; children: Rea
   return <>{children}</>
 }
 
-/** «/» → эрхтэй эхний модуль (пилот: Кемп; зөвхөн HR эрхтэй → Хүний нөөц). Модуль биш нүүр (MR г.м.) → HOME_PATH */
+/**
+ * «/» → v0.2.3 Блок 5 (M-0): Feed (асаалттай бол — идэвхтэй бүх хэрэглэгч уншина);
+ * эс бөгөөс эрхтэй эхний модуль (пилот: Кемп; зөвхөн HR эрхтэй → Хүний нөөц). Модуль биш нүүр (MR г.м.) → HOME_PATH
+ */
 export function HomeRedirect() {
+  if (FEED_ENABLED) return <Navigate to={FEED_PATH} replace />
+  return <ModuleHomeRedirect />
+}
+
+function ModuleHomeRedirect() {
   const moduleHome = HOME_PATH === '/camp' || HOME_PATH === '/hr'
   const q = useAccess()
   if (!moduleHome || !isEnabled('hr')) return <Navigate to={HOME_PATH} replace />

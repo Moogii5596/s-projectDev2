@@ -196,3 +196,8 @@ tags: [lessons]
 **Дүрэм:** Prisma клиентийн method-ийг тестэд орлуулахгүй; хэмжилтийг гадна талд (publisher mock, DB-ийн төлөв) хийнэ.
 
 ---
+
+### [CURSOR-002] `created_at`-аар cursor → ижил миллисекундын мөр алгасагдана (PG микросекунд ↔ JS Date мс) (v0.2.3 Блок 5)
+**Тохиолдсон (2026-11-07, хэрэгжүүлэхээс өмнө илэрсэн):** Feed-ийн `(created_at, id)` cursor-ийг JS `Date`-ээр кодлоход `clock_timestamp()`-ийн мкс тасарна → `created_at < cursor` нөхцөл тэр мс доторх (cursor-оос хойш бичигдсэн) мөрүүдийг алгасна.
+**Шийдэл:** cursor = мөрийн `id` (`uuid_generate_v7()` — цагаар эрэмбэлэгдэнэ, PG uuid харьцуулалт байтаар), `ORDER BY id DESC`, `id < cursor`. Integration: 5 пост, limit 2 — давхардал / алгасалтгүй.
+**Дүрэм:** Шинэ cursor pagination → v7 `id`-аар (эсвэл timestamp-ийг мкс нарийвчлалтай текстээр). JS `Date`-ээр timestamp cursor ✖.

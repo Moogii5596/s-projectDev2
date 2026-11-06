@@ -144,7 +144,7 @@ describe('🔑 Каталог ба анхдагч роль', () => {
     expect(legacy.body.map((r: { id: string }) => r.id).sort()).toEqual(core.body.map((r: { id: string }) => r.id).sort());
     const me = await api().get('/api/v1/core/rbac/me/permissions').set(as('admin'));
     expect(me.status).toBe(200);
-    expect(me.body.modules).toEqual(['camp', 'hr']);
+    expect(me.body.modules).toEqual(['camp', 'feed', 'hr']); // v0.2.3 Блок 5: + feed (feed.content.moderate)
     // ажилтны картаас нэвтрэх эрх — /camp-д үлдсэн (Deprecation-гүй)
     const opt = await api().get('/api/v1/core/rbac/invites/options').set(as('admin'));
     expect(opt.status).toBe(200);

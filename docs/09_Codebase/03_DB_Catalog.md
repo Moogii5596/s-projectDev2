@@ -10,17 +10,17 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (57 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **69** хүснэгт, 38 enum, 29 функц, 60 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (58 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **76** хүснэгт, 41 enum, 30 функц, 67 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
 ## Агуулга
 
-**Бусад (tenant, MR, workflow, event bus, модулиуд):** [[#approval_logs]] · [[#auth_guard.password_failures]] · [[#budget_allocations]] · [[#budget_commitments]] · [[#budget_periods]] · [[#dlq_events]] · [[#i18n_override_history]] · [[#i18n_overrides]] · [[#idempotency_keys]] · [[#installed_modules]] · [[#inventory_items]] · [[#mr_headers]] · [[#mr_items]] · [[#outbox_events]] · [[#super_admins]] · [[#tenant_routes]] · [[#tenants]] · [[#vendors]] · [[#workflow_definitions]] · [[#workflow_delegations]] · [[#workflow_instances]] · [[#workflow_sla_logs]] · [[#workflow_step_logs]]
+**Бусад (tenant, MR, workflow, event bus, модулиуд):** [[#approval_logs]] · [[#auth_guard.password_failures]] · [[#budget_allocations]] · [[#budget_commitments]] · [[#budget_periods]] · [[#dlq_events]] · [[#feed_comments]] · [[#feed_post_media]] · [[#feed_posts]] · [[#feed_reactions]] · [[#feed_reports]] · [[#feed_revisions]] · [[#i18n_override_history]] · [[#i18n_overrides]] · [[#idempotency_keys]] · [[#installed_modules]] · [[#inventory_items]] · [[#mr_headers]] · [[#mr_items]] · [[#outbox_events]] · [[#super_admins]] · [[#tenant_routes]] · [[#tenants]] · [[#vendors]] · [[#workflow_definitions]] · [[#workflow_delegations]] · [[#workflow_instances]] · [[#workflow_sla_logs]] · [[#workflow_step_logs]]
 
 **Кемп (`camp_*`):** [[#camp_asset_categories]] · [[#camp_asset_movements]] · [[#camp_assets]] · [[#camp_audit_log]] · [[#camp_building_types]] · [[#camp_buildings]] · [[#camp_contract_item_prices]] · [[#camp_contract_items]] · [[#camp_contracts]] · [[#camp_cost_entries]] · [[#camp_crews]] · [[#camp_data_imports]] · [[#camp_department_shift_patterns]] · [[#camp_departments]] · [[#camp_employee_phones]] · [[#camp_employees]] · [[#camp_haul_records]] · [[#camp_maintenance_parts]] · [[#camp_maintenance_requests]] · [[#camp_meal_locations]] · [[#camp_meal_order_lines]] · [[#camp_meal_orders]] · [[#camp_movement_imports]] · [[#camp_movements]] · [[#camp_organizations]] · [[#camp_pii_access_log]] · [[#camp_position_settings]] · [[#camp_position_shift_patterns]] · [[#camp_positions]] · [[#camp_room_allocations]] · [[#camp_rooms]] · [[#camp_settings]] · [[#camp_shift_adjustments]] · [[#camp_stays]] · [[#camps]]
 
-**Үндсэн (`core_*`):** [[#core_feedback]] · [[#core_feedback_votes]] · [[#core_permission_aliases]] · [[#core_permissions]] · [[#core_position_role_templates]] · [[#core_role_permissions]] · [[#core_roles]] · [[#core_user_invites]] · [[#core_user_permissions]] · [[#core_user_roles]] · [[#core_users]]
+**Үндсэн (`core_*`):** [[#core_feedback]] · [[#core_feedback_attachments]] · [[#core_feedback_votes]] · [[#core_permission_aliases]] · [[#core_permissions]] · [[#core_position_role_templates]] · [[#core_role_permissions]] · [[#core_roles]] · [[#core_user_invites]] · [[#core_user_permissions]] · [[#core_user_roles]] · [[#core_users]]
 
 ## Бусад (tenant, MR, workflow, event bus, модулиуд)
 
@@ -130,6 +130,148 @@ Policy: `tenant_isolation_budget_periods` (permissive ALL → app_user)
 | created_at | TIMESTAMPTZ | NN |  |
 
 Policy: `rls_dlq_events` (restrictive ALL → app_user) · `tenant_isolation_dlq_events` (permissive ALL → app_user (DO-блок))
+
+### feed_comments
+
+🔒🔒 · үүсгэсэн `20261107001_feed_v0.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK NN |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| post_id | UUID | NN |  |
+| author_id | UUID | NN |  |
+| body | TEXT | NN |  |
+| report_count | INTEGER | NN |  |
+| edited_at | TIMESTAMPTZ |  |  |
+| hidden_at | TIMESTAMPTZ |  |  |
+| deleted_at | TIMESTAMPTZ |  |  |
+| deleted_by | UUID |  |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `UNIQUE (tenant_id, id)` · `FOREIGN KEY (tenant_id, post_id) REFERENCES feed_posts (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, author_id) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, deleted_by) REFERENCES core_users (tenant_id, id) ON DELETE SET NULL (deleted_by)` · `CHECK (length(btrim(body)) BETWEEN 1 AND 2000)` · `CHECK (report_count >= 0)`
+
+Policy: `tenant_isolation_feed_comments` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_feed_comments_updated_at`
+
+### feed_post_media
+
+🔒🔒 · үүсгэсэн `20261107001_feed_v0.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK NN |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| post_id | UUID | NN |  |
+| sort_order | SMALLINT | NN |  |
+| width | INTEGER | NN |  |
+| height | INTEGER | NN |  |
+| thumbhash | TEXT | NN |  |
+| variants | JSONB | NN |  |
+| total_bytes | INTEGER | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (post_id, sort_order)` · `FOREIGN KEY (tenant_id, post_id) REFERENCES feed_posts (tenant_id, id) ON DELETE CASCADE` · `CHECK (sort_order BETWEEN 0 AND 5)` · `CHECK (width > 0 AND height > 0 AND total_bytes >= 0)` · `CHECK (jsonb_typeof(variants) = 'array' AND jsonb_array_length(variants) >= 1)`
+
+Policy: `tenant_isolation_feed_post_media` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_feed_post_media_updated_at`
+
+### feed_posts
+
+🔒🔒 · үүсгэсэн `20261107001_feed_v0.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK NN |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| author_id | UUID | NN |  |
+| body | TEXT | NN |  |
+| media_count | SMALLINT | NN |  |
+| like_count | INTEGER | NN |  |
+| comment_count | INTEGER | NN |  |
+| report_count | INTEGER | NN |  |
+| edited_at | TIMESTAMPTZ |  |  |
+| hidden_at | TIMESTAMPTZ |  |  |
+| deleted_at | TIMESTAMPTZ |  |  |
+| deleted_by | UUID |  |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `UNIQUE (tenant_id, id)` · `FOREIGN KEY (tenant_id, author_id) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, deleted_by) REFERENCES core_users (tenant_id, id) ON DELETE SET NULL (deleted_by)` · `CHECK (length(body) <= 5000)` · `CHECK (media_count BETWEEN 0 AND 6 AND like_count >= 0 AND comment_count >= 0 AND report_count >= 0)`
+
+Policy: `tenant_isolation_feed_posts` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_feed_posts_updated_at`
+
+### feed_reactions
+
+🔒🔒 · үүсгэсэн `20261107001_feed_v0.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK NN |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| post_id | UUID | NN |  |
+| user_id | UUID | NN |  |
+| kind | "FeedReactionKind" | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `UNIQUE (post_id, user_id, kind)` · `FOREIGN KEY (tenant_id, post_id) REFERENCES feed_posts (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, user_id) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE`
+
+Policy: `tenant_isolation_feed_reactions` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_feed_reactions_updated_at`
+
+### feed_reports
+
+🔒🔒 · үүсгэсэн `20261107001_feed_v0.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK NN |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| post_id | UUID |  |  |
+| comment_id | UUID |  |  |
+| reporter_id | UUID | NN |  |
+| reason | "FeedReportReason" | NN |  |
+| note | TEXT |  |  |
+| status | "FeedReportStatus" | NN |  |
+| resolved_by | UUID |  |  |
+| resolved_at | TIMESTAMPTZ |  |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `FOREIGN KEY (tenant_id, post_id) REFERENCES feed_posts (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, comment_id) REFERENCES feed_comments (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, reporter_id) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, resolved_by) REFERENCES core_users (tenant_id, id) ON DELETE SET NULL (resolved_by)` · `CHECK (num_nonnulls(post_id, comment_id) = 1)` · `CHECK (note IS NULL OR length(note) <= 500)`
+
+Policy: `tenant_isolation_feed_reports` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_feed_reports_updated_at`
+
+### feed_revisions
+
+🔒🔒 · үүсгэсэн `20261107001_feed_v0.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK NN |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| post_id | UUID |  |  |
+| comment_id | UUID |  |  |
+| body | TEXT | NN |  |
+| edited_by | UUID | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `FOREIGN KEY (tenant_id, post_id) REFERENCES feed_posts (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, comment_id) REFERENCES feed_comments (tenant_id, id) ON DELETE CASCADE` · `FOREIGN KEY (tenant_id, edited_by) REFERENCES core_users (tenant_id, id) ON DELETE CASCADE` · `CHECK (num_nonnulls(post_id, comment_id) = 1)`
+
+Policy: `tenant_isolation_feed_revisions` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_feed_revisions_updated_at`
 
 ### i18n_override_history
 
@@ -1360,6 +1502,30 @@ Policy: `tenant_isolation_core_feedback` (permissive ALL → app_user (camp_appl
 
 Trigger: `trg_core_feedback_updated_at`
 
+### core_feedback_attachments
+
+🔒🔒 · үүсгэсэн `20261107001_feed_v0.sql`
+
+| Багана | Төрөл | Шинж | FK |
+|---|---|---|---|
+| id | UUID | PK NN |  |
+| tenant_id | UUID | NN | → tenants (cascade) |
+| feedback_id | UUID | NN |  |
+| sort_order | SMALLINT | NN |  |
+| width | INTEGER | NN |  |
+| height | INTEGER | NN |  |
+| thumbhash | TEXT | NN |  |
+| variants | JSONB | NN |  |
+| total_bytes | INTEGER | NN |  |
+| created_at | TIMESTAMPTZ | NN |  |
+| updated_at | TIMESTAMPTZ | NN |  |
+
+Constraint: `UNIQUE (feedback_id, sort_order)` · `FOREIGN KEY (tenant_id, feedback_id) REFERENCES core_feedback (tenant_id, id) ON DELETE CASCADE` · `CHECK (sort_order BETWEEN 0 AND 2)` · `CHECK (width > 0 AND height > 0 AND total_bytes >= 0)` · `CHECK (jsonb_typeof(variants) = 'array' AND jsonb_array_length(variants) >= 1)`
+
+Policy: `tenant_isolation_core_feedback_attachments` (permissive ALL → app_user (camp_apply_tenant_rls))
+
+Trigger: `trg_core_feedback_attachments_updated_at`
+
 ### core_feedback_votes
 
 🔒🔒 · үүсгэсэн `20261019004_core_feedback.sql`
@@ -1403,7 +1569,7 @@ Trigger: `trg_core_feedback_votes_updated_at`
 | module | TEXT | NN |  |
 | available_in | TEXT | NN |  |
 
-Constraint: `CHECK (code ~ '^(camp\|hr\|core)\.[a-z_]+\.[a-z_]+$')` · `CHECK (module = split_part(code, '.', 1))` · `CHECK (available_in IN ('v1', 'v2'))`
+Constraint: `CHECK (code ~ '^(camp\|hr\|core)\.[a-z_]+\.[a-z_]+$')` · `CHECK (module = split_part(code, '.', 1))` · `CHECK (available_in IN ('v1', 'v2'))` · `CHECK (code ~ '^(camp\|hr\|core\|feed)\.[a-z_]+\.[a-z_]+$')`
 
 ### core_position_role_templates
 
@@ -1599,6 +1765,9 @@ Trigger: `update_core_users_updated_at`
 | CoreFeedbackStatus | NEW, ACCEPTED, PLANNED, DONE, REJECTED | `20261019004_core_feedback.sql` |
 | CoreInviteChannel | LINK, EMAIL | `20261013005_core_user_invites.sql` |
 | CoreInvitePurpose | INVITE, RESET | `20261013005_core_user_invites.sql` |
+| FeedReactionKind | LIKE | `20261107001_feed_v0.sql` |
+| FeedReportReason | SPAM, OFFENSIVE, PRIVACY, OTHER | `20261107001_feed_v0.sql` |
+| FeedReportStatus | OPEN, DISMISSED, REMOVED | `20261107001_feed_v0.sql` |
 | MrStatus | DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, CANCELLED, PROVISIONALLY_APPROVED | `0004_add_native_enums.sql` |
 | OutboxStatus | PENDING, PUBLISHED, FAILED, DEAD_LETTERED | `0004_add_native_enums.sql` |
 | TierType | tier1, tier2, tier3 | `0004_add_native_enums.sql` |
@@ -1633,6 +1802,7 @@ Trigger: `update_core_users_updated_at`
 | `core_user_roles_apply_template` |  | `20261106005_core_rbac_adr007.sql` |
 | `current_tenant_id` |  | `20261010004_rls_app_user.sql` |
 | `deprovision_tenant_schema` | p_tenant_id UUID | `20260921004_schema_isolation.sql` |
+| `feed_auto_hide_threshold` |  | `20261107001_feed_v0.sql` |
 | `generate_mr_number` | p_tenant_id UUID | `0001_initial_schema.sql` |
 | `provision_tenant_schema` | p_tenant_id UUID | `20260921004_schema_isolation.sql` |
 | `update_updated_at_column` |  | `0001_initial_schema.sql` |

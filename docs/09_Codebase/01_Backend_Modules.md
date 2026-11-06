@@ -14,7 +14,7 @@ tags: [codebase, backend, camp, hr, auth]
 ## Агуулга
 - Суурь: [[#auth]] · [[#db]] · [[#common]] · [[#config, cache, gateway]] · [[#scripts]]
 - Бизнес: [[#MR + workflow]] · [[#budget, inventory, vendor, report (lite)]] · [[#event-bus]] · [[#tenant-admin, route-ingress, health]]
-- HR / Core (v0.2.2 H1, [[ADR-006_HR_Core_Module]]): [[#hr — нийтлэг]] · [[#hr/employees, hr/org, hr/positions]] · [[#hr/attendance]] · [[#hr/import]] · [[#core/organizations]] · [[#core/feedback]]
+- HR / Core (v0.2.2 H1, [[ADR-006_HR_Core_Module]]): [[#hr — нийтлэг]] · [[#hr/employees, hr/org, hr/positions]] · [[#hr/attendance]] · [[#hr/import]] · [[#core/organizations]] · [[#core/feedback]] · [[#feed]] · [[#storage]]
 - Кемп: [[#camp — нийтлэг]] · [[#camp/rbac]] · [[#camp/master]] · [[#camp/catalog]] · [[#camp/settings]] · [[#camp/attendance]] · [[#camp/assets]] · [[#camp/maintenance]] · [[#camp/data]] · [[#camp/costs, camp/audit]] · [[#camp — V2 (кодгүй)]]
 
 ---
@@ -97,10 +97,26 @@ tags: [codebase, backend, camp, hr, auth]
 - `core.module.ts` — `CoreOrganizationsService` (байгууллагууд — гэрээт г.м.), `/api/v1/core/organizations`. Хүснэгт `camp_organizations` (model `CoreOrganization`). Эрх: `camp.master.manage`.
 
 ## core/permissions
-- `permission-registry.ts` (v0.2.3 Блок 2, [[ADR-007_System_Roles_Permissions]]) — эрхийн каталогийн эх (`PERMISSIONS`: `hr.*`, `camp.*`), `PERMISSION_ALIASES` / `normalizePermissionCode` / `withLegacyAliases` (нэг хувилбар), `RETIRED_PERMISSIONS`, `availableIn`, `SYSTEM_ROLE_CODES`. `camp/common/camp-permissions.ts` нь re-export (Блок 3-т guard шилжинэ). DB-тэй тулгалт — `camp-master.integration.spec.ts`.
+- `permission-registry.ts` (v0.2.3 Блок 2, [[ADR-007_System_Roles_Permissions]]) — эрхийн каталогийн эх (`PERMISSIONS`: `hr.*`, `camp.*`), `PERMISSION_ALIASES` / `normalizePermissionCode` / `withLegacyAliases` (нэг хувилбар), `RETIRED_PERMISSIONS`, `availableIn`, `SYSTEM_ROLE_CODES`. v0.2.3 Блок 5: `FEED_MODERATE` = `feed.content.moderate` (кодын модуль `feed` — DB CHECK `ck_core_permissions_code`, migration `20261107001`). `camp/common/camp-permissions.ts` нь re-export (Блок 3-т guard шилжинэ). DB-тэй тулгалт — `camp-master.integration.spec.ts`.
 
 ## core/feedback
 - `feedback/` (v0.2.3 Блок F, FB-SYS-01a) — `CoreFeedbackService` (санал хүсэлт: илгээх, бүгдийг харах, «+1», зохиогч «Шинэ» үед засах/устгах; OWNER/ADMIN — төлөв, хариу, `doneVersion`, Excel), `/api/v1/core/feedback`. Хүснэгт `core_feedback`, `core_feedback_votes` (`vote_count` нэг tx-д тоолно). Эрх: кемпийн эрхгүй — tenant-ийн идэвхтэй хэрэглэгч бүр; админ = `core_users.role` (ADR-007-ийн дараа системийн эрх рүү). Цэвэр дүрэм `feedback-rules.ts` (unit).
+- `core-feedback-attachments.service.ts` (v0.2.3 Блок 5, 5.7) — дэлгэцийн зураг ≤3 (`core_feedback_attachments`): `POST /core/feedback/:id/attachments` (multipart `images`), `DELETE /core/feedback/attachments/:attId`, `GET /core/feedback/attachments/:attId/:w` (`@SkipAuth` — гарын үсэгтэй URL, `'b'`). Эрх = `canEditFeedback`. `FeedbackItemDto.attachments` (`MediaImageDto[]`). Санал устгахад файлыг commit-ийн дараа цэвэрлэнэ.
+
+## feed
+- `feed/` (v0.2.3 Блок 5, FEED-01) — `/api/v1/core/feed`. Хүснэгт `feed_posts`, `feed_post_media`, `feed_comments`, `feed_reactions`, `feed_revisions`, `feed_reports` (migration `20261107001`, RLS).
+  - `FeedService` — жагсаалт (cursor = `id` — uuid v7; `created_at` биш: PG мкс ↔ JS мс), пост (JSON эсвэл multipart ≤6 зураг; зургийг tx-ээс ГАДНА боловсруулж, DB алдаа гарвал файлыг устгана), засах (зөвхөн текст, өмнөх нь `feed_revisions`), soft delete (файл commit-ийн дараа устна), лайк (`createMany skipDuplicates` → тоолуур), сэтгэгдэл (засах/түүх/устгах), `mediaVariant` (гарын үсэгтэй URL → хувилбар).
+  - `FeedReportsService` — report (нэг хүн нэг удаа; OPEN тоо ≥ `feed_auto_hide_threshold()` → `hidden_at`), модератор жагсаалт, `DISMISS` / `REMOVE` (тухайн агуулгын бүх OPEN хамт).
+  - Эрх: идэвхтэй бүх хэрэглэгч бичнэ/уншина (`feed.post` хасагдсан — ролгүй ажилтан бичих ёстой, 2026-11-07); засах = зохиогч; устгах = зохиогч эсвэл `feed.content.moderate` (OWNER/ADMIN = `isTenantAdmin` → автоматаар). Харагдах: устгасан ✖, нуусан — зохиогч + модератор.
+  - `feed-rules.ts` (цэвэр: `canView/canEdit/canDelete/canReport`, cursor, хуудас — unit), `feed.dto.ts` (frontend-тэй ТАМ АДИЛ — R20). Integration: `test/feed.integration.spec.ts`.
+  - Тохиргоо: `tenants.settings.feed.autoHideReports` (анхдагч 3) — SECURITY DEFINER `feed_auto_hide_threshold()` (app хэрэглэгч `tenants`-ыг шууд уншихгүй).
+
+## storage
+- `storage/` (v0.2.3 Блок 5) — `StorageService` interface → `LocalDiskStorage` (`STORAGE_DIR`, анхдагч repo root `storage/`; pilot.ps1 `PILOT_STORAGE_DIR` → нөөцлөлт, status). Хостинг солигдвол (ADR-002) зөвхөн `storage.module.ts`.
+  - `ImageProcessorService` — `process()` (нэг хувилбар + thumbnail) ба `processResponsive()` (480/1080/2048 WebP, thumbhash, агуулгын hash; EXIF/GPS арилгана, ≤15 MB, ≤100 MP, байтаас төрөл таньна).
+  - `MediaService` — `store/storeMany/remove/open`; key `<tenant>/<ns>/<uuid>-<w>.webp` (давхардалгүй); `mediaImageDto()`.
+  - `MediaUrlSigner` (`media-url.ts`) — `<img>` нь Bearer илгээж чадахгүй тул HMAC гарын үсэгтэй URL (`t`,`e`,`s`,`v`); хугацаа 7 хоногийн хувин (URL долоо хоногт тогтвортой → кэш), нууц `MEDIA_URL_SECRET` → `JWT_SECRET`. Хариу: `Cache-Control: private, max-age=1y, immutable` + ETag/304.
+  - `image-upload.ts` — multipart зураг (глобал 2 MB / 1 файлын хязгаарыг хүсэлтэд дарна).
 
 ## camp — нийтлэг
 - `camp.module.ts` — бүх дэд модулийг бүртгэнэ; `HrModule`, `CoreModule`-ийг import хийнэ (Кемп → HR, эсрэгээрээ үгүй). `camp-hr.bridge.ts` — HR-д байрлалтын порт, ажилтны мөчлөгийн порт (`CampEmployeeSite` — Блок 5), `rooms` экспорт бүртгэнэ. `common/camp-common.module.ts` — `CampAccessService`, `CampAuditService` (HR/Core хуваалцана). Кемп = уурхайн кемпийн катеринг үйлчилгээ ([[01_plan_and_erd]]).

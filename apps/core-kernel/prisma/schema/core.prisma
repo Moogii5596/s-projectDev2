@@ -114,6 +114,15 @@ model CoreUser {
   feedbacks                 CoreFeedback[]       @relation("CoreFeedbackAuthor")
   feedbackReplies           CoreFeedback[]       @relation("CoreFeedbackReplier")
   feedbackVotes             CoreFeedbackVote[]
+  // v0.2.3 Блок 5 (20261107001) — Feed v0
+  feedPosts                 FeedPost[]           @relation("FeedPostAuthor")
+  feedPostsDeleted          FeedPost[]           @relation("FeedPostDeletedBy")
+  feedComments              FeedComment[]        @relation("FeedCommentAuthor")
+  feedCommentsDeleted       FeedComment[]        @relation("FeedCommentDeletedBy")
+  feedReactions             FeedReaction[]       @relation("FeedReactionUser")
+  feedRevisions             FeedRevision[]       @relation("FeedRevisionEditor")
+  feedReports               FeedReport[]         @relation("FeedReportReporter")
+  feedReportsResolved       FeedReport[]         @relation("FeedReportResolvedBy")
   campShiftAdjustments      HrShiftAdjustment[]    @relation("CampShiftAdjustmentCreatedBy")
   campImportsUploaded       HrMovementImport[]     @relation("CampMovementImportUploadedBy")
   campImportsConfirmed      HrMovementImport[]     @relation("CampMovementImportConfirmedBy")
