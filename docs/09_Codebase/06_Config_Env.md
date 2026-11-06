@@ -58,6 +58,7 @@ tags: [codebase, config, generated]
 | `PILOT_BACKUP_DIR` | `E:\MoogiiDev\Pilot\backups` | ── Нөөцлөлт (pilot.ps1 backup, өдөр бүр 02:00) ────────────── Өөр диск/USB/OneDrive хавтас байвал илүү. Нууц үгийг нууц үгийн менежерт ХАДГАЛ — алдвал нөөцийг сэргээх боломжгүй. |
 | `PILOT_BACKUP_PASSWORD` | `***` |  |
 | `PILOT_BACKUP_KEEP_DAYS` | `14` |  |
+| `PILOT_STORAGE_DIR` |  | Feed-ийн зургийн хавтас (анхдагч <root>\storage; backend-ийн STORAGE_DIR-тэй ЯГ ИЖИЛ байх). backup/restore-д орно, status хэмжээ + дискний сул зай харуулна |
 | `PILOT_BACKUP_COPY_DIR` |  | 7z.exe PATH-д байхгүй бол: PILOT_7Z=C:\Program Files\7-Zip\7z.exe 2 дахь хуулбар (PIL-05; заавал биш): OneDrive/USB хавтас — PILOT_BACKUP_DIR-ээс ӨӨР. Хадгалах хугацаа = PILOT_BACKUP_KEEP_DAYS |
 | `PILOT_HEALTHCHECK_URL` |  | ── Мониторинг (PIL-04; заавал биш) ─────────────────────────── healthchecks.io → 2 check үүсгэ: (1) пилот — Period 10 мин, Grace 10 мин; (2) нөөц — Period 1 өдөр, Grace 2 цаг. Ping URL нь нууц үг биш (зөвхөн ping хүлээн авна), гэхдээ нийтэд бүү тавь. |
 | `PILOT_HEALTHCHECK_BACKUP_URL` |  |  |

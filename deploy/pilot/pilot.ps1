@@ -553,6 +553,17 @@ function Copy-BackupToSecondary([hashtable] $cfg, [string] $archive, [string] $p
   }
 }
 
+function Get-StorageDir([hashtable] $cfg) {
+  $d = Get-Cfg $cfg 'PILOT_STORAGE_DIR'
+  if ($d) { return $d }
+  return (Join-Path $Root 'storage')
+}
+
+# Junction-ийг (target-г БИШ) устгана — Remove-Item -Recurse PS 5.1 дээр junction-ийн дотрох файлыг устгадаг тул
+function Remove-StorageLink([string] $link) {
+  if (Test-Path -LiteralPath $link) { [System.IO.Directory]::Delete($link) }
+}
+
 function Invoke-Backup {
   $cfg = Import-PilotEnv
   Assert-PilotEnv $cfg -NeedBackup
@@ -590,6 +601,17 @@ function Invoke-Backup {
     }
     ($manifest | ConvertTo-Json) | Set-Content -Path (Join-Path $tmp 'manifest.json') -Encoding UTF8
 
+    # Feed-ийн зураг: junction-оор tmp\storage болгож 7z-д нэмнэ (хуулбар үүсгэхгүй); хавтас байхгүй бол алгасна
+    $storageDir = Get-StorageDir $cfg
+    $storageLink = Join-Path $tmp 'storage'
+    if (Test-Path -LiteralPath $storageDir -PathType Container) {
+      New-Item -ItemType Junction -Path $storageLink -Target $storageDir | Out-Null
+      $manifest['storage'] = $true
+      ($manifest | ConvertTo-Json) | Set-Content -Path (Join-Path $tmp 'manifest.json') -Encoding UTF8
+    } else {
+      Write-Host "  storage хавтас алга ($storageDir) — алгасав"
+    }
+
     $archive = Join-Path $dir "$($Prof.BackupPrefix)$slug-$stamp.7z"
     # -mhe=on: файлын нэрийг ч шифрлэнэ (AES-256)
     Invoke-Native $sevenZip @('a', '-t7z', '-mhe=on', '-mx=5', "-p$($cfg['PILOT_BACKUP_PASSWORD'])", $archive, (Join-Path $tmp '*')) -Quiet | Out-Null
@@ -610,6 +632,7 @@ function Invoke-Backup {
     $null = Send-HealthPing $cfg 'backup' -Fail -Message "backup FAIL: $($_.Exception.Message)"
     throw
   } finally {
+    Remove-StorageLink (Join-Path $tmp 'storage')
     Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
   }
 }
@@ -678,6 +701,17 @@ function Invoke-Restore([string] $file) {
       Stop-Pilot2 "тоо зөрүүтэй: DB $($c -join '/'), нөөц $($manifest.tenants)/$($manifest.coreUsers)/$($manifest.authUsers)"
     }
     Write-Ok "сэргээв: tenants $($c[0]), хэрэглэгч $($c[1]), auth $($c[2])"
+    $restoredStorage = Join-Path $tmp 'storage'
+    if (Test-Path -LiteralPath $restoredStorage -PathType Container) {
+      $storageDir = Get-StorageDir $cfg
+      New-Item -ItemType Directory -Force -Path $storageDir | Out-Null
+      # /MIR: DB-тэй нийцүүлж одоогийн зургийг нөөцийнхөөр солино (>=8 = алдаа)
+      & robocopy $restoredStorage $storageDir /MIR /R:2 /W:2 /NFL /NDL /NJH /NJS /NP | Out-Null
+      if ($LASTEXITCODE -ge 8) { Stop-Pilot2 "storage сэргээж чадсангүй (robocopy $LASTEXITCODE): $storageDir" }
+      Write-Ok "storage сэргээв: $storageDir"
+    } else {
+      Write-Warn2 'нөөцөд storage (зураг) алга — алгаслаа'
+    }
     Invoke-Native 'docker' @('exec', $RedisContainer, 'redis-cli', 'FLUSHALL') -Quiet | Out-Null
     Write-Ok 'Redis cache цэвэрлэв'
     Write-Log 'backup.log' "RESTORE OK $file"
@@ -977,6 +1011,32 @@ function Invoke-Watchdog {
   }
 }
 
+function Show-StorageStatus([hashtable] $cfg) {
+  $dir = Get-StorageDir $cfg
+  $probe = $dir
+  if (Test-Path -LiteralPath $dir -PathType Container) {
+    $files = @(Get-ChildItem -LiteralPath $dir -Recurse -File -ErrorAction SilentlyContinue)
+    $bytes = ($files | Measure-Object -Property Length -Sum).Sum
+    if (-not $bytes) { $bytes = 0 }
+    Write-Ok ("storage: {0} MB, {1} файл ({2})" -f [math]::Round($bytes / 1MB, 1), $files.Count, $dir)
+  } else {
+    Write-Host "  storage хавтас алга ($dir)"
+    $probe = Split-Path -Parent $dir
+  }
+  # Хавтас байхгүй бол хамгийн ойрын байгаа эцэг хавтасны дискийг шалгана
+  while ($probe -and -not (Test-Path -LiteralPath $probe)) { $probe = Split-Path -Parent $probe }
+  $root = if ($probe) { [System.IO.Path]::GetPathRoot((Resolve-Path -LiteralPath $probe).Path) } else { $null }
+  if ($root -and $root -match '^[A-Za-z]:\\') {
+    $disk = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$($root.Substring(0, 2))'" -ErrorAction SilentlyContinue
+    if ($disk -and $disk.Size -gt 0) {
+      $freeGb = [math]::Round($disk.FreeSpace / 1GB, 1)
+      $pct = [math]::Round(100 * $disk.FreeSpace / $disk.Size, 1)
+      $msg = "диск $($root.Substring(0, 2)) сул зай: $freeGb GB ($pct%)"
+      if ($disk.FreeSpace -lt 10GB -or $pct -lt 10) { Write-Warn2 "$msg — дутаж байна (< 10 GB эсвэл < 10%)" } else { Write-Ok $msg }
+    }
+  }
+}
+
 function Show-Status {
   $cfg = Import-PilotEnv
   Write-Ok "профайл: $Instance ($ProjectId) · код: $Root"
@@ -1001,6 +1061,7 @@ function Show-Status {
   }
   $pub = Get-Cfg $cfg 'PUBLIC_APP_URL'
   if ($pub) { Write-Ok "нийтийн хаяг (PUBLIC_APP_URL): $pub" }
+  Show-StorageStatus $cfg
   $bdir = Get-Cfg $cfg 'PILOT_BACKUP_DIR'
   if ($bdir -and (Test-Path $bdir)) {
     $last = Get-ChildItem -Path $bdir -Filter '*.7z' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
