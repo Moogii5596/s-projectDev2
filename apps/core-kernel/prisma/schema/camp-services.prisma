@@ -150,7 +150,8 @@ model CampCostEntry {
   haulRecordId      String?          @map("haul_record_id") @db.Uuid
   mealOrderId       String?          @map("meal_order_id") @db.Uuid
   maintenancePartId String?          @map("maintenance_part_id") @db.Uuid
-  serviceType       CampServiceType? @map("service_type")
+  /// 6б: каталогийн кодын snapshot (camp_service_types.code)
+  serviceType       String?          @map("service_type")
   contractItemId    String?          @map("contract_item_id") @db.Uuid
   organizationId    String?          @map("organization_id") @db.Uuid
   description       String?

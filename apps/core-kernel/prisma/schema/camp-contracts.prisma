@@ -1,4 +1,5 @@
-// Кемп: гэрээ, үнэ — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
+// Кемп: гэрээ, үнэ, ханш, каталог — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
+// v0.2.3 Блок 6б (20261107005): үйлчилгээ / нэгж = tenant-ийн каталог (G-1, enum биш); валют, НӨАТ, ханш, сунгалт
 
 enum CampContractStatus {
   DRAFT
@@ -6,42 +7,110 @@ enum CampContractStatus {
   TERMINATED
 }
 
-enum CampServiceType {
-  SEWAGE_TRANSPORT
-  SEWAGE_DISPOSAL
-  WASTE_TRANSPORT
-  WASTE_DISPOSAL
-  MEAL
+// ── 6б Каталог ───────────────────────────────────────────────
+/// Нэгжийн каталог (tenant). Анхдагч: camp_seed_contract_catalog()
+model CoreUnit {
+  id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  code      String
+  nameMn    String   @map("name_mn")
+  nameEn    String?  @map("name_en")
+  nameZh    String?  @map("name_zh")
+  decimals  Int      @default(0) @db.SmallInt
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  serviceTypes  CampServiceType[]
+  contractItems CampContractItem[]
+
+  @@unique([tenantId, id], map: "uq_core_units_tenant_id")
+  @@unique([tenantId, code], map: "uq_core_units_code")
+  @@map("core_units")
 }
 
-enum CampContractUnit {
-  TRIP
-  M3
-  TON
-  PERSON_DAY
+/// Үйлчилгээний төрөл (tenant). quantitySource: MEAL_ORDER | HAUL | MANUAL (TEXT + CHECK)
+model CampServiceType {
+  id             String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  code           String
+  nameMn         String   @map("name_mn")
+  nameEn         String?  @map("name_en")
+  nameZh         String?  @map("name_zh")
+  quantitySource String   @map("quantity_source")
+  defaultUnitId  String?  @map("default_unit_id") @db.Uuid
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  defaultUnit   CoreUnit?          @relation(fields: [tenantId, defaultUnitId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_service_types_unit")
+  contractItems CampContractItem[]
+
+  @@unique([tenantId, id], map: "uq_camp_service_types_tenant_id")
+  @@unique([tenantId, code], map: "uq_camp_service_types_code")
+  @@map("camp_service_types")
+}
+
+/// Ханш: 1 baseCurrency = rate quoteCurrency. MONTHLY_MANUAL → rateDate = сарын 1
+model CoreExchangeRate {
+  id            String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  rateDate      DateTime @map("rate_date") @db.Date
+  baseCurrency  String   @map("base_currency")
+  quoteCurrency String   @map("quote_currency")
+  rate          Decimal  @db.Decimal(18, 6)
+  sourceNote    String?  @map("source_note")
+  createdBy     String   @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdByUser CoreUser @relation("CoreExchangeRateCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_core_exchange_rates_created_by")
+
+  @@unique([tenantId, rateDate, baseCurrency, quoteCurrency], map: "uq_core_exchange_rates")
+  @@index([tenantId, baseCurrency, quoteCurrency, rateDate(sort: Desc)], map: "idx_core_exchange_rates_lookup")
+  @@map("core_exchange_rates")
 }
 
 // ── 1.5 Гэрээ ────────────────────────────────────────────────
 model CampContract {
-  id             String             @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
-  tenantId       String             @map("tenant_id") @db.Uuid
-  campId         String             @map("camp_id") @db.Uuid
-  organizationId String             @map("organization_id") @db.Uuid
-  contractNo     String             @map("contract_no")
-  title          String
-  startDate      DateTime           @map("start_date") @db.Date
-  /// NULL = хугацаагүй
-  endDate        DateTime?          @map("end_date") @db.Date
-  status         CampContractStatus @default(DRAFT)
-  terminatedAt   DateTime?          @map("terminated_at") @db.Date
-  note           String?
-  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+  id                     String             @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId               String             @map("tenant_id") @db.Uuid
+  campId                 String             @map("camp_id") @db.Uuid
+  /// Гүйцэтгэгч
+  organizationId         String             @map("organization_id") @db.Uuid
+  /// Захиалагч (6б)
+  customerOrganizationId String?            @map("customer_organization_id") @db.Uuid
+  contractNo             String             @map("contract_no")
+  title                  String
+  startDate              DateTime           @map("start_date") @db.Date
+  /// NULL = хугацаагүй; сунгалтаар шинэчлэгдэнэ (түүх → amendments)
+  endDate                DateTime?          @map("end_date") @db.Date
+  status                 CampContractStatus @default(DRAFT)
+  terminatedAt           DateTime?          @map("terminated_at") @db.Date
+  note                   String?
+  /// ISO 4217
+  currency               String
+  paymentCurrency        String             @map("payment_currency")
+  vatRate                Decimal            @map("vat_rate") @db.Decimal(5, 2)
+  /// NONE | FIXED | MONTHLY_MANUAL (TEXT + CHECK)
+  ratePolicy             String             @default("NONE") @map("rate_policy")
+  fixedRate              Decimal?           @map("fixed_rate") @db.Decimal(18, 6)
+  /// [{percent, rule, n, note}] — нийлбэр 100 (service)
+  paymentTerms           Json               @default("[]") @map("payment_terms")
+  createdAt              DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime           @updatedAt @map("updated_at") @db.Timestamptz
 
-  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  camp         Camp               @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contracts_camp")
-  organization CoreOrganization   @relation(fields: [tenantId, organizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contracts_org")
+  tenant       Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  camp         Camp                    @relation(fields: [tenantId, campId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contracts_camp")
+  organization CoreOrganization        @relation("CampContractContractor", fields: [tenantId, organizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contracts_org")
+  customer     CoreOrganization?       @relation("CampContractCustomer", fields: [tenantId, customerOrganizationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contracts_customer")
   items        CampContractItem[]
+  amendments   CampContractAmendment[]
 
   @@unique([tenantId, id], map: "uq_camp_contracts_tenant_id")
   @@unique([tenantId, campId, id], map: "uq_camp_contracts_camp_id")
@@ -51,34 +120,39 @@ model CampContract {
   @@map("camp_contracts")
 }
 
-/// MEAL ⇔ PERSON_DAY (CHECK). campId-г гэрээнээс давтан хадгална (бүртгэл зөвхөн өөрийн кемпийн гэрээг сонгоно)
+/// Үйлчилгээ + нэгж = каталог. quantityRule (MEAL_ORDER-д): TOTAL_DIV_N (÷ quantityDivisor) | MEAL_TYPE (mealType)
+/// Давхардал: uq (contract, service_type, meal_type) NULLS NOT DISTINCT — migration-д
 model CampContractItem {
-  id          String           @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
-  tenantId    String           @map("tenant_id") @db.Uuid
-  campId      String           @map("camp_id") @db.Uuid
-  contractId  String           @map("contract_id") @db.Uuid
-  serviceType CampServiceType  @map("service_type")
-  unit        CampContractUnit
-  description String?
-  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+  id              String        @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId        String        @map("tenant_id") @db.Uuid
+  campId          String        @map("camp_id") @db.Uuid
+  contractId      String        @map("contract_id") @db.Uuid
+  serviceTypeId   String        @map("service_type_id") @db.Uuid
+  unitId          String        @map("unit_id") @db.Uuid
+  quantityRule    String?       @map("quantity_rule")
+  quantityDivisor Decimal?      @map("quantity_divisor") @db.Decimal(8, 2)
+  mealType        CampMealType? @map("meal_type")
+  description     String?
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
-  tenant             Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  contract           CampContract            @relation(fields: [tenantId, campId, contractId], references: [tenantId, campId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_contract_items_contract")
-  prices             CampContractItemPrice[]
-  haulTransport      CampHaulRecord[]        @relation("CampHaulTransportItem")
-  haulDisposal       CampHaulRecord[]        @relation("CampHaulDisposalItem")
-  mealOrders         CampMealOrder[]
-  costEntries        CampCostEntry[]
+  tenant        Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  contract      CampContract            @relation(fields: [tenantId, campId, contractId], references: [tenantId, campId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_contract_items_contract")
+  serviceType   CampServiceType         @relation(fields: [tenantId, serviceTypeId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contract_items_service_type")
+  unit          CoreUnit                @relation(fields: [tenantId, unitId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contract_items_unit")
+  prices        CampContractItemPrice[]
+  haulTransport CampHaulRecord[]        @relation("CampHaulTransportItem")
+  haulDisposal  CampHaulRecord[]        @relation("CampHaulDisposalItem")
+  mealOrders    CampMealOrder[]
+  costEntries   CampCostEntry[]
 
   @@unique([tenantId, id], map: "uq_camp_contract_items_tenant_id")
   @@unique([tenantId, campId, id], map: "uq_camp_contract_items_camp_id")
-  @@unique([contractId, serviceType], map: "uq_camp_contract_items_service")
-  @@index([tenantId, campId, serviceType], map: "idx_camp_contract_items_service")
+  @@index([tenantId, campId, serviceTypeId], map: "idx_camp_contract_items_service")
   @@map("camp_contract_items")
 }
 
-/// Тухайн өдрийн үнэ = effectiveFrom <= D-ийн хамгийн сүүлийнх
+/// Тухайн өдрийн үнэ = effectiveFrom <= D-ийн хамгийн сүүлийнх (ContractPricingService)
 model CampContractItemPrice {
   id             String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId       String   @map("tenant_id") @db.Uuid
@@ -86,13 +160,46 @@ model CampContractItemPrice {
   effectiveFrom  DateTime @map("effective_from") @db.Date
   unitPrice      Decimal  @map("unit_price") @db.Decimal(18, 2)
   vatIncluded    Boolean  @map("vat_included")
+  currency       String
+  note           String?
+  createdBy      String?  @map("created_by") @db.Uuid
+  amendmentId    String?  @map("amendment_id") @db.Uuid
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  contractItem CampContractItem @relation(fields: [tenantId, contractItemId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_contract_item_prices_item")
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  contractItem  CampContractItem       @relation(fields: [tenantId, contractItemId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_contract_item_prices_item")
+  createdByUser CoreUser?              @relation("CampContractPriceCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contract_item_prices_created_by")
+  amendment     CampContractAmendment? @relation(fields: [tenantId, amendmentId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contract_item_prices_amendment")
 
+  @@unique([tenantId, id], map: "uq_camp_contract_item_prices_tenant_id")
   @@unique([contractItemId, effectiveFrom], map: "uq_camp_contract_item_prices")
   @@index([tenantId, contractItemId, effectiveFrom(sort: Desc)], map: "idx_camp_contract_item_prices_lookup")
   @@map("camp_contract_item_prices")
+}
+
+/// Сунгалт / нэмэлт өөрчлөлт — түүх (UPDATE/DELETE trigger-ээр хориотой). amendmentType: EXTENSION | PRICE_CHANGE | TERMS | TERMINATION | OTHER
+model CampContractAmendment {
+  id              String    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  campId          String    @map("camp_id") @db.Uuid
+  contractId      String    @map("contract_id") @db.Uuid
+  amendmentType   String    @map("amendment_type")
+  effectiveDate   DateTime  @map("effective_date") @db.Date
+  previousEndDate DateTime? @map("previous_end_date") @db.Date
+  newEndDate      DateTime? @map("new_end_date") @db.Date
+  documentNo      String?   @map("document_no")
+  note            String?
+  createdBy       String    @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant        Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  contract      CampContract            @relation(fields: [tenantId, campId, contractId], references: [tenantId, campId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_camp_contract_amendments_contract")
+  createdByUser CoreUser                @relation("CampContractAmendmentCreatedBy", fields: [tenantId, createdBy], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_camp_contract_amendments_created_by")
+  prices        CampContractItemPrice[]
+
+  @@unique([tenantId, id], map: "uq_camp_contract_amendments_tenant_id")
+  @@index([tenantId, contractId, effectiveDate], map: "idx_camp_contract_amendments_contract")
+  @@map("camp_contract_amendments")
 }

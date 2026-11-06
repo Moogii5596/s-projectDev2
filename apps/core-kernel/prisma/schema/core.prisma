@@ -61,6 +61,10 @@ model Tenant {
   campContracts               CampContract[]
   campContractItems           CampContractItem[]
   campContractItemPrices      CampContractItemPrice[]
+  campContractAmendments      CampContractAmendment[]
+  campServiceTypes            CampServiceType[]
+  coreUnits                   CoreUnit[]
+  coreExchangeRates           CoreExchangeRate[]
   campHaulRecords             CampHaulRecord[]
   campMealOrders              CampMealOrder[]
   campMealOrderLines          CampMealOrderLine[]
@@ -139,6 +143,9 @@ model CoreUser {
   campMealOrdersReviewed    CampMealOrder[]          @relation("CampMealOrderReviewedBy")
   campMealExtrasCreated     CampMealOrderExtra[]     @relation("CampMealExtraCreatedBy")
   campCostEntries           CampCostEntry[]          @relation("CampCostEntryCreatedBy")
+  campContractPrices        CampContractItemPrice[]  @relation("CampContractPriceCreatedBy")
+  campContractAmendments    CampContractAmendment[]  @relation("CampContractAmendmentCreatedBy")
+  coreExchangeRates         CoreExchangeRate[]       @relation("CoreExchangeRateCreatedBy")
 
   @@unique([tenantId, email])
   @@unique([tenantId, id], map: "uq_core_users_tenant_id") // Camp D2 (20261009001)
@@ -187,7 +194,8 @@ model CoreOrganization {
 
   tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   employees       HrEmployee[]
-  contracts       CampContract[]
+  contracts       CampContract[] @relation("CampContractContractor")
+  customerContracts CampContract[] @relation("CampContractCustomer")
   costEntries     CampCostEntry[]
   cateringForCamps CampSetting[]
 

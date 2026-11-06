@@ -16,6 +16,10 @@ import { CampSettingsController } from './settings/camp-settings.controller';
 import { CampSettingsService } from './settings/camp-settings.service';
 import { MealOrdersController } from './meal-orders/meal-orders.controller';
 import { MealOrdersService } from './meal-orders/meal-orders.service';
+import { ContractCatalogController, ContractsController } from './contracts/contracts.controller';
+import { ContractCatalogService } from './contracts/contract-catalog.service';
+import { ContractsService } from './contracts/contracts.service';
+import { ContractPricingService } from './contracts/contract-pricing.service';
 import { CampMasterController, CampsController } from './master/camp-master.controller';
 import { CampsService } from './master/camps.service';
 import { CampFacilitiesService } from './master/camp-facilities.service';
@@ -47,6 +51,8 @@ import { CampCatalogService } from './catalog/camp-catalog.service';
     CampRbacLegacyController,
     CampSettingsController,
     MealOrdersController,
+    ContractCatalogController,
+    ContractsController,
     CampsController,
     CampMasterController,
     CampAttendanceController,
@@ -62,6 +68,9 @@ import { CampCatalogService } from './catalog/camp-catalog.service';
     CampUserAccessService,
     CampSettingsService,
     MealOrdersService,
+    ContractCatalogService,
+    ContractsService,
+    ContractPricingService,
     CampsService,
     CampFacilitiesService,
     CampRoomsService,
@@ -73,6 +82,6 @@ import { CampCatalogService } from './catalog/camp-catalog.service';
     CampStaysService,
     CampHrBridge,
   ],
-  exports: [CampCommonModule, CampPresenceService],
+  exports: [CampCommonModule, CampPresenceService, ContractPricingService],
 })
 export class CampModule {}
