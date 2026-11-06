@@ -1,6 +1,6 @@
 {
   "name": "@s-project/core-kernel",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "description": "S Project Core Kernel — API Gateway, Auth, Module Registry",
   "scripts": {
