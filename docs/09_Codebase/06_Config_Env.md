@@ -26,6 +26,8 @@ tags: [codebase, config, generated]
 | `SUPABASE_ANON_KEY` | `***` |  |
 | `REDIS_URL` | `redis://localhost:6379` | Redis |
 | `JWT_SECRET` | `***` | JWT (32+ тэмдэгт — production-д аюулгүй random string ашиглана) |
+| `STORAGE_DIR` | `<repo root>\storage` | Feed-ийн зургийн хавтас (backend уншина; байхгүй бол repo root\storage). Pilot-д pilot.ps1 `PILOT_STORAGE_DIR`-ээс дамжуулна |
+| `MEDIA_URL_SECRET` |  | Заавал биш. Зургийн гарын үсэгтэй URL-ийн нууц; байхгүй бол JWT_SECRET-ээс гарган авна |
 | `DEV_TENANT_SLUG` | `test-tenant` | Development |
 | `DEPLOYMENT_MODE` | `shared` | Deployment mode (ADR-001): shared = SaaS, олон tenant + RLS (default)                             dedicated = Enterprise VPC, нэг deploy = нэг tenant |
 | `RATE_LIMIT_SHORT` | `100` | Tenant rate limit (Phase 3.1) — 1с / 10с / 60с цонх тус бүрийн хүсэлтийн тоо Load test-д: RATE_LIMIT_SHORT=1000000 RATE_LIMIT_MEDIUM=1000000 RATE_LIMIT_LONG=1000000 |
@@ -58,7 +60,8 @@ tags: [codebase, config, generated]
 | `PILOT_BACKUP_DIR` | `E:\MoogiiDev\Pilot\backups` | ── Нөөцлөлт (pilot.ps1 backup, өдөр бүр 02:00) ────────────── Өөр диск/USB/OneDrive хавтас байвал илүү. Нууц үгийг нууц үгийн менежерт ХАДГАЛ — алдвал нөөцийг сэргээх боломжгүй. |
 | `PILOT_BACKUP_PASSWORD` | `***` |  |
 | `PILOT_BACKUP_KEEP_DAYS` | `14` |  |
-| `PILOT_STORAGE_DIR` |  | Feed-ийн зургийн хавтас (анхдагч <root>\storage; backend-ийн STORAGE_DIR-тэй ЯГ ИЖИЛ байх). backup/restore-д орно, status хэмжээ + дискний сул зай харуулна |
+| `PILOT_STORAGE_DIR` |  | Feed-ийн зургийн хавтас (анхдагч <root>\storage). pilot.ps1 backend асаахдаа `STORAGE_DIR` env-ээр дамжуулна (ЯГ ИЖИЛ). backup/restore-д орно, status хэмжээ + дискний сул зай харуулна |
+| `MEDIA_URL_SECRET` |  | Заавал биш. Зургийн гарын үсэгтэй URL-ийн нууц (40+ тэмдэгт); байхгүй бол JWT_SECRET-ээс гарган авна. Солиход өмнөх URL-үүд хүчингүй болно |
 | `PILOT_BACKUP_COPY_DIR` |  | 7z.exe PATH-д байхгүй бол: PILOT_7Z=C:\Program Files\7-Zip\7z.exe 2 дахь хуулбар (PIL-05; заавал биш): OneDrive/USB хавтас — PILOT_BACKUP_DIR-ээс ӨӨР. Хадгалах хугацаа = PILOT_BACKUP_KEEP_DAYS |
 | `PILOT_HEALTHCHECK_URL` |  | ── Мониторинг (PIL-04; заавал биш) ─────────────────────────── healthchecks.io → 2 check үүсгэ: (1) пилот — Period 10 мин, Grace 10 мин; (2) нөөц — Period 1 өдөр, Grace 2 цаг. Ping URL нь нууц үг биш (зөвхөн ping хүлээн авна), гэхдээ нийтэд бүү тавь. |
 | `PILOT_HEALTHCHECK_BACKUP_URL` |  |  |
