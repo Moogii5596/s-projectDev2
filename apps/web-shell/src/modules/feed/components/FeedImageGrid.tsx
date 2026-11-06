@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Button } from '../../camp/components/ui'
+import type { FeedImageDto } from '../types'
 import FeedImage, { largestVariant } from './FeedImage'
-import type { FeedImageDto } from './types'
 
 export const MAX_GRID_IMAGES = 6
 
@@ -16,9 +17,8 @@ function cellClass(n: number, i: number): string {
 }
 
 function cellSizes(n: number, i: number): string {
-  if (n === 1) return '(min-width: 768px) 640px, 100vw'
-  const half = n === 2 || n === 4 || (n === 5 && i < 2) || (n === 3 && i > 0)
-  if (n === 3 && i === 0) return '(min-width: 768px) 640px, 100vw'
+  if (n === 1 || (n === 3 && i === 0)) return '(min-width: 768px) 640px, 100vw'
+  const half = n === 2 || n === 4 || (n === 5 && i < 2) || n === 3
   return half ? '(min-width: 768px) 320px, 50vw' : '(min-width: 768px) 214px, 34vw'
 }
 
@@ -60,7 +60,7 @@ export default function FeedImageGrid({ images, dataSaver = false, className = '
               image={img}
               dataSaver={dataSaver}
               sizes={cellSizes(n, i)}
-              alt={t('feed.image.open', { n: i + 1 })}
+              alt={t('feed.ui.image.open', { n: i + 1 })}
               className="h-full w-full"
               onClick={() => setOpen(i)}
             />
@@ -71,49 +71,48 @@ export default function FeedImageGrid({ images, dataSaver = false, className = '
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={t('feed.lightbox.title')}
+          aria-label={t('feed.ui.lightbox.title')}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
           onClick={close}
         >
           <img
             data-testid="feed-lightbox-img"
             src={largestVariant(current)?.url}
-            alt={t('feed.image.open', { n: (open ?? 0) + 1 })}
+            alt={t('feed.ui.image.open', { n: (open ?? 0) + 1 })}
             className="max-h-full max-w-full object-contain"
             onClick={(e) => e.stopPropagation()}
           />
-          <button
-            type="button"
-            aria-label={t('feed.lightbox.close')}
-            onClick={close}
-            className="absolute right-3 top-3 rounded-full bg-white/20 px-3 py-1 text-white"
-          >
-            ✕
-          </button>
+          <div className="absolute right-3 top-3">
+            <Button variant="secondary" size="sm" aria-label={t('feed.ui.lightbox.close')} onClick={close}>
+              ✕
+            </Button>
+          </div>
           {n > 1 && (
             <>
-              <button
-                type="button"
-                aria-label={t('feed.lightbox.prev')}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  step(-1)
-                }}
-                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/20 px-3 py-2 text-white"
-              >
-                ‹
-              </button>
-              <button
-                type="button"
-                aria-label={t('feed.lightbox.next')}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  step(1)
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/20 px-3 py-2 text-white"
-              >
-                ›
-              </button>
+              <div className="absolute left-2 top-1/2 -translate-y-1/2">
+                <Button
+                  variant="secondary"
+                  aria-label={t('feed.ui.lightbox.prev')}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    step(-1)
+                  }}
+                >
+                  ‹
+                </Button>
+              </div>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <Button
+                  variant="secondary"
+                  aria-label={t('feed.ui.lightbox.next')}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    step(1)
+                  }}
+                >
+                  ›
+                </Button>
+              </div>
             </>
           )}
         </div>

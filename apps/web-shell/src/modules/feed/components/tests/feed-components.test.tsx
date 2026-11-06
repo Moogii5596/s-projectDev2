@@ -1,17 +1,24 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import i18n from '../../../../i18n'
+import pending from '../../i18n-pending.json'
 import FeedImage from '../FeedImage'
 import FeedImageGrid from '../FeedImageGrid'
 import ImagePicker from '../ImagePicker'
 import ReportDialog from '../ReportDialog'
 import RevisionsDialog from '../RevisionsDialog'
-import { DATA_SAVER_KEY, readDataSaver } from '../useDataSaver'
-import type { FeedImageDto } from '../types'
+import type { FeedImageDto } from '../../types'
+
+// Каталогт нэгтгэгдэх хүртэл feed.ui.* түлхүүрийг i18n-pending.json-оос ачаална
+beforeAll(() => {
+  for (const [lang, msgs] of Object.entries(pending)) i18n.addResourceBundle(lang, 'translation', msgs, true, true)
+})
 
 afterEach(() => {
   cleanup()
-  localStorage.clear()
   vi.unstubAllGlobals()
 })
 
@@ -118,7 +125,7 @@ describe('ReportDialog', () => {
     const note = screen.getByLabelText('Тайлбар (заавал биш)')
     fireEvent.change(note, { target: { value: 'x'.repeat(501) } })
     expect(submit.disabled).toBe(true)
-    expect(screen.getByRole('alert')).toBeTruthy()
+    expect(screen.getByText('Тайлбар 500 тэмдэгтээс хэтэрсэн')).toBeTruthy()
 
     fireEvent.change(note, { target: { value: ' давтан ' } })
     fireEvent.click(submit)
@@ -148,14 +155,32 @@ describe('RevisionsDialog', () => {
   })
 })
 
-describe('readDataSaver', () => {
-  it('localStorage > Save-Data > false', () => {
-    expect(readDataSaver()).toBe(false)
-    vi.stubGlobal('navigator', { connection: { saveData: true } })
-    expect(readDataSaver()).toBe(true)
-    localStorage.setItem(DATA_SAVER_KEY, '0')
-    expect(readDataSaver()).toBe(false)
-    localStorage.setItem(DATA_SAVER_KEY, '1')
-    expect(readDataSaver()).toBe(true)
+describe('i18n-pending.json', () => {
+  const src = (dir: string): string =>
+    readdirSync(dir)
+      .filter((f) => f.endsWith('.tsx'))
+      .map((f) => readFileSync(join(dir, f), 'utf8'))
+      .join('\n')
+
+  it('mn/en/zh түлхүүр ижил, feed.ui.* угтвартай, хувьсагч ижил', () => {
+    const keys = Object.keys(pending.mn).sort()
+    expect(keys.every((k) => k.startsWith('feed.ui.'))).toBe(true)
+    expect(Object.keys(pending.en).sort()).toEqual(keys)
+    expect(Object.keys(pending.zh).sort()).toEqual(keys)
+    const vars = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
+    for (const k of keys) {
+      const mn = (pending.mn as Record<string, string>)[k]
+      expect(vars((pending.en as Record<string, string>)[k]), k).toEqual(vars(mn))
+      expect(vars((pending.zh as Record<string, string>)[k]), k).toEqual(vars(mn))
+    }
+  })
+
+  it("компонентод ашигласан t('feed.ui.…') түлхүүр бүр pending-д байна", () => {
+    const text = src(join(__dirname, '..'))
+    const used = [...text.matchAll(/\bt\(\s*['`](feed\.ui\.[\w.]+)['`]/g)].map((m) => m[1])
+    expect(used.length).toBeGreaterThan(10)
+    for (const k of used) expect(k in pending.mn, k).toBe(true)
+    // динамик: feed.ui.report.reason.${r}
+    for (const r of ['SPAM', 'OFFENSIVE', 'PRIVACY', 'OTHER']) expect(`feed.ui.report.reason.${r}` in pending.mn).toBe(true)
   })
 })

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { thumbHashToDataURL } from 'thumbhash'
-import type { FeedImageDto } from './types'
+import type { FeedImageDto } from '../types'
 
 export function thumbhashUrl(b64: string): string | undefined {
   try {

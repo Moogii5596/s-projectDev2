@@ -26,7 +26,6 @@ const SCOPE = [
   ...walk(join(SRC, 'modules', 'camp')),
   // v0.2.2 Блок 6: «Хүний нөөц», урилга / нууц үгийн хуудсууд
   ...walk(join(SRC, 'modules', 'hr')),
-  ...walk(join(SRC, 'features', 'feed')),
   join(SRC, 'pages', 'SetPasswordPage.tsx'),
   join(SRC, 'pages', 'ForgotPasswordPage.tsx'),
   join(SRC, 'pages', 'ChangePasswordPage.tsx'),
