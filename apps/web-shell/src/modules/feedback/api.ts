@@ -1,4 +1,5 @@
 import apiClient from '../../api/client'
+import type { FeedImageDto } from '../feed/types'
 
 /**
  * v0.2.3 Блок F — Санал хүсэлт (`/api/v1/core/feedback`). DTO нэр backend `core-feedback.dto.ts`-тэй ТАМ АДИЛ (RULE-20).
@@ -27,6 +28,7 @@ export interface FeedbackItemDto {
   authorName: string
   createdAt: string
   updatedAt: string
+  attachments: FeedImageDto[]
 }
 
 export interface FeedbackListDto {
@@ -72,6 +74,19 @@ export const feedbackApi = {
   create: async (dto: CreateFeedbackDto): Promise<FeedbackItemDto> => (await apiClient.post<FeedbackItemDto>(BASE, dto)).data,
   update: async (id: string, dto: UpdateFeedbackDto): Promise<FeedbackItemDto> =>
     (await apiClient.patch<FeedbackItemDto>(`${BASE}/${id}`, dto)).data,
+  addAttachments: async (id: string, files: File[]): Promise<FeedImageDto[]> => {
+    const form = new FormData()
+    files.forEach((file) => form.append('images', file))
+    return (
+      await apiClient.post<FeedImageDto[]>(`${BASE}/${id}/attachments`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000,
+      })
+    ).data
+  },
+  removeAttachment: async (attId: string): Promise<void> => {
+    await apiClient.delete(`${BASE}/attachments/${attId}`)
+  },
   setStatus: async (id: string, dto: SetFeedbackStatusDto): Promise<FeedbackItemDto> =>
     (await apiClient.patch<FeedbackItemDto>(`${BASE}/${id}/status`, dto)).data,
   remove: async (id: string): Promise<void> => {
