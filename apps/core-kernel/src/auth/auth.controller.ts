@@ -19,6 +19,7 @@ import { LoginDto } from './dto/login.dto';
 import { AcceptInviteDto, ChangePasswordDto, ForgotPasswordDto, SignInDto } from './dto/sign-in.dto';
 import { InviteService } from './invite.service';
 import { SignInService, clientIpOf } from './sign-in.service';
+import { SessionRevokeService } from './session-revoke.service';
 import { SkipAuth } from '../common/decorators/skip-auth.decorator';
 import { AllowPasswordChangeRequired } from '../common/decorators/allow-password-change-required.decorator';
 import type { RequestUser } from '@s-project/shared-types';
@@ -114,7 +115,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async changePassword(@Body() dto: ChangePasswordDto, @Req() req: FastifyRequest) {
     const u = req.user!;
-    return this.signInService.changePassword(u.tenantId, u.id, dto.currentPassword, dto.newPassword);
+    // PIL-15: одоогийн session үлдэх — JWT payload-ийн session_id
+    const keepSessionId = SessionRevokeService.sessionIdFromAuthHeader(req.headers.authorization);
+    return this.signInService.changePassword(u.tenantId, u.id, dto.currentPassword, dto.newPassword, keepSessionId);
   }
 
   @Get('me')

@@ -150,3 +150,8 @@ tags: [lessons]
 - **v0.2.3 Блок 1б-ээс:** schema олон файлтай (`prisma/schema/*.prisma`, R22) — shim хийхдээ хавтсыг бүхлээр нь хуулж `_base.prisma`-д `driverAdapters` нэмнэ (`previewFeatures = ["prismaSchemaFolder", "driverAdapters"]`).
 - **v0.2.3 Блок 2 (2026-11-06) нэмэлт:** generated `wasm.js`-ийн `getQueryEngineWasmModule` (`#wasm-engine-loader`) Node-д `undefined` буцаадаг → shim-д `new WebAssembly.Module(fs.readFileSync('query_engine_bg.wasm'))` болгож засна. `DEV_TENANT_SLUG`-ийг тохируулахгүй (MR тестүүд анхдагч `test-tenant` + `supabase/seed.sql`-ийн workflow-ийг ашиглана; өөр slug → 403 «workflow definition олдсонгүй»). Үр дүн: integration 277/277.
 - **Дүрэм:** Cloud-д сүлжээний хязгаартай үед ч integration-ийг бодит PG + RLS дээр ажиллуулна (shim-ээр); тэр орчны тохиргоог repo-д оруулахгүй. Бодит GoTrue / e2e нь таны машин дээр.
+
+### [OPS-013] GoTrue `admin.updateUserById({password})` өөрөө бүх session-ыг устгадаг — `auth.sessions`-д гараар цуцлах dedup хэрэггүй
+- **Тохиолдсон (2026-11-07, v0.2.3 Блок 4 / PIL-15):** нууц үг солиход «одоогийн session үлдэх» гэж `auth.sessions`-ээс `id <> keepSessionId` устгах логик бичсэн — integration тестэд DELETE нь 0 мөр (`deleted=0`) буцаасан: GoTrue admin API нууц үг шинэчлэхдээ `auth.sessions`-ийн мөрүүдийг аль хэдийн устгасан байсан. `auth.getUser(jwt)` ч session-ыг шалддаг тул хуучин access token ч шууд 401 — бүх төхөөрөмж-session амархан цуцлагдана.
+- **Шалтгаан:** Төслийн migration/trigger биш — GoTrue-ийн өөрийн session-бүртгэлийн бодлого (нууц үг солих = бүх session цуцлах).
+- **Дүрэм:** Session цуцлахын өмнө GoTrue-ийн натураль үйлдлүүдийг (password update, ban, delete user) шалга — давхар DELETE хэрэггүй; `SessionRevokeService`-г refresh_tokens цэвэрлэгээний нөөц роль болгон үлдээв.

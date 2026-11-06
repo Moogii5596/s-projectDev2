@@ -20,8 +20,9 @@ function setup(opts: { publicUrl?: string; mail?: boolean; user?: Record<string,
   const counters = new Map<string, number>();
   const redis = { incr: vi.fn(async (k: string) => { const n = (counters.get(k) ?? 0) + 1; counters.set(k, n); return n; }), pexpire: vi.fn() };
   const config = { get: (k: string) => (k === 'PUBLIC_APP_URL' ? (opts.publicUrl ?? 'https://sino.gobiverse.website/') : undefined) };
-  const svc = new InviteService(config as never, prisma as never, system as never, userAdmin as never, mailer as never, tenantCache as never, signIn as never, redis as never);
-  return { svc, tx, system, userAdmin, mailer, tenantCache, signIn };
+  const sessions = { revokeOthers: vi.fn(), revokeAll: vi.fn().mockResolvedValue(undefined) };
+  const svc = new InviteService(config as never, prisma as never, system as never, userAdmin as never, mailer as never, tenantCache as never, signIn as never, redis as never, sessions as never);
+  return { svc, tx, system, userAdmin, mailer, tenantCache, signIn, sessions };
 }
 
 describe('InviteService (v0.2.2 Блок 3)', () => {
@@ -92,6 +93,8 @@ describe('InviteService (v0.2.2 Блок 3)', () => {
     expect(sqls.some((q) => q.includes('must_change_password = false'))).toBe(true);
     expect(sqls.some((q) => q.includes('revoked_at = now()'))).toBe(true);
     expect(s.tenantCache.invalidateMember).toHaveBeenCalledWith('t1', 'auth1');
+    // PIL-15: амжилттай accept → бүх session цуцлагдана
+    expect(s.sessions.revokeAll).toHaveBeenCalledWith('auth1');
     s.system.$queryRaw.mockResolvedValueOnce([]);
     await expect(s.svc.accept(TOKEN, 'new-password-123')).rejects.toMatchObject({ code: 'auth.invite_invalid' });
   });
@@ -103,6 +106,7 @@ describe('InviteService (v0.2.2 Блок 3)', () => {
     s.userAdmin.setPassword.mockRejectedValueOnce(Object.assign(new Error('weak'), { status: 400 }));
     await expect(s.svc.accept(TOKEN, 'new-password-123')).rejects.toThrow('weak');
     expect((s.system.$executeRaw.mock.calls[0][0] as TemplateStringsArray).join('?')).toContain('used_at = NULL');
+    expect(s.sessions.revokeAll).not.toHaveBeenCalled();
   });
 
   it('forgot: хариу үргэлж ижил; хэрэглэгч алга / дотоод имэйл → илгээхгүй; хязгаар → 429', async () => {

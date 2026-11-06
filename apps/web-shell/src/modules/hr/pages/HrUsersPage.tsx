@@ -7,6 +7,7 @@ import type { CampUser } from '../../camp/api/types'
 import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
 import { useCampMutation } from '../../camp/hooks/useCampMutation'
 import { isSystemAdmin } from '../../camp/lib/permissions'
+import { currentLang, INTL_LOCALE } from '../../../i18n'
 import { Badge, Button, Card, Empty, ErrorBox, Loading, Modal, NoAccess, Table, inputSmCls, td } from '../../camp/components/ui'
 import InviteActions from '../components/InviteActions'
 import UserPermissionsModal from '../components/UserPermissionsModal'
@@ -14,6 +15,10 @@ import { type UserState, filterUsers, loginName, userState } from '../lib/user-a
 
 const STATE_TONE = { ACTIVE: 'green', INVITED: 'yellow', NO_INVITE: 'gray', INACTIVE: 'red' } as const
 const STATES: UserState[] = ['ACTIVE', 'INVITED', 'NO_INVITE', 'INACTIVE']
+
+/** PIL-16: сүүлийн нэвтрэлтийн огноо (null → «Хэзээ ч нэвтрээгүй») */
+const fmtSignIn = (iso: string | null | undefined, neverLabel: string): string =>
+  iso ? new Date(iso).toLocaleString(INTL_LOCALE[currentLang()], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : neverLabel
 
 /**
  * /hr/:campId/users — v0.2.2 Блок 4 (B4-Q1…Q4): байгууллагын бүх хэрэглэгч (tenant түвшин).
@@ -53,7 +58,7 @@ export default function HrUsersPage() {
       <ErrorBox error={users.error} onRetry={() => users.refetch()} />
       {users.data && list.length === 0 && <Empty>{t('hr.users.empty')}</Empty>}
       {list.length > 0 && (
-        <Table head={[t('camp.common.name'), t('hr.access.login'), t('hr.users.col.employee'), t('camp.common.status'), '']}>
+        <Table head={[t('camp.common.name'), t('hr.access.login'), t('hr.users.col.employee'), t('camp.common.status'), t('hr.users.col.last_signin'), '']}>
           {list.map((u) => {
             const s = userState(u)
             return (
@@ -75,6 +80,7 @@ export default function HrUsersPage() {
                 <td className={td}>
                   <Badge tone={STATE_TONE[s]}>{t(`hr.users.state.${s}`)}</Badge>
                 </td>
+                <td className={`${td} text-gray-600 whitespace-nowrap`}>{fmtSignIn(u.lastSignInAt, t('hr.users.never_signin'))}</td>
                 <td className={`${td} text-right whitespace-nowrap space-x-3`}>
                   <Button variant="ghost" onClick={() => setPermsOf(u)}>
                     {t('hr.users.perms')}

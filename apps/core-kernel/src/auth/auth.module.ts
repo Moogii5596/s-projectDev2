@@ -8,6 +8,7 @@ import { SignInService } from './sign-in.service';
 import { UserAdminService } from './user-admin.service';
 import { MailerService } from './mailer.service';
 import { InviteService } from './invite.service';
+import { SessionRevokeService } from './session-revoke.service';
 
 @Global()
 @Module({
@@ -21,7 +22,8 @@ import { InviteService } from './invite.service';
     UserAdminService,
     MailerService,
     InviteService,
+    SessionRevokeService,
   ],
-  exports: [TenantAuthGuard, TenantContextInterceptor, TenantCacheService, AuthService, SignInService, UserAdminService, InviteService],
+  exports: [TenantAuthGuard, TenantContextInterceptor, TenantCacheService, AuthService, SignInService, UserAdminService, InviteService, SessionRevokeService],
 })
 export class AuthModule {}

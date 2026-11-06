@@ -9,7 +9,7 @@ import { CampIt, createCampIt, WEDNESDAY } from './helpers/camp-it-app';
 
 let it_: CampIt;
 const emp = async (code: string, extra: Record<string, unknown> = {}) => {
-  const r = await it_.api().post(it_.camp('/employees')).set(it_.as('admin')).send({ organizationId: it_.ids.org, departmentId: it_.ids.dept, employeeCode: code, fullName: `Н ${code}`, ...extra });
+  const r = await it_.api().post(it_.hr('/employees')).set(it_.as('admin')).send({ organizationId: it_.ids.org, departmentId: it_.ids.dept, employeeCode: code, fullName: `Н ${code}`, ...extra });
   expect(r.status).toBe(201);
   return r.body.id as string;
 };
@@ -77,8 +77,8 @@ describe('👥 FB-03 хэлтсийн тоо', () => {
     await emp('D2', { position: 'Тогооч' });
     await emp('D3', { position: 'Жолооч' });
     const gone = await emp('D4', { position: 'Инженер' });
-    await it_.api().patch(it_.camp(`/employees/${gone}`)).set(it_.as('admin')).send({ status: 'INACTIVE' });
-    const list = await it_.api().get(it_.camp('/departments')).set(it_.as('admin'));
+    await it_.api().patch(it_.hr(`/employees/${gone}`)).set(it_.as('admin')).send({ status: 'INACTIVE' });
+    const list = await it_.api().get(it_.hr('/departments')).set(it_.as('admin'));
     expect(list.body[0]).toMatchObject({ code: 'ADM', activeEmployees: 3, positions: 2, _count: { employees: 4 } });
   });
 });
@@ -88,11 +88,11 @@ describe('🗓 FB-14 ирц', () => {
     const a = await emp('R1', { crewId: it_.ids.crew, position: 'Тогооч' });
     const b = await emp('R2', { crewId: it_.ids.crew, position: 'Жолооч' });
     it_.ids.r1 = a;
-    const pre = await it_.api().post(it_.camp('/movement-imports/manual')).set(it_.as('admin')).send({ date: WEDNESDAY, direction: 'ARRIVAL', employeeIds: [a, b] });
+    const pre = await it_.api().post(it_.hr('/movement-imports/manual')).set(it_.as('admin')).send({ date: WEDNESDAY, direction: 'ARRIVAL', employeeIds: [a, b] });
     expect(pre.status).toBe(201);
     expect(pre.body.import).toMatchObject({ status: 'PREVIEW', totalRows: 2, errorRows: 0 });
     expect(pre.body.summary).toMatchObject({ arrivals: 2, offRoster: 0 });
-    const ok = await it_.api().post(it_.camp(`/movement-imports/${pre.body.import.id}/confirm`)).set(it_.as('admin'));
+    const ok = await it_.api().post(it_.hr(`/movement-imports/${pre.body.import.id}/confirm`)).set(it_.as('admin'));
     expect(ok.status).toBe(200);
     const mv = await it_.prismaAdmin.hrMovement.findMany({ where: { tenantId: it_.tenantId, employeeId: { in: [a, b] } } });
     expect(mv.map((m) => m.meals)).toEqual([['DINNER'], ['DINNER']]);
@@ -100,17 +100,17 @@ describe('🗓 FB-14 ирц', () => {
 
   it('ээлжийн бус (ростергүй) + хоолгүй → мөрийн алдаа; өөр кемпийн/байхгүй ажилтан → 400', async () => {
     const x = await emp('X1');
-    const pre = await it_.api().post(it_.camp('/movement-imports/manual')).set(it_.as('admin')).send({ date: '2026-10-09', direction: 'ARRIVAL', employeeIds: [x] });
+    const pre = await it_.api().post(it_.hr('/movement-imports/manual')).set(it_.as('admin')).send({ date: '2026-10-09', direction: 'ARRIVAL', employeeIds: [x] });
     expect(pre.body.import.errorRows).toBe(1);
-    const withMeals = await it_.api().post(it_.camp('/movement-imports/manual')).set(it_.as('admin')).send({ date: '2026-10-09', direction: 'ARRIVAL', meals: ['LUNCH', 'DINNER'], employeeIds: [x] });
+    const withMeals = await it_.api().post(it_.hr('/movement-imports/manual')).set(it_.as('admin')).send({ date: '2026-10-09', direction: 'ARRIVAL', meals: ['LUNCH', 'DINNER'], employeeIds: [x] });
     expect(withMeals.body.import.errorRows).toBe(0);
-    const bad = await it_.api().post(it_.camp('/movement-imports/manual')).set(it_.as('admin')).send({ date: '2026-10-09', direction: 'ARRIVAL', employeeIds: ['00000000-0000-4000-8000-000000000000'] });
+    const bad = await it_.api().post(it_.hr('/movement-imports/manual')).set(it_.as('admin')).send({ date: '2026-10-09', direction: 'ARRIVAL', employeeIds: ['00000000-0000-4000-8000-000000000000'] });
     expect(bad.status).toBe(400);
-    expect((await it_.api().post(it_.camp('/movement-imports/manual')).set(it_.as('nobody')).send({ date: '2026-10-09', direction: 'ARRIVAL', employeeIds: [x] })).status).toBe(403);
+    expect((await it_.api().post(it_.hr('/movement-imports/manual')).set(it_.as('nobody')).send({ date: '2026-10-09', direction: 'ARRIVAL', employeeIds: [x] })).status).toBe(403);
   });
 
   it('ирцийн жагсаалтын шүүлт: ростер, ростергүй, албан тушаал, код/нэр', async () => {
-    const q = (s: string) => it_.api().get(it_.camp(`/movements?from=2026-10-01&to=2026-10-31${s}`)).set(it_.as('admin'));
+    const q = (s: string) => it_.api().get(it_.hr(`/movements?from=2026-10-01&to=2026-10-31${s}`)).set(it_.as('admin'));
     expect((await q('')).body).toHaveLength(2);
     expect((await q(`&crewId=${it_.ids.crew}`)).body).toHaveLength(2);
     expect((await q('&crewId=none')).body).toHaveLength(0);
@@ -127,7 +127,7 @@ describe('🛏 FB-12 өрөөний самбар', () => {
     const room = await it_.prismaAdmin.campRoom.findFirstOrThrow({ where: { tenantId: it_.tenantId, roomNo: '7-01' } });
     const alloc = await it_.api().post(it_.camp('/room-allocations')).set(it_.as('admin')).send({ roomId: room.id, employeeId: it_.ids.r1, startDate: WEDNESDAY });
     expect(alloc.status).toBe(201);
-    await it_.api().patch(it_.camp(`/employees/${it_.ids.r1}`)).set(it_.as('admin')).send({ status: 'INACTIVE' });
+    await it_.api().patch(it_.hr(`/employees/${it_.ids.r1}`)).set(it_.as('admin')).send({ status: 'INACTIVE' });
     const board = await it_.api().get(it_.camp('/room-board?date=2026-10-08')).set(it_.as('admin'));
     expect(board.status).toBe(200);
     const r = board.body.rooms.find((x: { roomNo: string }) => x.roomNo === '7-01');

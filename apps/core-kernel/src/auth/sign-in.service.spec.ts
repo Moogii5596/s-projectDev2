@@ -26,8 +26,9 @@ function setup(opts: { tenantId?: string | null; rows?: Record<string, unknown[]
     del: vi.fn(async (k: string) => { counters.delete(k); return 1; }),
   };
   const config = { get: (k: string) => ({ DEPLOYMENT_MODE: 'dedicated', DEDICATED_TENANT_SLUG: 'sino' } as Record<string, string>)[k] };
-  const svc = new SignInService(config as never, system as never, tenantCache as never, redis as never, () => gotrue as never);
-  return { svc, signInWithPassword, updateUserById, queryRaw, system, tenantCache, redis };
+  const sessions = { revokeOthers: vi.fn().mockResolvedValue(undefined), revokeAll: vi.fn().mockResolvedValue(undefined) };
+  const svc = new SignInService(config as never, system as never, tenantCache as never, redis as never, () => gotrue as never, sessions as never);
+  return { svc, signInWithPassword, updateUserById, queryRaw, system, tenantCache, redis, sessions };
 }
 
 const userRow = (over: Record<string, unknown> = {}) => ({ auth_id: 'auth-1', email: 'bat@sino.mn', must_change_password: false, ...over });
@@ -46,6 +47,8 @@ describe('SignInService (v0.2.2 D-10)', () => {
       expect(s.signInWithPassword).toHaveBeenCalledWith({ email: 'bat@sino.mn', password: 'pw' });
       expect(r).toEqual({ accessToken: 'at', refreshToken: 'rt', expiresIn: 3600, expiresAt: 99, tokenType: 'bearer', mustChangePassword: false });
       expect(s.tenantCache.getTenantId).toHaveBeenCalledWith('sino'); // dedicated → Host үл хамаарна
+      // PIL-16: амжилттай нэвтрэлт → last_sign_in_at
+      expect((s.system.$executeRaw.mock.calls[0][0] as TemplateStringsArray).join('?')).toContain('last_sign_in_at = now()');
     });
 
     it('username (жижиг үсэг) ба имэйл (жижиг үсэг) замаар', async () => {
@@ -139,12 +142,13 @@ describe('SignInService (v0.2.2 D-10)', () => {
       s = setup({ rows: { self: [{ id: 'cu1', email: 'bat@sino.mn' }] } });
     });
 
-    it('одоогийнх зөв → admin update → must_change_password = false → cache цэвэрлэнэ', async () => {
+    it('одоогийнх зөв → admin update → must_change_password = false → cache цэвэрлэнэ → PIL-15: бусад session цуцлах', async () => {
       s.signInWithPassword.mockResolvedValue({ data: { session, user: { id: 'auth-1' } }, error: null });
-      await expect(s.svc.changePassword('t1', 'auth-1', 'old-password', 'new-password-123')).resolves.toEqual({ changed: true });
+      await expect(s.svc.changePassword('t1', 'auth-1', 'old-password', 'new-password-123', 'sess-keep')).resolves.toEqual({ changed: true });
       expect(s.updateUserById).toHaveBeenCalledWith('auth-1', { password: 'new-password-123' });
       expect((s.system.$executeRaw.mock.calls[0][0] as TemplateStringsArray).join('?')).toContain('must_change_password = false');
       expect(s.tenantCache.invalidateMember).toHaveBeenCalledWith('t1', 'auth-1');
+      expect(s.sessions.revokeOthers).toHaveBeenCalledWith('auth-1', 'sess-keep');
     });
 
     it('ижил нууц үг → 400; одоогийнх буруу → 400 (update хийхгүй); түгжээ → 429; бодлого → 400 weak', async () => {
@@ -158,6 +162,7 @@ describe('SignInService (v0.2.2 D-10)', () => {
       s.updateUserById.mockResolvedValueOnce({ error: { status: 422, message: 'weak' } });
       await expect(s.svc.changePassword('t1', 'auth-1', 'old', 'new-password-123')).rejects.toMatchObject({ code: 'auth.password_weak' });
       expect(s.system.$executeRaw).not.toHaveBeenCalled();
+      expect(s.sessions.revokeOthers).not.toHaveBeenCalled();
     });
   });
 

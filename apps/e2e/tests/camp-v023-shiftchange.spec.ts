@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { api } from '../helpers/api';
 import ExcelJS from 'exceljs';
 import { loginAs } from '../helpers/auth.helper';
 
@@ -22,23 +23,6 @@ const SHEET = `${WED.replace(/-/g, '.')} A ирэх`;
 
 let campId = '';
 
-async function api<T = { id: string }>(page: Page, method: string, path: string, body?: unknown): Promise<T> {
-  return page.evaluate(
-    async ([m, p, b]) => {
-      const key = Object.keys(localStorage).find((k) => /^sb-.*-auth-token$/.test(k));
-      const token = key ? (JSON.parse(localStorage.getItem(key) as string) as { access_token: string }).access_token : '';
-      const res = await fetch(`/api/v1/camp${p}`, {
-        method: m,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: b === undefined ? undefined : JSON.stringify(b),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`${m} ${p} → ${res.status} ${text}`);
-      return text ? JSON.parse(text) : null;
-    },
-    [method, path, body] as const,
-  ) as Promise<T>;
-}
 
 /** ShiftChange: хуудасны нэрэнд огноо + төрөл, 1-р мөр гарчиг, 2-р мөр толгой */
 async function shiftChange(sheets: { name: string; rows: (string | number)[][] }[]): Promise<Buffer> {
@@ -86,16 +70,16 @@ test.describe.serial('v0.2.3 R4 — HR ShiftChange импорт', () => {
   });
 
   test('бэлтгэл (API): кемп, хэлтэс, А баг, 3 ажилтан (овог / нэртэй)', async ({ page }) => {
-    campId = (await api(page, 'POST', '/camps', { code: `SC-${STAMP}`, name: `E2E ShiftChange ${STAMP}` })).id;
-    const kitchen = (await api(page, 'POST', `/camps/${campId}/meal-locations`, { name: 'Гал тогоо' })).id;
-    await api(page, 'PUT', `/camps/${campId}/settings`, {
+    campId = (await api(page, 'POST', '/camp/camps', { code: `SC-${STAMP}`, name: `E2E ShiftChange ${STAMP}` })).id;
+    const kitchen = (await api(page, 'POST', `/camp/camps/${campId}/meal-locations`, { name: 'Гал тогоо' })).id;
+    await api(page, 'PUT', `/camp/camps/${campId}/settings`, {
       vatRate: 10, changeoverWeekday: 3, rosterOnDays: 14, rosterOffDays: 14, mealOrderCutoffTime: null, defaultMealLocationId: kitchen,
     });
-    const dept = (await api(page, 'POST', `/camps/${campId}/departments`, { code: 'MINE', name: 'Уул', shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] })).id;
-    const crewA = (await api(page, 'POST', `/camps/${campId}/crews`, { code: 'A', rosterAnchorDate: WED })).id;
-    const org = (await api(page, 'POST', '/organizations', { name: `Уурхай SC ${STAMP}`, orgType: 'MAIN' })).id;
+    const dept = (await api(page, 'POST', `/hr/sites/${campId}/departments`, { code: 'MINE', name: 'Уул', shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] })).id;
+    const crewA = (await api(page, 'POST', `/hr/sites/${campId}/crews`, { code: 'A', rosterAnchorDate: WED })).id;
+    const org = (await api(page, 'POST', '/core/organizations', { name: `Уурхай SC ${STAMP}`, orgType: 'MAIN' })).id;
     for (const [n, lastName, firstName] of [[1, 'Бат', 'Дорж'], [2, 'Болд', 'Сүх'], [3, 'Сараа', 'Ням']] as const) {
-      await api(page, 'POST', `/camps/${campId}/employees`, { organizationId: org, departmentId: dept, crewId: crewA, employeeCode: ec(n), lastName, firstName });
+      await api(page, 'POST', `/hr/sites/${campId}/employees`, { organizationId: org, departmentId: dept, crewId: crewA, employeeCode: ec(n), lastName, firstName });
     }
   });
 
@@ -153,7 +137,7 @@ test.describe.serial('v0.2.3 R4 — HR ShiftChange импорт', () => {
 
   test('[R8] гэрээт байгууллагын кодгүй ажилтан → «Код автоматаар» → Z… код; байгууллагаар шүүх', async ({ page }) => {
     const orgName = `Харуул ${STAMP}`;
-    await api(page, 'POST', '/organizations', { name: orgName, orgType: 'CONTRACTOR' });
+    await api(page, 'POST', '/core/organizations', { name: orgName, orgType: 'CONTRACTOR' });
     await page.goto(`/hr/${campId}`);
     await page.waitForURL('**/employees');
     await page.getByRole('button', { name: '+ Ажилтан' }).click();

@@ -10,7 +10,7 @@ import ExcelJS from 'exceljs';
 import { asTenant, CampIt, createCampIt } from './helpers/camp-it-app';
 
 let it_: CampIt;
-const DI = (path = '') => it_.camp(`/data-imports${path}`);
+const DI = (path = '') => it_.hr(`/data-imports${path}`);
 
 async function xlsx(rows: (string | number | null)[][]): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
@@ -35,12 +35,12 @@ const binary = (res: { on: (e: string, cb: (c?: Buffer) => void) => void; setEnc
 beforeAll(async () => {
   it_ = await createCampIt('dimp-it');
   // Нэмэлт: идэвхгүй ростер, 2 дахь кемп (код давхцал)
-  await it_.api().post(it_.camp('/crews')).set(it_.as('admin')).send({ code: 'B', rosterAnchorDate: '2026-10-21' });
+  await it_.api().post(it_.hr('/crews')).set(it_.as('admin')).send({ code: 'B', rosterAnchorDate: '2026-10-21' });
   const c2 = await it_.api().post('/api/v1/camp/camps').set(it_.as('admin')).send({ code: 'C2', name: 'Кемп 2' });
   it_.ids.c2 = c2.body.id;
   const loc2 = await it_.api().post(`/api/v1/camp/camps/${it_.ids.c2}/meal-locations`).set(it_.as('admin')).send({ name: 'C2 гал тогоо' });
-  const d2 = await it_.api().post(`/api/v1/camp/camps/${it_.ids.c2}/departments`).set(it_.as('admin')).send({ code: 'D2', name: 'd2', mealLocationId: loc2.body.id });
-  const e2 = await it_.api().post(`/api/v1/camp/camps/${it_.ids.c2}/employees`).set(it_.as('admin'))
+  const d2 = await it_.api().post(`/api/v1/hr/sites/${it_.ids.c2}/departments`).set(it_.as('admin')).send({ code: 'D2', name: 'd2', mealLocationId: loc2.body.id });
+  const e2 = await it_.api().post(`/api/v1/hr/sites/${it_.ids.c2}/employees`).set(it_.as('admin'))
     .send({ organizationId: it_.ids.org, departmentId: d2.body.id, employeeCode: 'X-900', fullName: 'Өөр кемп' });
   expect(e2.status).toBe(201);
 }, 120_000);
@@ -132,10 +132,10 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
   });
 
   it('PREVIEW-ээс хойш DB өөрчлөгдвөл confirm ДАХИН шалгана (хэлтэс идэвхгүй болсон → 409)', async () => {
-    const dept = await it_.api().post(it_.camp('/departments')).set(it_.as('admin')).send({ code: 'TMP', name: 'Түр', mealLocationId: it_.ids.loc });
+    const dept = await it_.api().post(it_.hr('/departments')).set(it_.as('admin')).send({ code: 'TMP', name: 'Түр', mealLocationId: it_.ids.loc });
     const pre = await it_.api().post(DI('/employees')).set(it_.as('admin')).send({ rows: [{ employeeCode: 'E-5', fullName: 'Ням', organization: it_.ids.orgReg, department: 'TMP' }] });
     expect(pre.body.import.createRows).toBe(1);
-    expect((await it_.api().patch(it_.camp(`/departments/${dept.body.id}`)).set(it_.as('admin')).send({ isActive: false })).status).toBe(200);
+    expect((await it_.api().patch(it_.hr(`/departments/${dept.body.id}`)).set(it_.as('admin')).send({ isActive: false })).status).toBe(200);
     const res = await it_.api().post(DI(`/employees/${pre.body.import.id}/confirm`)).set(it_.as('admin')).send({});
     expect(res.status).toBe(409);
     expect(res.body.rows[0].errors[0].code).toBe('row.ref_inactive');
@@ -174,7 +174,7 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
   });
 
   it('экспорт (en) → буцааж импорт = бүгд өөрчлөлтгүй (формат ижил)', async () => {
-    const exp = await it_.api().get(it_.camp('/export/employees')).set(it_.as('admin', { 'Accept-Language': 'en' })).buffer(true).parse(binary as never);
+    const exp = await it_.api().get(it_.hr('/export/employees')).set(it_.as('admin', { 'Accept-Language': 'en' })).buffer(true).parse(binary as never);
     expect(exp.status).toBe(200);
     expect(exp.headers['content-disposition']).toMatch(/C1-employees-\d{4}-\d{2}-\d{2}\.xlsx/);
     const sheet = await readSheet(exp.body as Buffer);
@@ -199,8 +199,8 @@ describe('👥 Ажилтан — хүснэгтээр', () => {
 
   it('эрх: manager (employee.manage-гүй) импорт → 403, экспорт → 200; nobody экспорт → 403', async () => {
     expect((await it_.api().post(DI('/employees')).set(it_.as('manager')).send({ rows: [{ employeeCode: 'Z', fullName: 'z', organization: 'x', department: 'y' }] })).status).toBe(403);
-    expect((await it_.api().get(it_.camp('/export/employees')).set(it_.as('manager'))).status).toBe(200);
-    expect((await it_.api().get(it_.camp('/export/employees')).set(it_.as('nobody'))).status).toBe(403);
+    expect((await it_.api().get(it_.hr('/export/employees')).set(it_.as('manager'))).status).toBe(200);
+    expect((await it_.api().get(it_.hr('/export/employees')).set(it_.as('nobody'))).status).toBe(403);
   });
 
   it('файлын алдаа: заавал багана алга → 400 import.missing_columns (zh); .xlsx биш → 400', async () => {
@@ -235,7 +235,7 @@ describe('🏢 Хэлтэс ба өрөөний экспорт', () => {
 
   it('өрөөний экспорт: байр, дугаар, багтаамж, төлөв (шошго)', async () => {
     await it_.api().post(it_.camp('/rooms')).set(it_.as('admin')).send({ buildingId: it_.ids.b1, roomNo: '101', capacity: 4, floor: 1 });
-    const exp = await it_.api().get(it_.camp('/export/rooms')).set(it_.as('admin')).buffer(true).parse(binary as never);
+    const exp = await it_.api().get(it_.hr('/export/rooms')).set(it_.as('admin')).buffer(true).parse(binary as never);
     expect(exp.status).toBe(200);
     const sheet = await readSheet(exp.body as Buffer);
     expect(sheet.rows[0]).toEqual(['Байрны код', 'Өрөөний дугаар', 'Давхар', 'Багтаамж', 'Төлөв', 'Тэмдэглэл']);

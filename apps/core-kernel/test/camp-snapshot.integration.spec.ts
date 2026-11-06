@@ -13,16 +13,16 @@ const TODAY = '2026-10-10'; // Бямба: ростерын ирэлтээс (Л
 beforeAll(async () => {
   it_ = await createCampIt('snap-it');
   const emp = async (code: string) => {
-    const r = await it_.api().post(it_.camp('/employees')).set(it_.as('admin')).send({ organizationId: it_.ids.org, departmentId: it_.ids.dept, crewId: it_.ids.crew, employeeCode: code, fullName: `Н ${code}` });
+    const r = await it_.api().post(it_.hr('/employees')).set(it_.as('admin')).send({ organizationId: it_.ids.org, departmentId: it_.ids.dept, crewId: it_.ids.crew, employeeCode: code, fullName: `Н ${code}` });
     expect(r.status).toBe(201);
     return r.body.id as string;
   };
   const a = await emp('S1');
   const b = await emp('S2');
   it_.ids.s1 = a;
-  const pre = await it_.api().post(it_.camp('/movement-imports/manual')).set(it_.as('admin')).send({ date: WEDNESDAY, direction: 'ARRIVAL', employeeIds: [a, b] });
+  const pre = await it_.api().post(it_.hr('/movement-imports/manual')).set(it_.as('admin')).send({ date: WEDNESDAY, direction: 'ARRIVAL', employeeIds: [a, b] });
   expect(pre.status).toBe(201);
-  expect((await it_.api().post(it_.camp(`/movement-imports/${pre.body.import.id}/confirm`)).set(it_.as('admin'))).status).toBe(200);
+  expect((await it_.api().post(it_.hr(`/movement-imports/${pre.body.import.id}/confirm`)).set(it_.as('admin'))).status).toBe(200);
   const room = await it_.api().post(it_.camp('/rooms')).set(it_.as('admin')).send({ buildingId: it_.ids.b1, roomNo: '101', capacity: 2 });
   expect(room.status).toBe(201);
   const alloc = await it_.api().post(it_.camp('/room-allocations')).set(it_.as('admin')).send({ employeeId: a, roomId: room.body.id, startDate: WEDNESDAY });
@@ -58,7 +58,7 @@ describe('📸 camp:snapshot', () => {
   it('өгөгдөл өөрчлөгдвөл зөрүүг замаар нь харуулна', async () => {
     const opts = { today: TODAY, tenantSlug: it_.slug, db: 'it', pastDays: 1, futureDays: 0 };
     const a = await buildSnapshot(it_.prismaAdmin, opts);
-    await it_.api().patch(it_.camp(`/employees/${it_.ids.s1}`)).set(it_.as('admin')).send({ status: 'INACTIVE' });
+    await it_.api().patch(it_.hr(`/employees/${it_.ids.s1}`)).set(it_.as('admin')).send({ status: 'INACTIVE' });
     const b = await buildSnapshot(it_.prismaAdmin, opts);
     const diff = compareSnapshots(a, b);
     expect(diff).toContain(`camps.${it_.slug}/C1.counts.employees.ACTIVE: 2 → 1`);

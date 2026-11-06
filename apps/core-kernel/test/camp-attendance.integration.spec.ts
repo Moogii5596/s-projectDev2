@@ -49,6 +49,8 @@ const api = () => supertest(app.getHttpServer());
 const auth = () => ({ Authorization: `Bearer ${token}`, Host: HOST });
 const V1 = '/api/v1/camp';
 const camp = (path = '') => `${V1}/camps/${ids.c1}${path}`;
+/** v0.2.3 Блок 4 (QA-11): HR зам (хуучин `/camp/camps/:id/...` устсан) */
+const hr = (path = '') => `/api/v1/hr/sites/${ids.c1}${path}`;
 
 async function xlsx(rows: unknown[][]): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
@@ -57,7 +59,7 @@ async function xlsx(rows: unknown[][]): Promise<Buffer> {
   rows.forEach((r) => ws.addRow(r));
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
-const upload = async (rows: unknown[][]) => api().post(camp('/movement-imports')).set(auth()).attach('file', await xlsx(rows), 'irts.xlsx');
+const upload = async (rows: unknown[][]) => api().post(hr('/movement-imports')).set(auth()).attach('file', await xlsx(rows), 'irts.xlsx');
 const presence = async (date: string) => {
   const r = await api().get(camp(`/presence?date=${date}`)).set(auth());
   expect(r.status).toBe(200);
@@ -125,19 +127,19 @@ beforeAll(async () => {
   });
   if (st.status !== 200) throw new Error(`settings ${st.status}`);
   // v0.2.1 (Q1, Д-4): хэлтэст хоолны байршил БАЙХГҮЙ (илгээсэн ч үл тооно) — уурхайчдын "Уул" нь албан тушаалын кемпийн анхдагч
-  ids.mine = await post(camp('/departments'), {
+  ids.mine = await post(hr('/departments'), {
     code: 'MINE', name: 'Уул', mealLocationId: ids.locCamp,
     shiftPattern: [{ dayFrom: 1, dayTo: 7, shift: 'DAY' }, { dayFrom: 8, dayTo: 14, shift: 'NIGHT' }],
   });
-  ids.adm = await post(camp('/departments'), { code: 'ADM', name: 'Захиргаа', shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] });
-  ids.posMiner = await post(`${V1}/positions`, { name: 'Уурхайчин' });
+  ids.adm = await post(hr('/departments'), { code: 'ADM', name: 'Захиргаа', shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] });
+  ids.posMiner = await post(`/api/v1/hr/positions`, { name: 'Уурхайчин' });
   const ps = await api().put(camp(`/position-settings/${ids.posMiner}`)).set(auth()).send({ mealLocationId: ids.locMine });
   if (ps.status !== 200) throw new Error(`position-settings ${ps.status} ${JSON.stringify(ps.body)}`);
-  ids.crewA = await post(camp('/crews'), { code: 'A', rosterAnchorDate: '2026-10-07' });
-  ids.crewC = await post(camp('/crews'), { code: 'C', rosterAnchorDate: '2026-10-21' });
-  ids.org = await post(`${V1}/organizations`, { name: 'Уурхай', orgType: 'MAIN' });
+  ids.crewA = await post(hr('/crews'), { code: 'A', rosterAnchorDate: '2026-10-07' });
+  ids.crewC = await post(hr('/crews'), { code: 'C', rosterAnchorDate: '2026-10-21' });
+  ids.org = await post(`/api/v1/core/organizations`, { name: 'Уурхай', orgType: 'MAIN' });
   for (const [code, dept, crew] of [['E1', ids.mine, ids.crewA], ['E2', ids.mine, ids.crewA], ['E3', ids.adm, null], ['E4', ids.mine, ids.crewC]] as const) {
-    ids[code] = await post(camp('/employees'), {
+    ids[code] = await post(hr('/employees'), {
       organizationId: ids.org, departmentId: dept, crewId: crew, employeeCode: code, fullName: `Ажилтан ${code}`,
       ...(dept === ids.mine ? { positionId: ids.posMiner } : {}),
     });
@@ -158,7 +160,7 @@ afterAll(async () => {
 
 describe('📥 Ирцийн xlsx импорт', () => {
   it('загвар татах → xlsx', async () => {
-    const r = await api().get(camp('/movement-imports/template')).set(auth());
+    const r = await api().get(hr('/movement-imports/template')).set(auth());
     expect(r.status).toBe(200);
     expect(r.headers['content-type']).toContain('spreadsheetml');
   });
@@ -172,11 +174,11 @@ describe('📥 Ирцийн xlsx импорт', () => {
     expect(r.status).toBe(201);
     expect(r.body.import).toMatchObject({ status: 'PREVIEW', totalRows: 3, errorRows: 2 });
     expect(r.body.rows[1].errors[0]).toMatch(/хоол заавал/);
-    const c = await api().post(camp(`/movement-imports/${r.body.import.id}/confirm`)).set(auth());
+    const c = await api().post(hr(`/movement-imports/${r.body.import.id}/confirm`)).set(auth());
     expect(c.status).toBe(409);
     expect(c.body.errors).toHaveLength(2);
     expect(await prismaAdmin.hrMovement.count({ where: { tenantId } })).toBe(0);
-    expect((await api().post(camp(`/movement-imports/${r.body.import.id}/cancel`)).set(auth())).status).toBe(200);
+    expect((await api().post(hr(`/movement-imports/${r.body.import.id}/cancel`)).set(auth())).status).toBe(200);
   });
 
   it('[R4.1] PREVIEW мөр засах / устгах → дахин төлөвлөнө (DB-д бичихгүй); validation; CANCEL-ийн дараа 409', async () => {
@@ -210,7 +212,7 @@ describe('📥 Ирцийн xlsx импорт', () => {
     const back = await patch({ rows: [{ row: 3, deleted: false }] });
     expect(back.body.import.errorRows).toBe(1);
 
-    expect((await api().post(camp(`/movement-imports/${id}/cancel`)).set(auth())).status).toBe(200);
+    expect((await api().post(hr(`/movement-imports/${id}/cancel`)).set(auth())).status).toBe(200);
     const late = await patch({ rows: [{ row: 3, deleted: true }] });
     expect([late.status, late.body.code]).toEqual([409, 'camp.err.attendance.11']);
   });
@@ -228,10 +230,10 @@ describe('📥 Ирцийн xlsx импорт', () => {
     expect(r.body.import.errorRows).toBe(0);
     expect(r.body.rows.map((x: { kind: string }) => x.kind)).toEqual(['ROSTER', 'ROSTER', 'OFF_ROSTER', 'OFF_ROSTER', 'ROSTER', 'ROSTER']);
     ids.import = r.body.import.id;
-    const c = await api().post(camp(`/movement-imports/${ids.import}/confirm`)).set(auth());
+    const c = await api().post(hr(`/movement-imports/${ids.import}/confirm`)).set(auth());
     expect(c.status).toBe(200);
     expect(c.body).toEqual({ status: 'CONFIRMED', movements: 6, newStays: 4, closedStays: 0, adjustments: 0 });
-    expect((await api().post(camp(`/movement-imports/${ids.import}/confirm`)).set(auth())).status).toBe(409);
+    expect((await api().post(hr(`/movement-imports/${ids.import}/confirm`)).set(auth())).status).toBe(409);
   });
 
   it('ижил файлыг дахин → давхардал PREVIEW-д илэрнэ', async () => {
@@ -267,15 +269,15 @@ describe('🍽️ Хоолны суурь тоо (presence)', () => {
 
   it('ээлжийн зохицуулалт: E1 10-16..10-17 ӨДӨР → 10-16 өдрийн хоол уулд; давхцал → 409', async () => {
     const body = { employeeIds: [ids.E1], startDate: '2026-10-16', endDate: '2026-10-17', shift: 'DAY', reasonType: 'SHIFT_CHANGE' };
-    expect((await api().post(camp('/shift-adjustments')).set(auth()).send(body)).status).toBe(201);
-    expect((await api().post(camp('/shift-adjustments')).set(auth()).send({ ...body, startDate: '2026-10-17', endDate: '2026-10-18' })).status).toBe(409);
+    expect((await api().post(hr('/shift-adjustments')).set(auth()).send(body)).status).toBe(201);
+    expect((await api().post(hr('/shift-adjustments')).set(auth()).send({ ...body, startDate: '2026-10-17', endDate: '2026-10-18' })).status).toBe(409);
     const p = await presence('2026-10-16');
     expect(p.simple).toContain('LUNCH@MINE=1');
     expect(p.simple).not.toContain('NIGHT@MINE=1');
   });
 
   it('календарь: E1 10-07..10-09 (ирэх 0 / загвар)', async () => {
-    const r = await api().get(camp(`/shift-calendar?from=2026-10-07&to=2026-10-09&departmentId=${ids.mine}`)).set(auth());
+    const r = await api().get(hr(`/shift-calendar?from=2026-10-07&to=2026-10-09&departmentId=${ids.mine}`)).set(auth());
     expect(r.status).toBe(200);
     const e1 = r.body.employees.find((e: { employeeCode: string }) => e.employeeCode === 'E1');
     expect(e1.cells.map((c: { shift: string | null; source: string; presence: string | null }) => [c.shift, c.source, c.presence])).toEqual([
@@ -286,14 +288,14 @@ describe('🍽️ Хоолны суурь тоо (presence)', () => {
 
 describe('✍️ Гараар бүртгэл', () => {
   it('ээлжийн бус ирэлт хоолгүй → 400; хоолтой → 201; сүүлийнхийг устгах → 200; өмнөхийг → 409', async () => {
-    expect((await api().post(camp('/movements')).set(auth()).send({ employeeId: ids.E2, date: '2026-10-20', direction: 'ARRIVAL' })).status).toBe(400);
-    const ok = await api().post(camp('/movements')).set(auth()).send({ employeeId: ids.E2, date: '2026-10-20', direction: 'ARRIVAL', meals: ['LUNCH', 'DINNER'], shift: 'NIGHT' });
+    expect((await api().post(hr('/movements')).set(auth()).send({ employeeId: ids.E2, date: '2026-10-20', direction: 'ARRIVAL' })).status).toBe(400);
+    const ok = await api().post(hr('/movements')).set(auth()).send({ employeeId: ids.E2, date: '2026-10-20', direction: 'ARRIVAL', meals: ['LUNCH', 'DINNER'], shift: 'NIGHT' });
     expect(ok.status).toBe(201);
     expect(ok.body).toMatchObject({ kind: 'OFF_ROSTER', meals: ['LUNCH', 'DINNER'] });
-    const list = await api().get(camp(`/movements?from=2026-10-01&to=2026-10-31&employeeId=${ids.E2}`)).set(auth());
+    const list = await api().get(hr(`/movements?from=2026-10-01&to=2026-10-31&employeeId=${ids.E2}`)).set(auth());
     const byDate = Object.fromEntries(list.body.map((m: { movementDate: string; id: string }) => [m.movementDate, m.id]));
-    expect((await api().delete(camp(`/movements/${byDate['2026-10-12']}`)).set(auth())).status).toBe(409);
-    expect((await api().delete(camp(`/movements/${byDate['2026-10-20']}`)).set(auth())).status).toBe(200);
+    expect((await api().delete(hr(`/movements/${byDate['2026-10-12']}`)).set(auth())).status).toBe(409);
+    expect((await api().delete(hr(`/movements/${byDate['2026-10-20']}`)).set(auth())).status).toBe(200);
   });
 });
 
@@ -359,7 +361,7 @@ describe('📥 [R4] HR ShiftChange — PREVIEW, ростерын зөрүү, м�
   }
 
   it('C баг 2026-11-18 ирэх: нэрээр тулгана, ЗОХИЦУУЛАЛТ алгасна, ростерын зөрүү (E4); алдаатай мөрийг устгахад загвар / алгассан хуудас хэвээр', async () => {
-    const e5 = await api().post(camp('/employees')).set(auth()).send({
+    const e5 = await api().post(hr('/employees')).set(auth()).send({
       organizationId: ids.org, departmentId: ids.mine, crewId: ids.crewC, employeeCode: 'E5', lastName: 'Бат', firstName: 'Дорж', positionId: ids.posMiner,
     });
     expect(e5.status).toBe(201);

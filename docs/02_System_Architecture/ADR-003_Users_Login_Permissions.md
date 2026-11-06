@@ -40,6 +40,7 @@ tags: [auth, v0.2.2]
 | **Нэг удаагийн нууц үг** | Аль ч | Систем 10 тэмдэгт үүсгэнэ, нэг удаа харуулна → **эхний нэвтрэлт дээр заавал шинэ нууц үг** (`core_users.must_change_password`; backend бусад API-г 403 `PASSWORD_CHANGE_REQUIRED`-аар хаана) |
 - "Нууц үг мартсан": имэйлтэй бол имэйл, үгүй бол админаас шинэ линк / нэг удаагийн нууц үг.
 - Хэрэглэгч өөрөө нууц үгээ солих (профайл).
+- **Session бодлого (v0.2.3 Блок 4, PIL-15, 2026-11-07):** нууц үг солих (`/auth/change-password`) болон урилга / reset хүлээн авах (`/auth/invites/:token/accept`) амжилттай бол **бүх GoTrue session-ууд цуцлагдана** — нэвтэрсэн төхөөрөмжүүд дахин нэвтрэх шаардлагатай. `SessionRevokeService` (`auth.sessions` + `auth.refresh_tokens` шууд устгах) нөөц sektörоор ажиллана; NB: GoTrue `admin.updateUserById({password})` өөрөө бүх session-ыг устгадаг (баталсан — DELETE 0 мөр). Одоогийн `last_sign_in_at`-ийг `SignInService` амжилттай нэвтрэлт бүрт бичнэ (PIL-16).
 - **Имэйл илгээх:** Gmail SMTP (app password; Gmail-д 2FA асаалттай байх; өдөрт ~500 хязгаар) — `.env`: `SMTP_HOST/PORT/USER/PASS/FROM`. Supabase Auth-ийн SMTP + имэйлийн загвар 3 хэлээр. Пилотын `site_url` = Funnel хаяг (линк зөв хаяг руу заана).
 - Нууц үгийн бодлого: ≥ 10 тэмдэгт (пилотын нэг удаагийн нууц үг 10–16).
 - **Хэрэгжүүлэлт (v0.2.2 Блок 3, 2026-10-13 — tech plan D-03, D-04):**

@@ -59,6 +59,8 @@ const api = () => supertest(app.getHttpServer());
 const as = (who: Who) => ({ Authorization: `Bearer ${tokens[who]}`, Host: HOST });
 const V1 = '/api/v1/camp';
 const camp = (path = '') => `${V1}/camps/${ids.c1}${path}`;
+/** v0.2.3 Блок 4 (QA-11): HR зам (хуучин `/camp/camps/:id/...` устсан) */
+const hr = (path = '') => `/api/v1/hr/sites/${ids.c1}${path}`;
 
 beforeAll(async () => {
   prismaAdmin = new PrismaClient({ datasources: { db: { url: dbUrl } } });
@@ -199,7 +201,7 @@ describe('🏕️ Кемп, тохиргоо, байршил', () => {
 
 describe('🏢 Хэлтэс + ээлжийн загвар, баг, байр/өрөө, байгууллага', () => {
   it('хэлтэс: 7/7 загвартай (201); цоорхой загвар → 400 мессежтэй; v0.2.1: хоолны байршлыг үл тооно', async () => {
-    const mine = await api().post(camp('/departments')).set(as('admin')).send({
+    const mine = await api().post(hr('/departments')).set(as('admin')).send({
       code: 'MINE', name: 'Уул засвар', mealLocationId: ids.locMine,
       shiftPattern: [{ dayFrom: 8, dayTo: 14, shift: CampShiftType.NIGHT }, { dayFrom: 1, dayTo: 7, shift: CampShiftType.DAY }],
     });
@@ -209,15 +211,15 @@ describe('🏢 Хэлтэс + ээлжийн загвар, баг, байр/өр
       { dayFrom: 8, dayTo: 14, shift: 'NIGHT' },
     ]);
     ids.deptMine = mine.body.id;
-    ids.deptAdm = (await api().post(camp('/departments')).set(as('admin')).send({ code: 'ADM', name: 'Захиргаа', mealLocationId: ids.locCamp })).body.id;
+    ids.deptAdm = (await api().post(hr('/departments')).set(as('admin')).send({ code: 'ADM', name: 'Захиргаа', mealLocationId: ids.locCamp })).body.id;
 
-    const gap = await api().put(camp(`/departments/${ids.deptAdm}/shift-pattern`)).set(as('admin')).send({ segments: [{ dayFrom: 1, dayTo: 10, shift: 'DAY' }] });
+    const gap = await api().put(hr(`/departments/${ids.deptAdm}/shift-pattern`)).set(as('admin')).send({ segments: [{ dayFrom: 1, dayTo: 10, shift: 'DAY' }] });
     expect(gap.status).toBe(400);
     expect(gap.body.message).toMatch(/Дутуу: 11–14/);
-    const full = await api().put(camp(`/departments/${ids.deptAdm}/shift-pattern`)).set(as('admin')).send({ segments: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] });
+    const full = await api().put(hr(`/departments/${ids.deptAdm}/shift-pattern`)).set(as('admin')).send({ segments: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] });
     expect(full.status).toBe(200);
     // v0.2.1 (Д-4): хэлтсийн хоолны байршлыг үл тооно — хуучин клиент (өөр кемпийн байршилтай ч) эвдрэхгүй, DB-д бичигдэхгүй
-    const legacy = await api().post(camp('/departments')).set(as('admin')).send({ code: 'X', name: 'x', mealLocationId: ids.locC2 });
+    const legacy = await api().post(hr('/departments')).set(as('admin')).send({ code: 'X', name: 'x', mealLocationId: ids.locC2 });
     expect(legacy.status).toBe(201);
     expect((await prismaAdmin.hrDepartment.findUniqueOrThrow({ where: { id: legacy.body.id } })).mealLocationId).toBeNull();
     expect((await prismaAdmin.hrDepartment.findUniqueOrThrow({ where: { id: ids.deptMine } })).mealLocationId).toBeNull();
@@ -232,11 +234,11 @@ describe('🏢 Хэлтэс + ээлжийн загвар, баг, байр/өр
   });
 
   it('баг: Лхагва → 201 (YYYY-MM-DD); Пүрэв → 400', async () => {
-    const a = await api().post(camp('/crews')).set(as('admin')).send({ code: 'A', rosterAnchorDate: WEDNESDAY });
+    const a = await api().post(hr('/crews')).set(as('admin')).send({ code: 'A', rosterAnchorDate: WEDNESDAY });
     expect(a.status).toBe(201);
     expect(a.body.rosterAnchorDate).toBe(WEDNESDAY);
     ids.crewA = a.body.id;
-    expect((await api().post(camp('/crews')).set(as('admin')).send({ code: 'B', rosterAnchorDate: '2026-10-08' })).status).toBe(400);
+    expect((await api().post(hr('/crews')).set(as('admin')).send({ code: 'B', rosterAnchorDate: '2026-10-08' })).status).toBe(400);
   });
 
   it('байр, өрөө: 201; capacity 0 → 400; өөр кемпийн байр → 400', async () => {
@@ -251,41 +253,41 @@ describe('🏢 Хэлтэс + ээлжийн загвар, баг, байр/өр
   });
 
   it('байгууллага: 201; давхар регистр → 409', async () => {
-    const o = await api().post(`${V1}/organizations`).set(as('admin')).send({ name: 'Уурхай ХХК', regNumber: `R${STAMP}`, orgType: 'MAIN' });
+    const o = await api().post(`/api/v1/core/organizations`).set(as('admin')).send({ name: 'Уурхай ХХК', regNumber: `R${STAMP}`, orgType: 'MAIN' });
     expect(o.status).toBe(201);
     ids.org = o.body.id;
-    expect((await api().post(`${V1}/organizations`).set(as('admin')).send({ name: 'Dup', regNumber: `R${STAMP}`, orgType: 'CONTRACTOR' })).status).toBe(409);
+    expect((await api().post(`/api/v1/core/organizations`).set(as('admin')).send({ name: 'Dup', regNumber: `R${STAMP}`, orgType: 'CONTRACTOR' })).status).toBe(409);
   });
 });
 
 describe('👷 Ажилтан', () => {
   it('3 ажилтан (201); давхар код → 409; өөр кемпийн хэлтэс → 400', async () => {
     for (const [code, dept] of [['E001', ids.deptMine], ['E002', ids.deptMine], ['E003', ids.deptAdm]] as const) {
-      const res = await api().post(camp('/employees')).set(as('admin')).send({
+      const res = await api().post(hr('/employees')).set(as('admin')).send({
         organizationId: ids.org, departmentId: dept, crewId: code === 'E003' ? null : ids.crewA, employeeCode: code, fullName: `Ажилтан ${code}`,
       });
       expect(res.status).toBe(201);
     }
-    expect((await api().post(camp('/employees')).set(as('admin')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E001', fullName: 'dup' })).status).toBe(409);
-    const c2dept = await api().post(`${V1}/camps/${ids.c2}/departments`).set(as('admin')).send({ code: 'D', name: 'd', mealLocationId: ids.locC2 });
-    expect((await api().post(camp('/employees')).set(as('admin')).send({ organizationId: ids.org, departmentId: c2dept.body.id, employeeCode: 'E009', fullName: 'x' })).status).toBe(400);
+    expect((await api().post(hr('/employees')).set(as('admin')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E001', fullName: 'dup' })).status).toBe(409);
+    const c2dept = await api().post(`/api/v1/hr/sites/${ids.c2}/departments`).set(as('admin')).send({ code: 'D', name: 'd', mealLocationId: ids.locC2 });
+    expect((await api().post(hr('/employees')).set(as('admin')).send({ organizationId: ids.org, departmentId: c2dept.body.id, employeeCode: 'E009', fullName: 'x' })).status).toBe(400);
   });
 
   it('cursor: limit=2 → 2 + nextCursor → 1 (давхардалгүй); хайлт; буруу cursor → 400', async () => {
-    const p1 = await api().get(camp('/employees?limit=2')).set(as('admin'));
+    const p1 = await api().get(hr('/employees?limit=2')).set(as('admin'));
     expect(p1.status).toBe(200);
     expect(p1.body).toMatchObject({ hasMore: true });
-    const p2 = await api().get(camp(`/employees?limit=2&cursor=${p1.body.nextCursor}`)).set(as('admin'));
+    const p2 = await api().get(hr(`/employees?limit=2&cursor=${p1.body.nextCursor}`)).set(as('admin'));
     expect(p2.body).toMatchObject({ hasMore: false, nextCursor: null });
     const codes = [...p1.body.data, ...p2.body.data].map((e: { employeeCode: string }) => e.employeeCode).sort();
     expect(codes).toEqual(['E001', 'E002', 'E003']);
-    const q = await api().get(camp('/employees?q=e003')).set(as('admin'));
+    const q = await api().get(hr('/employees?q=e003')).set(as('admin'));
     expect(q.body.data.map((e: { employeeCode: string }) => e.employeeCode)).toEqual(['E003']);
-    expect((await api().get(camp('/employees?cursor=garbage')).set(as('admin'))).status).toBe(400);
+    expect((await api().get(hr('/employees?cursor=garbage')).set(as('admin'))).status).toBe(400);
   });
 
   it('идэвхтэй ажилтантай хэлтэс идэвхгүй болгох → 409', async () => {
-    expect((await api().patch(camp(`/departments/${ids.deptMine}`)).set(as('admin')).send({ isActive: false })).status).toBe(409);
+    expect((await api().patch(hr(`/departments/${ids.deptMine}`)).set(as('admin')).send({ isActive: false })).status).toBe(409);
   });
 });
 
@@ -302,14 +304,14 @@ describe('👥 Кемпийн роль → эрх (зөвхөн тэр кемп�
   });
 
   it('manager: C1 уншина (200), C2 → 403; кемп жагсаалтад зөвхөн C1; ажилтан үүсгэх эрхгүй → 403', async () => {
-    expect((await api().get(camp('/employees')).set(as('manager'))).status).toBe(200);
-    expect((await api().get(`${V1}/camps/${ids.c2}/departments`).set(as('manager'))).status).toBe(403);
+    expect((await api().get(hr('/employees')).set(as('manager'))).status).toBe(200);
+    expect((await api().get(`/api/v1/hr/sites/${ids.c2}/departments`).set(as('manager'))).status).toBe(403);
     const list = await api().get(`${V1}/camps`).set(as('manager'));
     expect(list.body.map((c: { code: string }) => c.code)).toEqual(['C1']);
     const me = await api().get(`${V1}/me/permissions?campId=${ids.c1}`).set(as('manager'));
     expect(me.body.permissions).toContain('camp.meal.order');
     expect(me.body.permissions).not.toContain('camp.employee.manage');
-    expect((await api().post(camp('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E010', fullName: 'x' })).status).toBe(403);
+    expect((await api().post(hr('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E010', fullName: 'x' })).status).toBe(403);
   });
 
   it('админ "Кемп менежер"-т employee.manage нэмж ХЭРЭГЖҮҮЛЭХЭД manager үүсгэж чадна (201); буцааж хэрэгжүүлэхэд 403 (v0.2.2: загвар ≠ автомат)', async () => {
@@ -321,13 +323,13 @@ describe('👥 Кемпийн роль → эрх (зөвхөн тэр кемп�
     expect(added.status).toBe(200);
     expect(added.body.pendingUsers).toBeGreaterThan(0);
     // ADR-003 §2.4: хэрэгжүүлэхээс өмнө эрх өөрчлөгдөхгүй
-    expect((await api().post(camp('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E012', fullName: 'x' })).status).toBe(403);
+    expect((await api().post(hr('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E012', fullName: 'x' })).status).toBe(403);
     expect((await apply()).status).toBe(200);
-    const ok = await api().post(camp('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E010', fullName: 'Менежерийн нэмсэн' });
+    const ok = await api().post(hr('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E010', fullName: 'Менежерийн нэмсэн' });
     expect(ok.status).toBe(201);
     expect((await put(original)).status).toBe(200);
     expect((await apply()).status).toBe(200);
-    expect((await api().post(camp('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E011', fullName: 'x' })).status).toBe(403);
+    expect((await api().post(hr('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E011', fullName: 'x' })).status).toBe(403);
     expect((await put(['camp.unknown.perm'])).status).toBe(400);
   });
 
@@ -337,7 +339,7 @@ describe('👥 Кемпийн роль → эрх (зөвхөн тэр кемп�
     expect(custom.status).toBe(201);
     expect((await api().delete(`${V1}/roles/${custom.body.id}`).set(as('admin'))).status).toBe(200);
     expect((await api().delete(`${V1}/user-roles/${ids.urManager}`).set(as('admin'))).status).toBe(200);
-    expect((await api().get(camp('/employees')).set(as('manager'))).status).toBe(403);
+    expect((await api().get(hr('/employees')).set(as('manager'))).status).toBe(403);
   });
 });
 
@@ -411,27 +413,29 @@ describe('🔒 RLS leakage (app_user)', () => {
 
 describe('🆔 [R7] Кодгүй ажилтан — автомат код (PIL-25)', () => {
   const c2 = (path = '') => `${V1}/camps/${ids.c2}${path}`;
+  // QA-12: HR замууд /hr/sites/:id — хуучин /camp/camps/:id/{employees,departments} устсан
+  const hr2 = (path = '') => `/api/v1/hr/sites/${ids.c2}${path}`;
   const mkEmp = (path: string, dept: string, body: object = {}) =>
     api().post(path).set(as('admin')).send({ organizationId: ids.org, departmentId: dept, lastName: 'Автобус', firstName: 'Жолооч', ...body });
 
   it('код өгөөгүй → Z0001, Z0002 (зэрэг үүсгэхэд давхардахгүй); код солих → дараагийнх түүнээс; угтвар тохиргоо (кемп бүр)', async () => {
-    const dept = (await api().post(c2('/departments')).set(as('admin')).send({ code: 'GRD', name: 'Харуул', mealLocationId: ids.locC2 })).body.id;
-    const r = await Promise.all([mkEmp(c2('/employees'), dept), mkEmp(c2('/employees'), dept), mkEmp(c2('/employees'), dept)]);
+    const dept = (await api().post(hr2('/departments')).set(as('admin')).send({ code: 'GRD', name: 'Харуул', mealLocationId: ids.locC2 })).body.id;
+    const r = await Promise.all([mkEmp(hr2('/employees'), dept), mkEmp(hr2('/employees'), dept), mkEmp(hr2('/employees'), dept)]);
     expect(r.map((x) => x.status)).toEqual([201, 201, 201]);
     expect(r.map((x) => x.body.employeeCode).sort()).toEqual(['Z0001', 'Z0002', 'Z0003']);
 
     // HR ID ирсэн / гараар солих (R7.4) — Z0003 → Z0007 → дараагийн автомат Z0008
     const third = r.find((x) => x.body.employeeCode === 'Z0003')!.body.id;
-    expect((await api().patch(c2(`/employees/${third}`)).set(as('admin')).send({ employeeCode: 'Z0007' })).status).toBe(200);
-    expect((await mkEmp(c2('/employees'), dept)).body.employeeCode).toBe('Z0008');
+    expect((await api().patch(hr2(`/employees/${third}`)).set(as('admin')).send({ employeeCode: 'Z0007' })).status).toBe(200);
+    expect((await mkEmp(hr2('/employees'), dept)).body.employeeCode).toBe('Z0008');
 
     const base = { vatRate: 10, changeoverWeekday: 3, rosterOnDays: 14, rosterOffDays: 14, mealOrderCutoffTime: null, defaultMealLocationId: null };
     expect((await api().put(c2('/settings')).set(as('admin')).send({ ...base, autoCodePrefix: 'Z1' })).status).toBe(400);
     const st = await api().put(c2('/settings')).set(as('admin')).send({ ...base, autoCodePrefix: 'gr' });
     expect([st.status, st.body.autoCodePrefix]).toEqual([200, 'GR']);
-    expect((await mkEmp(c2('/employees'), dept)).body.employeeCode).toBe('GR0001');
+    expect((await mkEmp(hr2('/employees'), dept)).body.employeeCode).toBe('GR0001');
     // C1-ийн угтвар Z хэвээр, дугаарлалт tenant даяар
-    expect((await mkEmp(camp('/employees'), ids.deptAdm)).body.employeeCode).toBe('Z0009');
+    expect((await mkEmp(hr('/employees'), ids.deptAdm)).body.employeeCode).toBe('Z0009');
     // угтвар өгөөгүй PUT → өөрчлөхгүй
     expect((await api().put(c2('/settings')).set(as('admin')).send(base)).body.autoCodePrefix).toBe('GR');
   });

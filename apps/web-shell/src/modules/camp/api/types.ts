@@ -147,6 +147,8 @@ export interface CampUser {
   internalEmail: boolean
   employee: { id: string; employeeCode: string; fullName: string; campId: string; campCode: string } | null
   invite: { status: InviteStatus; channel: InviteChannel; expiresAt: string; createdAt: string } | null
+  /** v0.2.3 Блок 4 (PIL-16) — null → «Хэзээ ч нэвтрээгүй» */
+  lastSignInAt: string | null
 }
 
 /** v0.2.2 Блок 3–4: урилга */

@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { api } from '../helpers/api';
 import { resolve } from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from '../helpers/auth.helper';
@@ -42,23 +43,6 @@ async function accessToken(page: Page): Promise<string> {
   }, SESSION_KEY.source);
 }
 
-async function api<T = { id: string }>(page: Page, method: string, path: string, body?: unknown): Promise<T> {
-  return page.evaluate(
-    async ([m, p, b]) => {
-      const key = Object.keys(localStorage).find((k) => /^sb-.*-auth-token$/.test(k));
-      const token = key ? (JSON.parse(localStorage.getItem(key) as string) as { access_token: string }).access_token : '';
-      const res = await fetch(`/api/v1${p}`, {
-        method: m,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: b === undefined ? undefined : JSON.stringify(b),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`${m} ${p} → ${res.status} ${text}`);
-      return text ? JSON.parse(text) : null;
-    },
-    [method, path, body] as const,
-  ) as Promise<T>;
-}
 
 /**
  * `action` (goto / reload)-ийн дараа /login дээр тогтворжиж байгааг шалгана (FE-007 давталт).
@@ -121,7 +105,7 @@ test.describe.serial('QA-02 — бодит GoTrue: урилгын хэрэглэ
     ).id;
     // GoTrue admin API: имэйлгүй хэрэглэгч (`u-…@<slug>.login.invalid`) — staging-ийн «хамгийн чухал» шалгалтын CI хувилбар
     userId = (await api<{ userId: string }>(page, 'POST', `/camp/camps/${campId}/employees/${empId}/create-user`, {})).userId;
-    const invite = await api<{ path: string | null }>(page, 'POST', `/camp/users/${userId}/invites`, { channel: 'LINK' });
+    const invite = await api<{ path: string | null }>(page, 'POST', `/core/rbac/users/${userId}/invites`, { channel: 'LINK' });
     expect(invite.path).toMatch(/^\/invite\/[A-Za-z0-9_-]+$/);
     invitePath = invite.path as string;
   });

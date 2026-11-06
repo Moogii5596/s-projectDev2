@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { api } from '../helpers/api';
 import { loginAs } from '../helpers/auth.helper';
 import { switchUser } from '../helpers/fixture';
 
@@ -17,23 +18,6 @@ const ids: Record<string, string> = {};
 const ubDate = (offsetDays = 0) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ulaanbaatar' }).format(new Date(Date.now() + offsetDays * 86_400_000));
 
-async function api<T = { id: string }>(page: Page, method: string, path: string, body?: unknown): Promise<T> {
-  return page.evaluate(
-    async ([m, p, b]) => {
-      const key = Object.keys(localStorage).find((k) => /^sb-.*-auth-token$/.test(k));
-      const token = key ? (JSON.parse(localStorage.getItem(key) as string) as { access_token: string }).access_token : '';
-      const res = await fetch(`/api/v1${p}`, {
-        method: m,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: b === undefined ? undefined : JSON.stringify(b),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`${m} ${p} → ${res.status} ${text}`);
-      return text ? JSON.parse(text) : null;
-    },
-    [method, path, body] as const,
-  ) as Promise<T>;
-}
 
 test.describe.serial('v0.2.2 Блок 5 — профайл, ажлаас гаргах, дахин ажилд авах', () => {
   test.beforeEach(async ({ page }) => {

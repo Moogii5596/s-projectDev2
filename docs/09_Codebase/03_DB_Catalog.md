@@ -10,7 +10,7 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (56 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **69** хүснэгт, 38 enum, 29 функц, 60 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (57 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **69** хүснэгт, 38 enum, 29 функц, 60 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
@@ -1536,7 +1536,7 @@ Trigger: `trg_core_user_roles_updated_at` · `trg_core_user_roles_apply_template
 
 ### core_users
 
-🔒🔒 · үүсгэсэн `0001_initial_schema.sql` · өөрчлөлт: +locale (`20261011004_core_users_locale.sql`), +phone (`20261013004_core_users_login.sql`), +username (`20261013004_core_users_login.sql`), +must_change_password (`20261013004_core_users_login.sql`)
+🔒🔒 · үүсгэсэн `0001_initial_schema.sql` · өөрчлөлт: +locale (`20261011004_core_users_locale.sql`), +phone (`20261013004_core_users_login.sql`), +username (`20261013004_core_users_login.sql`), +must_change_password (`20261013004_core_users_login.sql`), +last_sign_in_at (`20261106006_core_users_last_sign_in.sql`)
 
 | Багана | Төрөл | Шинж | FK |
 |---|---|---|---|
@@ -1553,6 +1553,7 @@ Trigger: `trg_core_user_roles_updated_at` · `trg_core_user_roles_apply_template
 | phone | TEXT |  |  |
 | username | TEXT |  |  |
 | must_change_password | BOOLEAN | NN |  |
+| last_sign_in_at | TIMESTAMPTZ |  |  |
 
 Constraint: `UNIQUE (tenant_id, email)` · `UNIQUE (tenant_id, id)` · `CHECK (phone IS NULL OR phone ~ '^[0-9]{8}$')` · `CHECK (username IS NULL OR username ~ '^[a-z0-9][a-z0-9._-]{1,63}$')`
 

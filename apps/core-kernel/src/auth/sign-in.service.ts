@@ -10,6 +10,7 @@ import { AppError } from '../common/i18n/app-error';
 import { TenantCacheService } from './tenant-cache.service';
 import { resolveTenantSlug } from './tenant-slug';
 import { LoginIdentifier, maskPhone, parseLoginIdentifier } from './login-identifier';
+import { SessionRevokeService } from './session-revoke.service';
 
 export interface SignInSession {
   accessToken: string;
@@ -68,6 +69,8 @@ export class SignInService {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     /** Тест: GoTrue client-ийг орлуулах */
     @Optional() @Inject('SIGN_IN_GOTRUE_FACTORY') private readonly gotrueFactory?: () => SupabaseClient,
+    /** PIL-15: нууц үг солиход бусад session цуцлах (unit тест_session-гүй орчинд алдаа → log) */
+    @Optional() private readonly sessions?: SessionRevokeService,
   ) {
     this.deployment = parseDeploymentConfig({
       DEPLOYMENT_MODE: this.config?.get<string>('DEPLOYMENT_MODE') ?? process.env['DEPLOYMENT_MODE'],
@@ -186,6 +189,17 @@ export class SignInService {
     }
     await this.safe(() => this.redis.del(lk.id), 0);
 
+    // PIL-16: сүүлийн амжилттай нэвтрэлтийн огноо (алдаа → зөвхөн log, нэвтрэлтийг зогсоохгүй)
+    if (tenantId) {
+      try {
+        await this.system.$executeRaw`
+          UPDATE core_users SET last_sign_in_at = now()
+          WHERE tenant_id = ${tenantId}::uuid AND auth_id = ${user.authId}::uuid`;
+      } catch (err) {
+        this.logger.warn(`last_sign_in_at бичихэд алдаа: ${(err as Error).message}`);
+      }
+    }
+
     return {
       accessToken: data.session.access_token,
       refreshToken: data.session.refresh_token,
@@ -200,7 +214,7 @@ export class SignInService {
    * D-06: нууц үг солих. Одоогийн нууц үгийг GoTrue-ээр шалгана (түгжээ үйлчилнэ) → admin API-аар шинэчилнэ →
    * must_change_password = false → membership cache цэвэрлэнэ.
    */
-  async changePassword(tenantId: string, authId: string, currentPassword: string, newPassword: string): Promise<{ changed: true }> {
+  async changePassword(tenantId: string, authId: string, currentPassword: string, newPassword: string, keepSessionId: string | null = null): Promise<{ changed: true }> {
     if (currentPassword === newPassword) throw new AppError(HttpStatus.BAD_REQUEST, 'auth.password_same');
     const rows = await this.system.$queryRaw<{ id: string; email: string }[]>`
       SELECT id, email FROM core_users WHERE tenant_id = ${tenantId}::uuid AND auth_id = ${authId}::uuid AND is_active LIMIT 1`;
@@ -225,6 +239,8 @@ export class SignInService {
       UPDATE core_users SET must_change_password = false, updated_at = now()
       WHERE tenant_id = ${tenantId}::uuid AND id = ${rows[0].id}::uuid`;
     await this.tenantCache.invalidateMember(tenantId, authId);
+    // PIL-15: нууц үг солигдсон → одоогийн session л үлдэнэ, бусад төхөөрөмжийн session-ууд цуцлагдана
+    await this.sessions?.revokeOthers(authId, keepSessionId);
     return { changed: true };
   }
 

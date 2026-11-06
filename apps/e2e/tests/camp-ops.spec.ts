@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { api } from '../helpers/api';
 import ExcelJS from 'exceljs';
 import { loginAs } from '../helpers/auth.helper';
 
@@ -26,23 +27,6 @@ const WED = (() => {
 let campId = '';
 
 /** Нэвтэрсэн хуудсын Supabase token-оор API дуудна (vite proxy → core-kernel) */
-async function api<T = { id: string }>(page: Page, method: string, path: string, body?: unknown): Promise<T> {
-  return page.evaluate(
-    async ([m, p, b]) => {
-      const key = Object.keys(localStorage).find((k) => /^sb-.*-auth-token$/.test(k));
-      const token = key ? (JSON.parse(localStorage.getItem(key) as string) as { access_token: string }).access_token : '';
-      const res = await fetch(`/api/v1/camp${p}`, {
-        method: m,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: b === undefined ? undefined : JSON.stringify(b),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`${m} ${p} → ${res.status} ${text}`);
-      return text ? JSON.parse(text) : null;
-    },
-    [method, path, body] as const,
-  ) as Promise<T>;
-}
 
 async function xlsx(rows: (string | null)[][]): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
@@ -74,27 +58,27 @@ test.describe.serial('Кемп — өдөр тутмын ажиллагаа', ()
   });
 
   test('бэлтгэл (API): кемп, байршил, хэлтэс + загвар, баг, ажилтан, өрөө', async ({ page }) => {
-    campId = (await api(page, 'POST', '/camps', { code: CODE, name: CAMP_NAME })).id;
-    const kitchen = (await api(page, 'POST', `/camps/${campId}/meal-locations`, { name: 'Кемпийн гал тогоо' })).id;
-    const pit = (await api(page, 'POST', `/camps/${campId}/meal-locations`, { name: 'Уулын хэсэг' })).id;
-    await api(page, 'PUT', `/camps/${campId}/settings`, {
+    campId = (await api(page, 'POST', '/camp/camps', { code: CODE, name: CAMP_NAME })).id;
+    const kitchen = (await api(page, 'POST', `/camp/camps/${campId}/meal-locations`, { name: 'Кемпийн гал тогоо' })).id;
+    const pit = (await api(page, 'POST', `/camp/camps/${campId}/meal-locations`, { name: 'Уулын хэсэг' })).id;
+    await api(page, 'PUT', `/camp/camps/${campId}/settings`, {
       vatRate: 10, changeoverWeekday: 3, rosterOnDays: 14, rosterOffDays: 14, mealOrderCutoffTime: null, defaultMealLocationId: kitchen,
     });
-    const mine = (await api(page, 'POST', `/camps/${campId}/departments`, {
+    const mine = (await api(page, 'POST', `/hr/sites/${campId}/departments`, {
       code: 'MINE', name: 'Уул', mealLocationId: pit,
       shiftPattern: [{ dayFrom: 1, dayTo: 7, shift: 'DAY' }, { dayFrom: 8, dayTo: 14, shift: 'NIGHT' }],
     })).id;
-    const adm = (await api(page, 'POST', `/camps/${campId}/departments`, {
+    const adm = (await api(page, 'POST', `/hr/sites/${campId}/departments`, {
       code: 'ADM', name: 'Захиргаа', mealLocationId: kitchen, shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }],
     })).id;
-    const crewA = (await api(page, 'POST', `/camps/${campId}/crews`, { code: 'A', rosterAnchorDate: WED })).id;
-    const org = (await api(page, 'POST', '/organizations', { name: `Уурхай ${STAMP}`, orgType: 'MAIN' })).id;
+    const crewA = (await api(page, 'POST', `/hr/sites/${campId}/crews`, { code: 'A', rosterAnchorDate: WED })).id;
+    const org = (await api(page, 'POST', '/core/organizations', { name: `Уурхай ${STAMP}`, orgType: 'MAIN' })).id;
     for (const [n, name, dept, crew] of [[1, 'Бат', mine, crewA], [2, 'Дорж', mine, crewA], [3, 'Сараа', adm, null]] as const) {
-      await api(page, 'POST', `/camps/${campId}/employees`, { organizationId: org, departmentId: dept, crewId: crew, employeeCode: ec(n), fullName: name });
+      await api(page, 'POST', `/hr/sites/${campId}/employees`, { organizationId: org, departmentId: dept, crewId: crew, employeeCode: ec(n), fullName: name });
     }
-    const b = (await api(page, 'POST', `/camps/${campId}/buildings`, { code: 'B1', name: 'Байр 1' })).id;
-    await api(page, 'POST', `/camps/${campId}/rooms`, { buildingId: b, roomNo: '101', capacity: 2 });
-    await api(page, 'POST', `/camps/${campId}/rooms`, { buildingId: b, roomNo: '102', capacity: 1 });
+    const b = (await api(page, 'POST', `/camp/camps/${campId}/buildings`, { code: 'B1', name: 'Байр 1' })).id;
+    await api(page, 'POST', `/camp/camps/${campId}/rooms`, { buildingId: b, roomNo: '101', capacity: 2 });
+    await api(page, 'POST', `/camp/camps/${campId}/rooms`, { buildingId: b, roomNo: '102', capacity: 1 });
   });
 
   test('ирцийн xlsx: алдаатай → батлах хаалттай, цуцлах → засварласан файл → батлах', async ({ page }) => {

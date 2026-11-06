@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { api } from '../helpers/api';
 import { loginAs } from '../helpers/auth.helper';
 import { loginAsUser } from '../helpers/fixture';
 
@@ -18,23 +19,6 @@ const WED = addDays(TODAY, -((new Date(`${TODAY}T00:00:00Z`).getUTCDay() - 3 + 7
 
 let campId = '';
 
-async function api<T = { id: string }>(page: Page, method: string, path: string, body?: unknown, raw = false): Promise<T> {
-  return page.evaluate(
-    async ([m, p, b, r]) => {
-      const key = Object.keys(localStorage).find((k) => /^sb-.*-auth-token$/.test(k));
-      const token = key ? (JSON.parse(localStorage.getItem(key) as string) as { access_token: string }).access_token : '';
-      const res = await fetch(r ? p : `/api/v1/camp${p}`, {
-        method: m,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: b === undefined ? undefined : JSON.stringify(b),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`${m} ${p} → ${res.status} ${text}`);
-      return text ? JSON.parse(text) : null;
-    },
-    [method, path, body, raw] as const,
-  ) as Promise<T>;
-}
 
 const settings = async (page: Page, section: string) => {
   await page.goto(`/camp/${campId}/settings/${section}`);
@@ -46,12 +30,12 @@ test.describe.serial('Кемп v0.2.0', () => {
   });
 
   test('бэлтгэл (API): кемп, байршил, тохиргоо, хэлтэс, байгууллага, ростер', async ({ page }) => {
-    campId = (await api(page, 'POST', '/camps', { code: CODE, name: CAMP_NAME })).id;
-    const loc = (await api(page, 'POST', `/camps/${campId}/meal-locations`, { name: 'Гал тогоо' })).id;
-    await api(page, 'PUT', `/camps/${campId}/settings`, { vatRate: 10, changeoverWeekday: 3, rosterOnDays: 14, rosterOffDays: 14, mealOrderCutoffTime: null, defaultMealLocationId: loc });
-    await api(page, 'POST', `/camps/${campId}/departments`, { code: 'ADM', name: 'Захиргаа', mealLocationId: loc });
-    await api(page, 'POST', '/organizations', { name: `Уурхай ${STAMP}`, regNumber: `R${STAMP}`, orgType: 'MAIN' });
-    await api(page, 'POST', `/camps/${campId}/crews`, { code: 'A', rosterAnchorDate: WED });
+    campId = (await api(page, 'POST', '/camp/camps', { code: CODE, name: CAMP_NAME })).id;
+    const loc = (await api(page, 'POST', `/camp/camps/${campId}/meal-locations`, { name: 'Гал тогоо' })).id;
+    await api(page, 'PUT', `/camp/camps/${campId}/settings`, { vatRate: 10, changeoverWeekday: 3, rosterOnDays: 14, rosterOffDays: 14, mealOrderCutoffTime: null, defaultMealLocationId: loc });
+    await api(page, 'POST', `/hr/sites/${campId}/departments`, { code: 'ADM', name: 'Захиргаа', mealLocationId: loc });
+    await api(page, 'POST', '/core/organizations', { name: `Уурхай ${STAMP}`, regNumber: `R${STAMP}`, orgType: 'MAIN' });
+    await api(page, 'POST', `/hr/sites/${campId}/crews`, { code: 'A', rosterAnchorDate: WED });
   });
 
   test('FB-07: байр + 24 өрөө нэг дор → "+ Олон өрөө" (байгааг алгасна)', async ({ page }) => {
@@ -180,7 +164,7 @@ test.describe.serial('Кемп v0.2.0', () => {
     // Хэл тест унасан ч admin@test.mn-ийн профайлын хэлийг МН болгоно (бусад тест монгол шошгоор хайдаг)
     const p = await browser.newPage();
     await loginAs(p);
-    await api(p, 'PATCH', '/api/v1/i18n/me/locale', { locale: 'mn' }, true).catch(() => undefined);
+    await api(p, 'PATCH', '/api/v1/i18n/me/locale', { locale: 'mn' }).catch(() => undefined);
     await p.close();
   });
 
@@ -217,7 +201,7 @@ test.describe.serial('Кемп v0.2.0', () => {
     await page.getByRole('group', { name: '语言' }).getByRole('button', { name: 'МН' }).click();
     await expect(page.getByRole('button', { name: 'Кемп', exact: true })).toBeVisible();
     // профайл ч МН руу буцсан эсэх
-    const me = await api<{ locale: string }>(page, 'GET', '/api/v1/auth/me', undefined, true);
+    const me = await api<{ locale: string }>(page, 'GET', '/api/v1/auth/me', undefined);
     expect(me.locale).toBe('mn');
     await own.close();
   });

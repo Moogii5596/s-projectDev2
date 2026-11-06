@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { api } from '../helpers/api';
 import { loginAs } from '../helpers/auth.helper';
 import { loginAsUser } from '../helpers/fixture';
 
@@ -18,23 +19,6 @@ const POS = `Нярав ${STAMP}`;
 let campId = '';
 const ids: Record<string, string> = {};
 
-async function api<T = { id: string }>(page: Page, method: string, path: string, body?: unknown): Promise<T> {
-  return page.evaluate(
-    async ([m, p, b]) => {
-      const key = Object.keys(localStorage).find((k) => /^sb-.*-auth-token$/.test(k));
-      const token = key ? (JSON.parse(localStorage.getItem(key) as string) as { access_token: string }).access_token : '';
-      const res = await fetch(`/api/v1${p}`, {
-        method: m,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: b === undefined ? undefined : JSON.stringify(b),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`${m} ${p} → ${res.status} ${text}`);
-      return text ? JSON.parse(text) : null;
-    },
-    [method, path, body] as const,
-  ) as Promise<T>;
-}
 
 test.describe.serial('v0.2.2 Блок 4 — хэрэглэгч удирдах', () => {
   test.beforeEach(async ({ page }) => {

@@ -32,18 +32,18 @@ const stays = async (q: string) => {
 beforeAll(async () => {
   it_ = await createCampIt('v021-it');
   ids.locPost = (await post(it_.camp('/meal-locations'), { name: 'Харуулын пост' })).id;
-  ids.ops = (await post(it_.camp('/departments'), { code: 'OPS', name: 'Үйл ажиллагаа', shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] })).id;
-  ids.guard = (await post(`${V1}/positions`, { name: 'Харуул' })).id;
+  ids.ops = (await post(it_.hr('/departments'), { code: 'OPS', name: 'Үйл ажиллагаа', shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] })).id;
+  ids.guard = (await post(`/api/v1/hr/positions`, { name: 'Харуул' })).id;
   const ps = await it_.api().put(it_.camp(`/position-settings/${ids.guard}`)).set(it_.as('admin'))
     .send({ mealLocationId: ids.locPost, shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'NIGHT' }] });
   expect(ps.status).toBe(200);
   const emp = async (code: string, extra: object) =>
-    (await post(it_.camp('/employees'), { organizationId: it_.ids.org, departmentId: ids.ops, crewId: it_.ids.crew, employeeCode: code, fullName: `Н ${code}`, ...extra })).id;
+    (await post(it_.hr('/employees'), { organizationId: it_.ids.org, departmentId: ids.ops, crewId: it_.ids.crew, employeeCode: code, fullName: `Н ${code}`, ...extra })).id;
   ids.G1 = await emp('G1', { positionId: ids.guard }); // албан тушаалын загвар (шөнө) + байршил (пост)
   ids.D1 = await emp('D1', {}); // хэлтсийн загвар (өдөр), анхдагч байршил
   ids.N1 = await emp('N1', { mealsIncluded: false }); // хоолгүй
   ids.O1 = await emp('O1', { mealLocationId: ids.locPost }); // ажилтны override
-  for (const c of ['G1', 'D1', 'N1', 'O1']) await post(it_.camp('/movements'), { employeeId: ids[c], date: WEDNESDAY, direction: 'ARRIVAL' });
+  for (const c of ['G1', 'D1', 'N1', 'O1']) await post(it_.hr('/movements'), { employeeId: ids[c], date: WEDNESDAY, direction: 'ARRIVAL' });
 }, 120_000);
 
 afterAll(async () => {
@@ -79,21 +79,21 @@ describe('🍽️ Хоолны байршил / хоол авах / ээлж —
   });
 
   it('олноор: D1, O1 хоолгүй → 3 хоолгүй, нэг transaction + audit; буцаах (null) → анхны тоо', async () => {
-    const r = await it_.api().post(it_.camp('/employees/bulk')).set(it_.as('admin')).send({ ids: [ids.D1, ids.O1], mealsIncluded: false });
+    const r = await it_.api().post(it_.hr('/employees/bulk')).set(it_.as('admin')).send({ ids: [ids.D1, ids.O1], mealsIncluded: false });
     expect(r.status).toBe(200);
     expect(r.body).toEqual({ updated: 2 });
     const p = await presence('2026-10-09');
     expect(p.noMealCount).toBe(3);
     expect(p.simple).toEqual(['BREAKFAST@camp=1', 'DINNER@camp=1', 'NIGHT@post=1']);
-    const emp = await it_.api().get(it_.camp(`/employees/${ids.O1}`)).set(it_.as('admin'));
+    const emp = await it_.api().get(it_.hr(`/employees/${ids.O1}`)).set(it_.as('admin'));
     expect(emp.body.effective).toMatchObject({ mealLocationId: ids.locPost, mealLocationSource: 'EMPLOYEE', mealsIncluded: false, mealsIncludedSource: 'EMPLOYEE' });
-    await it_.api().post(it_.camp('/employees/bulk')).set(it_.as('admin')).send({ ids: [ids.D1, ids.O1], mealsIncluded: null });
+    await it_.api().post(it_.hr('/employees/bulk')).set(it_.as('admin')).send({ ids: [ids.D1, ids.O1], mealsIncluded: null });
     expect((await presence('2026-10-09')).noMealCount).toBe(1);
     // эрхгүй (manager-т employee.manage бий эсэхээс үл хамааран) өөр кемпийн / байхгүй id → 400, юу ч өөрчлөгдөхгүй
-    const bad = await it_.api().post(it_.camp('/employees/bulk')).set(it_.as('admin')).send({ ids: [ids.D1, '0192a3b4-0000-7000-8000-000000000999'], mealsIncluded: false });
+    const bad = await it_.api().post(it_.hr('/employees/bulk')).set(it_.as('admin')).send({ ids: [ids.D1, '0192a3b4-0000-7000-8000-000000000999'], mealsIncluded: false });
     expect(bad.status).toBe(400);
     expect((await presence('2026-10-09')).noMealCount).toBe(1);
-    expect((await it_.api().post(it_.camp('/employees/bulk')).set(it_.as('nobody')).send({ ids: [ids.D1], mealsIncluded: false })).status).toBe(403);
+    expect((await it_.api().post(it_.hr('/employees/bulk')).set(it_.as('nobody')).send({ ids: [ids.D1], mealsIncluded: false })).status).toBe(403);
   });
 
   it('хоолны байршил ашиглагдаж байхад идэвхгүй болгох → 409 (ажилтан 1, албан тушаал 1)', async () => {
@@ -103,14 +103,14 @@ describe('🍽️ Хоолны байршил / хоол авах / ээлж —
   });
 
   it('ростерын урт өөрчлөх: энэ кемпэд загвартай албан тушаал байвал → 409 (нэрийг нэрлэнэ)', async () => {
-    await it_.api().put(it_.camp(`/departments/${ids.ops}/shift-pattern`)).set(it_.as('admin')).send({ segments: [] });
+    await it_.api().put(it_.hr(`/departments/${ids.ops}/shift-pattern`)).set(it_.as('admin')).send({ segments: [] });
     const r = await it_.api().put(it_.camp('/settings')).set(it_.as('admin')).send({
       vatRate: 10, changeoverWeekday: 3, rosterOnDays: 10, rosterOffDays: 14, mealOrderCutoffTime: null, defaultMealLocationId: it_.ids.loc,
     });
     expect(r.status).toBe(409);
     expect(r.body).toMatchObject({ code: 'camp.err.settings.10' });
     expect(r.body.message).toMatch(/Харуул/);
-    await it_.api().put(it_.camp(`/departments/${ids.ops}/shift-pattern`)).set(it_.as('admin')).send({ segments: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] });
+    await it_.api().put(it_.hr(`/departments/${ids.ops}/shift-pattern`)).set(it_.as('admin')).send({ segments: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] });
   });
 });
 

@@ -131,7 +131,7 @@ export class CampRbacService {
       await this.access.requireTenantAdmin(tx, tenantId, authId);
       const users = await tx.coreUser.findMany({
         where: { tenantId },
-        select: { id: true, email: true, fullName: true, isActive: true, role: true, phone: true, username: true },
+        select: { id: true, email: true, fullName: true, isActive: true, role: true, phone: true, username: true, lastSignInAt: true },
         orderBy: [{ isActive: 'desc' }, { email: 'asc' }],
       });
       const ids = users.map((x) => x.id);

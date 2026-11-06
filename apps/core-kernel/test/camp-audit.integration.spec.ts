@@ -31,13 +31,13 @@ describe('📜 camp_audit_log', () => {
   });
 
   it('ажилтан: үүсгэх → засах (зөвхөн өөрчлөгдсөн талбар) → өөрчлөлтгүй засвар мөр нэмэхгүй → INACTIVE = DEACTIVATE', async () => {
-    const e = await it_.api().post(it_.camp('/employees')).set(it_.as('admin'))
+    const e = await it_.api().post(it_.hr('/employees')).set(it_.as('admin'))
       .send({ organizationId: it_.ids.org, departmentId: it_.ids.dept, employeeCode: 'E100', fullName: 'Бат', phone: '99112233' });
     expect(e.status).toBe(201);
     const id = e.body.id as string;
-    expect((await it_.api().patch(it_.camp(`/employees/${id}`)).set(it_.as('admin')).send({ fullName: 'Бат-Эрдэнэ', phone: '99112233' })).status).toBe(200);
-    expect((await it_.api().patch(it_.camp(`/employees/${id}`)).set(it_.as('admin')).send({ fullName: 'Бат-Эрдэнэ' })).status).toBe(200);
-    expect((await it_.api().patch(it_.camp(`/employees/${id}`)).set(it_.as('admin')).send({ status: 'INACTIVE' })).status).toBe(200);
+    expect((await it_.api().patch(it_.hr(`/employees/${id}`)).set(it_.as('admin')).send({ fullName: 'Бат-Эрдэнэ', phone: '99112233' })).status).toBe(200);
+    expect((await it_.api().patch(it_.hr(`/employees/${id}`)).set(it_.as('admin')).send({ fullName: 'Бат-Эрдэнэ' })).status).toBe(200);
+    expect((await it_.api().patch(it_.hr(`/employees/${id}`)).set(it_.as('admin')).send({ status: 'INACTIVE' })).status).toBe(200);
     const list = await rows('employee', id);
     expect(list.map((r) => r.action)).toEqual(['CREATE', 'UPDATE', 'DEACTIVATE']);
     // v0.2.3 Блок D (S1): нэрийн хэсгүүд ч түүхэд (fullName = «овог нэр»)
@@ -48,10 +48,10 @@ describe('📜 camp_audit_log', () => {
   });
 
   it('алдаатай засвар (давхар код 409) → түүхийн мөр нэмэгдэхгүй', async () => {
-    await it_.api().post(it_.camp('/employees')).set(it_.as('admin'))
+    await it_.api().post(it_.hr('/employees')).set(it_.as('admin'))
       .send({ organizationId: it_.ids.org, departmentId: it_.ids.dept, employeeCode: 'E101', fullName: 'Дорж' });
     const before = await it_.prismaAdmin.campAuditLog.count({ where: { tenantId: it_.tenantId } });
-    expect((await it_.api().patch(it_.camp(`/employees/${it_.ids.emp}`)).set(it_.as('admin')).send({ employeeCode: 'E101' })).status).toBe(409);
+    expect((await it_.api().patch(it_.hr(`/employees/${it_.ids.emp}`)).set(it_.as('admin')).send({ employeeCode: 'E101' })).status).toBe(409);
     expect(await it_.prismaAdmin.campAuditLog.count({ where: { tenantId: it_.tenantId } })).toBe(before);
   });
 
@@ -64,7 +64,7 @@ describe('📜 camp_audit_log', () => {
     expect(list[1].summaryParams).toEqual({ room: '101', building: 'B1' });
     expect(list[1].diff).toEqual({ status: { from: 'ACTIVE', to: 'INACTIVE' } });
 
-    const sp = await it_.api().put(it_.camp(`/departments/${it_.ids.dept}/shift-pattern`)).set(it_.as('admin'))
+    const sp = await it_.api().put(it_.hr(`/departments/${it_.ids.dept}/shift-pattern`)).set(it_.as('admin'))
       .send({ segments: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] });
     expect(sp.status).toBe(200);
     const d = await rows('department', it_.ids.dept);

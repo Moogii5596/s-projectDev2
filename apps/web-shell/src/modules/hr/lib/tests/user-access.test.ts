@@ -16,6 +16,7 @@ const user = (o: Partial<CampUser> = {}): CampUser => ({
   internalEmail: true,
   employee: { id: 'e1', employeeCode: 'E001', fullName: 'Бат', campId: 'c1', campCode: 'K1' },
   invite: null,
+  lastSignInAt: null,
   ...o,
 })
 

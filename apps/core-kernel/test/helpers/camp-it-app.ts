@@ -39,6 +39,8 @@ export interface CampIt {
   api: () => ReturnType<typeof supertest>;
   as: (who: Who, extra?: Record<string, string>) => Record<string, string>;
   camp: (path?: string) => string;
+  /** v0.2.3 Блок 4 (QA-11): HR зам `/api/v1/hr/sites/:c1` (хуучин `/camp/camps/:id/...` устсан) */
+  hr: (path?: string) => string;
   close: () => Promise<void>;
 }
 
@@ -100,6 +102,7 @@ export async function createCampIt(prefix: string): Promise<CampIt> {
   const api = () => supertest(app.getHttpServer());
   const as = (who: Who, extra: Record<string, string> = {}) => ({ Authorization: `Bearer ${tokens[who]}`, Host: host, ...extra });
   const camp = (path = '') => `${V1}/camps/${ids.c1}${path}`;
+  const hr = (path = '') => `/api/v1/hr/sites/${ids.c1}${path}`;
   const must = async (p: Promise<supertest.Response>, label: string) => {
     const r = await p;
     if (r.status >= 300) throw new Error(`${label}: ${r.status} ${JSON.stringify(r.body)}`);
@@ -115,10 +118,10 @@ export async function createCampIt(prefix: string): Promise<CampIt> {
     }),
     'settings',
   );
-  ids.dept = (await must(api().post(camp('/departments')).set(as('admin')).send({ code: 'ADM', name: 'Захиргаа', mealLocationId: ids.loc }), 'dept')).id;
-  ids.org = (await must(api().post(`${V1}/organizations`).set(as('admin')).send({ name: 'Уурхай ХХК', regNumber: `R${stamp}`, orgType: 'MAIN' }), 'org')).id;
+  ids.dept = (await must(api().post(hr('/departments')).set(as('admin')).send({ code: 'ADM', name: 'Захиргаа', mealLocationId: ids.loc }), 'dept')).id;
+  ids.org = (await must(api().post(`/api/v1/core/organizations`).set(as('admin')).send({ name: 'Уурхай ХХК', regNumber: `R${stamp}`, orgType: 'MAIN' }), 'org')).id;
   ids.orgReg = `R${stamp}`;
-  ids.crew = (await must(api().post(camp('/crews')).set(as('admin')).send({ code: 'A', rosterAnchorDate: WEDNESDAY }), 'crew')).id;
+  ids.crew = (await must(api().post(hr('/crews')).set(as('admin')).send({ code: 'A', rosterAnchorDate: WEDNESDAY }), 'crew')).id;
   ids.b1 = (await must(api().post(camp('/buildings')).set(as('admin')).send({ code: 'B1', name: 'Байр 1' }), 'building')).id;
 
   // manager = "Кемп менежер" (C1)
@@ -134,7 +137,7 @@ export async function createCampIt(prefix: string): Promise<CampIt> {
     await prismaAdmin.$disconnect();
   };
 
-  return { app, prismaAdmin, prismaRls, tenantId, slug, host, coreIds, ids, api, as, camp, close };
+  return { app, prismaAdmin, prismaRls, tenantId, slug, host, coreIds, ids, api, as, camp, hr, close };
 }
 
 /** app_user (RLS) холболтоор тухайн tenant-ийн контекстод уншина */

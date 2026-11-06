@@ -66,10 +66,10 @@ describe('🌐 Орчуулгын Excel', () => {
     expect(apply.body).toEqual({ applied: 4 });
 
     // backend алдааны мессеж шууд шинэ текстээр (байгууллагын засвар)
-    const err = await it_.api().post(it_.camp('/data-imports/employees')).set(it_.as('admin')).send({ rows: [] });
+    const err = await it_.api().post(it_.hr('/data-imports/employees')).set(it_.as('admin')).send({ rows: [] });
     expect(err.status).toBe(400);
     expect(err.body).toMatchObject({ code: 'import.empty', message: 'Мөр алга байна!' });
-    const errEn = await it_.api().post(it_.camp('/data-imports/employees')).set(it_.as('admin', { 'Accept-Language': 'en' })).send({ rows: [] });
+    const errEn = await it_.api().post(it_.hr('/data-imports/employees')).set(it_.as('admin', { 'Accept-Language': 'en' })).send({ rows: [] });
     expect(errEn.body.message).toBe('There are no data rows');
     // frontend засвар (зөвхөн web түлхүүр), ETag
     const web = await it_.api().get('/api/v1/i18n/web/zh').set(it_.as('manager'));
@@ -108,7 +108,7 @@ describe('🌐 Орчуулгын Excel', () => {
   it('RLS: өөр байгууллагад засвар харагдахгүй (API ба app_user)', async () => {
     const web = await other.api().get('/api/v1/i18n/web/mn').set(other.as('admin'));
     expect(web.body.messages).toEqual({});
-    const err = await other.api().post(other.camp('/data-imports/employees')).set(other.as('admin')).send({ rows: [] });
+    const err = await other.api().post(other.hr('/data-imports/employees')).set(other.as('admin')).send({ rows: [] });
     expect(err.body.message).toBe('Өгөгдлийн мөр алга');
     const n = await asTenant(it_.prismaRls, other.tenantId, (tx) => tx.i18nOverride.count({ where: { tenantId: it_.tenantId } }));
     expect(n).toBe(0);
@@ -127,7 +127,7 @@ describe('🗣 Хэрэглэгчийн хэл', () => {
 
 describe('🌐 Кемпийн алдаа 3 хэлээр (code + params + message)', () => {
   it('давхардсан хэлтэс: Accept-Language-ээр mn/en/zh; code тогтвортой; 403 кодтой', async () => {
-    const path = `/api/v1/camp/camps/${it_.ids.c1}/departments`;
+    const path = `/api/v1/hr/sites/${it_.ids.c1}/departments`;
     const send = (lang: string) => it_.api().post(path).set(it_.as('admin', { 'Accept-Language': lang })).send({ code: 'ADM', name: 'Дахин', mealLocationId: it_.ids.loc });
     const mn = await send('mn');
     expect(mn.status).toBe(409);

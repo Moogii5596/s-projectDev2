@@ -112,7 +112,7 @@ beforeAll(async () => {
   ids.r101 = (await post(camp('/rooms'), { buildingId: b, roomNo: '101', capacity: 2 })).id;
   ids.r102 = (await post(camp('/rooms'), { buildingId: b, roomNo: '102', capacity: 2 })).id;
   ids.r103 = (await post(camp('/rooms'), { buildingId: b, roomNo: '103', capacity: 2 })).id;
-  ids.catering = (await post(`${V1}/organizations`, { name: 'Катеринг ХХК', orgType: 'CONTRACTOR', serviceTypes: ['CATERING'] })).id;
+  ids.catering = (await post(`/api/v1/core/organizations`, { name: 'Катеринг ХХК', orgType: 'CONTRACTOR', serviceTypes: ['CATERING'] })).id;
   const st = await api().put(camp('/settings')).set(auth()).send({ ...SETTINGS(), cateringOrganizationId: ids.catering });
   if (st.status !== 200) throw new Error(`settings ${st.status} ${JSON.stringify(st.body)}`);
 }, 120_000);
@@ -249,7 +249,7 @@ describe('🔧 Засвар', () => {
   });
 
   it('катеринг байгууллагаас CATERING хасах → 409 (кемпийн тохиргоонд ашиглагдаж байна)', async () => {
-    const r = await api().patch(`${V1}/organizations/${ids.catering}`).set(auth()).send({ serviceTypes: ['OTHER'] });
+    const r = await api().patch(`/api/v1/core/organizations/${ids.catering}`).set(auth()).send({ serviceTypes: ['OTHER'] });
     expect(r.status).toBe(409);
   });
 });

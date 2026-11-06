@@ -10,7 +10,7 @@ tags: [codebase, api, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Нийт **242** endpoint, 32 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
+Нийт **198** endpoint, 31 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
 
 **Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). **OWNER·ADMIN** = зөвхөн системийн роль (`requireTenantAdmin` — хэрэглэгч / роль удирдах, SEC-009), `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].
 
@@ -43,7 +43,7 @@ tags: [codebase, api, generated]
 - [[#modules/tenant-admin]] — 1
 - [[#modules/vendor]] — 3
 - [[#modules/workflow]] — 7
-- [[#modules/camp/legacy]] — 66
+- [[#modules/camp/legacy]] — 22
 
 ## app
 
@@ -55,14 +55,14 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| POST | `/api/v1/auth/register` | `AuthController.register` → `AuthService.getMe` | — | `auth.controller.ts:53` |
-| POST | `/api/v1/auth/login` | `AuthController.login` → `AuthService.login` | — | `auth.controller.ts:68` |
-| POST | `/api/v1/auth/sign-in` | `AuthController.signIn` → `SignInService.signIn` | — | 🌐 `auth.controller.ts:84` |
-| GET | `/api/v1/auth/invites/:token` | `AuthController.inspectInvite` → `InviteService.inspect` | — | 🌐 `auth.controller.ts:91` |
-| POST | `/api/v1/auth/invites/:token/accept` | `AuthController.acceptInvite` → `InviteService.accept` | — | 🌐 `auth.controller.ts:99` |
-| POST | `/api/v1/auth/forgot-password` | `AuthController.forgotPassword` → `InviteService.forgot` | — | 🌐 `auth.controller.ts:107` |
-| POST | `/api/v1/auth/change-password` | `AuthController.changePassword` → `SignInService.changePassword` | — | AllowPasswordChangeRequired `auth.controller.ts:115` |
-| GET | `/api/v1/auth/me` | `AuthController.me` → `AuthService.getMe` | — | AllowPasswordChangeRequired UseGuards(TenantAuthGuard) UseInterceptors `auth.controller.ts:124` |
+| POST | `/api/v1/auth/register` | `AuthController.register` → `AuthService.getMe` | — | `auth.controller.ts:54` |
+| POST | `/api/v1/auth/login` | `AuthController.login` → `AuthService.login` | — | `auth.controller.ts:69` |
+| POST | `/api/v1/auth/sign-in` | `AuthController.signIn` → `SignInService.signIn` | — | 🌐 `auth.controller.ts:85` |
+| GET | `/api/v1/auth/invites/:token` | `AuthController.inspectInvite` → `InviteService.inspect` | — | 🌐 `auth.controller.ts:92` |
+| POST | `/api/v1/auth/invites/:token/accept` | `AuthController.acceptInvite` → `InviteService.accept` | — | 🌐 `auth.controller.ts:100` |
+| POST | `/api/v1/auth/forgot-password` | `AuthController.forgotPassword` → `InviteService.forgot` | — | 🌐 `auth.controller.ts:108` |
+| POST | `/api/v1/auth/change-password` | `AuthController.changePassword` → `SignInService.changePassword` | — | AllowPasswordChangeRequired `auth.controller.ts:116` |
+| GET | `/api/v1/auth/me` | `AuthController.me` → `AuthService.getMe` | — | AllowPasswordChangeRequired UseGuards(TenantAuthGuard) UseInterceptors `auth.controller.ts:127` |
 
 ## common/i18n
 
@@ -360,50 +360,6 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| GET | `/api/v1/camp/organizations` | `CampOrganizationsController (extends CoreOrganizationsController).list` → `CoreOrganizationsService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:15` |
-| POST | `/api/v1/camp/organizations` | `CampOrganizationsController (extends CoreOrganizationsController).create` → `CoreOrganizationsService.create` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:15` |
-| PATCH | `/api/v1/camp/organizations/:id` | `CampOrganizationsController (extends CoreOrganizationsController).update` → `CoreOrganizationsService.update` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:15` |
-| GET | `/api/v1/camp/positions` | `CampPositionsController (extends HrPositionsController).list` → `HrPositionsService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:19` |
-| POST | `/api/v1/camp/positions` | `CampPositionsController (extends HrPositionsController).create` → `HrPositionsService.create` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:19` |
-| PATCH | `/api/v1/camp/positions/:id` | `CampPositionsController (extends HrPositionsController).update` → `HrPositionsService.update` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:19` |
-| GET | `/api/v1/camp/camps/:campId/departments` | `CampHrOrgLegacyController (extends HrOrgController).listDepartments` → `HrDepartmentsService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:23` |
-| POST | `/api/v1/camp/camps/:campId/departments` | `CampHrOrgLegacyController (extends HrOrgController).createDepartment` → `HrDepartmentsService.create` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:23` |
-| PATCH | `/api/v1/camp/camps/:campId/departments/:id` | `CampHrOrgLegacyController (extends HrOrgController).updateDepartment` → `HrDepartmentsService.update` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:23` |
-| PUT | `/api/v1/camp/camps/:campId/departments/:id/shift-pattern` | `CampHrOrgLegacyController (extends HrOrgController).setShiftPattern` → `HrDepartmentsService.setShiftPattern` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:23` |
-| GET | `/api/v1/camp/camps/:campId/crews` | `CampHrOrgLegacyController (extends HrOrgController).listCrews` → `HrCrewsService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:23` |
-| POST | `/api/v1/camp/camps/:campId/crews` | `CampHrOrgLegacyController (extends HrOrgController).createCrew` → `HrCrewsService.create` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:23` |
-| PATCH | `/api/v1/camp/camps/:campId/crews/:id` | `CampHrOrgLegacyController (extends HrOrgController).updateCrew` → `HrCrewsService.update` | `camp.master.manage` | Deprecated `hr-legacy.controller.ts:23` |
-| GET | `/api/v1/camp/camps/:campId/employees` | `CampHrEmployeesLegacyController (extends HrEmployeesController).listEmployees` → `HrEmployeesService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:27` |
-| GET | `/api/v1/camp/camps/:campId/employees/:id` | `CampHrEmployeesLegacyController (extends HrEmployeesController).getEmployee` → `HrEmployeesService.get` | гишүүн | Deprecated `hr-legacy.controller.ts:27` |
-| POST | `/api/v1/camp/camps/:campId/employees/bulk` | `CampHrEmployeesLegacyController (extends HrEmployeesController).bulkEmployees` → `HrEmployeesService.bulkUpdate` | `hr.employee.manage` | Deprecated `hr-legacy.controller.ts:27` |
-| POST | `/api/v1/camp/camps/:campId/employees` | `CampHrEmployeesLegacyController (extends HrEmployeesController).createEmployee` → `HrEmployeesService.create` | `hr.employee.manage` | Deprecated `hr-legacy.controller.ts:27` |
-| PATCH | `/api/v1/camp/camps/:campId/employees/:id` | `CampHrEmployeesLegacyController (extends HrEmployeesController).updateEmployee` → `HrEmployeesService.update` | `hr.employee.manage` | Deprecated `hr-legacy.controller.ts:27` |
-| GET | `/api/v1/camp/camps/:campId/employees/:id/profile` | `CampHrEmployeesLegacyController (extends HrEmployeesController).profile` → `HrEmployeeLifecycleService.profile` | `hr.employee.terminate` | Deprecated `hr-legacy.controller.ts:27` |
-| GET | `/api/v1/camp/camps/:campId/employees/:id/pii-views` | `CampHrEmployeesLegacyController (extends HrEmployeesController).piiViews` → `HrEmployeeLifecycleService.piiViews` | **OWNER·ADMIN** | Deprecated `hr-legacy.controller.ts:27` |
-| POST | `/api/v1/camp/camps/:campId/employees/:id/terminate` | `CampHrEmployeesLegacyController (extends HrEmployeesController).terminate` → `HrEmployeeLifecycleService.terminate` | `hr.employee.terminate` | Deprecated `hr-legacy.controller.ts:27` |
-| POST | `/api/v1/camp/camps/:campId/employees/:id/rehire` | `CampHrEmployeesLegacyController (extends HrEmployeesController).rehire` → `HrEmployeeLifecycleService.rehire` | `hr.employee.terminate` / OWNER·ADMIN | Deprecated `hr-legacy.controller.ts:27` |
-| GET | `/api/v1/camp/camps/:campId/movement-imports/template` | `CampHrAttendanceLegacyController (extends HrAttendanceController).template` → `HrAttendanceService.template` | — | Deprecated `hr-legacy.controller.ts:31` |
-| POST | `/api/v1/camp/camps/:campId/movement-imports` | `CampHrAttendanceLegacyController (extends HrAttendanceController).upload` → `HrAttendanceService.preview` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
-| POST | `/api/v1/camp/camps/:campId/movement-imports/manual` | `CampHrAttendanceLegacyController (extends HrAttendanceController).manual` → `HrAttendanceService.previewManual` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
-| GET | `/api/v1/camp/camps/:campId/movement-imports` | `CampHrAttendanceLegacyController (extends HrAttendanceController).listImports` → `HrAttendanceService.listImports` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
-| GET | `/api/v1/camp/camps/:campId/movement-imports/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).getImport` → `HrAttendanceService.getImport` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
-| PATCH | `/api/v1/camp/camps/:campId/movement-imports/:id/rows` | `CampHrAttendanceLegacyController (extends HrAttendanceController).updateRows` → `HrAttendanceService.updateRows` | `hr.attendance.import` `hr.employee.manage` | Deprecated `hr-legacy.controller.ts:31` |
-| POST | `/api/v1/camp/camps/:campId/movement-imports/:id/confirm` | `CampHrAttendanceLegacyController (extends HrAttendanceController).confirm` → `HrAttendanceService.confirm` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
-| POST | `/api/v1/camp/camps/:campId/movement-imports/:id/cancel` | `CampHrAttendanceLegacyController (extends HrAttendanceController).cancel` → `HrAttendanceService.cancel` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
-| GET | `/api/v1/camp/camps/:campId/movements` | `CampHrAttendanceLegacyController (extends HrAttendanceController).listMovements` → `HrAttendanceService.listMovements` | гишүүн | Deprecated `hr-legacy.controller.ts:31` |
-| POST | `/api/v1/camp/camps/:campId/movements` | `CampHrAttendanceLegacyController (extends HrAttendanceController).createMovement` → `HrAttendanceService.createMovement` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
-| DELETE | `/api/v1/camp/camps/:campId/movements/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).deleteMovement` → `HrAttendanceService.deleteMovement` | `hr.attendance.import` | Deprecated `hr-legacy.controller.ts:31` |
-| GET | `/api/v1/camp/camps/:campId/shift-adjustments` | `CampHrAttendanceLegacyController (extends HrAttendanceController).listAdjustments` → `HrShiftsService.listAdjustments` | гишүүн | Deprecated `hr-legacy.controller.ts:31` |
-| POST | `/api/v1/camp/camps/:campId/shift-adjustments` | `CampHrAttendanceLegacyController (extends HrAttendanceController).createAdjustments` → `HrShiftsService.createAdjustments` | `hr.shift.adjust` | Deprecated `hr-legacy.controller.ts:31` |
-| DELETE | `/api/v1/camp/camps/:campId/shift-adjustments/:id` | `CampHrAttendanceLegacyController (extends HrAttendanceController).deleteAdjustment` → `HrShiftsService.deleteAdjustment` | `hr.shift.adjust` | Deprecated `hr-legacy.controller.ts:31` |
-| GET | `/api/v1/camp/camps/:campId/shift-calendar` | `CampHrAttendanceLegacyController (extends HrAttendanceController).calendar` → `HrShiftsService.calendar` | гишүүн | Deprecated `hr-legacy.controller.ts:31` |
-| GET | `/api/v1/camp/camps/:campId/data-imports/:type/template` | `CampDataController (extends HrDataController).template` → `HrDataImportService.template` | — | Deprecated `hr-legacy.controller.ts:35` |
-| GET | `/api/v1/camp/camps/:campId/data-imports` | `CampDataController (extends HrDataController).list` → `HrDataImportService.list` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
-| POST | `/api/v1/camp/camps/:campId/data-imports/:type` | `CampDataController (extends HrDataController).upload` → `HrDataImportService.preview` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
-| GET | `/api/v1/camp/camps/:campId/data-imports/:type/:id` | `CampDataController (extends HrDataController).get` → `HrDataImportService.get` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
-| POST | `/api/v1/camp/camps/:campId/data-imports/:type/:id/confirm` | `CampDataController (extends HrDataController).confirm` → `HrDataImportService.confirm` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
-| POST | `/api/v1/camp/camps/:campId/data-imports/:type/:id/cancel` | `CampDataController (extends HrDataController).cancel` → `HrDataImportService.cancel` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
-| GET | `/api/v1/camp/camps/:campId/export/:type` | `CampDataController (extends HrDataController).export` → `HrDataImportService.export` | гишүүн | Deprecated `hr-legacy.controller.ts:35` |
 | GET | `/api/v1/camp/permissions` | `CampRbacLegacyController (extends CoreRbacController).permissions` → `CampRbacService.listPermissions` | — | Deprecated `rbac-legacy.controller.ts:10` |
 | GET | `/api/v1/camp/me/permissions` | `CampRbacLegacyController (extends CoreRbacController).myPermissions` → `CampRbacService.myPermissions` | — | Deprecated `rbac-legacy.controller.ts:10` |
 | GET | `/api/v1/camp/users` | `CampRbacLegacyController (extends CoreRbacController).users` → `CampRbacService.listUsers` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |

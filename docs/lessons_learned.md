@@ -13,7 +13,7 @@ tags: [lessons, index, generated]
 > **Шинэ алдаа:** тохирох `lessons/LL-*.md`-д `### [TAG-NNN] Гарчиг` + **Тохиолдсон / Шалтгаан / Дүрэм** → [[LL-99_Changelog]]-д мөр → `pnpm docs:gen`. Давтагдвал шинэ ID биш — `### [ID] (давтагдсан, огноо) …`.
 > Файл: [[LL-01_Backend_DB]] · [[LL-02_Test_CI]] · [[LL-03_Env_Ops_Pilot]] · [[LL-04_Architecture_RLS]] · [[LL-05_Frontend]] · [[LL-06_Camp_v02]] · [[LL-07_Docs]] · Хуучин нэгтгэсэн файл (архив): [[lessons_learned_MVP]]
 
-Нийт **179** сургамж.
+Нийт **180** сургамж.
 
 ## DB, Prisma, RLS, migration
 
@@ -195,6 +195,7 @@ tags: [lessons, index, generated]
 | OPS-010 | Нэг машинд dev/staging/пилот зэрэгцэх тул контейнерийг **яг нэрээр** (`^…$`) сонгоно; DB-д бичих dev команд бүр… | LL-03 §20 |
 | OPS-011 | A/B харьцуулах хэрэгслийн хүрээг (slug, муж) A-гийн **бүх** хэсгээс гаргана; зөрүү гарвал эхлээд бодит өгөгдөл эсвэл… | LL-03 §20 |
 | OPS-012 | Cloud-д сүлжээний хязгаартай үед ч integration-ийг бодит PG + RLS дээр ажиллуулна (shim-ээр); тэр орчны тохиргоог repo-д… | LL-03 §20 |
+| OPS-013 | Session цуцлахын өмнө GoTrue-ийн натураль үйлдлүүдийг (password update, ban, delete user) шалга — давхар DELETE хэрэггүй;… | LL-03 §20 |
 | PS-001 | Windows PowerShell 5.1-д ажиллах скрипт бичих | LL-03 §20 |
 | PS-002 | Процессын нэр шалгадаг кодыг тестлэх shim нь жинхэнэ нэртэй байх (жижиг C wrapper, хүүхэд процесс `PR_SET_PDEATHSIG`-тэй). | LL-06 §21 |
 | PS-003 | Урт амьдрах процесс асаадаг командыг pipe-аар бүү дууд. Windows-ийн процесс/handle-ийн зан төлөвийг Linux shim тестээр… | LL-06 §21 |

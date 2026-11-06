@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { CampCommonModule } from './common/camp-common.module';
 import { CoreModule } from '../core/core.module';
 import { HrModule } from '../hr/hr.module';
-import { CAMP_HR_LEGACY_CONTROLLERS } from './legacy/hr-legacy.controller';
 import { CampHrBridge } from './camp-hr.bridge';
 import { CampStayStore, CampStaysService } from './attendance/camp-stays.service';
 import { CampEmployeeSite } from './attendance/camp-employee-site';
@@ -52,7 +51,6 @@ import { CampCatalogService } from './catalog/camp-catalog.service';
     CampAssetsController,
     CampMaintenanceController,
     CampAuditController,
-    ...CAMP_HR_LEGACY_CONTROLLERS,
   ],
   providers: [
     CampCatalogService,

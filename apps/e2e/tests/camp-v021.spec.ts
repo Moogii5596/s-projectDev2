@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { api } from '../helpers/api';
 import { loginAs } from '../helpers/auth.helper';
 import { fixture, loginAsUser } from '../helpers/fixture';
 
@@ -22,23 +23,6 @@ const D2 = addDays(WED, 1);
 let campId = '';
 const ids: Record<string, string> = {};
 
-async function api<T = { id: string }>(page: Page, method: string, path: string, body?: unknown, raw = false): Promise<T> {
-  return page.evaluate(
-    async ([m, p, b, r]) => {
-      const key = Object.keys(localStorage).find((k) => /^sb-.*-auth-token$/.test(k));
-      const token = key ? (JSON.parse(localStorage.getItem(key) as string) as { access_token: string }).access_token : '';
-      const res = await fetch(r ? p : `/api/v1/camp${p}`, {
-        method: m,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: b === undefined ? undefined : JSON.stringify(b),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`${m} ${p} → ${res.status} ${text}`);
-      return text ? JSON.parse(text) : null;
-    },
-    [method, path, body, raw] as const,
-  ) as Promise<T>;
-}
 
 test.describe.serial('Кемп v0.2.1', () => {
   test.beforeEach(async ({ page }) => {
@@ -48,18 +32,18 @@ test.describe.serial('Кемп v0.2.1', () => {
   test.afterAll(async ({ browser }) => {
     const p = await browser.newPage();
     await loginAs(p);
-    await api(p, 'PATCH', '/api/v1/i18n/me/locale', { locale: 'mn' }, true).catch(() => undefined);
+    await api(p, 'PATCH', '/api/v1/i18n/me/locale', { locale: 'mn' }).catch(() => undefined);
     await p.close();
   });
 
   test('бэлтгэл (API): кемп, 2 байршил, тохиргоо, хэлтэс (өдөр), байгууллага, ростер', async ({ page }) => {
-    campId = (await api(page, 'POST', '/camps', { code: CODE, name: `E2E v0.2.1 ${STAMP}` })).id;
-    ids.locCamp = (await api(page, 'POST', `/camps/${campId}/meal-locations`, { name: 'Кемп гал тогоо' })).id;
-    ids.locPost = (await api(page, 'POST', `/camps/${campId}/meal-locations`, { name: 'Уулын пост' })).id;
-    await api(page, 'PUT', `/camps/${campId}/settings`, { vatRate: 10, changeoverWeekday: 3, rosterOnDays: 14, rosterOffDays: 14, mealOrderCutoffTime: null, defaultMealLocationId: ids.locCamp });
-    ids.dept = (await api(page, 'POST', `/camps/${campId}/departments`, { code: 'OPS', name: 'Үйл ажиллагаа', shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] })).id;
-    ids.org = (await api(page, 'POST', '/organizations', { name: `Уурхай ${STAMP}`, regNumber: `R${STAMP}`, orgType: 'MAIN' })).id;
-    ids.crew = (await api(page, 'POST', `/camps/${campId}/crews`, { code: 'A', rosterAnchorDate: WED })).id;
+    campId = (await api(page, 'POST', '/camp/camps', { code: CODE, name: `E2E v0.2.1 ${STAMP}` })).id;
+    ids.locCamp = (await api(page, 'POST', `/camp/camps/${campId}/meal-locations`, { name: 'Кемп гал тогоо' })).id;
+    ids.locPost = (await api(page, 'POST', `/camp/camps/${campId}/meal-locations`, { name: 'Уулын пост' })).id;
+    await api(page, 'PUT', `/camp/camps/${campId}/settings`, { vatRate: 10, changeoverWeekday: 3, rosterOnDays: 14, rosterOffDays: 14, mealOrderCutoffTime: null, defaultMealLocationId: ids.locCamp });
+    ids.dept = (await api(page, 'POST', `/hr/sites/${campId}/departments`, { code: 'OPS', name: 'Үйл ажиллагаа', shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'DAY' }] })).id;
+    ids.org = (await api(page, 'POST', '/core/organizations', { name: `Уурхай ${STAMP}`, regNumber: `R${STAMP}`, orgType: 'MAIN' })).id;
+    ids.crew = (await api(page, 'POST', `/hr/sites/${campId}/crews`, { code: 'A', rosterAnchorDate: WED })).id;
   });
 
   test('Хүний нөөц › Албан тушаал: нэмэх; давхардсан нэр (зай/үсэг) → алдаа', async ({ page }) => {
@@ -70,7 +54,7 @@ test.describe.serial('Кемп v0.2.1', () => {
     await page.getByLabel('Шинэ албан тушаал').fill(`  ${POS.toLowerCase()} `);
     await page.getByRole('button', { name: 'Нэмэх', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText(POS);
-    const list = await api<{ id: string; name: string }[]>(page, 'GET', '/positions');
+    const list = await api<{ id: string; name: string }[]>(page, 'GET', '/hr/positions');
     ids.pos = list.find((p) => p.name === POS)!.id;
   });
 
@@ -86,8 +70,8 @@ test.describe.serial('Кемп v0.2.1', () => {
 
   test('ажилтан: албан тушаалаас байршил авна; олноор "Хоолгүй" → хоолны тоонд үгүй, ирцэд бий', async ({ page }) => {
     for (const [code, positionId] of [[`${STAMP}-G1`, ids.pos], [`${STAMP}-D1`, null]] as const) {
-      ids[code] = (await api(page, 'POST', `/camps/${campId}/employees`, { organizationId: ids.org, departmentId: ids.dept, crewId: ids.crew, employeeCode: code, fullName: `Н ${code}`, positionId })).id;
-      await api(page, 'POST', `/camps/${campId}/movements`, { employeeId: ids[code], date: WED, direction: 'ARRIVAL' });
+      ids[code] = (await api(page, 'POST', `/hr/sites/${campId}/employees`, { organizationId: ids.org, departmentId: ids.dept, crewId: ids.crew, employeeCode: code, fullName: `Н ${code}`, positionId })).id;
+      await api(page, 'POST', `/hr/sites/${campId}/movements`, { employeeId: ids[code], date: WED, direction: 'ARRIVAL' });
     }
     await page.goto(`/hr/${campId}/employees`);
     const g1 = page.getByRole('row', { name: new RegExp(`${STAMP}-G1`) });
@@ -135,12 +119,12 @@ test.describe.serial('Кемп v0.2.1', () => {
     await page.getByRole('button', { name: 'Нэмэх', exact: true }).click();
     await expect(page.getByRole('cell', { name: BTYPE, exact: true })).toBeVisible();
 
-    const b = await api(page, 'POST', `/camps/${campId}/buildings`, { code: 'B1', name: 'Байр 1', rooms: { from: 1, to: 2, padTo: 0, capacity: 2 } });
+    const b = await api(page, 'POST', `/camp/camps/${campId}/buildings`, { code: 'B1', name: 'Байр 1', rooms: { from: 1, to: 2, padTo: 0, capacity: 2 } });
     await page.goto(`/camp/${campId}/settings/facilities`);
     await page.getByLabel('B1 байрны төрөл').selectOption({ label: BTYPE });
     await expect(page.getByLabel('B1 байрны төрөл')).not.toHaveValue('');
 
-    const cat = await api(page, 'POST', '/asset-categories', { name: `Гал хамгаалал ${STAMP}` });
+    const cat = await api(page, 'POST', '/camp/asset-categories', { name: `Гал хамгаалал ${STAMP}` });
     await page.goto(`/camp/${campId}/assets`);
     await page.getByRole('button', { name: '+ Хөрөнгө' }).click();
     const dlg = page.getByRole('dialog');
@@ -163,9 +147,9 @@ test.describe.serial('Кемп v0.2.1', () => {
     const admCtx = await browser.newContext();
     const admin = await admCtx.newPage();
     await loginAsUser(admin, 'devUserAdmin');
-    const roles = await api<{ id: string; systemCode: string | null }[]>(admin, 'GET', '/roles');
+    const roles = await api<{ id: string; systemCode: string | null }[]>(admin, 'GET', '/core/rbac/roles');
     const roleId = roles.find((r) => r.systemCode === 'CAMP_ADMIN')?.id as string;
-    await api(admin, 'POST', '/user-roles', { userId: fixture().users.devAppr1.coreId, roleId, campId });
+    await api(admin, 'POST', '/core/rbac/user-roles', { userId: fixture().users.devAppr1.coreId, roleId, campId });
     await admCtx.close();
     const own = await browser.newContext();
     const page = await own.newPage();

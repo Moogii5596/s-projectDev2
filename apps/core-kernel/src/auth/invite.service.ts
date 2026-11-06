@@ -10,6 +10,7 @@ import { inTenantTx } from '../db/tenant-tx';
 import { AppError, badRequest } from '../common/i18n/app-error';
 import { TenantCacheService } from './tenant-cache.service';
 import { SignInService } from './sign-in.service';
+import { SessionRevokeService } from './session-revoke.service';
 import { UserAdminService } from './user-admin.service';
 import { MailerService } from './mailer.service';
 import { mailLang, renderAuthMail } from './auth-mail';
@@ -47,6 +48,8 @@ export class InviteService {
     private readonly tenantCache: TenantCacheService,
     private readonly signIn: SignInService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    /** PIL-15: accept амжилттай бол олдох session-уудыг бүгдийг нь цуцлах */
+    private readonly sessions?: SessionRevokeService,
   ) {}
 
   /** `PUBLIC_APP_URL` (ADR-005) — төгсгөлийн `/`-гүй; http(s) биш бол null */
@@ -167,6 +170,8 @@ export class InviteService {
       UPDATE core_user_invites SET revoked_at = now(), updated_at = now()
       WHERE tenant_id = ${c.tenant_id}::uuid AND user_id = ${c.user_id}::uuid AND id <> ${c.id}::uuid AND used_at IS NULL AND revoked_at IS NULL`;
     await this.tenantCache.invalidateMember(c.tenant_id, u.auth_id);
+    // PIL-15: шинэ нууц үг тавигдлаа → өмнөх бүх session цуцлагдана
+    await this.sessions?.revokeAll(u.auth_id);
     return { done: true as const, login: loginHint(u) };
   }
 

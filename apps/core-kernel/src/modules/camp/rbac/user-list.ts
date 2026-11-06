@@ -30,6 +30,8 @@ export interface UserRowInput {
   role: string;
   phone: string | null;
   username: string | null;
+  /** v0.2.3 Блок 4 (PIL-16) — сүүлийн амжилттай нэвтрэлт; null → «Хэзээ ч нэвтрээгүй» */
+  lastSignInAt?: Date | string | null;
 }
 
 export interface EmployeeLink {

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { api } from '../helpers/api';
 import { loginAs } from '../helpers/auth.helper';
 import { loginAsUser } from '../helpers/fixture';
 
@@ -18,23 +19,6 @@ const YEAR = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ulaanbaatar' }).
 let campId = '';
 
 /** Нэвтэрсэн хуудсын Supabase token-оор API дуудна (vite proxy → core-kernel) */
-async function api<T = { id: string }>(page: Page, method: string, path: string, body?: unknown): Promise<T> {
-  return page.evaluate(
-    async ([m, p, b]) => {
-      const key = Object.keys(localStorage).find((k) => /^sb-.*-auth-token$/.test(k));
-      const token = key ? (JSON.parse(localStorage.getItem(key) as string) as { access_token: string }).access_token : '';
-      const res = await fetch(`/api/v1/camp${p}`, {
-        method: m,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: b === undefined ? undefined : JSON.stringify(b),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`${m} ${p} → ${res.status} ${text}`);
-      return text ? JSON.parse(text) : null;
-    },
-    [method, path, body] as const,
-  ) as Promise<T>;
-}
 
 async function openSection(page: Page, section: string) {
   await page.goto(`/camp/${campId}`);
@@ -55,22 +39,22 @@ test.describe.serial('Кемп — хөрөнгө ба засвар', () => {
   });
 
   test('бэлтгэл (API): кемп, өрөө, катеринг байгууллага, засварын эрх', async ({ page, browser }) => {
-    campId = (await api(page, 'POST', '/camps', { code: CODE, name: CAMP_NAME })).id;
-    const b = (await api(page, 'POST', `/camps/${campId}/buildings`, { code: 'B1', name: 'Байр 1' })).id;
-    await api(page, 'POST', `/camps/${campId}/rooms`, { buildingId: b, roomNo: '101', capacity: 2 });
-    await api(page, 'POST', `/camps/${campId}/rooms`, { buildingId: b, roomNo: '102', capacity: 1 });
-    const catering = (await api(page, 'POST', '/organizations', { name: `Катеринг ${STAMP}`, orgType: 'CONTRACTOR', serviceTypes: ['CATERING'] })).id;
-    await api(page, 'PUT', `/camps/${campId}/settings`, {
+    campId = (await api(page, 'POST', '/camp/camps', { code: CODE, name: CAMP_NAME })).id;
+    const b = (await api(page, 'POST', `/camp/camps/${campId}/buildings`, { code: 'B1', name: 'Байр 1' })).id;
+    await api(page, 'POST', `/camp/camps/${campId}/rooms`, { buildingId: b, roomNo: '101', capacity: 2 });
+    await api(page, 'POST', `/camp/camps/${campId}/rooms`, { buildingId: b, roomNo: '102', capacity: 1 });
+    const catering = (await api(page, 'POST', '/core/organizations', { name: `Катеринг ${STAMP}`, orgType: 'CONTRACTOR', serviceTypes: ['CATERING'] })).id;
+    await api(page, 'PUT', `/camp/camps/${campId}/settings`, {
       vatRate: 10, changeoverWeekday: 3, rosterOnDays: 14, rosterOffDays: 14, mealOrderCutoffTime: null, defaultMealLocationId: null, cateringOrganizationId: catering,
     });
     // admin@test.mn-д энэ кемпэд сэлбэг/хаах эрх (Кемп админ ролийнд байхгүй)
-    const me = await api<{ userId: string }>(page, 'GET', '/me/permissions');
+    const me = await api<{ userId: string }>(page, 'GET', '/core/rbac/me/permissions');
     // SEC-009 (v0.2.2 Блок 6б): роль үүсгэх / олгох = зөвхөн системийн админ → fixture devUserAdmin
     const ctx = await browser.newContext();
     const adm = await ctx.newPage();
     await loginAsUser(adm, 'devUserAdmin');
-    const role = (await api(adm, 'POST', '/roles', { name: `E2E засвар ${STAMP}`, permissionCodes: ['camp.maintenance.parts', 'camp.maintenance.close'] })).id;
-    await api(adm, 'POST', '/user-roles', { userId: me.userId, roleId: role, campId });
+    const role = (await api(adm, 'POST', '/core/rbac/roles', { name: `E2E засвар ${STAMP}`, permissionCodes: ['camp.maintenance.parts', 'camp.maintenance.close'] })).id;
+    await api(adm, 'POST', '/core/rbac/user-roles', { userId: me.userId, roleId: role, campId });
     await ctx.close();
   });
 
