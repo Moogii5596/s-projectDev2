@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'feat/**', 'fix/**', 'chore/**']
 
 # Phase 6.4.1 [CI-004]: local-тай ижил — апп = app_user (RLS), системийн ажил = postgres.
 # Supabase key-ууд `supabase status -o env`-ээс (step "Supabase env") → $GITHUB_ENV.
@@ -84,6 +84,10 @@ jobs:
 
       - name: Lint
         run: pnpm turbo lint
+
+      # 2026-11-07: баримтын шалгалт агентаас CI руу (AGENTS.md §3)
+      - name: Docs check
+        run: pnpm docs:check
 
       # `pnpm test` = core-kernel + web-shell unit (сервергүй) — e2e тусдаа job-д
       - name: Unit tests

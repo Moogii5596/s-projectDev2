@@ -1,11 +1,10 @@
 ---
-description: Rules for writing and editing project docs (Obsidian vault = docs/)
+description: Rules for editing project docs (Obsidian vault = docs/)
 globs: docs/**
 alwaysApply: false
 ---
-# Docs (Obsidian vault = `docs/`)
-- Every .md has YAML frontmatter: `title`, `type` (PRD|Architecture|Database|Roadmap|Guide|Log), `status` (Draft|Active|Deprecated|Archived), `last_updated` (YYYY-MM-DD), `tags`.
-- Link other docs with `[[filename]]` wiki-links (no dangling links). Register every new file under its category in `docs/INDEX.md`.
-- Single source of truth: link, don't copy (`docs/CONTEXT.md` §5 says where each fact lives). Plans, roadmap and core docs must not contradict each other.
-- `docs/09_Codebase/*` catalogs and `lessons_learned.md` are generated (🤖) — edit sources, then `pnpm docs:gen` → `pnpm docs:check`.
-- `docs/_learning/` is a separate private repo — don't touch it unless asked.
+# Docs (vault = `docs/`)
+- Frontmatter: `title`, `type` (PRD|Architecture|Database|Roadmap|Guide|Log), `status` (Draft|Active|Deprecated|Archived), `last_updated`, `tags`. Link with `[[filename]]`; new file → `docs/INDEX.md`.
+- Progress goes ONLY to the current tech plan; CHANGELOG / project-status / roadmap / backlog are updated at release (`AGENTS.md` §3).
+- `docs/09_Codebase/*` catalogs and `lessons_learned.md` are generated — edit sources, run `pnpm docs:gen`. CI runs `docs:check`.
+- `docs/_learning/` is a separate private repo — don't touch.

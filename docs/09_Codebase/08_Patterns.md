@@ -2,7 +2,7 @@
 title: "Кодын хэв маяг ба загвар (RULE + жишээ файл)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-11-07
 tags: [codebase, rules, patterns, testing]
 ---
 
@@ -88,9 +88,5 @@ SELECT camp_apply_tenant_rls('camp_example');  -- ENABLE + FORCE + policy + GRAN
 ## 5. Frontend
 → [[04_Frontend_Map]] §6 (шинэ хуудас), §4 (орчуулга).
 
-## 6. Блок дуусгах шалгах хуудас (DoD)
-- [ ] type-check, lint, холбогдох тест ногоон
-- [ ] Migration бол: local reset + `db:generate`; staging-д шалгах зүйлс progress-д бичсэн
-- [ ] `pnpm docs:gen` → `pnpm docs:check` ✓ (RULE-21)
-- [ ] [[01_Backend_Modules]] / [[04_Frontend_Map]]-ийн хамаарах хэсэг шинэчлэгдсэн
-- [ ] Спринтийн progress + [[project-status]]; алдаа гарсан бол `lessons/LL-*.md`-д `[ID]` (индекс [[lessons_learned]] автомат)
+## 6. Блок дуусгах шалгуур (DoD)
+→ repo-ийн root `AGENTS.md` §2 (бүх агентад нэг; 2026-11-07-нд шинэчилсэн). Энд давтахгүй.

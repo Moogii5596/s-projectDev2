@@ -8,4 +8,4 @@ alwaysApply: true
 - Use PowerShell syntax: `$env:NAME = "value"` (not `export`), `Remove-Item -Recurse` (not `rm -rf`), `Get-Content` (not `cat` pipes with bash flags).
 - Package manager is **pnpm** only (`pnpm --filter @s-project/core-kernel <script>`). Never use npm/yarn to install.
 - Supabase runs locally in **Docker** (DB port 54322). If DB is unreachable, check `pnpm supabase:status` / Docker Desktop before changing code.
-- Ask before running destructive or DB-changing commands: `supabase db reset`, migrations apply, deleting files, `git` writes.
+- Risky actions (deleting data/files, `main` merge/tag/push, pilot/staging upgrade, non-local `db reset`) need explicit user approval — `AGENTS.md` §4. Committing on your own feature branch is fine.

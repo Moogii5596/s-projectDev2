@@ -2,7 +2,7 @@
 title: "RULE-01~21 — хатуу дүрэм (код бичих)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-11-07
 tags: [rules]
 ---
 
@@ -107,7 +107,7 @@ tags: [rules]
   # ХОРИГЛОНО: VITE_API_BASE_URL=http://localhost:3000 → CORS алдаа
   ```
 - **RULE-20** Frontend DTO field names → backend DTO-тай ТАМ АДИЛ байх ёстой. Эхлээд `*.dto.ts` файл шалгах, дараа frontend type бич.
-- **RULE-21** (2026-10-13) Код өөрчилсөн блок бүрийн төгсгөлд: `pnpm docs:gen` → `pnpm docs:check` ✓ + [[01_Backend_Modules]] / [[04_Frontend_Map]]-ийн хамаарах хэсгийг шинэчилнэ. Автомат каталогийг (`docs/09_Codebase/0[235679]_*`) гараар засахгүй. Шалтгаан: баримт кодоос хоцорвол (DOC-001) хөгжүүлэлтийн чат кодыг дахин уншиж контекст алдана. DoD: [[08_Patterns]] §6.
+- **RULE-21** (2026-10-13, шинэчилсэн 2026-11-07) Код өөрчилсөн блокийн төгсгөлд `pnpm docs:gen`; `docs:check`-ийг CI шалгана. `01_Backend_Modules` / `04_Frontend_Map`-ийн гар хэсгийг release-д нэг удаа шинэчилнэ (`AGENTS.md` §3).
 
 ---
 

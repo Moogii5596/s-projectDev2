@@ -1,10 +1,6 @@
-# /plan — Хийх ажлын төлөвлөгөө
+# /plan — Хувилбарын / блокийн төлөвлөгөө
 
-1. Read `docs/CONTEXT.md` only. From its §2 table pick the task type and read just the listed files/sections (plus `docs/project-status.md` §1–2 if this continues a sprint block).
-2. Check `docs/lessons_learned.md` for lessons related to this area.
-3. Do NOT write code. Output in Mongolian:
-   - Goal (1–2 lines)
-   - Files to change/create (paths)
-   - "Хийх ажлын төлөвлөгөө" as `- [ ]` checklist, ending with: verify (type-check/lint/tests) and docs (`docs:gen` → `docs:check`, progress, project-status)
-   - Open questions / risks (if any)
-4. Wait for "Батлав" before implementing.
+Шинэ хувилбар эсвэл tech plan-д байхгүй ажилд л хэрэглэнэ (батлагдсан блокийг шууд хийнэ — `AGENTS.md` §1).
+1. `AGENTS.md`, `docs/CONTEXT.md` → холбогдох roadmap / PRD / ADR, кодын каталогийн тухайн хэсэг.
+2. Монголоор: зорилго; DB / API / UI гэрээ (хүснэгт, endpoint, эрх); блокууд `- [ ]` (блок бүр AGENTS.md §2-ийн шалгуураар дуусна); эрсдэл, нээлттэй асуулт.
+3. Хэрэглэгч батласны дараа tech plan-д бичиж хэрэгжүүлнэ.
