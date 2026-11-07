@@ -28,7 +28,7 @@ tags: [context, moc]
 | Пилот / deploy / staging | [[04_Pilot_Camp_Windows]] · [[05_Cloudflare_Tunnel]] · [[06_Config_Env]] |
 | IDE тохиргоо | [[06_Cursor_Setup]] |
 | Төлөвлөлт / шинэ хувилбар | [[01_Development_Roadmap]] → [[11_v0.2_completion_master_plan]] → [[00_backlog_and_tech_debt]] → PRD / ADR |
-| Бүтээгдэхүүн / архитектур | [[PRD-01_Core_Vision]] · [[ARCH-00_System_Overview]] · [[PRD-06_Vision_Business_Model]] |
+| Бүтээгдэхүүн / архитектур | [[ADR-009_Module_Engine]] (цөм ↔ модуль) · [[PRD-01_Core_Vision]] · [[ARCH-00_System_Overview]] · [[PRD-06_Vision_Business_Model]] |
 | Кодын дүрмийн тайлбар | [[00_rules_and_context]] (RULE-01…22, шалтгаан) · [[08_Patterns]] (жишээ файл) |
 | Баримт засах | [[INDEX]] |
 

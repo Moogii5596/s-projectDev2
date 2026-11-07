@@ -2,7 +2,7 @@
 title: "S Project — Баримт бичгийн газрын зураг (INDEX)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-19
+last_updated: 2026-11-07
 tags: [index, moc]
 ---
 
@@ -24,7 +24,7 @@ tags: [index, moc]
 - [[ARCH-00_System_Overview]] — **архитектурын тойм**: одоо ✅ / зорилт 🧭, эрсдэлийн бүртгэл
 - [[01_Core_API_Gateway_ReverseProxy_Spec]] — edge → API: Cloudflare, Caddy, guard гинж, хязгаар
 - [[ARCH-05_UI_UX_Architecture_Spec]] — frontend шийдвэрүүд
-- ADR: [[ADR-001_Tenant_Isolation]] (RLS + dedicated) · [[ADR-003_Users_Login_Permissions]] (хэрэглэгч, нэвтрэлт, эрх) · [[ADR-004_Feed_Architecture]] · [[ADR-005_Org_Connectivity_Domains]] (домэйн, tunnel, нүүр хуудас) · [[ADR-006_HR_Core_Module]] · [[ADR-007_System_Roles_Permissions]] (роль, эрх системийн түвшинд)
+- ADR: [[ADR-001_Tenant_Isolation]] (RLS + dedicated) · [[ADR-003_Users_Login_Permissions]] (хэрэглэгч, нэвтрэлт, эрх) · [[ADR-004_Feed_Architecture]] · [[ADR-005_Org_Connectivity_Domains]] (домэйн, tunnel, нүүр хуудас) · [[ADR-006_HR_Core_Module]] · [[ADR-007_System_Roles_Permissions]] (роль, эрх системийн түвшинд) · [[ADR-009_Module_Engine]] (**цөм = модулийн хөдөлгүүр**) · [[ADR-002_Hosting]] (пилот PC)
 
 ## 🗄 Өгөгдөл ба аюулгүй байдал
 - [[01_PostgreSQL_MultiTenant_RLS_Spec]] — tenant тусгаарлалт, DB роль, policy загвар
@@ -70,4 +70,4 @@ tags: [index, moc]
 - `v0.1.0`: [[02_v1_sprint_implementation_plan]] · [[sprint_0_foundation]] · [[sprint_1_ingress]] · [[sprint_2_workflow]] · [[sprint_3_eventbus]] · [[sprint_4_onboarding]] · [[sprint_5_production]]
 
 ## 🧩 Vault-д алга (олдвол нэмнэ)
-- [ ] `04_Module_SDK/01_Shared_Event_Bus_Contract_Spec.md` — event bus гэрээ · [ ] `06_*/FIX-01~04` (RLS pool, outbox DLQ, pessimistic lock, 3-way diff) · [ ] ADR-002 Хостинг (PIL-06)
+- [ ] `04_Module_SDK/01_Shared_Event_Bus_Contract_Spec.md` — event bus гэрээ · [ ] `06_*/FIX-01~04` (RLS pool, outbox DLQ, pessimistic lock, 3-way diff)
