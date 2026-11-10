@@ -2,7 +2,7 @@
 title: "Frontend зураглал (web-shell)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-11-07
+last_updated: 2026-11-10
 tags: [codebase, frontend, camp, i18n]
 ---
 
@@ -22,7 +22,7 @@ tags: [codebase, frontend, camp, i18n]
 | `lib/` | `access.ts` (v0.2.3 Блок 3, PIL-19 — цэс/хэсэг/ажлын байр харагдах дүрмийн ганц эх сурвалж, [[ADR-007_System_Roles_Permissions]] §6б) · `supabase.ts` (session; пилотод same-origin `/auth/v1`) · `modules.ts` (typed frontend manifest: build/tenant/debug ID, dependency/build order, home/debug path, route, navigation, settings, widgets, i18n prefixes; `camp` → `hr`) · `roles.ts` (core role, `canWrite` = OWNER/ADMIN) · `mr-approval.ts` · (Кемп) `modules/camp/lib/permissions.ts` — `isSystemAdmin(perms)`: хэрэглэгч / роль удирдах UI зөвхөн OWNER / ADMIN (SEC-009), `RETIRED_PERMISSIONS` (`camp.roles.manage` матрицад харагдахгүй) |
 | `config/enabled-modules.ts` | `ENABLED_MODULES`, `HOME_PATH`, `isEnabled()` |
 | `pages/` | MR (`MRList/Create/DetailPage`), workflow админ (`ApprovalSla`, `WorkflowDefinition`, `Delegation`), auth (`Login`, `SetPassword`, `ForgotPassword`, `ChangePassword`), `DevicesPage` (`/account/devices` — нэвтэрсэн төхөөрөмжүүд харах / гаргах; `api/sessions.ts`, `lib/devices.ts`, v0.2.3 Блок 4б) |
-| `core/` | Модуль хоорондын ерөнхий UI (`ui.tsx`, `ImportDialog`, `ExportButton`), импортын хүснэгтийн helper (`grid.ts`), API алдаа (`errors.ts`), огноо (`dates.ts`), мөнгө (`money.ts`), файл таталт (`download.ts`), шошго (`labels.ts`), эрхийн API/hook/query key (`permission-api.ts`, `useAppPermissions.ts`), эрхийн дүрэм (`permissions.ts`), mutation hook (`useAppMutation.ts`); Camp-ийн хуучин хамаарлыг арилгасан (C2-ийн шилжүүлэлт үргэлжилнэ) |
+| `core/` | Модуль хоорондын ерөнхий UI (`ui.tsx`, `ImportDialog`, `ExportButton`), импортын хүснэгтийн helper (`grid.ts`), API алдаа (`errors.ts`), огноо (`dates.ts`), мөнгө (`money.ts`), файл таталт (`download.ts`), шошго (`labels.ts`), эрхийн API/hook/query key (`permission-api.ts`, `useAppPermissions.ts`), эрхийн дүрэм (`permissions.ts`), mutation hook (`useAppMutation.ts`); C2-ийн frontend цөмийн зөөлт дууссан |
 | `modules/<name>/` | Модуль бүр өөрийн `api`, хуудас, `lib` — §2–§3. Feature модуль хооронд импорт хийхгүй; хуучин integration-уудыг `*.bridge.ts` entrypoint-аар тусгаарласан, ESLint boundary дүрэмтэй. |
 | `i18n/index.ts` | i18next тохиргоо — §4 |
 | `test/setup.ts` | vitest setup (тест: [[07_Test_Map]]) |
@@ -35,7 +35,7 @@ tags: [codebase, frontend, camp, i18n]
 - `components/` — `ShiftPattern`. HR picker нь `modules/hr/components/EmployeePicker`; Camp-ийн хуучин HR route, picker болон өрөөний export нь `api/camp-hr.bridge.ts`-ээр холбогдоно. HR-ийн Camp API/type болон Camp shared helper хэрэглээ `modules/hr/api/camp-bridge.ts`-ээр; Camp-оос Core attachment UI ашиглах нь `api/core-bridge.ts`-ээр дамжина. Импорт/экспортын ерөнхий UI нь `src/core/ImportDialog`.
 - `pages/` — `CampHomePage`, `SystemSettingsPage` (`/camp/system/:section` — «Кемпийн тохиргоо»: кемп, байрны төрөл, хөрөнгийн ангилал; v0.2.3 Блок 3: байгууллага, роль, хэрэглэгчийн роль, орчуулга → `/settings`), мастер (`Facilities`, `Organizations`, `Catalog` — HR албан тушаалд ч, `PositionSettings` — албан тушаалын хоол/ээлж), ажиллагаа (`Presence`, `RoomBoard`), хөрөнгө (`AssetCategories`, `Assets`), засвар (`MaintenanceList/Detail`), `CampSettings`, `Roles` (эрхийн нэр `permissionLabel` — `perm.<code>`), `UserRoles`, `Translations`.
 - **Хоолны захиалга (v0.2.3 Блок 6а):** `pages/MealOrdersPage.tsx` (`/camp/:campId/meal-orders` — өдөр сонгох, хоол × байршил хүснэгт, зочин/нэмэлт, товч бүр `order.actions[]`-ээс; шалтгаантай үйлдэл `Modal`), `components/MealGrid.tsx`, `components/MealOrderSettings.tsx` (`/camp/:campId/settings/meal-orders` — урсгалын 6 тохиргоо + тогтмол загвар), `lib/meal-order.ts`, `api/meal-order-types.ts` (backend `meal-order.types.ts`-ийн хуулбар — R20, хоёуланг зэрэг өөрчил). i18n `camp.mo.*`.
-- **Гэрээ (v0.2.3 Блок 6б):** `pages/ContractsPage`, `ContractDetailPage`, `ContractCatalogPage`, `ExchangeRatesPage`; гэрээний жагсаалтын холбоосоор каталог ба ханш руу орно. Цэс `camp.contract.manage` эрхээр харагдана; `api/contract-api.ts`, `api/contract-types.ts` (backend `contract.types.ts`-ийн хуулбар — R20), `components/contracts/`, `lib/contract.ts`; i18n `camp.ct.*`.
+- **Гэрээ (v0.2.3 Блок 6б):** `pages/ContractsPage`, `ContractDetailPage`, `ContractCatalogPage`, `ExchangeRatesPage`; гэрээний жагсаалтын холбоосоор каталог ба ханш руу орно. Гэрээний эрх `camp.contract.manage`, харин ханшийн удирдлага `core.exchange_rate.manage`; байгууллагын удирдлага `core.organization.manage`. `api/contract-api.ts`, `api/contract-types.ts` (backend `contract.types.ts`-ийн хуулбар — R20), `components/contracts/`, `lib/contract.ts`; i18n `camp.ct.*`.
 - `lib/` — цэвэр функц (unit тесттэй, `lib/tests`): `permissions` (+ `permissionLabel`), `dates`, `calendar`, `stays`, `presence`, `meals`, `money`, `room-range` (backend `room-range.ts`-тэй ИЖИЛ дүрэм), `shift-pattern`, `maintenance`, `permissions`, `errors` (`apiErrorMessage`), `labels`, `grid`, `download`, `last-camp`, `effective`, `asset-location`.
 
 ## 2б. Хүний нөөц (`modules/hr/`, v0.2.2 H2 — [[ADR-006_HR_Core_Module]] §5.1)

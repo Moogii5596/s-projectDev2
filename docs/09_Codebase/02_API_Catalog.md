@@ -2,7 +2,7 @@
 title: "API каталог (core-kernel)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-11-07
+last_updated: 2026-11-10
 tags: [codebase, api, generated]
 ---
 
@@ -322,9 +322,9 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| GET | `/api/v1/core/exchange-rates` | `ExchangeRatesController.list` → `ExchangeRatesService.list` | `camp.contract.manage` | `exchange-rates.controller.ts:13` |
-| PUT | `/api/v1/core/exchange-rates` | `ExchangeRatesController.upsert` → `ExchangeRatesService.upsert` | `camp.contract.manage` | `exchange-rates.controller.ts:19` |
-| DELETE | `/api/v1/core/exchange-rates/:id` | `ExchangeRatesController.remove` → `ExchangeRatesService.remove` | `camp.contract.manage` | `exchange-rates.controller.ts:26` |
+| GET | `/api/v1/core/exchange-rates` | `ExchangeRatesController.list` → `ExchangeRatesService.list` | `core.exchange_rate.manage` | `exchange-rates.controller.ts:13` |
+| PUT | `/api/v1/core/exchange-rates` | `ExchangeRatesController.upsert` → `ExchangeRatesService.upsert` | `core.exchange_rate.manage` | `exchange-rates.controller.ts:19` |
+| DELETE | `/api/v1/core/exchange-rates/:id` | `ExchangeRatesController.remove` → `ExchangeRatesService.remove` | `core.exchange_rate.manage` | `exchange-rates.controller.ts:26` |
 
 ## modules/core/feedback
 
@@ -368,8 +368,8 @@ tags: [codebase, api, generated]
 |---|---|---|---|---|
 | GET | `/api/v1/core/organizations/service-types` | `CoreOrganizationsController.serviceTypes` → `CoreOrganizationsService.serviceTypeCatalog` | гишүүн | `core-organizations.controller.ts:15` |
 | GET | `/api/v1/core/organizations` | `CoreOrganizationsController.list` → `CoreOrganizationsService.list` | гишүүн | `core-organizations.controller.ts:21` |
-| POST | `/api/v1/core/organizations` | `CoreOrganizationsController.create` → `CoreOrganizationsService.create` | `camp.master.manage` | `core-organizations.controller.ts:28` |
-| PATCH | `/api/v1/core/organizations/:id` | `CoreOrganizationsController.update` → `CoreOrganizationsService.update` | `camp.master.manage` | `core-organizations.controller.ts:34` |
+| POST | `/api/v1/core/organizations` | `CoreOrganizationsController.create` → `CoreOrganizationsService.create` | `core.organization.manage` | `core-organizations.controller.ts:28` |
+| PATCH | `/api/v1/core/organizations/:id` | `CoreOrganizationsController.update` → `CoreOrganizationsService.update` | `core.organization.manage` | `core-organizations.controller.ts:34` |
 
 ## modules/core/settings
 
@@ -454,13 +454,13 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| GET | `/api/v1/hr/sites/:campId/data-imports/:type/template` | `HrDataController.template` → `HrDataImportService.template` | — | `hr-data.controller.ts:45` |
-| GET | `/api/v1/hr/sites/:campId/data-imports` | `HrDataController.list` → `HrDataImportService.list` | гишүүн | `hr-data.controller.ts:52` |
-| POST | `/api/v1/hr/sites/:campId/data-imports/:type` | `HrDataController.upload` → `HrDataImportService.preview` | гишүүн | `hr-data.controller.ts:59` |
-| GET | `/api/v1/hr/sites/:campId/data-imports/:type/:id` | `HrDataController.get` → `HrDataImportService.get` | гишүүн | `hr-data.controller.ts:77` |
-| POST | `/api/v1/hr/sites/:campId/data-imports/:type/:id/confirm` | `HrDataController.confirm` → `HrDataImportService.confirm` | гишүүн | `hr-data.controller.ts:84` |
-| POST | `/api/v1/hr/sites/:campId/data-imports/:type/:id/cancel` | `HrDataController.cancel` → `HrDataImportService.cancel` | гишүүн | `hr-data.controller.ts:91` |
-| GET | `/api/v1/hr/sites/:campId/export/:type` | `HrDataController.export` → `HrDataImportService.export` | гишүүн | `hr-data.controller.ts:97` |
+| GET | `/api/v1/hr/sites/:campId/data-imports/:type/template` | `HrDataController.template` → `DataTransferService.template` | — | `hr-data.controller.ts:45` |
+| GET | `/api/v1/hr/sites/:campId/data-imports` | `HrDataController.list` → `DataTransferService.list` | гишүүн | `hr-data.controller.ts:52` |
+| POST | `/api/v1/hr/sites/:campId/data-imports/:type` | `HrDataController.upload` → `DataTransferService.preview` | гишүүн | `hr-data.controller.ts:59` |
+| GET | `/api/v1/hr/sites/:campId/data-imports/:type/:id` | `HrDataController.get` → `DataTransferService.get` | гишүүн | `hr-data.controller.ts:77` |
+| POST | `/api/v1/hr/sites/:campId/data-imports/:type/:id/confirm` | `HrDataController.confirm` → `DataTransferService.confirm` | гишүүн | `hr-data.controller.ts:84` |
+| POST | `/api/v1/hr/sites/:campId/data-imports/:type/:id/cancel` | `HrDataController.cancel` → `DataTransferService.cancel` | гишүүн | `hr-data.controller.ts:91` |
+| GET | `/api/v1/hr/sites/:campId/export/:type` | `HrDataController.export` → `DataTransferService.export` | гишүүн | `hr-data.controller.ts:97` |
 
 ## modules/hr/org
 

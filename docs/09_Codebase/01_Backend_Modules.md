@@ -2,7 +2,7 @@
 title: "Backend модулиуд (core-kernel)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-11-06
+last_updated: 2026-11-10
 tags: [codebase, backend, camp, hr, auth]
 ---
 
@@ -14,7 +14,7 @@ tags: [codebase, backend, camp, hr, auth]
 ## Агуулга
 - Суурь: [[#auth]] · [[#db]] · [[#common]] · [[#config, cache, gateway]] · [[#scripts]]
 - Бизнес: [[#MR + workflow]] · [[#budget, inventory, vendor, report (lite)]] · [[#event-bus]] · [[#tenant-admin, route-ingress, health]]
-- HR / Core (v0.2.2 H1, [[ADR-006_HR_Core_Module]]): [[#hr — нийтлэг]] · [[#hr/employees, hr/org, hr/positions]] · [[#hr/attendance]] · [[#hr/import]] · [[#core/organizations]] · [[#core/feedback]] · [[#feed]] · [[#storage]]
+- HR / Core (v0.2.2 H1, [[ADR-006_HR_Core_Module]]): [[#hr — нийтлэг]] · [[#hr/employees, hr/org, hr/positions]] · [[#hr/attendance]] · [[#hr/import]] · [[#core/organizations]] · [[#core/exchange-rates]] · [[#core/import-export]] · [[#core/feedback]] · [[#feed]] · [[#storage]]
 - Кемп: [[#camp — нийтлэг]] · [[#camp/rbac]] · [[#camp/master]] · [[#camp/catalog]] · [[#camp/settings]] · [[#camp/attendance]] · [[#camp/assets]] · [[#camp/maintenance]] · [[#camp/data]] · [[#camp/costs, camp/audit]] · [[#camp — V2 (кодгүй)]]
 
 ---
@@ -88,13 +88,16 @@ tags: [codebase, backend, camp, hr, auth]
 - **Хүснэгт:** `camp_movements`, `camp_movement_imports`, `camp_shift_adjustments`. **Эрх:** `hr.attendance.import`, `hr.shift.adjust`. Тест: `import.test`, `import-edits.test`, `roster-gaps.test`, `attendance-services.test` (Кемптэй хамт), `camp-attendance` integration + golden.
 
 ## hr/import
-- `hr-data-import.service.ts` — хүснэгтээр оруулах/экспорт, урсгал PREVIEW → CONFIRM (дахин шалгана). Handler-ийн **бүртгэл** (v0.2.3 Блок D): HR-ийнх `employees`, `former-employees`, `departments`, `positions`; бусад модуль `registerHandler(urlType, handler)` (Кемп: `building-types`, `buildings`, `rooms`, `room-allocations` — `CampHrBridge`). `registerExport` — handler-гүй экспорт. Хүснэгт: `camp_data_imports` (`CampDataImportType` 8 утга).
+- `hr-data.controller.ts` нь Core `DataTransferService`-ийг ашиглан одоогийн HR импорт/экспорт API-г хадгална. Ерөнхий урсгал (`PREVIEW → CONFIRM`, дахин шалгалт, экспорт) ба typed handler registry нь `core/import-export/`-д; `HrDataTransferRegistration` бүртгэдэг `employees`, `former-employees`, `departments`, `positions` handler-уудыг HR эзэмшинэ. Кемп `CampHrBridge`-ээр `building-types`, `buildings`, `rooms`, `room-allocations` handler-уудаа Core registry-д бүртгэдэг. Import history нь одоогоор `camp_data_imports`, tenant/access/audit нь C1 зөөлт хүртэл одоогийн Camp helper-үүдийг ашиглана.
 - **Handler-ууд:** `employees.handler.ts` (овог/нэр/ургийн овог, хуучин «Овог нэр» = салгана; «Нэмэлт утас» таслал/мөрөөр), `former-employees.handler.ts` (S7: зөвхөн ШИНЭ `TERMINATED` бүртгэл, түлхүүр = код + гарсан огноо (огноогүй → «Мэдээлэл дутуу», дараа огноотой мөр бөглөнө — S11), `linkRehireChains` — ижил кодыг огноогоор гинжлэнэ, идэвхтэй нь сүүлд; эрх `hr.employee.terminate`), `departments.handler.ts`, `positions.handler.ts` (нэрээр, `code` = ажлын байрны индекс).
-- **Дараалал:** хэлтэс → албан тушаал → ажилтан → гарсан ажилтан; байрны төрөл → байр → өрөө → байрлуулалт ([[12_v0.2.3_data_import]]). Тест: `camp-data-import`, `camp-v023-data-import` integration.
+- **Дараалал:** хэлтэс → албан тушаал → ажилтан → гарсан ажилтан; байрны төрөл → байр → өрөө → байрлуулалт ([[12_v0.2.3_data_import]]). Тест: `camp-data-import`, `camp-v023-data-import` integration; HR импортын e2e.
 - **Хөрвүүлэлт (repo-д, системээс гадуур):** `scripts/data-migration/sino/convert.mjs` + `mapping.json` → 01–08 импортын файл; v0.2.3 R10 — `contractors.mjs` (ID-гүй гүйцэтгэгч → `Z` код, `--z-start`; тест `node --test …/contractors.test.mjs`) — [[12_v0.2.3_data_import]] §3.1.
 
 ## core/organizations
-- `core.module.ts` — `CoreOrganizationsService` (байгууллагууд — гэрээт г.м.), `/api/v1/core/organizations`. Хүснэгт `camp_organizations` (model `CoreOrganization`). Эрх: `camp.master.manage`.
+- `CoreOrganizationsService` — `/api/v1/core/organizations`, tenant байгууллагууд (`camp_organizations`, model `CoreOrganization`). Эрх: `core.organization.manage`; `20261110002` migration нь өмнөх `camp.master.manage` grant-ыг ижил хүрээтэй Core grant болгон 1:1 хуулна.
+
+## core/exchange-rates
+- `exchange-rates/` — валют/ханшийн Core DTO, ISO 4217 `CURRENCY` ба ханшийн `RATE` validator, tenant-ийн ханшийн API (`core_exchange_rates`). Эрх: `core.exchange_rate.manage`; хуучин `camp.contract.manage` grant-ыг `20261110002` migration-д ижил хүрээгээр хуулна. Гэрээний бизнесийн үйлдэл `camp.contract.manage` хэвээр.
 
 ## core/permissions
 - `permission-registry.ts` (v0.2.3 Блок 2, [[ADR-007_System_Roles_Permissions]]) — эрхийн каталогийн эх (`PERMISSIONS`: `hr.*`, `camp.*`), `PERMISSION_ALIASES` / `normalizePermissionCode` / `withLegacyAliases` (нэг хувилбар), `RETIRED_PERMISSIONS`, `availableIn`, `SYSTEM_ROLE_CODES`. v0.2.3 Блок 5: `FEED_MODERATE` = `feed.content.moderate` (кодын модуль `feed` — DB CHECK `ck_core_permissions_code`, migration `20261107001`). `camp/common/camp-permissions.ts` нь re-export (Блок 3-т guard шилжинэ). DB-тэй тулгалт — `camp-master.integration.spec.ts`.
@@ -105,9 +108,12 @@ tags: [codebase, backend, camp, hr, auth]
 
 ## core/modules
 - `modules/module-registry.ts` — `ModuleManifest` (`id`, `requires`, default/required/debug, API prefix, permission/approval/notification/attachment/Feed object, settings/i18n/term/audit/import-export/report/cron/numbering capability); tenant module status ба dependency guard үүнээс уншина. Өмнөх API snapshot дахь `dependencies` талбар хэвээр.
-- Approval, notification, attachment, Feed link registry нь үл мэдэгдэх модуль/type-ийг татгалзана; attachment handler-ийн PII тэмдэглэгээ manifest-тай таарах ёстой. Approval callback одоо ч эзэмшигч service-ээс бүртгэгдэнэ.
-- `HrDataImportService` built-in болон runtime handler-уудын import/export type-ийг manifest-тай шалгана. Capability coverage тест нь permission, audit entity, term/i18n catalog болон бусад зарласан ID-г owner/давхардлаар тулгана.
-- C3 manifest-ийн одоо хэрэгжсэн capability coverage дууссан; ерөнхий scheduler, sequence болон импорт/экспортын framework нь C4-ийн хүрээ.
+- Approval, notification, attachment, Feed link, scheduler, sequence, import/export registry нь үл мэдэгдэх модуль/type-ийг татгалзана; attachment handler-ийн PII тэмдэглэгээ manifest-тай таарах ёстой. Approval callback эзэмшигч service-ээс бүртгэгдэнэ.
+- C3 manifest-ийн capability coverage болон C4 scheduler, sequence, `DataTransferService` дууссан; import/export handler-уудыг манифестээр шалгаж, HR/Camp тус тус эзэмшдэг.
+
+## core/import-export
+- `DataTransferService` preview → confirm → export урсгалыг, `DataTransferRegistry` typed handler-уудыг төвлөрүүлнэ; бүртгэсэн төрөл manifest-д яг нэг удаа байх ёстой. HR-ийн `HrDataTransferRegistration` болон Кемпийн `CampHrBridge` өөрсдийн handler-уудыг бүртгэдэг; HR-facing endpoint/хариу, `camp_data_imports` түүх хэвээр.
+- Regression: `camp-data-import`, `camp-v023-data-import`, `test/v024-core-services.integration.spec.ts`, HR import E2E. Одоогийн tenant/access/audit context нь C1 зөөлт хүртэл Camp helper-үүдийг ашиглана.
 
 ## core/attachments
 - `attachments/` — `AttachmentsService`, `AttachmentTypeRegistry`; `GET/PUT /core/attachments/patterns`, `POST /core/attachments/bulk/preview` ба `/bulk/commit`. Batch нь 20 хүртэл файл (тус бүр ≤10 MiB), `{object}`, `{type}`, `{date}` нэрийн токентой; preview-ийн дараа сервер дахин шалгаж commit хийнэ, дараагийн ижил төрлийн файл одоогийн хувилбарыг supersede хийнэ.
@@ -173,5 +179,5 @@ tags: [codebase, backend, camp, hr, auth]
 
 ## camp/meal-orders, camp/contracts
 - **Хоолны захиалга (v0.2.3 Блок 6а, V2-03):** `meal-orders/` — `meal-order-policy.ts` (цэвэр; cutoff, `decideSubmit`, `allowedActions`, `mealTotals`, `defaultLines` — урсгалын ГАНЦ эх сурвалж), `meal-order.types.ts` (frontend `api/meal-order-types.ts`-тэй ТАМ АДИЛ), `MealOrdersService` (`/camp/camps/:campId/meal-orders/:date/{extras,submit,accept,reject,request-change,withdraw-change,approve-change,reject-change}`, `meal-order-template`). Урсгал бүгд `camp_settings.meal_order_*` (G-8): cutoff өмнөх өдөр, cutoff-оос хойш `BLOCK/APPROVAL/FREE`, хүлээн авах шаардлага, өөрөө хүлээн авах, хүлээн авсны дараах засвар `FORBID/ALLOW/TWO_SIDED` (`CHANGE_REQUESTED` + `pending_lines`), анхдагч тоо `EMPTY/COPY_PREV/TEMPLATE`. Initial болон change approval нь manifest-ийн `CAMP_MEAL_ORDER` / `CAMP_MEAL_ORDER_CHANGE` handler-ээр `ApprovalEngineService` ашиглана; default алхам `camp.meal.accept`, withdraw → instance `CANCELLED` + SLA хаалт, legacy pending мөр шийдвэрлэх үед instance нөхөн үүсгэнэ. `allowSelfAccept` requester ID-г хадгалж эхний алхамд л үйлчилнэ. Нэхэмжлэх тоо = захиалга (ирцээс хамаарахгүй, G-2); зочин/нэмэлт — `camp_meal_order_extras`. DB түгжээг (`ACCEPTED`/`CHANGE_REQUESTED`/`REJECTED`) зөвхөн service бодлого шалгасны дараа `app.meal_order_edit=1` (tx-local) тавьж тойрно. Эрх `camp.meal.order` / `camp.meal.accept`; тохиргоо/загвар `camp.settings.manage`. Integration: `camp-v023-meal-orders.integration.spec.ts`.
-- **Гэрээ (v0.2.3 Блок 6б):** `contracts/` — каталог, гэрээ, ажил, хүчинтэй огноотой үнэ, нэмэлт өөрчлөлт, үнийн тооцоо; `core/exchange-rates/` — tenant-ийн гараар оруулах ханш. DRAFT → ACTIVE → TERMINATED; ACTIVE нөхцөл/үнэ, сунгалт, цуцлалт түүхтэй. `MONTHLY_MANUAL` ханшгүй тооцоо алдаа; quote-ийн тоо хэмжээг хүсэлтээр өгнө. Эрх `camp.contract.manage`; `contract.types.ts`-ийн frontend хуулбар R20.
+- **Гэрээ (v0.2.3 Блок 6б):** `contracts/` — каталог, гэрээ, ажил, хүчинтэй огноотой үнэ, нэмэлт өөрчлөлт, үнийн тооцоо; ханш `core/exchange-rates/`-д. DRAFT → ACTIVE → TERMINATED; ACTIVE нөхцөл/үнэ, сунгалт, цуцлалт түүхтэй. `MONTHLY_MANUAL` ханшгүй тооцоо алдаа; quote-ийн тоо хэмжээг хүсэлтээр өгнө. Гэрээний эрх `camp.contract.manage`, ханшийн эрх `core.exchange_rate.manage`; `contract.types.ts`-ийн frontend хуулбар R20.
 - DB-д бий, service/API хараахан алга: `camp_haul_records` (бохир ус / хог); эрх `camp.haul.*`, `camp.report.view`.

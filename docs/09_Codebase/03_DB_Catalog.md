@@ -10,7 +10,7 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (80 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **94** хүснэгт, 41 enum, 41 функц, 92 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (81 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **94** хүснэгт, 41 enum, 42 функц, 92 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
@@ -2274,8 +2274,9 @@ Trigger: `update_core_users_updated_at`
 | `core_roles_protect_system` |  | `20261106005_core_rbac_adr007.sql` |
 | `core_seed_default_roles` | p_tenant_id uuid | `20261106005_core_rbac_adr007.sql` |
 | `core_seed_holiday_calendars` | p_tenant_id uuid | `20261107011_seed_core_holiday_calendars.sql` |
+| `core_seed_shared_permissions` | p_tenant_id uuid | `20261110002_core_org_exchange_permissions.sql` |
 | `core_sync_tenant_settings_name` |  | `20261107007_core_tenant_settings.sql` |
-| `core_tenants_after_insert` |  | `20261106005_core_rbac_adr007.sql` |
+| `core_tenants_after_insert` |  | `20261110002_core_org_exchange_permissions.sql` |
 | `core_tenants_seed_holiday_calendars` |  | `20261107011_seed_core_holiday_calendars.sql` |
 | `core_user_roles_apply_template` |  | `20261106005_core_rbac_adr007.sql` |
 | `current_tenant_id` |  | `20261010004_rls_app_user.sql` |

@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 41 файл, ~334 тест
+## Integration (бодит PG + RLS) — 41 файл, ~335 тест
 
 Команд: `pnpm test:integration`
 
@@ -42,7 +42,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/core-calendars.integration.spec.ts` | 2 | SYS-03 holiday calendars API (integration) |
 | `core-kernel/test/core-feedback.integration.spec.ts` | 8 | v0.2.3 Блок F — санал хүсэлт (integration) |
 | `core-kernel/test/core-notifications.integration.spec.ts` | 3 | NTF-01 core notifications (integration) |
-| `core-kernel/test/core-rbac-adr007.integration.spec.ts` | 7 | v0.2.3 Блок 2 — ADR-007 core RBAC (integration) |
+| `core-kernel/test/core-rbac-adr007.integration.spec.ts` | 8 | v0.2.3 Блок 2 — ADR-007 core RBAC (integration) |
 | `core-kernel/test/core-sites.integration.spec.ts` | 2 | Core sites API (integration) |
 | `core-kernel/test/core-tenant-settings.integration.spec.ts` | 4 | SYS-01 tenant settings API (integration) |
 | `core-kernel/test/event-bus.integration.spec.ts` | 5 | 🔗 5.2 Гинж: MR → Workflow → Budget → Outbox → Redis · 🔒 5.0 Зэрэгцээ poller — event бүр яг нэг удаа [EVT-001] · ♻️ 5.3 Retry + DLQ |
@@ -60,7 +60,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 | `core-kernel/test/v024-core-services.integration.spec.ts` | 5 | v0.2.4 core services (integration) |
 
-## Unit — core-kernel — 117 файл, ~864 тест
+## Unit — core-kernel — 117 файл, ~878 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -113,7 +113,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/camp/common/tests/catalog-name-i18n.test.ts` | 2 | catalog name translations |
 | `core-kernel/src/modules/camp/common/tests/module-audit-manifest.test.ts` | 1 | Camp audit manifest coverage |
 | `core-kernel/src/modules/camp/contracts/tests/contract-pricing.test.ts` | 15 | contract-pricing — хугацаа · contract-pricing — үнэ · contract-pricing — ханш · contract-pricing — хоолны тоо (G-3) · contract-pricing — төлбөрийн хуваарь |
-| `core-kernel/src/modules/camp/contracts/tests/contract-services.test.ts` | 14 | contract services |
+| `core-kernel/src/modules/camp/contracts/tests/contract-services.test.ts` | 15 | contract services |
 | `core-kernel/src/modules/camp/costs/tests/vat.test.ts` | 2 | VatCalculator (Шат 4.2) |
 | `core-kernel/src/modules/camp/maintenance/tests/camp-maintenance.service.test.ts` | 28 | maintenance-flow (Шат 4.4) · CampMaintenanceService — үүсгэх (Шат 4.4) · CampMaintenanceService — төлөв шилжилт (Шат 4.4) · CampMaintenanceService — сэлбэг (Шат 4.4) |
 | `core-kernel/src/modules/camp/master/tests/camp-master.services.test.ts` | 28 | CampsService (Шат 2.4) · CampFacilitiesService (Шат 2.4) · CoreOrganizationsService (Шат 2.4) · HrDepartmentsService (Шат 2.4) · HrCrewsService (Шат 2.4) · HrEmployeesService (Шат 2.4) |
@@ -129,20 +129,21 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/core/attachments/attachments.service.spec.ts` | 7 | AttachmentsService (FILE-01) |
 | `core-kernel/src/modules/core/calendars/working-days.spec.ts` | 2 | workingDaysBetween |
 | `core-kernel/src/modules/core/debug/debug-access.guard.spec.ts` | 2 | DebugAccessGuard (D-1) |
+| `core-kernel/src/modules/core/debug/debug-storage-warning.spec.ts` | 4 | evaluateDebugStorageWarning |
 | `core-kernel/src/modules/core/feedback/tests/feedback-rules.test.ts` | 5 | v0.2.3 Блок F — санал хүсэлтийн дүрэм |
 | `core-kernel/src/modules/core/import-export/data-transfer.registry.spec.ts` | 2 | DataTransferRegistry |
 | `core-kernel/src/modules/core/modules/core-tenant-modules.service.spec.ts` | 8 | CoreTenantModulesService (SYS-02) |
 | `core-kernel/src/modules/core/notifications/notification-mail.scheduler.spec.ts` | 3 | NotificationMailScheduler (NTF-01) |
 | `core-kernel/src/modules/core/notifications/notification.service.spec.ts` | 10 | NotificationService (NTF-01) · renderNotificationMail (NTF-01) |
-| `core-kernel/src/modules/core/permissions/tests/permission-registry.test.ts` | 8 | permission-registry (ADR-007) |
-| `core-kernel/src/modules/core/scheduler/scheduled-job.registry.spec.ts` | 1 | ScheduledJobRegistry |
-| `core-kernel/src/modules/core/sequences/sequence.service.spec.ts` | 2 | SequenceService |
+| `core-kernel/src/modules/core/permissions/tests/permission-registry.test.ts` | 9 | permission-registry (ADR-007) |
+| `core-kernel/src/modules/core/scheduler/scheduled-job.registry.spec.ts` | 3 | ScheduledJobRegistry |
+| `core-kernel/src/modules/core/sequences/sequence.service.spec.ts` | 4 | SequenceService |
 | `core-kernel/src/modules/core/settings/core-tenant-settings.service.spec.ts` | 5 | CoreTenantSettingsService (SYS-01) |
 | `core-kernel/src/modules/core/sites/core-sites.service.spec.ts` | 3 | CoreSitesService |
 | `core-kernel/src/modules/event-bus/cloud-events.adapter.spec.ts` | 6 | CloudEventsAdapter |
 | `core-kernel/src/modules/event-bus/dlq.service.spec.ts` | 3 | DlqService |
 | `core-kernel/src/modules/event-bus/event-bus.service.spec.ts` | 2 | EventBusService.emit (Phase 5.1 [EVT-003]) |
-| `core-kernel/src/modules/event-bus/outbox-poller.service.spec.ts` | 10 | OutboxPollerService |
+| `core-kernel/src/modules/event-bus/outbox-poller.service.spec.ts` | 11 | OutboxPollerService |
 | `core-kernel/src/modules/feed/tests/feed-links.service.test.ts` | 3 | FeedLinksService (FEED-04) |
 | `core-kernel/src/modules/feed/tests/feed-rules.test.ts` | 6 | feed-rules — харагдах, засах, устгах, report · feed-rules — cursor, хуудас |
 | `core-kernel/src/modules/hr/attendance/tests/import-edits.test.ts` | 6 | applyRowEdits (R4.1) · planWithDeleted (R4.1) |
@@ -156,13 +157,12 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/hr/employees/tests/employee-names.test.ts` | 3 | v0.2.3 Блок D — employee-names |
 | `core-kernel/src/modules/hr/employees/tests/hr-employee-lifecycle.test.ts` | 19 | цэвэр функц · HrEmployeeLifecycleService · HrEmployeesService — ажлаас гарсан бүртгэл (v0.2.2 Блок 5) |
 | `core-kernel/src/modules/hr/employees/tests/hr-employees-v021.test.ts` | 5 | v0.2.1 HrEmployeesService — албан тушаал, хоолны байршил, хоол авах |
-| `core-kernel/src/modules/hr/import/hr-data-import.service.spec.ts` | 3 | HrDataImportService manifest registration |
 | `core-kernel/src/modules/hr/org/tests/shift-pattern.test.ts` | 7 | normalizeShiftPattern (Шат 2.4) |
-| `core-kernel/src/modules/hr/positions/tests/hr-positions.service.test.ts` | 4 | v0.2.1 каталог — normName / resolvePositionByName · HrPositionsService — албан тушаалын каталог (v0.2.1 C-01 → v0.2.2 H1) |
+| `core-kernel/src/modules/hr/positions/tests/hr-positions.service.test.ts` | 4 | v0.2.1 каталог — нэрийн нормчлол / resolvePositionByName · HrPositionsService — албан тушаалын каталог (v0.2.1 C-01 → v0.2.2 H1) |
 | `core-kernel/src/modules/inventory/tests/inventory.service.test.ts` | 9 | InventoryService |
 | `core-kernel/src/modules/material-requisition/tests/material-requisition.find-all.test.ts` | 3 | MaterialRequisitionService.findAll (cursor) |
 | `core-kernel/src/modules/material-requisition/tests/mr-approval.test.ts` | 8 | normalizeSteps · approvalDenial [SEC-004] · quorumReached · summarizeWorkflow |
-| `core-kernel/src/modules/material-requisition/tests/mr-number.test.ts` | 1 | generateMrNumber (CORE-06) |
+| `core-kernel/src/modules/material-requisition/tests/mr-number.test.ts` | 2 | generateMrNumber (CORE-06) |
 | `core-kernel/src/modules/mr-lifecycle/mr-lifecycle.service.test.ts` | 3 | MrLifecycleService (Phase 4.0) |
 | `core-kernel/src/modules/report/tests/report.service.test.ts` | 3 | ReportService (Phase 4.4) |
 | `core-kernel/src/modules/tenant-admin/tenant-onboarding.service.spec.ts` | 6 | TenantOnboardingService |
@@ -174,7 +174,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/workflow/workflow-definition.dto.test.ts` | 4 | stepsConfigError · WorkflowDefinitionDto |
 | `core-kernel/src/modules/workflow/workflow-definition.service.test.ts` | 4 | WorkflowDefinitionService |
 | `core-kernel/src/scripts/camp-login-report.spec.ts` | 1 | camp-login-report (v0.2.2 §8) |
-| `core-kernel/src/scripts/camp-snapshot-perms.spec.ts` | 8 | camp-snapshot perms (v0.2.2 §5.1/5.2) · camp-snapshot perms — ADR-007 (v0.2.3): хуучин код ↔ шинэ код |
+| `core-kernel/src/scripts/camp-snapshot-perms.spec.ts` | 13 | camp-snapshot perms (v0.2.2 §5.1/5.2) · camp-snapshot perms — ADR-007 (v0.2.3): хуучин код ↔ шинэ код · camp-snapshot perms — v0.2.4 shared Core permissions · camp-snapshot v0.2.4 module and translati |
 | `core-kernel/src/scripts/e2e-fixture.spec.ts` | 4 | setupFixture · teardownFixture |
 | `core-kernel/src/scripts/pilot-admin.spec.ts` | 7 | validate* · onboard · ensureUser |
 | `core-kernel/src/scripts/test-user.spec.ts` | 9 | ensureTestUser · assertLocalUrl · parseDotenv / parseArgs |
@@ -231,7 +231,7 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/report/lib/tests/report.test.ts` | 5 | report lib |
 | `web-shell/src/release-notes/tests/release-notes.test.ts` | 7 | release notes — функц · release notes — өгөгдөл (notes.ts) |
 
-## E2E (Playwright) — 19 файл, ~89 тест
+## E2E (Playwright) — 19 файл, ~91 тест
 
 Команд: `pnpm test:e2e`
 
@@ -254,5 +254,5 @@ tags: [codebase, testing, generated]
 | `e2e/tests/core-v024-shell.spec.ts` | 3 |  |
 | `e2e/tests/modules-lite.spec.ts` | 8 |  |
 | `e2e/tests/multi-tenant.spec.ts` | 5 |  |
-| `e2e/tests/requisition-flow.spec.ts` | 3 |  |
+| `e2e/tests/requisition-flow.spec.ts` | 5 |  |
 | `e2e/tests/workflow-multistep.spec.ts` | 2 |  |

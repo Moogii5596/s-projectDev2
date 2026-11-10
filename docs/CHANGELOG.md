@@ -2,7 +2,7 @@
 title: "CHANGELOG"
 type: "Log"
 status: "Active"
-last_updated: 2026-10-19
+last_updated: 2026-11-10
 tags: [release]
 ---
 
@@ -15,12 +15,38 @@ tags: [release]
 
 ---
 
-## [Unreleased] — v0.2.4
+## [v0.2.4] — 2026-11-10 — Release-д бэлтгэсэн (staging/pilot gate хүлээгдэнэ)
 
-### ARC-05 — ADR-007 шилжилтийн үлдэгдэл цэвэрлэгээ
-- **Хассан:** permission API alias болон хуучин `/api/v1/camp` RBAC зам; хуучин код одоо хүчинтэй permission биш.
-- **Хассан (DB, migration `20261107006`):** `core_permission_aliases`, `legacy_camp_*` зургаан хуулбар, ашиглагдахаа больсон `CampRoleCode` enum.
-- **Өөрчлөгдсөн:** `camp:snapshot` хуучин snapshot-ийг тулгахад зориулсан хувилбар хоорондын mapping-ийг зөвхөн snapshot хэрэгсэл дотроо хадгална.
+> Код, local шалгалт ба баримт бэлэн; staging/pilot upgrade, TC-v023/TC-v024 болон `main` merge/tag/push хийгдээгүй.
+
+### Нэмэгдсэн
+- Цөмийн тохиргоо, календарь, валют/ханш, ажлын байр, орчуулга/нэр томьёоны засварлагчийг `/settings` дор нэгтгэв; tenant-ийн runtime модулийг manifest-аар бүртгэж удирдана.
+- Батлах хөдөлгүүрийг MR болон хоолны захиалгад холбов; «Миний батлах», аппын мэдэгдэл, сонголттой имэйлийн мэдэгдэл нэмэв.
+- AES-GCM шифрлэлттэй бөөн хавсралт, нэрийн загварын preview, хувилбарын түүх, эрхээр хязгаарласан таталт нэмэв.
+- Feed постоос засварын хүсэлт болон санал хүсэлт үүсгэж, үр дүнг эх посттой холбоно.
+- Scheduler-ийн lease/heartbeat ба Debug гүйлтийн түүх, цөмийн sequence болон manifest-аар баталгааждаг import/export handler нэмэв.
+- Утасны навигаци, системийн эрүүл мэндийн Debug дэлгэц (DB + storage хэмжээ, `PILOT_STORAGE_DB_WARN_GB` босго) нэмэв.
+
+### Өөрчлөгдсөн
+- HR болон Кемпийн import/export preview → confirm → export урсгалыг Core DataTransferService рүү шилжүүлж, модуль хоорондын шууд хамаарлыг арилгав.
+- Хоолны батлагдсан захиалгын өөрчлөлтийн анхдагч урсгал `TWO_SIDED`; MR болон засварын дугаарын одоогийн формат хадгалагдана.
+- `camp:snapshot` эрхээс гадна өмнөх module status-ыг тулгаж, орчуулгын override-ийн SHA-256 hash-ийг харьцуулна; override-ийн текстийг snapshot файлд хадгалахгүй.
+- Байгууллага, ханшийн API-г Core эрхийн кодод шилжүүлж, `20261110002` migration-аар өмнөх Camp роль/хэрэглэгчийн grant-уудыг шинэ Core grant-д 1:1 хуулна; эрх буурахгүй.
+
+### Зассан
+- PostgreSQL advisory lock-ийн `void` үр дүнг Prisma-д тайлж чадахгүйгээс батлах тодорхойлолт үүсгэхэд 500 болдог алдааг засав.
+- Outbox poller-ийн DB алдаа scheduler-д FAILED төлөвөөр хүрнэ; cron бүртгэл ба ажиллуулагч ижил илэрхийлэл ашиглана.
+- Дугаарлалтын алдаа structured `AppError` болж, MR-ийн жилийг Улаанбаатарын өдрөөр тооцно.
+
+### Хассан
+- **API:** permission alias болон хуучин `/api/v1/camp` RBAC зам; хуучин permission код API-д хүчинтэй биш.
+- **DB, migration `20261107006`:** `core_permission_aliases`, `legacy_camp_*` зургаан хуулбар, ашиглагдахаа больсон `CampRoleCode` enum.
+
+### ⚠️ Шинэчлэхийн өмнө
+- Тохиргооны үндсэн зам `/settings/*`; хуучин `/camp/system/*` нь шинэ зам руу чиглэнэ. Runtime-ийн нэмэлт/debug модуль default-оор унтраалттай; Debug цэс/API-д `DEBUG_MENU_ENABLED=true` **ба** `core.debug.view` хэрэгтэй.
+- Орчуулга/нэр томьёо засварлагч зөвхөн эрхтэй хэрэглэгчид харагдана. `FILE_ENCRYPTION_KEY` нь 32 байтын base64 түлхүүр; production-д тусад нь secure хадгалж, DB/storage нөөцөөс салгана. Түлхүүр соливол хуучин хавсралтыг тайлж унших боломжгүй болно. `DEBUG_MENU_ENABLED=false`, `PILOT_STORAGE_DB_WARN_GB=10` нь жишээ анхдагч утга.
+- Migration `20261110002` хуучин `camp.master.manage` / `camp.contract.manage` grant-уудыг `core.organization.manage` / `core.exchange_rate.manage` руу ижил хүрээтэй хуулна; хуучин grant-ууд хэвээр. Pilot upgrade-ийн дараа эрхийн snapshot болон TC-v023-A04-өөр хэрэглэгчийн хандалтыг тулга.
+- Migration `20261107006` legacy хүснэгтүүдийг **устгана**. Pilot-д зөвхөн TC-v023 эрхийн шалгалт (D-6) амжилттай, DB + storage нөөц ба SHA256 баталгаажсан, staging A = B болсны дараа ажиллуулна; буцаалт нь зөвхөн шинэчлэлийн өмнөх нөөцийг сэргээх.
 
 ## [v0.2.3] — 2026-11-07 — Release бэлтгэл
 
@@ -447,6 +473,7 @@ tags: [release]
 
 ---
 
-[Unreleased]: https://github.com/Moogii5596/s-projectDev2/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/Moogii5596/s-projectDev2/compare/v0.2.4...HEAD
+[v0.2.4]: https://github.com/Moogii5596/s-projectDev2/compare/v0.2.3...v0.2.4
 [v0.1.5]: https://github.com/Moogii5596/s-projectDev2/releases/tag/v0.1.5
 [v0.1.0]: тэмдэглэгээ (git tag) тавигдаагүй — v0.1.0 нь `v0.1.5`-ийн өмнөх түүх

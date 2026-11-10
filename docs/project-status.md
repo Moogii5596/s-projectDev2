@@ -2,8 +2,8 @@
 title: "Төслийн төлөв (одоо ба дараагийн алхам)"
 type: "Log"
 status: "Active"
-last_updated: 2026-11-07
-tags: [status, v0.2.2]
+last_updated: 2026-11-10
+tags: [status, v0.2.4]
 ---
 
 # Төслийн төлөв (одоо ба дараагийн алхам)
@@ -11,10 +11,10 @@ tags: [status, v0.2.2]
 > **Ганц эх сурвалж:** "одоо юу хийгдэж байна, дараа нь юу" — энд. Хувилбарын жагсаалт → [[01_Development_Roadmap]] · өөрчлөлт → [[CHANGELOG]] · код → [[00_Codebase_Map]] · түүх (v0.1.x төлөв, тестийн хуучин үр дүн) → [[project-status_history_v0.1]].
 > Блок / хувилбар дуусах бүрт шинэчилнэ (дээд талын 3 хэсэг).
 
-## 1. Одоо (2026-11-07)
+## 1. Одоо (2026-11-10)
 - **Сүүлийн release:** `v0.2.3` (2026-11-07) — пилот (Sino Hydro, Кемп) шинэчлэгдсэн; local/public health ✓, TC-v023 бүрэн шалгалт хүлээгдэж байна, `https://sino.gobiverse.website` (Cloudflare Tunnel).
 - **Агент:** нэг блок дээр Claude **эсвэл** Cursor — ээлжлэн (лимит дуусахад солино); өөр блок / өөр файл дээр зэрэгцэж болно (2026-11-06). Солих журам → [[CONTEXT]] §7. Cursor тохиргоо → [[06_Cursor_Setup]].
-- **Хөгжүүлэлт:** одоо `v0.2.4` — анх батлагдсан техникийн хүрээ [[10_v0.2.4_tech_plan]]; S0–S5 багцлалт, Feed 10б нь нэмэлт батлуулах санал. v0.2 мастер төлөвлөгөө (v0.2.4…v0.2.9) [[11_v0.2_completion_master_plan]] ✅ батлагдсан; v0.2.3 пилотын TC-v023 бүрэн шалгалт хүлээгдэж байна.
+- **Хөгжүүлэлт:** `v0.2.4` release candidate — код `feat/v0.2.4` дээр commit болсон; local шалгалт (unit/integration/build/type-check; E2E 17 pass + 3 Debug-only skip, `DEBUG_MENU_ENABLED=true` MR E2E 4/4 pass), TC-v024 ба pilot runbook бэлэн. Staging upgrade/A = B, TC-v023-A04 эрхийн gate, pilot backup/SHA256, smoke ба TC-v024 хэрэглэгчийн шалгалт үлдсэн; `main` merge/tag/push хийгдээгүй. Хүрээ ба явц → [[10_v0.2.4_tech_plan]], дараагийн хувилбарууд → [[11_v0.2_completion_master_plan]].
 
 | v0.2.2 | Төлөв |
 |---|---|
@@ -31,6 +31,7 @@ tags: [status, v0.2.2]
 | **Release `v0.2.2`** — tag → staging → пилот | ✅ 2026-10-19 (staging A = B; пилот `upgrade` 00:47, нөөц `sinohydro-20261019-004700.7z`) |
 
 ## 2. Дараагийн алхам
+0м. 🚧 **v0.2.4 release gate** (2026-11-10): release candidate-ийн код/баримтыг `feat/v0.2.4` дээр commit хийнэ. Энэ ажлын хүрээнд staging/pilot upgrade, `main` merge/tag/push хийхгүй. Pilot-ийн өмнө DB + storage backup/SHA256 → staging upgrade → `camp:snapshot` A = B → TC-v023-A04 эрхийн gate → зөвшөөрөлтэй pilot upgrade/smoke → TC-v024 дарааллыг [[04_Pilot_Camp_Windows]] §13г дагана.
 0к. 🚧 **v0.2.4 Блок 0 — хостингийн бэхжүүлэлт** (2026-11-07): код/баримт — Supabase loopback network, status-ийн network/Firewall/Funnel шалгалт, `rotate-db-password` secure prompt + `.env` шинэчлэлт, secret алдааны redaction, ADR-002; pilot shim 0 fail, Supabase CLI `--network-id` дэмждэгийг шалгасан, `docs:gen` / `docs:check` ✓. Блок дуусаагүй: staging → пилот дээр бодит шалгалт, Funnel/Firewall тохиргоо, нөөц restore дадлага болон A = B үлдсэн. Эдгээр live үйлдлийг ажиллуулаагүй.
 0л. ✅ **v0.2.4 Блок 1 — DEP-03, QA-17/19/20, ARC-05**: Router 7 + route `errorElement`; Knip-ээр ашиглагдаагүй export/type цэвэрлэж давхар DTO устгасан; зургаан тохиргооны уншилтыг төвлөрүүлж, `SYSTEM_DATABASE_URL`-г fail-fast болгосон; `console.*` → Nest Logger; ADR-007 legacy alias/route цэвэрлэж migration `20261107006` нэмсэн. Core unit 877/877, integration 311/311, web 177/177, type-check/build, lint (0 error; 72 warning), drift, `docs:check` ✓. Knip-д public method-ийн 3 шаардлагатай return type болон integration-д хэрэглэдэг `GLOBAL_PREFIX` хадгалагдсан. Дараагийнх — **Блок 2: Системийн тохиргоо**. Блок 0-ийн pilot/staging live шалгалтууд тусдаа үлдсэн.
 0и. ✅ **v0.2.3 Блок 6б — гэрээ, үнэ, ханш** (2026-11-07): UI route/эрх/i18n холбогдсон, гэрээний service unit ба 2 tenant integration нэмэгдсэн; tsc/eslint, backend unit 35, frontend unit 17, integration 48/48 ✓; drift +9 санаатай. Release `v0.2.3` tag push, tag-ийн CI ✓; staging upgrade, A = B, UI smoke ✓; pilot upgrade, local/public health ✓. Үлдсэн — pilot хэрэглэгчээр TC-v023 бүрэн шалгах. Pilot-ийн өмнөх локал өөрчлөлтийг сэргээж хадгалсан. Явц → [[09_v0.2.3_tech_plan]] Блок 6б/9.

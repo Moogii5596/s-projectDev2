@@ -2,7 +2,7 @@
 title: "v0.2 — Үлдсэн ажил ба техникийн өрийн нэгдсэн бүртгэл"
 type: "Roadmap"
 status: "Active"
-last_updated: 2026-11-07
+last_updated: 2026-11-10
 tags: [roadmap, v0.2]
 ---
 
@@ -48,7 +48,7 @@ tags: [roadmap, v0.2]
 | F-01 | Staging орчин + шилжүүлэлтийн дадлага (`pilot.ps1 -Profile staging`, `pnpm camp:snapshot`) | v0.2.0 | ✅ v0.2.0 |
 | F-02 | Нийтлэг Excel импорт/экспорт + "хүснэгтээр оруулах" | v0.2.0 | ✅ v0.2.0 |
 | F-03 | Хоолны тооцооны regression (golden) тест | v0.2.0 | ✅ v0.2.0 |
-| I18N-01 | Олон хэл: монгол · English · 中文 — суурь + Кемп + нэвтрэх/цэс (v0.2.0); бусад модуль (v0.2.4) | v0.2.0 | 🔄 суурь+Кемп ✅ v0.2.0; бусад 📋 v0.2.4 |
+| I18N-01 | Олон хэл: монгол · English · 中文 — суурь + Кемп + нэвтрэх/цэс (v0.2.0); бусад модуль (v0.2.4) | v0.2.0 | ✅ суурь + Кемп v0.2.0; бусад модуль v0.2.4 |
 | PIL-03, PIL-08, PIL-11, QA-01 | Өөрчлөлтийн түүх · экспорт · `pilot.ps1 upgrade` · CI → v0.2.0-д | v0.2.0 | ✅ v0.2.0 (доорх мөрүүдийг үз) |
 
 ## 1. Кемп модуль V2 (D8 — DB, Prisma, эрхийн код бэлэн) → v0.2.3 (V2-01, 03, 05, 07), **v0.2.7** (V2-02, 04, 06, 08, 09) — [[11_v0.2_completion_master_plan]], [[09_v0.2.3_tech_plan]]
@@ -71,9 +71,9 @@ tags: [roadmap, v0.2]
 |---|---|---|---|---|---|
 | FEED-01 | Feed v0 (хамгийн бага): текст/зураг пост, лайк, сэтгэгдэл; зураг локал диск (storage interface, EXIF арилгах) — [[09_v0.2.3_tech_plan]] G-9 | Хэрэглэгчийн шийдвэр 2026-10-19 | P1 | M | ✅ v0.2.3 Блок 5 (2026-11-07; + засвар/түүх, report/модерац, M-0) |
 | FEED-02 | Feed бүрэн (ажлын пост, анхааруулга + тогтоох, өнөөдрийн цэс, мэдэгдэл, зохицуулалт, PWA, кемпээр шүүх) | [[00_plan_draft]] (v0.3) | P1 | L | 📝 v0.2.8 хэсэг (анхааруулга + тогтоох, цэс) · бусад v0.3 (M-4) [[11_v0.2_completion_master_plan]] |
-| FEED-03 | **Пост → ажил (эхний туршилт):** «⋯ → Засварын хүсэлт болгох» — одоогийн засварын хүсэлт үүсч эх посттой холбогдоно; төлөв (хүлээн авсан → засаж байна → хаагдсан) пост дээр систем сэтгэгдлээр, хаагдвал «✓ Шийдэгдсэн»; **нууцлалын хил эхнээсээ** (зардал, сэлбэг, хувийн мэдээлэл Feed-д ✖ — зөвхөн зөвшөөрөгдсөн төлөв) | Хэрэглэгч 2026-11-07 ([[PRD-05_Internal_Social_Feed]] §6, санал 1, 2, 4) | P1 | M | 📋 v0.2.4 Блок 10б (батлагдсан 2026-11-07, D-5) |
-| FEED-04 | **`feed_links` суурь:** нэг ерөнхий холбоос (пост ↔ объектын төрөл ↔ id) — засвар, санал хүсэлт, хоолны гомдол, өрөө солих г.м. бүгд нэг аргаар | Хэрэглэгч 2026-11-07 (санал 5) | P1 | S | 📋 v0.2.4 Блок 10б (D-5) |
-| FEED-05 | **Пост → санал хүсэлт** (`core_feedback`): хэлэлцүүлгээс шууд санал болгох, «Хийгдсэн» болоход эх пост дээр | Хэрэглэгч 2026-11-07 | P1 | S | 📋 v0.2.4 Блок 10б (D-5) |
+| FEED-03 | **Пост → ажил (эхний туршилт):** «⋯ → Засварын хүсэлт болгох» — одоогийн засварын хүсэлт үүсч эх посттой холбогдоно; төлөв (хүлээн авсан → засаж байна → хаагдсан) пост дээр систем сэтгэгдлээр, хаагдвал «✓ Шийдэгдсэн»; **нууцлалын хил эхнээсээ** (зардал, сэлбэг, хувийн мэдээлэл Feed-д ✖ — зөвхөн зөвшөөрөгдсөн төлөв) | Хэрэглэгч 2026-11-07 ([[PRD-05_Internal_Social_Feed]] §6, санал 1, 2, 4) | P1 | M | ✅ v0.2.4 Блок 10б |
+| FEED-04 | **`feed_links` суурь:** нэг ерөнхий холбоос (пост ↔ объектын төрөл ↔ id) — засвар, санал хүсэлт, хоолны гомдол, өрөө солих г.м. бүгд нэг аргаар | Хэрэглэгч 2026-11-07 (санал 5) | P1 | S | ✅ v0.2.4 Блок 10б |
+| FEED-05 | **Пост → санал хүсэлт** (`core_feedback`): хэлэлцүүлгээс шууд санал болгох, «Хийгдсэн» болоход эх пост дээр | Хэрэглэгч 2026-11-07 | P1 | S | ✅ v0.2.4 Блок 10б |
 | FEED-06 | **Пост → хоолны гомдол** (CMP-04-тэй холбох): гомдол, катерингийн хариу, шийдсэн эсэх эх пост дээр | Хэрэглэгч 2026-11-07 | P1 | S | 📋 v0.2.8 (CMP-04-тэй хамт) |
 | FEED-07 | **Пост → өрөө солих хүсэлт** (CMP-06): хүсэлт → кемп менежер батлах / татгалзах → эх пост дээр үр дүн | Хэрэглэгч 2026-11-07 | P1 | S | 📋 v0.2.8 (CMP-06-тай хамт) |
 | FEED-08 | **Хөнгөн хамтын шийдвэр:** санал асуулга / «+1», хариуцагч, хугацаа, хаагдахад «Шийдвэр: …» бичлэг (хоолны цэс, арга хэмжээ) | Хэрэглэгч 2026-11-07 (санал 3) | P2 | M | 📋 FEED-03 батлагдсаны дараа |
@@ -85,19 +85,19 @@ tags: [roadmap, v0.2]
 |---|---|---|---|---|---|
 | SYS-01 | Системийн тохиргоо апп-ын түвшинд `/settings` (registry, байгууллагын профайл, аюулгүй байдлын бодлого) | v0.2.4 | P1 | M | ✅ v0.2.4 (local, commit хүлээгдэж байна) |
 | SYS-02 | Runtime модуль идэвхжүүлэх (`installed_modules`, rebuild-гүй) | v0.2.4 | P1 | M | ✅ v0.2.4 (local, commit хүлээгдэж байна) |
-| SYS-03 | Нийтлэг каталог: нэгж, валют/ханш, амралтын өдрийн календарь, ажлын байр (site) суурь, байгууллагын үйлчилгээний төрөл | v0.2.4 | P1 | M | 🔄 v0.2.4 — нэгж/ханш/календарь ✅, ажлын байр 📋 |
-| I18N-03 | Орчуулга v2: апп доторх засварлагч, нэр томьёоны толь (тийн хэлбэр), каталогийн олон хэлний нэр, имэйл/Excel override | v0.2.4 | P1 | L | 🔄 v0.2.4 — засварлагч ✅, 887 түлхүүрийн хөрвүүлэлт 📋 |
-| WF-06 | Батлах урсгалын нэгдсэн хөдөлгүүр (алхам = эрх + хүрээ, entity бүртгэл, тохируулагдах, SLA/орлон) | v0.2.4 | P1 | L | 📋 |
-| NTF-01 | Мэдэгдэл: апп доторх хонх + имэйл, хэрэглэгчийн сувгийн тохиргоо | v0.2.4 | P1 | M | 📋 |
-| FILE-01 | Файлын ерөнхий сервис: хавсралт, шифрлэлт, хандалтын лог | v0.2.4 | P1 | M | 📋 |
-| UX-01 | Апп-ын хүрээ: утасны навигаци, профайл, мэдэгдлийн хонх, «Миний батлах» | v0.2.4 | P1 | M | 📋 |
-| CORE-01 | Цөмийг Кемпээс салгах (backend): tenant tx, эрх шалгах service (scope tenant/site), алдаа, DTO, огноо, request → цөм; eslint хамаарлын дүрэм CI-д ([[ADR-009_Module_Engine]]) | v0.2.5 | P1 | L | 📋 |
-| CORE-02 | Цөмийн өгөгдөл: `camp_audit_log` → `core_audit_log`; байгууллагын үйлчилгээний каталог Кемпээс салгах; `core_apply_tenant_rls` | v0.2.5 | P1 | M | 📋 |
-| CORE-03 | Frontend цөм: UI kit, hook, lib `modules/camp` → `src/core` | v0.2.4 | P1 | M | 📋 |
-| CORE-04 | Модулийн manifest (backend + frontend нэг гэрээ; эрх, цэс, route, тохиргоо, i18n, audit, батлалт, мэдэгдэл, хавсралт, импорт/экспорт, Feed холбоос, cron, дугаарлалт) | v0.2.4 | P1 | L | 📋 |
-| CORE-05 | Scheduler: cron registry, lock, гүйлтийн түүх (Debug) | v0.2.4 | P1 | S | 📋 |
-| CORE-06 | Дугаарлалт: `core_sequences` (угтвар, он, урт), давхардалгүй | v0.2.4 | P2 | S | 📋 |
-| CORE-07 | Импорт/экспортын framework (preview → батлах, 3 хэл, модулийн handler manifest-ээр) — DATA-01-ийн суурь | v0.2.4 | P1 | M | 📋 |
+| SYS-03 | Нийтлэг каталог: нэгж, валют/ханш, амралтын өдрийн календарь, ажлын байр (site) суурь, байгууллагын үйлчилгээний төрөл | v0.2.4 | P1 | M | ✅ v0.2.4 |
+| I18N-03 | Орчуулга v2: апп доторх засварлагч, нэр томьёоны толь (тийн хэлбэр), каталогийн олон хэлний нэр, имэйл/Excel override | v0.2.4 | P1 | L | ✅ v0.2.4 |
+| WF-06 | Батлах урсгалын нэгдсэн хөдөлгүүр (алхам = эрх + хүрээ, entity бүртгэл, тохируулагдах, SLA/орлон) | v0.2.4 | P1 | L | ✅ v0.2.4 |
+| NTF-01 | Мэдэгдэл: апп доторх хонх + имэйл, хэрэглэгчийн сувгийн тохиргоо | v0.2.4 | P1 | M | ✅ v0.2.4 |
+| FILE-01 | Файлын ерөнхий сервис: хавсралт, шифрлэлт, хандалтын лог | v0.2.4 | P1 | M | ✅ v0.2.4 |
+| UX-01 | Апп-ын хүрээ: утасны навигаци, профайл, мэдэгдлийн хонх, «Миний батлах» | v0.2.4 | P1 | M | ✅ v0.2.4 |
+| CORE-01 | Цөмийг Кемпээс салгах (backend): tenant tx, эрх шалгах service (scope tenant/site), алдаа, DTO, огноо, request → цөм; eslint хамаарлын дүрэм CI-д ([[ADR-009_Module_Engine]]) | v0.2.5 (D-7) | P1 | L | 📋 |
+| CORE-02 | Цөмийн өгөгдөл: `camp_audit_log` → `core_audit_log`; байгууллагын үйлчилгээний каталог Кемпээс салгах; `core_apply_tenant_rls` | v0.2.5 (D-7) | P1 | M | 📋 |
+| CORE-03 | Frontend цөм: UI kit, hook, lib `modules/camp` → `src/core` | v0.2.4 | P1 | M | ✅ v0.2.4 |
+| CORE-04 | Модулийн manifest (backend + frontend нэг гэрээ; эрх, цэс, route, тохиргоо, i18n, audit, батлалт, мэдэгдэл, хавсралт, импорт/экспорт, Feed холбоос, cron, дугаарлалт) | v0.2.4 | P1 | L | ✅ v0.2.4 |
+| CORE-05 | Scheduler: cron registry, lock, гүйлтийн түүх (Debug) | v0.2.4 | P1 | S | ✅ v0.2.4 |
+| CORE-06 | Дугаарлалт: `core_sequences` (угтвар, он, урт), давхардалгүй | v0.2.4 | P2 | S | ✅ v0.2.4 |
+| CORE-07 | Импорт/экспортын framework (preview → батлах, 3 хэл, модулийн handler manifest-ээр) — DATA-01-ийн суурь | v0.2.4 | P1 | M | ✅ v0.2.4; Camp/HR → Core handler registry |
 | CORE-08 | Тайлангийн хөдөлгүүр (dataset, бүлэглэх, багана, шүүлт, загвар, Excel/3 хэл) — HR тайлан, зардлын тайлан | v0.2.5 | P1 | L | 📋 |
 | CORE-09 | Асуулга / маягтын хөдөлгүүр (сэтгэл ханамж г.м.) | v0.2.7 | P1 | M | 📋 |
 | HR-01 | ADR-008 HR өгөгдлийн загвар v2: ажлын байр ↔ кемп салгах, assignment, байгууллагын түвшний хэлтэс/ростер, хэлтэс ↔ хоолны байршил салгах, `hr_*` биет нэр, `core_audit_log` (хоолны тоо A = B) | v0.2.5 | P1 | L | 📋 |
@@ -133,7 +133,7 @@ tags: [roadmap, v0.2]
 | PIL-03 | Хувийн мэдээллийн аудит лог — ажилтны мэдээллийг хэн, хэзээ үзсэн/өөрчилсөн | пилот: хувийн мэдээлэл | P1 | M | ✅ өөрчлөлтийн түүх v0.2.0; үзсэн бүртгэл (`camp_pii_access_log`, «Хэн үзсэн») v0.2.2 Блок 5 |
 | PIL-04 | Мониторинг: гаднаас uptime шалгалт, нөөцлөлт/backend унавал утсанд мэдэгдэл | runbook §16 | P1 | S | ✅ v0.2.1 |
 | PIL-05 | Нөөцийг өөр газар (OneDrive / USB / object storage) автоматаар хуулах | runbook §12 | P1 | S | ✅ v0.2.1 |
-| PIL-06 | **Хостингийн шийдвэр (ADR-002):** local Supabase-ийг production-д ашиглаж байна (DB `postgres`/`supabase_admin` нууц үг анхдагч, портууд 0.0.0.0 — firewall-аар хамгаалсан, нэг машин, CLI нь production-д зориулагдаагүй) → VPS / cloud / self-hosted Supabase (docker compose, өөрийн нууц үгтэй) / Supabase Cloud | v0.1.6 суулгалт | P1 | L | 📋 v0.2.4 — шийдвэр (в): пилот PC-г бэхжүүлэх ([[10_v0.2.4_tech_plan]] Q15, Блок 0) |
+| PIL-06 | **Хостингийн шийдвэр (ADR-002):** local Supabase-ийг production-д ашиглаж байна (DB `postgres`/`supabase_admin` нууц үг анхдагч, портууд 0.0.0.0 — firewall-аар хамгаалсан, нэг машин, CLI нь production-д зориулагдаагүй) → VPS / cloud / self-hosted Supabase (docker compose, өөрийн нууц үгтэй) / Supabase Cloud | v0.1.6 суулгалт | P1 | L | 🔄 v0.2.4 — ADR-002/хатуужуулалтын код бэлэн; staging, pilot-ийн live дадлага Блок 0-д үлдсэн |
 | PIL-07 | Auth-ийн нэвтрэлтийн хязгаар Caddy-ийн ард бүх хэрэглэгчид нэг IP-ээр хуваалцагддаг → бодит IP (X-Forwarded-For) | runbook §15 | P2 | S | ✅ v0.2.1 |
 | PIL-08 | Excel export: ажилтан, ирц, өрөөний самбар, хоолны тоо (V1-д ирцийн загвараас өөр export алга) | Explore 2026-10-11 | P1? | M | 🔄 ажилтан/хэлтэс/өрөө ✅ v0.2.0; ирц/хоол 📋 |
 | PIL-09 | Анхдагч "Кемп админ" рольд засвар эхлүүлэх/хаах эрх алга (`maintenance.parts` = Катеринг админ, `maintenance.close` = Кемп менежер) — санаатай хуваарилалт уу, өөрчлөх үү (бизнес шийдвэр) | Explore 2026-10-11 | P2 | S | ✅ v0.2.2 Блок 1 (Q9) |
@@ -161,11 +161,11 @@ tags: [roadmap, v0.2]
 
 | ID | Ажил | Эх сурвалж | Урьдч. | Хэмжээ | Төлөв |
 |---|---|---|---|---|---|
-| WF-01 | Escalation: `escalationEnabled`-ийг шалгадаггүй, `currentStep = order - 1`, escalate = алхам алгасах → бизнесийн дүрэм тодорхойлж засаад `ESCALATION_CRON`-ийг асаах | v0.1.5 backlog | P1* | M | 📋 v0.2.4 (WF-06-тай хамт) |
+| WF-01 | Escalation: `escalationEnabled`-ийг шалгадаггүй, `currentStep = order - 1`, escalate = алхам алгасах → бизнесийн дүрэм тодорхойлж засаад `ESCALATION_CRON`-ийг асаах | v0.1.5 backlog | P1* | M | ✅ v0.2.4 (WF-06-тай хамт) |
 | WF-02 | Delegation ↔ MR батлалт (орлон гүйцэтгэгч алхмыг батлах — шийдвэр Б) | v0.1.5 backlog | P2 | M | 📋 |
-| WF-03 | `WorkflowService.approveStep/rejectStep` (controller-гүй, role шалгалтгүй) — устгах эсвэл нэгтгэх | SEC-004 | P2 | S | 📋 v0.2.4 (WF-06-тай хамт) |
+| WF-03 | `WorkflowService.approveStep/rejectStep` (controller-гүй, role шалгалтгүй) — устгах эсвэл нэгтгэх | SEC-004 | P2 | S | ✅ v0.2.4 (WF-06-тай хамт) |
 | WF-04 | MR үүсгэх UI-д нэгж үнэ (одоо UI-ийн MR 0₮ → үргэлж 1 алхам) | v0.1.5 backlog | P2* | S | 📋 |
-| WF-05 | MR / Бараа / Нийлүүлэгч / Тайланг пилотод нээх эсэх (`PILOT_MODULES`) | v0.1.6 | — | S | 📋 v0.2.4 — бүрэн нууцлаж Debug цэсэнд (Q17, Блок 8б) |
+| WF-05 | MR / Бараа / Нийлүүлэгч / Тайланг пилотод нээх эсэх (`PILOT_MODULES`) | v0.1.6 | — | S | ✅ v0.2.4 — default-оор унтрааж Debug цэсэнд хязгаарласан |
 
 \* MR модулийг пилотод нээх (WF-05) шийдвэр гарвал P1 болно.
 
@@ -180,7 +180,7 @@ tags: [roadmap, v0.2]
 | QA-05 | Давхар RESTRICTIVE policy цэвэрлэх (PERMISSIVE-тэй ижил нөхцөл) | v0.1.5 backlog | P2 | S | 📋 v0.2.9 [[11_v0.2_completion_master_plan]] |
 | QA-06 | ESLint анхааруулга 71 (core: `no-explicit-any` 65 + `no-unused-vars` 5, web: 1) — ихэнх нь spec болон MR/workflow (ARC-03) | lint 2026-10-18 | P2 | S | 📋 v0.2.9 [[11_v0.2_completion_master_plan]] |
 | QA-07 | `pilot.ps1`-ийн автомат тест (pwsh + shim, PS-001) CI-д — v0.2.0: cloud harness-д 10 кейс (staging/upgrade/restore), repo/CI-д хараахан биш; Task Scheduler/Firewall хэсгийг гараар шалгах жагсаалт | lessons PS-001/002 | P2 | M | 📋 v0.2.9 [[11_v0.2_completion_master_plan]] |
-| QA-08 | `mfe-requisitions` (15 мөр stub) + Module Federation-ийг хадгалах уу, хасах уу (`@module-federation/vite` web-shell build-ийн замд хэвээр) | v0.1.5 | P2 | S | 📋 v0.2.4 — устгахгүй, Debug цэс рүү (Q18, Блок 8б) |
+| QA-08 | `mfe-requisitions` (15 мөр stub) + Module Federation-ийг хадгалах уу, хасах уу (`@module-federation/vite` web-shell build-ийн замд хэвээр) | v0.1.5 | P2 | S | ✅ v0.2.4 — хадгалж Debug цэснээс lazy ачаална |
 | QA-09 | CONC-002 тест (30 зэрэгцээ MR) postgres горимд 4-өөс 1 удаа унав — алдааг барьж шалтгааныг батлах (таамаг: Prisma tx `maxWait`/`timeout`) | lessons TEST-019 | P2 | S | 📋 |
 | QA-10 | HR frontend Кемпээс хамаарна (`ui.tsx`, `useCampMutation`, `campKeys`, `types.ts`, `ImportDialog`, `EmployeePicker`, `CatalogPage`; «Ирц» → Кемпийн `stays`) → `modules/shared` руу салгах | v0.2.2 H2 (H2-Q3) | P2 | M | 📋 v0.3 |
 | QA-11 | e2e API helper-ууд хуучин `/api/v1/camp/...` (Deprecation) замыг дууддаг → хуучин зам устгахаас **өмнө** `/hr`, `/core` руу | v0.2.2 H2 | P1 | S | ✅ v0.2.3 Блок 4 (2026-11-07) — `e2e/helpers/api.ts`, 8 spec |
@@ -189,13 +189,13 @@ tags: [roadmap, v0.2]
 | QA-14 | HR замын параметр `/hr/sites/:campId` → `siteId` (утга = ажлын байр, H-Q1) | v0.2.2 H1 | P3 | S | 📋 v0.3 |
 | QA-15 | Repo цэвэрлэгээ: root-ийн `_tmp_*` (~45), `a`, хоосон `outputs_tmp/`, root-ийн хуучин `lessons_learned.md` stub; `.gitattributes` (`*.ps1`, `Caddyfile` — LF/CRLF) | 2026-10-18 | P3 | S | 📋 v0.2.2.1 (`.gitattributes`; бусад — дараа) |
 | QA-16 | Frontend-д **ErrorBoundary алга** — нэг компонент унахад цагаан дэлгэц (route `errorElement` + глобал boundary, i18n мессеж) | кодын анализ 2026-10-18 | P1 | S | 📋 v0.2.2.1 (hotfix) |
-| QA-17 | Ашиглагдаагүй код: 55 export, 68 type (knip), `route-ingress/register-route.dto.ts` (DEPRECATED давхар) | knip 2026-10-18 | P3 | S | 📋 v0.2.4 |
+| QA-17 | Ашиглагдаагүй код: 55 export, 68 type (knip), `route-ingress/register-route.dto.ts` (DEPRECATED давхар) | knip 2026-10-18 | P3 | S | ✅ v0.2.4 Блок 1 |
 | QA-18 | Production кодын type цоорхой: `as any` 19, `as unknown as` 27 | кодын анализ 2026-10-18 | P3 | S | 📋 v0.2.9 [[11_v0.2_completion_master_plan]] |
-| QA-19 | `process.env`-ийг zod `env.config`-ийг тойрч уншдаг 6 файл (escalation, outbox, tenant-slug, prisma-log, main, system-prisma); `SYSTEM_DATABASE_URL` → `DATABASE_URL` «шилжилтийн» fallback-ийг хасаж fail-fast | кодын анализ 2026-10-18 | P3 | S | 📋 v0.2.4 |
-| QA-20 | `console.log/error` → Nest `Logger` (`db/redis.module.ts`, `main.ts`) | кодын анализ 2026-10-18 | P3 | S | 📋 v0.2.4 |
+| QA-19 | `process.env`-ийг zod `env.config`-ийг тойрч уншдаг 6 файл (escalation, outbox, tenant-slug, prisma-log, main, system-prisma); `SYSTEM_DATABASE_URL` → `DATABASE_URL` «шилжилтийн» fallback-ийг хасаж fail-fast | кодын анализ 2026-10-18 | P3 | S | ✅ v0.2.4 Блок 1 |
+| QA-20 | `console.log/error` → Nest `Logger` (`db/redis.module.ts`, `main.ts`) | кодын анализ 2026-10-18 | P3 | S | ✅ v0.2.4 Блок 1 |
 | QA-21 | `schema.prisma` ↔ `supabase/migrations` зөрүүг автоматаар шалгах (CI-д `prisma migrate diff`, MIG-001) | кодын анализ 2026-10-18 | P2 | S–M | ✅ v0.2.3 Блок 8 (`3db4ba5`, baseline ratchet) |
-| DBG-01 | **Debug цэс** (эрх `core.debug.view/manage` + `DEBUG_MENU_ENABLED`): унтаа модулиуд, MFE, системийн мэдээлэл, эрүүл мэнд (DB/Redis/GoTrue/SMTP/storage/outbox/cron), эрхийн шалгагч, лог, i18n дутуу, кэш цэвэрлэх — [[10_v0.2.4_tech_plan]] D-1 | Хэрэглэгчийн шийдвэр 2026-10-19 | P1 | M | 📋 v0.2.4 |
-| I18N-02 | Олон хэлний үлдэгдэл: DTO (class-validator) мессеж, DB trigger-ийн тайлбар, ирцийн хуучин xlsx загвар (zh толгой/утга) | [[i18n-review]] §4 | P2 | M | 📋 v0.2.4 Блок 5 [[11_v0.2_completion_master_plan]] |
+| DBG-01 | **Debug цэс** (эрх `core.debug.view/manage` + `DEBUG_MENU_ENABLED`): унтаа модулиуд, MFE, системийн мэдээлэл, эрүүл мэнд (DB/Redis/GoTrue/SMTP/storage/outbox/cron), эрхийн шалгагч, лог, i18n дутуу, кэш цэвэрлэх — [[10_v0.2.4_tech_plan]] D-1 | Хэрэглэгчийн шийдвэр 2026-10-19 | P1 | M | ✅ v0.2.4 |
+| I18N-02 | Олон хэлний үлдэгдэл: DTO (class-validator) мессеж, DB trigger-ийн тайлбар, ирцийн хуучин xlsx загвар (zh толгой/утга) | [[i18n-review]] §4 | P2 | M | ✅ v0.2.4 Блок 5 |
 
 ## 4б. Хамаарал ба архитектур (кодын анализ 2026-10-18)
 
@@ -205,20 +205,20 @@ tags: [roadmap, v0.2]
 |---|---|---|---|---|---|
 | DEP-01 | `nodemailer 6.10.1` → сүүлийн хувилбар (урилгын имэйл: хүлээн авагчийн домэйн шалгалт тойрох, addressparser DoS, CRLF) | audit | P1 | S | ✅ v0.2.3 Блок 1 — nodemailer 10.1.7 (2026-10-19) |
 | DEP-02 | NestJS 10.4 → 11 + Fastify 4.28 → 5 (v4 дэмжлэг дууссан; эвдэрсэн URL-ээр auth тойрох, body validation тойрох; `@fastify/middie` critical — Nest middleware ашиглаагүй тул бодит эрсдэл бага; `find-my-way`) | audit | P1 | M | ✅ v0.2.3 Блок 1 — Nest 11.2.7, Fastify 5.12.7 (2026-10-19) |
-| DEP-03 | `react-router` 6.30 → 7 (open redirect, moderate) | audit | P2 | M | 📋 v0.2.4 |
+| DEP-03 | `react-router` 6.30 → 7 (open redirect, moderate) | audit | P2 | M | ✅ v0.2.4 Блок 1 |
 | ARC-01 | Backend HR ↔ Кемп хоёр тийш хамааралтай: `hr` → `camp/common` ~80 import (camp-tx, permissions, errors, access, audit…), `camp` → `hr` 15 файл → `camp/common`-ийг `common/tenant` руу зөөх (QA-10-ийн backend тал) | madge/grep | P1 | M | 📋 v0.3 |
 | ARC-02 | Frontend API type гараар (`camp/api/types.ts` 88 type, 703 мөр; R20-оор гар синк) → `@nestjs/swagger` OpenAPI + type codegen | кодын анализ | P1 | M | 📋 v0.3 |
-| ARC-03 | Унтаа модулиуд (MR, workflow, budget, inventory, vendor, report, event-bus, route-ingress, mr-lifecycle) — backend ~3.7k, frontend ~630 мөр; lint анхааруулгын 65/70 → WF-05-тай хамт: хадгалах / хасах | кодын анализ | P2 | M | 📋 v0.2.4 — Debug цэсэнд (Q17); хадгалах/устгах — v0.3 |
+| ARC-03 | Унтаа модулиуд (MR, workflow, budget, inventory, vendor, report, event-bus, route-ingress, mr-lifecycle) — backend ~3.7k, frontend ~630 мөр; lint анхааруулгын 65/70 → WF-05-тай хамт: хадгалах / хасах | кодын анализ | P2 | M | ✅ v0.2.4 — Debug-д эрх/flag-аар нууцалсан; устгах эсэх шийдвэр v0.3-д |
 | ARC-04 | `schema.prisma` 1953 мөр (67 model, 38 enum) → модулиар `prisma/schema/*.prisma` (16 файл, `prismaSchemaFolder` preview, R22) | хэрэглэгч 2026-10-19 | P2 | S | ✅ v0.2.3 Блок 1б (2026-10-19) |
 | DEP-04 | Prisma 5.22 → 6.x (олон файлт schema GA, `prismaSchemaFolder` preview-г хасах) | Блок 1б | P2 | M | 📋 v0.2.4 |
 | DEP-05 | Хөгжүүлэлтийн хэрэгслийн эмзэг хамаарал (audit 2026-10-19, runtime-д хамаарахгүй): `vitest` 1.6 → 3.2+ (tinypool, vite, source-map-js), `@playwright/test` 1.48 → 1.55+, `@module-federation/vite` (adm-zip, undici), `@typescript-eslint` 7 (braces) | Блок 1 audit | P2 | M | 📋 v0.2.4 |
-| ARC-05 | ADR-007 цэвэрлэгээ: `legacy_camp_*` 6 хүснэгт, `core_permission_aliases`, кодын `PERMISSION_ALIASES` / `withLegacyAliases`, хуучин `/camp` RBAC зам (`CampRbacLegacyController`), `CampRoleCode` enum, `supabase/dev/camp_schema_test.sql`-ийн RBAC хэсэг устгах ([[ADR-007_System_Roles_Permissions]] §6); дараа нь QA-21 baseline `node scripts/ci/prisma-drift.mjs --update` (`DROP TABLE legacy_camp_*`, `DROP TYPE CampRoleCode` мөрүүд алга болно) | v0.2.3 Блок 2 | P2 | S | 📋 v0.2.4 |
+| ARC-05 | ADR-007 цэвэрлэгээ: `legacy_camp_*` 6 хүснэгт, `core_permission_aliases`, кодын `PERMISSION_ALIASES` / `withLegacyAliases`, хуучин `/camp` RBAC зам (`CampRbacLegacyController`), `CampRoleCode` enum, `supabase/dev/camp_schema_test.sql`-ийн RBAC хэсэг устгах ([[ADR-007_System_Roles_Permissions]] §6); дараа нь QA-21 baseline `node scripts/ci/prisma-drift.mjs --update` (`DROP TABLE legacy_camp_*`, `DROP TYPE CampRoleCode` мөрүүд алга болно) | v0.2.3 Блок 2 | P2 | S | ✅ v0.2.4 Блок 1; drift check baseline 337 мөр |
 
 ## 5. Баримт
 
 | ID | Ажил | Урьдч. | Төлөв |
 |---|---|---|---|
-| DOC-01 | ADR-002 Хостинг (PIL-06-ийн шийдвэр) | P1 | 📋 v0.2.4 — ADR-002 = пилот PC (Q15) |
+| DOC-01 | ADR-002 Хостинг (PIL-06-ийн шийдвэр) | P1 | ✅ v0.2.4 — ADR-002, release runbook; rollout дадлага Блок 0 gate |
 | DOC-02 | Хэрэглэгчийн гарын авлага (Кемп) — [[pilot-test-guide]]-ээс үүсгэх | P2 | 📋 v0.2.9 (гарын авлага, сургалт — 3 хэл) [[11_v0.2_completion_master_plan]] |
 | DOC-03 | «Missing Specs» (Event bus гэрээ, FIX-01~04): [[project-status]] §3 нь [[INDEX]]-ийн хэсэг рүү заадаг ч тэр хэсэг алга → INDEX-д нэмэх | P3 | 📋 |
 

@@ -1,12 +1,12 @@
 ---
-title: "04 — Кемп пилот: нэг Windows машин дээр интернэтэд нээх (v0.1.6, шинэчлэл/staging — v0.2.0)"
+title: "04 — Кемп пилот: нэг Windows машин дээр интернэтэд нээх (v0.1.6, шинэчлэл/staging — v0.2.4)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-11-07
+last_updated: 2026-11-10
 tags: [camp, pilot, stack]
 ---
 
-# 04 — Кемп пилот: нэг Windows машин дээр интернэтэд нээх (v0.1.6, шинэчлэл/staging — v0.2.0)
+# 04 — Кемп пилот: нэг Windows машин дээр интернэтэд нээх (v0.1.6, шинэчлэл/staging — v0.2.4)
 
 > Үүсгэсэн: 2026-10-10 (v0.1.6) | Байгууллага: **Sino Hydro** (`sinohydro`) | Модуль: **Кемп**
 > Холбоотой: `deploy/pilot/` (скрипт, тохиргоо), [[ADR-002_Hosting]] (хостинг), [[02_Local_Supabase_Docker_Windows]] (dev орчин),
@@ -354,6 +354,40 @@ git tag v0.1.7 ; git push origin release/v0.1 --tags
 git switch main ; git merge release/v0.1   # засварыг v0.2-т ч оруулна
 ```
 Пилот дээр §13-ийн алхмаар `git checkout v0.1.7`.
+
+### 13г. v0.2.4 — staging дадлага, эрхийн gate, пилотын шинэчлэл
+
+> Энэ хэсэг нь заавар; одоогийн release бэлтгэлд staging/pilot-д **ажиллуулахгүй**. Pilot upgrade-д эзэмшигчийн шууд зөвшөөрөл шаардлагатай. Migration `20261107006` хуучин эрхийн хүснэгтүүдийг устгах тул буцаалт нь migration хийхээс өмнөх DB + storage нөөцийг сэргээх юм.
+
+1. **Бэлтгэл ба нөөц:** пилотын админ PowerShell дээр `.\deploy\pilot\pilot.ps1 backup` ажиллуул. Нөөцөд PostgreSQL ба `storage/` орсныг шалгаж, архив болон гаднах хуулбарын SHA256 таарч байгааг баталгаажуул. `FILE_ENCRYPTION_KEY`-ийг нөөцийн архиваас тусад нь нууц үгийн менежерт хадгал; staging restore-д хавсралтыг унших шаардлагатай тул ижил түлхүүрийг зөвшөөрөгдсөн secure сувгаар staging-ийн нууцын санд оруул. Бодит `.env`-г Git/чатад бүү хуул.
+2. **Staging restore:** §13в-ийн тусдаа staging profile-д пилотын backup-ийг сэргээ. Staging-ийн бусад нууц (DB, JWT, backup password) шинээр үүсгэ; `FILE_ENCRYPTION_KEY` ижил байх ёстой. Snapshot A-г **одоогийн v0.2.3 DB-г шинэчлэхээс өмнө**, dev-ийн шинэ `camp:snapshot` хэрэгслээр ав:
+   ```powershell
+   cd E:\MoogiiDev\Dev\s-project
+   pnpm camp:snapshot --env=E:\MoogiiDev\Staging\s-project\.env.staging --out=E:\MoogiiDev\Staging\a-v024.json
+   ```
+3. **Staging upgrade ба тулгалт:** `& $st upgrade -Tag v0.2.4 -Profile staging -Root $sr` ажиллуул. Шинэчлэлтээр `20261107006` legacy alias/хуулбар хүснэгтүүдийг устгаж, `20261110002` өмнөх Camp роль/хэрэглэгчийн эрхийг ижил хүрээтэй Core эрх рүү хуулна. Шинэчилсний дараа ижил CLI-гаар B авч, A-тай яг ижил огноо/мужийг `--like`-аар хадгалж, тулга:
+   ```powershell
+   cd E:\MoogiiDev\Dev\s-project
+   pnpm camp:snapshot --env=E:\MoogiiDev\Staging\s-project\.env.staging --out=E:\MoogiiDev\Staging\b-v024.json --like=E:\MoogiiDev\Staging\a-v024.json
+   pnpm camp:snapshot --compare E:\MoogiiDev\Staging\a-v024.json E:\MoogiiDev\Staging\b-v024.json
+   ```
+   `camp:snapshot/2` нь хоол/өрөө/тоо, эрх (Camp/Core хоёр хос grant-ийг ижил эрх гэж тулгана), A-д байсан module status, орчуулгын override-ийн hash-ийг шалгана (текстийг файлд хадгалахгүй). Migration-аар шинээр үүсэх module-ийн анхдагч мөрүүдийг тулгалтаас хасна; B дээр `core`, `hr`, `camp`, `feed` нь `ACTIVE`, debug/сонголтот модулиуд `SUSPENDED` болохыг тусад нь шалга. Зөрүү эсвэл hash өөрчлөлт гарвал pilot руу **шилжүүлэхгүй**.
+4. **Pilot D-6 gate:** шинэ backup + SHA256-г дахин баталгаажуул. Migration `20261107006`-г ажиллуулахын өмнө TC-v023-ийн **A04 эрхийн шалгалтыг** эрхийн жагсаалт/хэрэглэгчийн жишээн дээр гүйцэтгэж, хэн ч эрхээ алдаагүйг бүртгэ. Дараагийн `20261110002` migration ижил роль, хэрэглэгч, ажлын байрны хүрээтэй Core grant-ыг хуулна; upgrade-ийн дараа snapshot болон TC-v023-A04-өөр дахин тулгана. Энэ gate амжилтгүй эсвэл нотолгоо байхгүй бол зогсоно.
+5. **Зөвшөөрөлтэй pilot upgrade:** зөвхөн staging A = B, D-6 gate, backup, owner зөвшөөрөл бүгд хангагдсан үед:
+   ```powershell
+   cd E:\MoogiiDev\Pilot\s-project
+   .\deploy\pilot\pilot.ps1 upgrade -Tag v0.2.4
+   .\deploy\pilot\pilot.ps1 status
+   ```
+   Дараа нь health/smoke, TC-v023-ийн эрхийн шалгалт, TC-v024-ийг ажиллуул; шалгаагүй үр дүнг release-д ногоон гэж тэмдэглэхгүй.
+6. **Rollback:** migration буцаах SQL байхгүй. Upgrade алдаа эсвэл өгөгдлийн зөрүү гарвал аппыг зогсоож, кодыг `v0.2.3` руу буцаагаад яг энэ шинэчлэлийн өмнөх backup-ийг сэргээ; дараа нь өмнөх хувилбарыг build/start хий. Restore-д DB + storage болон secure хадгалсан ижил `FILE_ENCRYPTION_KEY` заавал хамт байна:
+   ```powershell
+   .\deploy\pilot\pilot.ps1 stop
+   git checkout v0.2.3
+   .\deploy\pilot\pilot.ps1 restore E:\MoogiiDev\Pilot\backups\<энэ-шинэчлэлийн-өмнөх-нөөц>.7z
+   .\deploy\pilot\pilot.ps1 build
+   Start-ScheduledTask 'S-Project Pilot'
+   ```
 
 ## 14. Хориотой
 

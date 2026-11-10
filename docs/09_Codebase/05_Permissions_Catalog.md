@@ -2,7 +2,7 @@
 title: "Эрхийн каталог (core RBAC)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-11-07
+last_updated: 2026-11-10
 tags: [codebase, auth, rbac, generated]
 ---
 
@@ -14,13 +14,13 @@ tags: [codebase, auth, rbac, generated]
 
 Шинэ эрх: (1) migration-д `INSERT INTO core_permissions`, (2) `permission-registry.ts`, (3) хэрэгтэй бол seed роль → `pnpm docs:gen`. Хэрэглэгчийн эцсийн эрх = `core_user_permissions` (ганц эх сурвалж). Роль, эрх системийн түвшинд — [[ADR-007_System_Roles_Permissions]]. Үндсэн (core) роль — [[03_DB_Catalog]] → Enum. Загвар: [[ADR-003_Users_Login_Permissions]].
 
-## Эрх (21)
+## Эрх (23)
 
 | Код | Нэр | Хувилбар | CAMP_ADMIN | CAMP_MANAGER | CATERING_ADMIN | EMPLOYEE | Ашигласан файл |
 |---|---|---|---|---|---|---|---|
 | `camp.settings.manage` | Кемпийн тохиргоо (НӨАТ, ростер, хоол идэх байршил) | V1 | ✅ |  |  |  | `meal-orders.service.ts` `camp-settings.service.ts` `module-registry.ts` |
-| `camp.master.manage` | Мастер өгөгдөл (кемп, байр, өрөө, хэлтэс, баг, байгууллага) | V1 | ✅ |  |  |  | `camp-catalog.service.ts` `facilities.handlers.ts` `camp-facilities.service.ts` `camps.service.ts` `module-registry.ts` `core-organizations.service.ts` `departments.handler.ts` `positions.handler.ts` `hr-crews.service.ts` `hr-departments.service.ts` `hr-positions.service.ts` |
-| `camp.contract.manage` | Гэрээ, ажил, үнэ | V1 | ✅ |  |  |  | `contract-catalog.service.ts` `contract-pricing.service.ts` `contracts.service.ts` `exchange-rates.service.ts` `module-registry.ts` |
+| `camp.master.manage` | Мастер өгөгдөл (кемп, байр, өрөө, хэлтэс, баг, байгууллага) | V1 | ✅ |  |  |  | `camp-catalog.service.ts` `facilities.handlers.ts` `camp-facilities.service.ts` `camps.service.ts` `module-registry.ts` `departments.handler.ts` `positions.handler.ts` `hr-crews.service.ts` `hr-departments.service.ts` `hr-positions.service.ts` `camp-snapshot.ts` |
+| `camp.contract.manage` | Гэрээ, ажил, үнэ | V1 | ✅ |  |  |  | `contract-catalog.service.ts` `contract-pricing.service.ts` `contracts.service.ts` `module-registry.ts` `camp-snapshot.ts` |
 | `hr.employee.manage` | Ажилтан бүртгэл | V1 | ✅ |  | ✅ |  | `hr-attendance.service.ts` `hr-employees.service.ts` `employees.handler.ts` |
 | `hr.employee.terminate` | Ажлаас гаргах, дахин ажилд авах | V1 | ✅ |  |  |  | `hr-employee-lifecycle.service.ts` `former-employees.handler.ts` |
 | `hr.attendance.import` | Ирц (xlsx) импорт | V1 | ✅ | ✅ |  |  | `hr-attendance.service.ts` |
@@ -38,6 +38,8 @@ tags: [codebase, auth, rbac, generated]
 | `feed.content.moderate` | Feed модерац (пост, сэтгэгдэл устгах, report) | V1 |  |  |  |  | `feed.service.ts` |
 | `core.debug.view` | Debug цэс ба туршилтын модулиуд харах | V1 |  |  |  |  | `debug.service.ts` `core-tenant-modules.service.ts` |
 | `core.debug.manage` | Debug үйлдэл (кэш цэвэрлэх, outbox дахин илгээх) | V1 |  |  |  |  | `debug.service.ts` |
+| `core.organization.manage` | Байгууллага удирдах | V1 |  |  |  |  | `core-organizations.service.ts` |
+| `core.exchange_rate.manage` | Валют, ханш удирдах | V1 |  |  |  |  | `exchange-rates.service.ts` |
 | `mr.request.approve` |  | V1 |  |  |  |  | `material-requisition.service.ts` |
 
 ## Анхдагч роль
