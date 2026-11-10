@@ -18,6 +18,7 @@
     backup                Шифрлэсэн нөөц (7-Zip AES-256) → PILOT_BACKUP_DIR (+ хуулбар PILOT_BACKUP_COPY_DIR), хуучныг устгана
     restore <файл.7z>     Нөөцөөс сэргээх (ОДООГИЙН ӨГӨГДӨЛ УСТНА — баталгаажуулалт асууна)
     rotate-db-password    postgres / supabase_admin нууц үг солих (.env шинэчилнэ; staging-ээс эхэлнэ)
+                          -Generate (зөвхөн staging): нууцыг автоматаар үүсгэнэ, prompt-гүй, хэвлэхгүй
     upgrade -Tag <tag>    Шинэ хувилбар: нөөц → зогсоох → git fetch/checkout <tag> → init → build → start → health
                           (бохир git tree бол эхлэхгүй; алдаа гарвал буцаах заавар хэвлэнэ)
     auth-test <имэйл>     (зөвхөн -Profile staging) Нэвтрэлтийн түгжээ (PIL-07): 6 буруу нууц үг → 400×5, 429; дараа нь түгжээг тайлна
@@ -44,6 +45,7 @@ param(
   [Parameter(Position = 1, ValueFromRemainingArguments = $true)] [string[]] $Rest,
   [switch] $All,
   [switch] $Yes,
+  [switch] $Generate,
   # $PROFILE (PowerShell-ийн автомат хувьсагч)-тай давхцахгүйн тулд дотроо $Instance
   [Alias('Profile')] [ValidateSet('pilot', 'staging')] [string] $Instance = 'pilot',
   [string] $Root = '',
@@ -232,7 +234,41 @@ function ConvertFrom-SecureInput([securestring] $value) {
   finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
 }
 
+# Модулогийн хазайлтгүй [A-Za-z0-9] нууц (CSPRNG)
+function New-RandomAlnum([int] $length) {
+  $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+  try {
+    $sb = New-Object System.Text.StringBuilder
+    $buf = New-Object byte[] 64
+    while ($sb.Length -lt $length) {
+      $rng.GetBytes($buf)
+      foreach ($x in $buf) {
+        if ($x -lt 248 -and $sb.Length -lt $length) { [void]$sb.Append($alphabet[$x % 62]) }
+      }
+    }
+    return $sb.ToString()
+  } finally { $rng.Dispose() }
+}
+
+# v0.2.4.1 upgrade preflight: шинэ хувилбарын init нь PILOT_DB_ADMIN_PASSWORD (32+)-гүйгээр Supabase асаахгүй.
+# Pilot-ийг зогсоохоос ӨМНӨ шалгана — эс бөгөөс upgrade дундаа зогсож систем унтарсан хэвээр үлдэнэ.
+function Assert-DbAdminPasswordReady([hashtable] $cfg) {
+  $pw = Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD'
+  $hint = if ($Instance -eq 'staging') { 'pilot.ps1 rotate-db-password -Profile staging -Root <staging> -Generate' } else { 'pilot.ps1 rotate-db-password -Profile pilot -Yes' }
+  if ($pw -notmatch '^[A-Za-z0-9]{32,}$') {
+    Stop-Pilot2 "PILOT_DB_ADMIN_PASSWORD (32+ үсэг/тоо) тохируулаагүй — эхлээд: $hint. Upgrade эхлээгүй, систем ажилласан хэвээр."
+  }
+  $a = @('exec', '-e', "PGPASSWORD=$pw", $DbContainer, 'psql', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'postgres', '-At', '-c', 'SELECT current_user')
+  $r = Invoke-Native -Exe 'docker' -Arguments $a -Capture -AllowFail -Quiet
+  if ($r.Code -ne 0 -or (@($r.Out) -join '').Trim() -ne 'postgres') {
+    Stop-Pilot2 "DB ($DbContainer) ажиллахгүй эсвэл PILOT_DB_ADMIN_PASSWORD DB-ийн нууцтай таарахгүй — $hint. Upgrade эхлээгүй, систем ажилласан хэвээр."
+  }
+  Write-Ok 'DB administrator нууц үг баталгаажлаа (upgrade preflight)'
+}
+
 function Invoke-DbPasswordRotation {
+  if ($Generate -and $Instance -ne 'staging') { Stop-Pilot2 '-Generate зөвхөн staging-д; pilot-д интерактив + -Yes' }
   $cfg = Import-PilotEnv
   $envFile = Join-Path $Root $Prof.EnvFile
   $oldPassword = Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD' 'postgres'
@@ -241,10 +277,16 @@ function Invoke-DbPasswordRotation {
     $confirmation = Read-Host "Баталгаажуулахын тулд $($cfg['DEDICATED_TENANT_SLUG']) гэж бич"
     if ($confirmation -cne $cfg['DEDICATED_TENANT_SLUG']) { Stop-Pilot2 'Пилотын нууц үг солих цуцлагдлаа' }
   }
-  $first = Read-Host 'Шинэ DB administrator нууц үг (32+ латин үсэг/тоо)' -AsSecureString
-  $second = Read-Host 'Шинэ DB administrator нууц үгийг давтан оруул' -AsSecureString
-  $newPassword = ConvertFrom-SecureInput $first
-  $confirmPassword = ConvertFrom-SecureInput $second
+  if ($Generate) {
+    # v0.2.4.1: staging-д агент/скрипт prompt-гүй солино; нууцыг хэвлэхгүй, зөвхөн .env-д хадгална
+    $newPassword = New-RandomAlnum 40
+    $confirmPassword = $newPassword
+  } else {
+    $first = Read-Host 'Шинэ DB administrator нууц үг (32+ латин үсэг/тоо)' -AsSecureString
+    $second = Read-Host 'Шинэ DB administrator нууц үгийг давтан оруул' -AsSecureString
+    $newPassword = ConvertFrom-SecureInput $first
+    $confirmPassword = ConvertFrom-SecureInput $second
+  }
   if ($newPassword -notmatch '^[A-Za-z0-9]{32,}$') { Stop-Pilot2 'DB administrator нууц үг зөвхөн латин үсэг/тоо, 32+ тэмдэгт байна' }
   if ($newPassword -cne $confirmPassword) { Stop-Pilot2 'Нууц үг таарсангүй' }
   if ($newPassword -ceq $oldPassword) { Stop-Pilot2 'Шинэ нууц үг одоогийн нууц үгтэй ижил байна' }
@@ -931,6 +973,10 @@ function Invoke-Upgrade([string] $tag) {
   if ($tag -notmatch '^v\d+\.\d+\.\d+(\.\d+)?$') { Stop-Pilot2 "tag буруу: $tag (жнь v0.2.0)" }
   $cfg = Import-PilotEnv
   Assert-PilotEnv $cfg -NeedBackup
+  Assert-DbAdminPasswordReady $cfg
+  if (-not (Get-Cfg $cfg 'FILE_ENCRYPTION_KEY')) {
+    Write-Warn2 'FILE_ENCRYPTION_KEY алга — хавсралтын түлхүүр JWT_SECRET-ээс гарна (JWT солиход хавсралт уншигдахгүй). openssl rand -base64 32 → .env, нөөцөөс тусад хадгална (ADR-002)'
+  }
   $null = Get-7zExe
   $self = Get-SelfCommand
 

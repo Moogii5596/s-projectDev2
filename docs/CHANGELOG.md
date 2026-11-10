@@ -15,6 +15,18 @@ tags: [release]
 
 ---
 
+## [v0.2.4.1] — 2026-11-10 — Pilot шинэчлэлийн хамгаалалт
+
+> v0.2.4-ийн код, migration өөрчлөгдөөгүй; зөвхөн `deploy/` скрипт ба баримт. Staging/pilot-д v0.2.4.1-ийг суулгана.
+
+### Засварласан
+- `pilot.ps1 upgrade` — **preflight**: `PILOT_DB_ADMIN_PASSWORD` (32+) болон DB-д нэвтрэлтийг pilot-ийг зогсоохоос ӨМНӨ шалгана (өмнө нь upgrade дундаа Supabase асаахаас татгалзаж систем унтарсан хэвээр үлдэх эрсдэлтэй байв); `FILE_ENCRYPTION_KEY` байхгүй бол анхааруулна.
+- `pilot.ps1 rotate-db-password -Generate` — зөвхөн staging: нууцыг CSPRNG-ээр үүсгэж prompt-гүй солино, хэвлэхгүй.
+- `.env.pilot.example`, `.env.staging.example` — `FILE_ENCRYPTION_KEY`, `MEDIA_URL_SECRET`, `DEBUG_MENU_ENABLED` нэмэв.
+
+### ⚠️ Pilot-д суулгахаас өмнө (эзэмшигч)
+- Pilot `.env`-д `FILE_ENCRYPTION_KEY` нэмж нөөцөөс тусад хадгалах; `rotate-db-password -Profile pilot -Yes`; upgrade-ийг шинэ tools скриптээр `-Root`-тэй — [[04_Pilot_Camp_Windows]] §13г.
+
 ## [v0.2.4] — 2026-11-10 — Release-д бэлтгэсэн (staging/pilot gate хүлээгдэнэ)
 
 > Код, local шалгалт ба баримт бэлэн; staging/pilot upgrade, TC-v023/TC-v024 болон `main` merge/tag/push хийгдээгүй.
