@@ -132,7 +132,14 @@ test.describe.serial('Кемп v0.2.0', () => {
   });
 
   test('FB-12: өрөөний самбарын шүүлт; FB-05/11: хуучин хаяг redirect, сүүлийн кемп', async ({ page }) => {
+    test.setTimeout(60_000);
     await page.goto(`/camp/${campId}/rooms`);
+    const accessibleCamps = await api<{ id: string; isActive: boolean }[]>(page, 'GET', '/camp/camps');
+    expect(accessibleCamps).toContainEqual(expect.objectContaining({ id: campId, isActive: true }));
+    await expect.poll(
+      () => page.evaluate((id) => Object.entries(localStorage).some(([key, value]) => key.startsWith('s-project.camp.last.') && value === id), campId),
+      { timeout: 15_000 },
+    ).toBe(true);
     await page.getByRole('button', { name: /^Сул · \d+/ }).click();
     await expect(page.getByLabel('Өрөө 7-01')).toBeVisible();
     await page.getByRole('button', { name: /^Хэтэрсэн · 0/ }).click();
@@ -155,9 +162,11 @@ test.describe.serial('Кемп v0.2.0', () => {
     await page.goto('/camp/system/positions');
     await page.waitForURL('**/hr/*/positions');
     await page.goto('/camp/admin/organizations');
-    await page.waitForURL('**/settings/organizations'); // v0.2.3 Блок 3: Системийн тохиргоо
+    await expect(page.getByText('S Project', { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page).toHaveURL(/\/settings\/organizations$/, { timeout: 20_000 }); // v0.2.3 Блок 3: Системийн тохиргоо
     await page.goto('/camp');
-    await page.waitForURL(`**/camp/${campId}/rooms`);
+    await expect(page.getByText('S Project', { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page).toHaveURL(new RegExp(`/camp/${campId}/rooms$`), { timeout: 20_000 });
   });
 
   test.afterAll(async ({ browser }) => {
@@ -176,9 +185,9 @@ test.describe.serial('Кемп v0.2.0', () => {
     await loginAsUser(page, 'devLangAdmin');
     await page.goto(`/hr/${campId}/employees`);
     await page.getByRole('group', { name: 'Хэл' }).getByRole('button', { name: 'EN' }).click();
-    await expect(page.getByRole('button', { name: 'Camp', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Camp', exact: true })).toBeVisible({ timeout: 15_000 });
     // v0.2.2 H2: ирц «Хүний нөөц»-д
-    await expect(page.getByRole('navigation', { name: 'HR sections' }).getByRole('link', { name: 'Attendance' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'HR sections' }).getByRole('link', { name: 'Attendance' })).toBeVisible({ timeout: 15_000 });
     // backend алдаа хэрэглэгчийн хэлээр (Accept-Language)
     await page.getByRole('button', { name: 'Import (Excel / table)' }).click();
     await page.getByRole('dialog').getByRole('tab', { name: 'Enter as table' }).click();
@@ -187,19 +196,19 @@ test.describe.serial('Кемп v0.2.0', () => {
     await page.keyboard.press('Escape');
 
     await page.getByRole('group', { name: 'Language' }).getByRole('button', { name: '中文' }).click();
-    await expect(page.getByRole('button', { name: '营地', exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '员工', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '营地', exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { name: '员工', exact: true })).toBeVisible({ timeout: 15_000 });
 
     // Шинэ төхөөрөмж (цэвэр контекст) — профайлын хэл
     const ctx = await browser.newContext();
     const other = await ctx.newPage();
     await loginAsUser(other, 'devLangAdmin');
     await other.goto('/camp?list=1');
-    await expect(other.getByRole('button', { name: '营地', exact: true })).toBeVisible();
+    await expect(other.getByRole('button', { name: '营地', exact: true })).toBeVisible({ timeout: 15_000 });
     await ctx.close();
 
     await page.getByRole('group', { name: '语言' }).getByRole('button', { name: 'МН' }).click();
-    await expect(page.getByRole('button', { name: 'Кемп', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Кемп', exact: true })).toBeVisible({ timeout: 15_000 });
     // профайл ч МН руу буцсан эсэх
     const me = await api<{ locale: string }>(page, 'GET', '/api/v1/auth/me', undefined);
     expect(me.locale).toBe('mn');

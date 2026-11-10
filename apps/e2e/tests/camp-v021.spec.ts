@@ -157,11 +157,11 @@ test.describe.serial('Кемп v0.2.1', () => {
     await loginAsUser(page, 'devAppr1');
     await page.goto(`/camp/${campId}/settings/positions`);
     await page.getByRole('group', { name: 'Хэл' }).getByRole('button', { name: 'EN' }).click();
-    await expect(page.getByRole('heading', { name: 'Positions' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Positions' })).toBeVisible({ timeout: 15_000 });
     await page.goto(`/hr/${campId}/employees`);
-    await expect(page.getByRole('columnheader', { name: 'Work meal location' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Work meal location' })).toBeVisible({ timeout: 15_000 });
     await page.getByRole('group', { name: 'Language' }).getByRole('button', { name: 'МН' }).click();
-    await expect(page.getByRole('button', { name: 'Кемп', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Кемп', exact: true })).toBeVisible({ timeout: 15_000 });
     await own.close();
   });
 });

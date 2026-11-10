@@ -98,6 +98,7 @@
     "test:e2e": {
       "cache": false,
       "passThroughEnv": [
+        "DEBUG_MENU_ENABLED",
         "DATABASE_URL",
         "SYSTEM_DATABASE_URL",
         "DIRECT_URL",
