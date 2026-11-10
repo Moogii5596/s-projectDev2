@@ -98,6 +98,7 @@ tags: [roadmap, v0.2]
 | CORE-05 | Scheduler: cron registry, lock, гүйлтийн түүх (Debug) | v0.2.4 | P1 | S | ✅ v0.2.4 |
 | CORE-06 | Дугаарлалт: `core_sequences` (угтвар, он, урт), давхардалгүй | v0.2.4 | P2 | S | ✅ v0.2.4 |
 | CORE-07 | Импорт/экспортын framework (preview → батлах, 3 хэл, модулийн handler manifest-ээр) — DATA-01-ийн суурь | v0.2.4 | P1 | M | ✅ v0.2.4; Camp/HR → Core handler registry |
+| CORE-10 | Импорт/экспортын цөмийг scope-оор ерөнхийлөх: `DataTransferService`-ээс `getCampOr404`, `campId`, `CampDataImportType`, `CampPermission`-ийг хасаж `scopeId` + модулийн handler-ийн scope шалгалт болгох (C1-тэй хамт) | v0.2.5 (D-7) | P2 | S | 📋 |
 | CORE-08 | Тайлангийн хөдөлгүүр (dataset, бүлэглэх, багана, шүүлт, загвар, Excel/3 хэл) — HR тайлан, зардлын тайлан | v0.2.5 | P1 | L | 📋 |
 | CORE-09 | Асуулга / маягтын хөдөлгүүр (сэтгэл ханамж г.м.) | v0.2.7 | P1 | M | 📋 |
 | HR-01 | ADR-008 HR өгөгдлийн загвар v2: ажлын байр ↔ кемп салгах, assignment, байгууллагын түвшний хэлтэс/ростер, хэлтэс ↔ хоолны байршил салгах, `hr_*` биет нэр, `core_audit_log` (хоолны тоо A = B) | v0.2.5 | P1 | L | 📋 |

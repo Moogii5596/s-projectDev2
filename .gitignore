@@ -87,3 +87,6 @@ _tmp_*
 # Сургалтын материал — тусдаа private repo (s-project-learning)
 /docs/_learning/
 .devin/
+
+# Module Federation-ийн генерацлагдсан төрөл (dev үед үүснэ; src/mfe.d.ts ашиглагдана)
+apps/web-shell/@mf-types/
