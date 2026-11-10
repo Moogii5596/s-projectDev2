@@ -10,9 +10,9 @@
 import { randomBytes } from 'node:crypto';
 import { TENANT_SLUG_PATTERN } from '../config/deployment-mode';
 
-export const PILOT_ROLES = ['OWNER', 'ADMIN', 'APPROVER', 'REQUESTER', 'VIEWER'] as const;
+const PILOT_ROLES = ['OWNER', 'ADMIN', 'APPROVER', 'REQUESTER', 'VIEWER'] as const;
 export type PilotRole = (typeof PILOT_ROLES)[number];
-export const CAMP_ROLE_CODES = ['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN'] as const;
+const CAMP_ROLE_CODES = ['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN'] as const;
 export type CampRoleCode = (typeof CAMP_ROLE_CODES)[number];
 
 export interface PilotAuth {
@@ -62,7 +62,7 @@ export function validateSlug(slug: string): string {
   return s;
 }
 
-export function validateEmail(email: string): string {
+function validateEmail(email: string): string {
   const e = email.trim().toLowerCase();
   if (!EMAIL.test(e)) throw new Error(`email буруу: "${email}"`);
   return e;
@@ -82,7 +82,7 @@ export function validateCampRole(code: string): CampRoleCode {
   return c as CampRoleCode;
 }
 
-export function validatePassword(pw: string): string {
+function validatePassword(pw: string): string {
   if (pw.length < 12) throw new Error('password хамгийн багадаа 12 тэмдэгт (пилот — интернэтэд нээлттэй)');
   return pw;
 }

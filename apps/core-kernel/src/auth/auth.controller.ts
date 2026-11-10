@@ -26,7 +26,7 @@ import { AllowPasswordChangeRequired } from '../common/decorators/allow-password
 import type { RequestUser } from '@s-project/shared-types';
 
 /** SEC-005 (v0.1.6): хэрэглэгч үүсгэх эрхтэй role-ууд */
-export const REGISTER_ROLES = ['OWNER', 'ADMIN'] as const;
+const REGISTER_ROLES = ['OWNER', 'ADMIN'] as const;
 
 interface FastifyRequest {
   user?: RequestUser;
@@ -60,6 +60,13 @@ export class AuthController {
       throw new ForbiddenException('Хэрэглэгч үүсгэх эрхгүй (OWNER/ADMIN)');
     }
     return this.authService.register(dto, caller.tenantId);
+  }
+
+  /** GET /api/v1/auth/password-policy — нэвтэрсэн хэрэглэгчийн tenant-ийн нууц үгийн доод урт */
+  @Get('password-policy')
+  @AllowPasswordChangeRequired()
+  passwordPolicy(@Req() req: FastifyRequest) {
+    return this.authService.passwordPolicy(req.user!.tenantId);
   }
 
   /**

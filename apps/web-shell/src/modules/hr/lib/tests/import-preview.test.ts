@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import mn from '@s-project/i18n/web.mn.json'
-import type { ImportPreview } from '../../../camp/api/types'
+import type { ImportPreview } from '../../api/camp-bridge'
 import { FORMAT_KEY, SKIP_REASON_KEY, previewBadges, rosterGapTotals } from '../import-preview'
 
 const base = (p: Partial<ImportPreview> = {}, summary: Partial<ImportPreview['summary']> = {}): ImportPreview => ({

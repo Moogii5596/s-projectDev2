@@ -1,4 +1,4 @@
-import type { GridColumn } from '../../camp/components/ImportDialog'
+import type { GridColumn } from '../../../core/ImportDialog'
 
 /** v0.2.2 H2: импортын баганууд — ажилтан/хэлтсийн хуудас ба «Импорт» хуудас хуваалцана */
 /** FB-08 (v0.2.0): Excel / хүснэгтээр оруулах — баганын түлхүүр backend EMPLOYEES_SPEC-тэй ижил */

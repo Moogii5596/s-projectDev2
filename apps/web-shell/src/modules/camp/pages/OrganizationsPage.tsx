@@ -1,25 +1,26 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { campApi, type OrganizationInput } from '../api/camp-api'
-import type { Organization, OrgServiceType, OrgType } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
-import { ORG_SERVICE_LABEL, ORG_TYPE_LABEL } from '../lib/labels'
-import { ActiveBadge, Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Table, inputCls, td } from '../components/ui'
+import type { Organization, OrganizationServiceType, OrgServiceType, OrgType } from '../api/types'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { ORG_SERVICE_LABEL, ORG_TYPE_LABEL } from '../../../core/labels'
+import { ActiveBadge, Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Table, inputCls, td } from '../../../core/ui'
 import { useTranslation } from 'react-i18next'
 
-const SERVICES = Object.keys(ORG_SERVICE_LABEL) as OrgServiceType[]
 const ORG_TYPES = Object.keys(ORG_TYPE_LABEL) as OrgType[]
 
 /** /camp/admin/organizations — tenant түвшин (бүх кемпэд үйлчилнэ). Бичих: бүх кемпийн master.manage */
 export default function OrganizationsPage() {
-  const { t } = useTranslation()
-  const perms = useCampPermissions()
+  const { t, i18n } = useTranslation()
+  const perms = useAppPermissions()
   const [showInactive, setShowInactive] = useState(false)
   const orgs = useQuery({ queryKey: [...campKeys.organizations, showInactive], queryFn: () => campApi.organizations({ activeOnly: !showInactive }) })
+  const serviceTypes = useQuery({ queryKey: [...campKeys.organizations, 'service-types'], queryFn: campApi.organizationServiceTypes })
   const [editing, setEditing] = useState<Organization | 'new' | null>(null)
   const canEdit = perms.can(P.MASTER_MANAGE)
+  const serviceLabel = (code: OrgServiceType) => organizationServiceLabel(serviceTypes.data ?? [], code, i18n.resolvedLanguage ?? i18n.language)
 
   return (
     <div className="space-y-4">
@@ -51,7 +52,7 @@ export default function OrganizationsPage() {
                     ) : (
                       o.serviceTypes.map((s) => (
                         <Badge key={s} tone={s === 'CATERING' ? 'blue' : 'gray'}>
-                          {ORG_SERVICE_LABEL[s]}
+                          {serviceLabel(s)}
                         </Badge>
                       ))
                     )}
@@ -73,12 +74,25 @@ export default function OrganizationsPage() {
           </Table>
         )}
       </Card>
-      {editing && <OrgModal org={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
+      <ErrorBox error={serviceTypes.error} onRetry={() => serviceTypes.refetch()} />
+      {editing && <OrgModal org={editing === 'new' ? null : editing} serviceTypes={serviceTypes.data ?? []} language={i18n.resolvedLanguage ?? i18n.language} onClose={() => setEditing(null)} />}
     </div>
   )
 }
 
-function OrgModal({ org, onClose }: { org: Organization | null; onClose: () => void }) {
+function organizationServiceLabel(catalog: OrganizationServiceType[], code: OrgServiceType, language: string) {
+  const item = catalog.find((service) => service.code === code)
+  if (!item) return ORG_SERVICE_LABEL[code] ?? code
+  const lang = language.split('-')[0]
+  return (lang === 'en' ? item.nameEn : lang === 'zh' ? item.nameZh : null) || item.nameMn || code
+}
+
+function OrgModal({ org, serviceTypes, language, onClose }: {
+  org: Organization | null
+  serviceTypes: OrganizationServiceType[]
+  language: string
+  onClose: () => void
+}) {
   const { t } = useTranslation()
   const [f, setF] = useState<OrganizationInput & { isActive: boolean }>({
     name: org?.name ?? '',
@@ -103,7 +117,7 @@ function OrgModal({ org, onClose }: { org: Organization | null; onClose: () => v
     phone: f.phone?.trim() || null,
     email: f.email?.trim() || null,
   })
-  const m = useCampMutation(
+  const m = useAppMutation(
     () => (org ? campApi.updateOrganization(org.id, { ...body(), isActive: f.isActive }) : campApi.createOrganization(body())),
     [campKeys.organizations],
     onClose,
@@ -144,9 +158,15 @@ function OrgModal({ org, onClose }: { org: Organization | null; onClose: () => v
       <fieldset>
         <legend className="block text-xs font-medium text-gray-600 mb-1">{t('camp.org.service_types')}</legend>
         <div className="grid grid-cols-2 gap-1">
-          {SERVICES.map((s) => (
-            <label key={s} className="inline-flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={f.serviceTypes?.includes(s) ?? false} onChange={() => toggleService(s)} /> {ORG_SERVICE_LABEL[s]}
+          {serviceTypes.map((service) => (
+            <label key={service.code} className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={f.serviceTypes?.includes(service.code) ?? false}
+                disabled={!service.isActive && !(f.serviceTypes?.includes(service.code) ?? false)}
+                onChange={() => toggleService(service.code)}
+              />
+              {organizationServiceLabel(serviceTypes, service.code, language)}
             </label>
           ))}
         </div>

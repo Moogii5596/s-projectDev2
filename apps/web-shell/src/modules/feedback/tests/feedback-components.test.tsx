@@ -3,7 +3,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import i18n from '../../../i18n'
 import FeedbackAttachments from '../FeedbackAttachments'
-import type { FeedImageDto } from '../../feed/types'
+import type { FeedImageDto } from '../feed-bridge'
 
 beforeAll(() => {
   i18n.addResourceBundle(

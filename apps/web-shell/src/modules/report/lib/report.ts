@@ -1,7 +1,7 @@
 /** Phase 6.0.4 — Тайлангийн харуулах туслахууд (цэвэр функц) */
 
 /** Backend-ийн `MrStatus` бүх утга (schema.prisma) */
-export const MR_STATUS_LABEL: Record<string, string> = {
+const MR_STATUS_LABEL: Record<string, string> = {
   DRAFT: 'Ноорог',
   PENDING_APPROVAL: 'Батлуулж байна',
   PROVISIONALLY_APPROVED: 'Түр батлагдсан',

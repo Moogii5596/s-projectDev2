@@ -1,10 +1,10 @@
 import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
 import { useMe } from '../hooks/useMe'
-import { changePasswordRequest } from '../api/auth'
+import { changePasswordRequest, getPasswordPolicy } from '../api/auth'
 import { MIN_PASSWORD_LENGTH, apiErrorMessage } from '../lib/password-change'
 import { HOME_PATH } from '../config/enabled-modules'
 import LanguageSwitcher from '../components/LanguageSwitcher'
@@ -19,6 +19,8 @@ export default function ChangePasswordPage() {
   const qc = useQueryClient()
   const { signOut } = useAuth()
   const { me } = useMe()
+  const policy = useQuery({ queryKey: ['auth', 'password-policy'], queryFn: getPasswordPolicy })
+  const minPasswordLength = policy.data?.passwordMinLength ?? MIN_PASSWORD_LENGTH
   const required = me?.mustChangePassword === true
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
@@ -30,7 +32,7 @@ export default function ChangePasswordPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (next.length < MIN_PASSWORD_LENGTH) return setError(t('auth.change.min', { n: MIN_PASSWORD_LENGTH }))
+    if (next.length < minPasswordLength) return setError(t('auth.change.min', { n: minPasswordLength }))
     if (next !== confirm) return setError(t('auth.change.mismatch'))
     setSubmitting(true)
     try {
@@ -70,8 +72,8 @@ export default function ChangePasswordPage() {
             </div>
             <div>
               <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">{t('auth.change.new')}</label>
-              <input id="new-password" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD_LENGTH} value={next} onChange={(e) => setNext(e.target.value)} className={input} />
-              <p className="mt-1 text-xs text-gray-500">{t('auth.change.min', { n: MIN_PASSWORD_LENGTH })}</p>
+              <input id="new-password" type="password" autoComplete="new-password" required minLength={minPasswordLength} value={next} onChange={(e) => setNext(e.target.value)} className={input} />
+              <p className="mt-1 text-xs text-gray-500">{t('auth.change.min', { n: minPasswordLength })}</p>
             </div>
             <div>
               <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">{t('auth.change.confirm')}</label>

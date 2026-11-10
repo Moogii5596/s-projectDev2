@@ -6,11 +6,12 @@ import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../db/redis.module';
 import { SystemPrismaService } from '../db/system-prisma.service';
 import { parseDeploymentConfig, DeploymentConfig } from '../config/deployment-mode';
-import { AppError } from '../common/i18n/app-error';
+import { AppError, badRequest } from '../common/i18n/app-error';
 import { TenantCacheService } from './tenant-cache.service';
 import { resolveTenantSlug } from './tenant-slug';
 import { LoginIdentifier, maskPhone, parseLoginIdentifier } from './login-identifier';
 import { SessionRevokeService } from './session-revoke.service';
+import { DEFAULT_TENANT_SECURITY_POLICY, TenantSecurityPolicyService } from './tenant-security-policy.service';
 
 export interface SignInSession {
   accessToken: string;
@@ -37,6 +38,7 @@ export const SIGN_IN_LIMITS = {
   identifier: { limit: 10, ttlSec: 15 * 60 },
   ip: { limit: 50, ttlSec: 5 * 60 },
 } as const;
+type FailureLimit = { limit: number; ttlSec: number };
 
 const invalid = () => new AppError(HttpStatus.UNAUTHORIZED, 'auth.invalid_credentials');
 const tooMany = () => new AppError(HttpStatus.TOO_MANY_REQUESTS, 'auth.too_many_attempts');
@@ -46,7 +48,7 @@ const unavailable = () => new AppError(HttpStatus.SERVICE_UNAVAILABLE, 'auth.ser
  * GoTrue хүрэх боломжгүй: supabase-js throw хийхгүй, `AuthRetryableFetchError` (status 0/байхгүй) буцаадаг —
  * үүнийг "нууц үг буруу" (401) гэж харуулбал төөрөгдүүлнэ → 503. Буруу нууц үг = 400.
  */
-export const isAuthServiceDown = (e: { status?: number; name?: string }) =>
+const isAuthServiceDown = (e: { status?: number; name?: string }) =>
   e.name === 'AuthRetryableFetchError' || !e.status || e.status >= 500;
 
 /**
@@ -66,6 +68,7 @@ export class SignInService {
     private readonly config: ConfigService,
     private readonly system: SystemPrismaService,
     private readonly tenantCache: TenantCacheService,
+    private readonly securityPolicy: TenantSecurityPolicyService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     /** Тест: GoTrue client-ийг орлуулах */
     @Optional() @Inject('SIGN_IN_GOTRUE_FACTORY') private readonly gotrueFactory?: () => SupabaseClient,
@@ -110,17 +113,23 @@ export class SignInService {
   }
 
   /** Өмнөх амжилтгүй оролдлого босгонд хүрсэн бол GoTrue дуудахгүй 429 */
-  private async assertNotLimited(k: { id: string; ip: string | null }): Promise<void> {
+  private async assertNotLimited(
+    k: { id: string; ip: string | null },
+    identifierLimit: FailureLimit = SIGN_IN_LIMITS.identifier,
+  ): Promise<void> {
     const [byId, byIp] = await this.safe(
       async () => Promise.all([this.redis.get(k.id), k.ip ? this.redis.get(k.ip) : Promise.resolve(null)]),
       [null, null] as (string | null)[],
     );
-    if (Number(byId ?? 0) >= SIGN_IN_LIMITS.identifier.limit || Number(byIp ?? 0) >= SIGN_IN_LIMITS.ip.limit) throw tooMany();
+    if (Number(byId ?? 0) >= identifierLimit.limit || Number(byIp ?? 0) >= SIGN_IN_LIMITS.ip.limit) throw tooMany();
   }
 
-  private async recordFailure(k: { id: string; ip: string | null }): Promise<void> {
+  private async recordFailure(
+    k: { id: string; ip: string | null },
+    identifierLimit: FailureLimit = SIGN_IN_LIMITS.identifier,
+  ): Promise<void> {
     await this.safe(async () => {
-      for (const [key, ttl] of [[k.id, SIGN_IN_LIMITS.identifier.ttlSec], [k.ip, SIGN_IN_LIMITS.ip.ttlSec]] as const) {
+      for (const [key, ttl] of [[k.id, identifierLimit.ttlSec], [k.ip, SIGN_IN_LIMITS.ip.ttlSec]] as const) {
         if (!key) continue;
         const n = await this.redis.incr(key);
         if (n === 1) await this.redis.pexpire(key, ttl * 1000);
@@ -158,10 +167,15 @@ export class SignInService {
   async signIn(host: string | undefined, clientIp: string | undefined, identifier: string, password: string): Promise<SignInSession> {
     const slug = resolveTenantSlug(this.deployment, host);
     const tenantId = slug ? await this.tenantCache.getTenantId(slug) : null;
+    const policy = tenantId ? await this.securityPolicy.get(tenantId) : DEFAULT_TENANT_SECURITY_POLICY;
+    const identifierLimit = {
+      limit: policy.loginFailureLimit,
+      ttlSec: policy.loginLockoutMinutes * 60,
+    };
     const parsed = parseLoginIdentifier(identifier);
     const key = parsed?.value ?? identifier.trim().toLowerCase();
     const lk = SignInService.keys(tenantId ?? 'none', key, clientIp);
-    await this.assertNotLimited(lk);
+    await this.assertNotLimited(lk, identifierLimit);
 
     const user = tenantId && parsed ? await this.findLoginUser(tenantId, parsed) : null;
     // Байхгүй хэрэглэгч: хуурамч хаяг (RFC 2606 .invalid — хэзээ ч бүртгэгдэхгүй) → GoTrue ижил 400 → 401
@@ -179,12 +193,12 @@ export class SignInService {
       if (error.status === 429) throw tooMany();
       if (isAuthServiceDown(error)) throw unavailable();
       if (user && parsed?.kind === 'phone') this.logger.log(`sign-in татгалзсан: утас ${maskPhone(parsed.value)}`);
-      await this.recordFailure(lk);
+      await this.recordFailure(lk, identifierLimit);
       throw invalid();
     }
     // Хамгаалалт: session нь бидний олсон хэрэглэгчийнх биш бол (байх ёсгүй) — токен өгөхгүй
     if (!user || !data.session || data.user?.id !== user.authId) {
-      await this.recordFailure(lk);
+      await this.recordFailure(lk, identifierLimit);
       throw invalid();
     }
     await this.safe(() => this.redis.del(lk.id), 0);
@@ -221,6 +235,10 @@ export class SignInService {
    */
   async changePassword(tenantId: string, authId: string, currentPassword: string, newPassword: string, accessToken: string | null = null): Promise<{ changed: true }> {
     if (currentPassword === newPassword) throw new AppError(HttpStatus.BAD_REQUEST, 'auth.password_same');
+    const policy = await this.securityPolicy.get(tenantId);
+    if (newPassword.length < policy.passwordMinLength) {
+      throw badRequest('auth.password_min_length', { min: policy.passwordMinLength });
+    }
     const rows = await this.system.$queryRaw<{ id: string; email: string }[]>`
       SELECT id, email FROM core_users WHERE tenant_id = ${tenantId}::uuid AND auth_id = ${authId}::uuid AND is_active LIMIT 1`;
     if (rows.length === 0) throw invalid();

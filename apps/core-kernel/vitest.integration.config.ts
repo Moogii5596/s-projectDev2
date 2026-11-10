@@ -27,7 +27,7 @@ export default defineConfig({
     testTimeout: 30000,
     // [3.6.6] Санаатай давхардлын (409) `prisma:error` чимээг нуух. Барьж аваагүй алдаа → filter-ийн [ERROR] лог хэвээр
     // [5.0] OUTBOX_POLLER_CRON=off: зэрэгцээ тест файлуудын app-ийн cron бие биеийн outbox-ийг боловсруулахгүй (тест poller-ийг шууд дуудна)
-    env: { PRISMA_LOG_LEVELS: process.env.PRISMA_LOG_LEVELS ?? 'warn', OUTBOX_POLLER_CRON: 'off' },
+    env: { PRISMA_LOG_LEVELS: process.env.PRISMA_LOG_LEVELS ?? 'warn', OUTBOX_POLLER_CRON: 'off', NOTIFICATION_MAIL_CRON: 'off' },
     hookTimeout: 60000,
     pool: 'forks',
     poolOptions: {

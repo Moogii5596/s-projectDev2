@@ -21,6 +21,7 @@ max_rows = 1000
 port = 56522
 shadow_port = 56520
 major_version = 15
+password = "env(PILOT_DB_ADMIN_PASSWORD)"
 
 [db.pooler]
 enabled = false

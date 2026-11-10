@@ -1,15 +1,16 @@
-import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy, type ReactNode } from 'react';
+import { createBrowserRouter, Navigate, RouterProvider, useParams } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import PageSuspense from './components/PageSuspense';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
 import { HomeRedirect, ModuleGate } from './components/ModuleGate';
-// Нэвтрэлтгүй хуудсууд — үндсэн chunk-д (анхны ачаалал хурдан, утас + Tunnel)
 import LoginPage from './pages/LoginPage';
 import SetPasswordPage from './pages/SetPasswordPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import { FEED_ENABLED, isEnabled } from './config/enabled-modules';
+import { APP_MODULES, MODULE_ROUTES, moduleRoutesForBuild } from './lib/modules';
 
-// v0.2.2 Блок 6 (PIL-10): нэвтэрсний дараах хуудас/модуль бүр тусдаа chunk
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
 const DevicesPage = lazy(() => import('./pages/DevicesPage'));
 const MRListPage = lazy(() => import('./pages/MRListPage'));
@@ -24,83 +25,111 @@ const SettingsPage = lazy(() => import('./modules/settings/SettingsPage'));
 const InventoryPage = lazy(() => import('./modules/inventory/InventoryPage'));
 const VendorsPage = lazy(() => import('./modules/vendor/VendorsPage'));
 const ReportPage = lazy(() => import('./modules/report/ReportPage'));
-// v0.2.3 Блок F — санал хүсэлт, шинэчлэлийн түүх (модулиас үл хамаарна)
 const FeedbackPage = lazy(() => import('./modules/feedback/FeedbackPage'));
 const WhatsNewPage = lazy(() => import('./modules/feedback/WhatsNewPage'));
 const FeedPage = lazy(() => import('./modules/feed/FeedPage'));
 const FeedReportsPage = lazy(() => import('./modules/feed/FeedReportsPage'));
-import { FEED_ENABLED, isEnabled } from './config/enabled-modules';
+const RequisitionApp = React.lazy(() => import('mfe_requisitions/RequisitionApp'));
+const DebugModulesPage = lazy(() => import('./modules/settings/DebugModulesPage'));
+// v0.2.4 — мэдэгдэл, батлах урсгал, профайл, Debug, нэг пост
+const NotificationsPage = lazy(() => import('./modules/core/NotificationsPage'));
+const ApprovalsPage = lazy(() => import('./modules/core/ApprovalsPage'));
+const ApprovalDetailPage = lazy(() => import('./modules/core/ApprovalDetailPage'));
+const ProfilePage = lazy(() => import('./modules/core/ProfilePage'));
+const DebugPage = lazy(() => import('./modules/debug/DebugPage'));
+const FeedPostPage = lazy(() => import('./modules/feed/FeedPostPage'));
+const MfeLoading = lazy(() => import('./components/MfeLoading'));
 
-// Sprint 4: Module Federation — React.lazy + dynamic import
-// mfe-requisitions remote-оос ачаалагдана (port 5174)
-const RequisitionApp = React.lazy(
-  () => import('mfe_requisitions/RequisitionApp'),
-);
+function LegacyMrDetailRedirect() {
+  const { id } = useParams();
+  return <Navigate to={id ? `/debug/modules/mr/${id}` : '/debug/modules/mr'} replace />;
+}
+
+type ModuleRouteKey = (typeof MODULE_ROUTES)[number]['key'];
+
+const MODULE_ROUTE_ELEMENTS = {
+  home: <HomeRedirect />,
+  devices: <DevicesPage />,
+  feedback: <FeedbackPage />,
+  settings: <SettingsPage />,
+  'settings-section': <SettingsPage />,
+  'debug-modules': <DebugModulesPage />,
+  debug: <DebugPage />,
+  'debug-tab': <DebugPage />,
+  notifications: <NotificationsPage />,
+  approvals: <ApprovalsPage />,
+  'approval-detail': <ApprovalDetailPage />,
+  profile: <ProfilePage />,
+  'legacy-org-settings': <Navigate to="/settings/organizations" replace />,
+  'legacy-role-settings': <Navigate to="/settings/roles" replace />,
+  'legacy-user-role-settings': <Navigate to="/settings/user-roles" replace />,
+  'legacy-translation-settings': <Navigate to="/settings/translations" replace />,
+  'legacy-building-settings': <Navigate to="/settings/building-types" replace />,
+  'legacy-asset-settings': <Navigate to="/settings/asset-categories" replace />,
+  'whats-new': <WhatsNewPage />,
+  hr: <HrRoutes />,
+  camp: <CampRoutes />,
+  feed: <FeedPage />,
+  'feed-reports': <FeedReportsPage />,
+  'feed-post': <FeedPostPage />,
+  mr: <MRListPage />,
+  'mr-new': <MRCreatePage />,
+  'mr-detail': <MRDetailPage />,
+  'legacy-mr': <Navigate to="/debug/modules/mr" replace />,
+  'legacy-mr-new': <Navigate to="/debug/modules/mr/new" replace />,
+  'legacy-mr-detail': <LegacyMrDetailRedirect />,
+  'approval-sla': <ApprovalSlaPage />,
+  'workflow-definitions': <WorkflowDefinitionPage />,
+  delegations: <DelegationPage />,
+  'legacy-approval-sla': <Navigate to="/debug/modules/workflow/approval-sla" replace />,
+  'legacy-workflow-definitions': <Navigate to="/debug/modules/workflow/definitions" replace />,
+  'legacy-delegations': <Navigate to="/debug/modules/workflow/delegations" replace />,
+  inventory: <InventoryPage />,
+  'legacy-inventory': <Navigate to="/debug/modules/inventory" replace />,
+  vendors: <VendorsPage />,
+  'legacy-vendors': <Navigate to="/debug/modules/vendors" replace />,
+  reports: <ReportPage />,
+  'legacy-reports': <Navigate to="/debug/modules/reports" replace />,
+  mfe: <Suspense fallback={<Suspense fallback={null}><MfeLoading /></Suspense>}><RequisitionApp /></Suspense>,
+  'legacy-mfe': <Navigate to="/debug/modules/mfe" replace />,
+} satisfies Record<ModuleRouteKey, ReactNode>;
+
+const moduleRoutes = moduleRoutesForBuild(new Set(APP_MODULES.filter(isEnabled)), FEED_ENABLED)
+  .flatMap(({ key, path, module }) => {
+  const element = MODULE_ROUTE_ELEMENTS[key];
+  return [{
+    path,
+    element: module === 'core'
+      ? element
+      : <ModuleGate mod={module}>{element}</ModuleGate>,
+  }];
+});
+
+const router = createBrowserRouter([
+  {
+    errorElement: <RouteErrorBoundary />,
+    children: [
+      { path: '/login', element: <LoginPage /> },
+      { path: '/invite/:token', element: <SetPasswordPage /> },
+      { path: '/reset/:token', element: <SetPasswordPage /> },
+      { path: '/forgot', element: <ForgotPasswordPage /> },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          { path: '/change-password', element: <PageSuspense><ChangePasswordPage /></PageSuspense> },
+          {
+            element: <Layout />,
+            children: [
+              ...moduleRoutes,
+            ],
+          },
+        ],
+      },
+      { path: '*', element: <Navigate to="/" replace /> },
+    ],
+  },
+]);
 
 export default function App() {
-  return (
-    <Routes>
-      {/* Public */}
-      <Route path="/login" element={<LoginPage />} />
-      {/* v0.2.2 Блок 3: нэвтрэлтгүй — урилга, нууц үг сэргээх */}
-      <Route path="/invite/:token" element={<SetPasswordPage />} />
-      <Route path="/reset/:token" element={<SetPasswordPage />} />
-      <Route path="/forgot" element={<ForgotPasswordPage />} />
-
-      {/* Protected */}
-      <Route element={<ProtectedRoute />}>
-        {/* v0.2.2 D-06: Layout-гүй (нууц үг солих шаардлагатай үед цэс харуулахгүй) */}
-        <Route path="/change-password" element={<PageSuspense><ChangePasswordPage /></PageSuspense>} />
-        <Route element={<Layout />}>
-          {/* v0.1.6: VITE_MODULES-оор шүүнэ (пилот = зөвхөн camp → нүүр /camp) */}
-          <Route path="/" element={<HomeRedirect />} />
-          {/* v0.2.3 Блок 4б (PIL-15): нэвтэрсэн төхөөрөмжүүд */}
-          <Route path="/account/devices" element={<DevicesPage />} />
-          <Route path="/feedback" element={<FeedbackPage />} />
-          <Route path="/whats-new" element={<WhatsNewPage />} />
-          {/* v0.2.3 Блок 5 (FEED-01) — модулиас үл хамаарна; M-0: «/» → /feed */}
-          {FEED_ENABLED && <Route path="/feed" element={<FeedPage />} />}
-          {FEED_ENABLED && <Route path="/feed/reports" element={<FeedReportsPage />} />}
-          {isEnabled('mr') && (
-            <>
-              <Route path="/requisitions" element={<MRListPage />} />
-              <Route path="/requisitions/new" element={<MRCreatePage />} />
-              <Route path="/requisitions/:id" element={<MRDetailPage />} />
-              <Route path="/admin/approval-sla" element={<ApprovalSlaPage />} />
-              <Route path="/admin/workflow-definitions" element={<WorkflowDefinitionPage />} />
-              <Route path="/admin/delegations" element={<DelegationPage />} />
-            </>
-          )}
-
-          {/* Phase 6.0: хөнгөн модулиуд (Inventory / Vendor / Report) */}
-          {isEnabled('inventory') && <Route path="/inventory" element={<InventoryPage />} />}
-          {isEnabled('vendors') && <Route path="/vendors" element={<VendorsPage />} />}
-          {isEnabled('reports') && <Route path="/reports" element={<ReportPage />} />}
-
-          {/* Шат 8: Кемп модуль (V1) */}
-          {isEnabled('camp') && <Route path="/camp/*" element={<ModuleGate mod="camp"><CampRoutes /></ModuleGate>} />}
-          {/* v0.2.2 H2: Хүний нөөц (camp асвал автоматаар — lib/modules.ts) */}
-          {isEnabled('hr') && <Route path="/hr/*" element={<ModuleGate mod="hr"><HrRoutes /></ModuleGate>} />}
-          {/* v0.2.3 Блок 3 (ADR-007 B3-2): Системийн тохиргоо — роль, эрх, байгууллага, орчуулга */}
-          {isEnabled('hr') && <Route path="/settings" element={<SettingsPage />} />}
-          {isEnabled('hr') && <Route path="/settings/:section" element={<SettingsPage />} />}
-
-          {/* Sprint 4: MFE Remote — /mfe route */}
-          {isEnabled('mfe') && (
-            <Route
-              path="/mfe/*"
-              element={
-                <Suspense fallback={<div>MFE ачааллаж байна...</div>}>
-                  <RequisitionApp />
-                </Suspense>
-              }
-            />
-          )}
-        </Route>
-      </Route>
-
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
+  return <RouterProvider router={router} />;
 }

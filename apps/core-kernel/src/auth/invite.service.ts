@@ -1,4 +1,5 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'node:crypto';
 import Redis from 'ioredis';
@@ -11,6 +12,7 @@ import { AppError, badRequest } from '../common/i18n/app-error';
 import { TenantCacheService } from './tenant-cache.service';
 import { SignInService } from './sign-in.service';
 import { SessionRevokeService } from './session-revoke.service';
+import { TenantSecurityPolicyService } from './tenant-security-policy.service';
 import { UserAdminService } from './user-admin.service';
 import { MailerService } from './mailer.service';
 import { mailLang, renderAuthMail } from './auth-mail';
@@ -47,9 +49,12 @@ export class InviteService {
     private readonly mailer: MailerService,
     private readonly tenantCache: TenantCacheService,
     private readonly signIn: SignInService,
+    private readonly securityPolicy: TenantSecurityPolicyService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     /** PIL-15: accept амжилттай бол олдох session-уудыг бүгдийг нь цуцлах */
     private readonly sessions?: SessionRevokeService,
+    /** NTF-01: NotificationService (CoreModule) — AuthModule ↔ CoreModule хамаарлын тойргоос зайлсхийж lazy */
+    @Optional() private readonly moduleRef?: ModuleRef,
   ) {}
 
   /** `PUBLIC_APP_URL` (ADR-005) — төгсгөлийн `/`-гүй; http(s) биш бол null */
@@ -141,20 +146,29 @@ export class InviteService {
       expiresAt: r.expires_at,
       name: r.full_name,
       login: loginHint({ phone: r.phone, username: r.username, email: r.email }),
+      passwordMinLength: (await this.securityPolicy.get(r.tenant_id)).passwordMinLength,
     };
   }
 
   /** POST /auth/invites/:token/accept — атомаар "ашигласан" болгоод нууц үг тавина; амжилтгүй бол буцаана */
   async accept(token: string, password: string) {
     if (!TOKEN_RE.test(token)) throw badRequest('auth.invite_invalid');
-    const claimed = await this.system.$queryRaw<{ id: string; tenant_id: string; user_id: string }[]>`
+    const candidate = await this.findByToken(token);
+    if (!candidate || !candidate.is_active || candidate.used || candidate.revoked || candidate.expired) {
+      throw badRequest('auth.invite_invalid');
+    }
+    const policy = await this.securityPolicy.get(candidate.tenant_id);
+    if (password.length < policy.passwordMinLength) {
+      throw badRequest('auth.password_min_length', { min: policy.passwordMinLength });
+    }
+    const claimed = await this.system.$queryRaw<{ id: string; tenant_id: string; user_id: string; purpose: string; created_by: string | null }[]>`
       UPDATE core_user_invites SET used_at = now(), updated_at = now()
       WHERE token_hash = ${hashToken(token)} AND used_at IS NULL AND revoked_at IS NULL AND expires_at > now()
-      RETURNING id, tenant_id, user_id`;
+      RETURNING id, tenant_id, user_id, purpose::text AS purpose, created_by::text AS created_by`;
     const c = claimed[0];
     if (!c) throw badRequest('auth.invite_invalid');
-    const users = await this.system.$queryRaw<{ auth_id: string; email: string; phone: string | null; username: string | null; is_active: boolean }[]>`
-      SELECT auth_id, email, phone, username, is_active FROM core_users WHERE tenant_id = ${c.tenant_id}::uuid AND id = ${c.user_id}::uuid`;
+    const users = await this.system.$queryRaw<{ auth_id: string; email: string; phone: string | null; username: string | null; is_active: boolean; full_name: string | null }[]>`
+      SELECT auth_id, email, phone, username, is_active, full_name FROM core_users WHERE tenant_id = ${c.tenant_id}::uuid AND id = ${c.user_id}::uuid`;
     const u = users[0];
     if (!u || !u.is_active) throw badRequest('auth.invite_invalid');
     try {
@@ -172,7 +186,30 @@ export class InviteService {
     await this.tenantCache.invalidateMember(c.tenant_id, u.auth_id);
     // PIL-15: шинэ нууц үг тавигдлаа → өмнөх бүх session цуцлагдана
     await this.sessions?.revokeAll(u.auth_id);
+    if (c.purpose === 'INVITE' && c.created_by) await this.notifyInviter(c.tenant_id, c.created_by, c.user_id, u.full_name?.trim() || loginHint(u) || '');
     return { done: true as const, login: loginHint(u) };
+  }
+
+  /** v0.2.4 NTF-01: урилга илгээсэн админд мэдэгдэл. Алдаа нь accept-ийн үр дүнг өөрчлөхгүй. */
+  private async notifyInviter(tenantId: string, inviterId: string, userId: string, name: string): Promise<void> {
+    try {
+      // Динамик import — auth ↔ core модулийн файлын тойрог (decorator metadata undefined) үүсгэхгүй
+      const { NotificationService } = await import('../modules/core/notifications/notification.service');
+      const notifications = this.moduleRef?.get(NotificationService, { strict: false });
+      if (!notifications) return;
+      await inTenantTx(this.prisma, tenantId, (tx) =>
+        notifications.notify(tx, tenantId, {
+          type: 'core.invite.accepted',
+          recipients: [inviterId],
+          excludeUserId: userId,
+          titleKey: 'notify.invite.accepted.title',
+          params: { name },
+          link: '/settings/user-roles',
+        }),
+      );
+    } catch (err) {
+      this.logger.warn(`Урилгын мэдэгдэл үүсгэж чадсангүй: ${(err as Error).message}`);
+    }
   }
 
   private async hit(key: string, ttlSec: number): Promise<number> {

@@ -1,18 +1,20 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { campApi } from '../../camp/api/camp-api'
+import { campApi } from '../api/camp-bridge'
 import { hrApi } from '../api/hr-api'
-import type { Department } from '../../camp/api/types'
-import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
-import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { P } from '../../camp/lib/permissions'
-import { weekdayName } from '../../camp/lib/labels'
-import ImportDialog, { ExportButton } from '../../camp/components/ImportDialog'
+import type { Department } from '../api/camp-bridge'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { weekdayName } from '../../../core/labels'
+import ImportDialog, { ExportButton } from '../../../core/ImportDialog'
 import { DEPARTMENT_IMPORT_COLUMNS } from '../lib/import-columns'
-import { PatternStrip, ShiftPatternModal } from '../../camp/components/ShiftPattern'
-import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, td } from '../../camp/components/ui'
+import { PatternStrip, ShiftPatternModal } from '../api/camp-bridge'
+import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, td } from '../../../core/ui'
 import { useTranslation } from 'react-i18next'
+import { localizedCatalogName } from '../../../core/labels'
+import { LocalizedNameFields } from '../api/camp-bridge'
 
 
 /**
@@ -21,9 +23,9 @@ import { useTranslation } from 'react-i18next'
  * FB-03 (v0.2.0): идэвхтэй ажилтны тоо, албан тушаалын тоо; мөр дээр дарахад ажилтнууд албан тушаалаар.
  */
 export default function DepartmentsPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { campId = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => hrApi.departments(campId) })
   const settings = useQuery({ queryKey: campKeys.settings(campId), queryFn: () => campApi.settings(campId) })
   const [infoModal, setInfoModal] = useState<Department | 'new' | null>(null)
@@ -40,7 +42,7 @@ export default function DepartmentsPage() {
         title={t('camp.dept.title')}
         actions={
           <div className="flex flex-wrap gap-2">
-            <ExportButton campId={campId} type="departments" />
+            <ExportButton exportFile={() => hrApi.exportFile(campId, 'departments')} />
             {canEdit && (
               <Button size="sm" variant="secondary" onClick={() => setImporting(true)}>
                 {t('camp.import.import')}
@@ -77,7 +79,7 @@ export default function DepartmentsPage() {
                 <td className={`${td} font-mono text-gray-600`}>{d.code}</td>
                 <td className={td}>
                   <button type="button" className="text-blue-600 hover:underline text-left" onClick={() => setDetail(d)}>
-                    {d.name}
+                    {localizedCatalogName(d, i18n.resolvedLanguage ?? i18n.language)}
                   </button>
                 </td>
                 <td className={td}>{d.activeEmployees ?? '—'}</td>
@@ -108,7 +110,7 @@ export default function DepartmentsPage() {
       {infoModal && <DeptModal campId={campId} dept={infoModal === 'new' ? null : infoModal} onClose={() => setInfoModal(null)} />}
       {patternModal && (
         <ShiftPatternModal
-          title={t('camp.dept.pattern_title', { code: patternModal.code, name: patternModal.name })}
+          title={t('camp.dept.pattern_title', { code: patternModal.code, name: localizedCatalogName(patternModal, i18n.resolvedLanguage ?? i18n.language) })}
           note={t('camp.dept.pattern_fallback_note')}
           initial={patternModal.shiftPatterns}
           onDays={onDays}
@@ -121,11 +123,15 @@ export default function DepartmentsPage() {
       {detail && <DeptEmployeesModal campId={campId} dept={detail} onClose={() => setDetail(null)} />}
       {importing && (
         <ImportDialog
-          campId={campId}
-          type="departments"
           title={t('camp.dept.import_title')}
           columns={DEPARTMENT_IMPORT_COLUMNS}
           invalidate={[campKeys.departments(campId)]}
+          templateFileName="departments-template.xlsx"
+          downloadTemplate={() => hrApi.dataTemplate(campId, 'departments')}
+          uploadFile={(file) => hrApi.dataUploadXlsx(campId, 'departments', file)}
+          uploadRows={(rows) => hrApi.dataUploadRows(campId, 'departments', rows)}
+          confirmImport={(id, skipErrors) => hrApi.dataConfirm(campId, 'departments', id, skipErrors)}
+          cancelImport={(id) => hrApi.dataCancel(campId, 'departments', id)}
           onClose={() => setImporting(false)}
         />
       )}
@@ -137,12 +143,13 @@ function DeptModal({ campId, dept, onClose }: { campId: string; dept: Department
   const { t } = useTranslation()
   const [code, setCode] = useState(dept?.code ?? '')
   const [name, setName] = useState(dept?.name ?? '')
+  const [nameI18n, setNameI18n] = useState({ en: dept?.nameI18n?.en ?? '', zh: dept?.nameI18n?.zh ?? '' })
   const [isActive, setIsActive] = useState(dept?.isActive ?? true)
-  const m = useCampMutation(
+  const m = useAppMutation(
     () =>
       dept
-        ? hrApi.updateDepartment(campId, dept.id, { name: name.trim(), isActive })
-        : hrApi.createDepartment(campId, { code: code.trim(), name: name.trim() }),
+        ? hrApi.updateDepartment(campId, dept.id, { name: name.trim(), nameI18n: { en: nameI18n.en.trim(), zh: nameI18n.zh.trim() }, isActive })
+        : hrApi.createDepartment(campId, { code: code.trim(), name: name.trim(), nameI18n: { en: nameI18n.en.trim(), zh: nameI18n.zh.trim() } }),
     [campKeys.departments(campId)],
     onClose,
   )
@@ -161,11 +168,9 @@ function DeptModal({ campId, dept, onClose }: { campId: string; dept: Department
         </>
       }
     >
-      <div className="grid grid-cols-3 gap-3">
+      <div className="space-y-3">
         <Field label={t('camp.common.code')}>{(id) => <input id={id} className={inputCls} value={code} onChange={(e) => setCode(e.target.value)} disabled={!!dept} maxLength={30} />}</Field>
-        <div className="col-span-2">
-          <Field label={t('camp.common.name')}>{(id) => <input id={id} className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />}</Field>
-        </div>
+        <LocalizedNameFields value={{ name, nameI18n }} onChange={(value) => { setName(value.name); setNameI18n(value.nameI18n) }} maxLength={200} />
       </div>
       <p className="text-xs text-gray-500">{t('camp.dept.meal_moved_hint')}</p>
       {dept && (
@@ -180,19 +185,21 @@ function DeptModal({ campId, dept, onClose }: { campId: string; dept: Department
 
 /** FB-03 — хэлтсийн идэвхтэй ажилтнууд албан тушаалаар бүлэглэсэн (≤100; илүү бол Ажилтан хуудсанд шүүлтээр) */
 function DeptEmployeesModal({ campId, dept, onClose }: { campId: string; dept: Department; onClose: () => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const q = useQuery({
     queryKey: [...campKeys.employees(campId), 'dept', dept.id],
     queryFn: () => hrApi.employees(campId, { departmentId: dept.id, status: 'ACTIVE', limit: 100 }),
   })
   const groups = new Map<string, { code: string; name: string; crew: string | null }[]>()
   for (const e of q.data?.data ?? []) {
-    const k = e.position?.trim() || '—'
+    const k = e.positionRef
+      ? localizedCatalogName(e.positionRef, i18n.resolvedLanguage ?? i18n.language)
+      : e.position?.trim() || '—'
     groups.set(k, [...(groups.get(k) ?? []), { code: e.employeeCode, name: e.fullName, crew: e.crew?.code ?? null }])
   }
   const sorted = [...groups.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
   return (
-    <Modal title={`${dept.code} · ${dept.name}`} onClose={onClose} wide>
+    <Modal title={`${dept.code} · ${localizedCatalogName(dept, i18n.resolvedLanguage ?? i18n.language)}`} onClose={onClose} wide>
       {q.isLoading && <Loading />}
       <ErrorBox error={q.error} />
       {q.data && q.data.data.length === 0 && <Empty>{t('camp.dept.no_employees')}</Empty>}

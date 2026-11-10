@@ -2,7 +2,7 @@
  * v0.2.2 Блок 4 — урилгын линк, нэвтрэх нэр, төлөв, шүүлт, эрхийн харагдац
  */
 import { describe, expect, it } from 'vitest'
-import type { CampUser, UserPermissions } from '../../../camp/api/types'
+import type { CampUser, UserPermissions } from '../../api/camp-bridge'
 import { filterUsers, inviteLink, loginName, outdatedAssignments, permissionView, userState } from '../user-access'
 
 const user = (o: Partial<CampUser> = {}): CampUser => ({

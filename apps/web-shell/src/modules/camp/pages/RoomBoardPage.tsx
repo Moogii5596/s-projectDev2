@@ -3,13 +3,13 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
 import type { BoardRoom } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
-import { addDays, todayUb } from '../lib/dates'
-import { ROOM_STATUS_LABEL } from '../lib/labels'
-import EmployeePicker, { type PickedEmployee } from '../components/EmployeePicker'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, inputCls, inputSmCls } from '../components/ui'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { addDays, todayUb } from '../../../core/dates'
+import { ROOM_STATUS_LABEL } from '../../../core/labels'
+import { EmployeePicker, type PickedEmployee } from '../api/camp-hr.bridge'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, inputCls, inputSmCls } from '../../../core/ui'
 import { useTranslation } from 'react-i18next'
 
 const OCC_CLS = { VACANT: 'border-gray-200', PARTIAL: 'border-blue-300', FULL: 'border-green-400' } as const
@@ -31,7 +31,7 @@ const matches = (r: BoardRoom, f: BoardFilter) =>
 export default function RoomBoardPage() {
   const { t } = useTranslation()
   const { campId = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const canEdit = perms.can(P.ROOM_MANAGE)
   const canRepair = perms.can(P.MAINTENANCE_CREATE)
   const [date, setDate] = useState(todayUb())
@@ -274,7 +274,7 @@ function AllocateModal({
   const [startDate, setStartDate] = useState(date)
   const current = emp[0] ? hasCurrent(emp[0].id) : false
   const [replace, setReplace] = useState(true)
-  const m = useCampMutation(
+  const m = useAppMutation(
     () => campApi.allocateRoom(campId, { employeeId: emp[0].id, roomId, startDate, ...(current && replace ? { replaceCurrent: true } : {}) }),
     [campKeys.roomBoard(campId), campKeys.allocations(campId)],
     onClose,
@@ -324,7 +324,7 @@ function AllocateModal({
 function EndModal({ campId, date, allocationId, label, onClose }: { campId: string; date: string; allocationId: string; label: string; onClose: () => void }) {
   const { t } = useTranslation()
   const [endDate, setEndDate] = useState(date)
-  const m = useCampMutation(() => campApi.endAllocation(campId, allocationId, endDate), [campKeys.roomBoard(campId), campKeys.allocations(campId)], onClose)
+  const m = useAppMutation(() => campApi.endAllocation(campId, allocationId, endDate), [campKeys.roomBoard(campId), campKeys.allocations(campId)], onClose)
   return (
     <Modal
       title={t('camp.board.end_title')}

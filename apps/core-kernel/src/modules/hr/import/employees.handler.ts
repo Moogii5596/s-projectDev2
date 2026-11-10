@@ -1,5 +1,5 @@
 import { CampDataImportType, CampEmployeeStatus, Prisma } from '@prisma/client';
-import { CellValue, ParsedTableRow, TableSpec } from '../../../common/xlsx/table-spec';
+import { CellValue, TableSpec } from '../../../common/xlsx/table-spec';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
 import { Tx } from '../../camp/common/camp-tx';
 import { EMPLOYEE_AUDIT_FIELDS } from '../employees/hr-employees.service';
@@ -303,4 +303,3 @@ export const employeesHandler: DataImportHandler = {
 };
 
 /** parsed_rows-оос буцааж уншихад RESOLVED алга болно — confirm дахин plan хийнэ (DB өөрчлөгдсөн байж болно) */
-export type { ParsedTableRow };

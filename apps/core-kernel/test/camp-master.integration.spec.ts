@@ -25,7 +25,7 @@ import { createRedisMock } from './helpers/redis-mock';
 import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { CAMP_PERMISSION_CODES, campPermissionAvailableIn } from '../src/modules/camp/common/camp-permissions';
-import { PERMISSION_ALIASES, permissionModule } from '../src/modules/core/permissions/permission-registry';
+import { permissionModule } from '../src/modules/core/permissions/permission-registry';
 import { toCampHttpError } from '../src/modules/camp/common/camp-errors';
 import { configureApp } from '../src/common/http/configure-app';
 import { ADMIN_DB_URL } from './helpers/db-urls';
@@ -34,6 +34,7 @@ const STAMP = Date.now();
 const SLUG = `camp-it-${STAMP}`;
 const HOST = `${SLUG}.example.com`;
 const PASSWORD = 'Test1234!';
+const CORE_RBAC = '/api/v1/core/rbac';
 const EMAILS = {
   admin: `camp-admin-${STAMP}@example.com`,     // tenant ADMIN → кемпийн бүх эрх
   manager: `camp-mgr-${STAMP}@example.com`,     // REQUESTER + "Кемп менежер" (зөвхөн C1)
@@ -123,45 +124,41 @@ afterAll(async () => {
 }, 30_000);
 
 describe('🔑 Каталог ба анхдагч роль', () => {
-  it('кодын CAMP_PERMISSIONS = DB core_permissions (код, модуль, хувилбар) ба alias (ADR-007) — зөрөхгүй', async () => {
+  it('кодын CAMP_PERMISSIONS = DB core_permissions (код, модуль, хувилбар) — зөрөхгүй', async () => {
     const rows = await prismaAdmin.corePermission.findMany({ select: { code: true, module: true, availableIn: true } });
     expect(rows.map((p) => p.code).sort()).toEqual([...CAMP_PERMISSION_CODES].sort());
     for (const r of rows) {
       expect(r.module).toBe(permissionModule(r.code));
       expect(r.availableIn).toBe(campPermissionAvailableIn(r.code));
     }
-    const aliases = await prismaAdmin.corePermissionAlias.findMany({ select: { oldCode: true, newCode: true } });
-    expect(Object.fromEntries(aliases.map((a) => [a.oldCode, a.newCode]))).toEqual(PERMISSION_ALIASES);
   });
 
-  it('v0.2.3 Блок 3 (B3-1): /core/rbac — шинэ зам; хуучин /camp зам ижил хариу + Deprecation; me/permissions.modules', async () => {
+  it('/core/rbac нь одоогийн зам; хуучин RBAC зам устсан; me/permissions.modules', async () => {
     const core = await api().get('/api/v1/core/rbac/roles').set(as('admin'));
     expect(core.status).toBe(200);
     expect(core.headers.deprecation).toBeUndefined();
     const legacy = await api().get(`${V1}/roles`).set(as('admin'));
-    expect(legacy.status).toBe(200);
-    expect(legacy.headers.deprecation).toBe('true');
-    expect(legacy.body.map((r: { id: string }) => r.id).sort()).toEqual(core.body.map((r: { id: string }) => r.id).sort());
+    expect(legacy.status).toBe(404);
     const me = await api().get('/api/v1/core/rbac/me/permissions').set(as('admin'));
     expect(me.status).toBe(200);
-    expect(me.body.modules).toEqual(['camp', 'feed', 'hr']); // v0.2.3 Блок 5: + feed (feed.content.moderate)
+    expect(me.body.modules).toEqual(['camp', 'feed', 'hr']); // v0.2.3 feed; v0.2.4: core.debug.*/mr.* tenant admin-д автоматаар биш
     // ажилтны картаас нэвтрэх эрх — /camp-д үлдсэн (Deprecation-гүй)
     const opt = await api().get('/api/v1/core/rbac/invites/options').set(as('admin'));
     expect(opt.status).toBe(200);
   });
 
-  it('шинэ tenant → 4 системийн роль (trigger; v0.2.2 Блок 1 — «Ажилтан» EMPLOYEE); GET /camp/roles (ADMIN) 200', async () => {
-    const res = await api().get(`${V1}/roles`).set(as('admin'));
+  it('шинэ tenant → 4 системийн роль (trigger; v0.2.2 Блок 1 — «Ажилтан» EMPLOYEE); GET /core/rbac/roles (ADMIN) 200', async () => {
+    const res = await api().get(`${CORE_RBAC}/roles`).set(as('admin'));
     expect(res.status).toBe(200);
     const sys = res.body.filter((r: { isSystem: boolean }) => r.isSystem).map((r: { systemCode: string }) => r.systemCode).sort();
     expect(sys).toEqual(['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN', 'EMPLOYEE'].sort());
     ids.roleManager = res.body.find((r: { systemCode: string }) => r.systemCode === 'CAMP_MANAGER').id;
   });
 
-  it('рольгүй REQUESTER: /camp/roles 403, /camp/camps 403, /camp/me/permissions → хоосон', async () => {
-    expect((await api().get(`${V1}/roles`).set(as('nobody'))).status).toBe(403);
+  it('рольгүй REQUESTER: /core/rbac/roles 403, /camp/camps 403, /core/rbac/me/permissions → хоосон', async () => {
+    expect((await api().get(`${CORE_RBAC}/roles`).set(as('nobody'))).status).toBe(403);
     expect((await api().get(`${V1}/camps`).set(as('nobody'))).status).toBe(403);
-    const me = await api().get(`${V1}/me/permissions`).set(as('nobody'));
+    const me = await api().get(`${CORE_RBAC}/me/permissions`).set(as('nobody'));
     expect(me.status).toBe(200);
     expect(me.body).toMatchObject({ isTenantAdmin: false, permissions: [] });
   });
@@ -253,9 +250,18 @@ describe('🏢 Хэлтэс + ээлжийн загвар, баг, байр/өр
   });
 
   it('байгууллага: 201; давхар регистр → 409', async () => {
-    const o = await api().post(`/api/v1/core/organizations`).set(as('admin')).send({ name: 'Уурхай ХХК', regNumber: `R${STAMP}`, orgType: 'MAIN' });
+    const o = await api().post(`/api/v1/core/organizations`).set(as('admin')).send({
+      name: 'Уурхай ХХК', regNumber: `R${STAMP}`, orgType: 'MAIN', serviceTypes: ['CATERING', 'WASTE_TRANSPORT'],
+    });
     expect(o.status).toBe(201);
+    expect(o.body.serviceTypes).toEqual(['CATERING', 'WASTE_TRANSPORT']);
     ids.org = o.body.id;
+    const types = await api().get('/api/v1/core/organizations/service-types').set(as('admin')).expect(200);
+    expect(types.body.map((item: { code: string }) => item.code)).toContain('CATERING');
+    expect(await prismaAdmin.coreOrganizationServiceType.count({ where: { tenantId, organizationId: ids.org } })).toBe(2);
+    expect((await api().post(`/api/v1/core/organizations`).set(as('admin')).send({
+      name: 'Invalid service', orgType: 'CONTRACTOR', serviceTypes: ['NOT_IN_CATALOG'],
+    })).status).toBe(400);
     expect((await api().post(`/api/v1/core/organizations`).set(as('admin')).send({ name: 'Dup', regNumber: `R${STAMP}`, orgType: 'CONTRACTOR' })).status).toBe(409);
   });
 });
@@ -293,13 +299,13 @@ describe('👷 Ажилтан', () => {
 
 describe('👥 Кемпийн роль → эрх (зөвхөн тэр кемпэд)', () => {
   it('manager-т "Кемп менежер" (C1) оноох → 201; давхар → 409; өөр tenant-ийн хэрэглэгч → 400', async () => {
-    const res = await api().post(`${V1}/user-roles`).set(as('admin')).send({ userId: coreIds.manager, roleId: ids.roleManager, campId: ids.c1 });
+    const res = await api().post(`${CORE_RBAC}/user-roles`).set(as('admin')).send({ userId: coreIds.manager, roleId: ids.roleManager, campId: ids.c1 });
     expect(res.status).toBe(201);
     ids.urManager = res.body.id;
-    expect((await api().post(`${V1}/user-roles`).set(as('admin')).send({ userId: coreIds.manager, roleId: ids.roleManager, campId: ids.c1 })).status).toBe(409);
+    expect((await api().post(`${CORE_RBAC}/user-roles`).set(as('admin')).send({ userId: coreIds.manager, roleId: ids.roleManager, campId: ids.c1 })).status).toBe(409);
     const foreign = await prismaAdmin.coreUser.findFirst({ where: { NOT: { tenantId } }, select: { id: true } });
     if (foreign) {
-      expect((await api().post(`${V1}/user-roles`).set(as('admin')).send({ userId: foreign.id, roleId: ids.roleManager })).status).toBe(400);
+      expect((await api().post(`${CORE_RBAC}/user-roles`).set(as('admin')).send({ userId: foreign.id, roleId: ids.roleManager })).status).toBe(400);
     }
   });
 
@@ -308,18 +314,18 @@ describe('👥 Кемпийн роль → эрх (зөвхөн тэр кемп�
     expect((await api().get(`/api/v1/hr/sites/${ids.c2}/departments`).set(as('manager'))).status).toBe(403);
     const list = await api().get(`${V1}/camps`).set(as('manager'));
     expect(list.body.map((c: { code: string }) => c.code)).toEqual(['C1']);
-    const me = await api().get(`${V1}/me/permissions?campId=${ids.c1}`).set(as('manager'));
+    const me = await api().get(`${CORE_RBAC}/me/permissions?campId=${ids.c1}`).set(as('manager'));
     expect(me.body.permissions).toContain('camp.meal.order');
     expect(me.body.permissions).not.toContain('camp.employee.manage');
     expect((await api().post(hr('/employees')).set(as('manager')).send({ organizationId: ids.org, departmentId: ids.deptAdm, employeeCode: 'E010', fullName: 'x' })).status).toBe(403);
   });
 
   it('админ "Кемп менежер"-т employee.manage нэмж ХЭРЭГЖҮҮЛЭХЭД manager үүсгэж чадна (201); буцааж хэрэгжүүлэхэд 403 (v0.2.2: загвар ≠ автомат)', async () => {
-    const roles = (await api().get(`${V1}/roles`).set(as('admin'))).body;
+    const roles = (await api().get(`${CORE_RBAC}/roles`).set(as('admin'))).body;
     const original: string[] = roles.find((r: { id: string }) => r.id === ids.roleManager).permissionCodes;
-    const put = (codes: string[]) => api().put(`${V1}/roles/${ids.roleManager}/permissions`).set(as('admin')).send({ permissionCodes: codes });
-    const apply = () => api().post(`${V1}/roles/${ids.roleManager}/apply`).set(as('admin')).send({});
-    const added = await put([...original, 'camp.employee.manage']);
+    const put = (codes: string[]) => api().put(`${CORE_RBAC}/roles/${ids.roleManager}/permissions`).set(as('admin')).send({ permissionCodes: codes });
+    const apply = () => api().post(`${CORE_RBAC}/roles/${ids.roleManager}/apply`).set(as('admin')).send({});
+    const added = await put([...original, 'hr.employee.manage']);
     expect(added.status).toBe(200);
     expect(added.body.pendingUsers).toBeGreaterThan(0);
     // ADR-003 §2.4: хэрэгжүүлэхээс өмнө эрх өөрчлөгдөхгүй
@@ -334,11 +340,11 @@ describe('👥 Кемпийн роль → эрх (зөвхөн тэр кемп�
   });
 
   it('системийн роль устгах → 409; энгийн роль үүсгэж/устгах → 201/200; роль хассанаар manager эрхгүй болно', async () => {
-    expect((await api().delete(`${V1}/roles/${ids.roleManager}`).set(as('admin'))).status).toBe(409);
-    const custom = await api().post(`${V1}/roles`).set(as('admin')).send({ name: 'Нягтлан', permissionCodes: ['camp.report.view'] });
+    expect((await api().delete(`${CORE_RBAC}/roles/${ids.roleManager}`).set(as('admin'))).status).toBe(409);
+    const custom = await api().post(`${CORE_RBAC}/roles`).set(as('admin')).send({ name: 'Нягтлан', permissionCodes: ['camp.report.view'] });
     expect(custom.status).toBe(201);
-    expect((await api().delete(`${V1}/roles/${custom.body.id}`).set(as('admin'))).status).toBe(200);
-    expect((await api().delete(`${V1}/user-roles/${ids.urManager}`).set(as('admin'))).status).toBe(200);
+    expect((await api().delete(`${CORE_RBAC}/roles/${custom.body.id}`).set(as('admin'))).status).toBe(200);
+    expect((await api().delete(`${CORE_RBAC}/user-roles/${ids.urManager}`).set(as('admin'))).status).toBe(200);
     expect((await api().get(hr('/employees')).set(as('manager'))).status).toBe(403);
   });
 });
@@ -358,10 +364,10 @@ describe('🧯 camp-errors — БОДИТ Prisma алдаан дээр', () => {
     expect(e).toBeInstanceOf(ConflictException);
   });
 
-  it('trigger CAMP_SYSTEM_ROLE → 409 (мессеж хадгалагдана)', async () => {
+  it('trigger CAMP_SYSTEM_ROLE → 409 (v0.2.4 I18N-02: бүртгэлтэй кодоор орчуулагдана)', async () => {
     const e = await mapped(prismaAdmin.coreRole.delete({ where: { id: ids.roleManager } }));
     expect(e, String((e as Error).message)).toBeInstanceOf(ConflictException);
-    expect((e as Error).message).toBe('CAMP_SYSTEM_ROLE: системийн ролийг устгах боломжгүй (Кемп менежер)');
+    expect((e as Error).message).toBe('Системийн ролийг устгах эсвэл кодыг өөрчлөх боломжгүй');
   });
 
   it('EXCLUDE (ээлжийн загвар давхцал) → 409', async () => {

@@ -6,9 +6,10 @@ import { inTenantTx, Tx } from '../../camp/common/camp-tx';
 import { withCampErrors } from '../../camp/common/camp-errors';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../../camp/common/common.dto';
+import { mergeCatalogNameI18n } from '../../camp/common/catalog-name-i18n';
 
 const P = CAMP_PERMISSIONS;
-const ITEM = { id: true, name: true, code: true, isActive: true, createdAt: true, updatedAt: true } as const;
+const ITEM = { id: true, name: true, nameI18n: true, code: true, isActive: true, createdAt: true, updatedAt: true } as const;
 
 /** Нэрийг харьцуулах хэлбэр: илүү зай, том/жижиг үсэг үл хамаарна (DB-ийн uq_*_name индекстэй ижил) */
 export const normName = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -49,7 +50,7 @@ export class HrPositionsService {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
         const name = dto.name.replace(/\s+/g, ' ');
         await this.assertUniqueName(tx, tenantId, name);
-        return tx.hrPosition.create({ data: { tenantId, name }, select: ITEM });
+        return tx.hrPosition.create({ data: { tenantId, name, nameI18n: mergeCatalogNameI18n(name, undefined, dto.nameI18n) }, select: ITEM });
       }),
     );
   }
@@ -58,13 +59,19 @@ export class HrPositionsService {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
-        const cur = await tx.hrPosition.findFirst({ where: { id, tenantId }, select: { id: true } });
+        const cur = await tx.hrPosition.findFirst({ where: { id, tenantId }, select: { id: true, name: true, nameI18n: true } });
         if (!cur) throw notFound('camp.err.catalog.position_not_found');
         const name = dto.name?.replace(/\s+/g, ' ');
         if (name) await this.assertUniqueName(tx, tenantId, name, id);
         return tx.hrPosition.update({
           where: { id },
-          data: { ...(name ? { name } : {}), ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}) },
+          data: {
+            ...(name ? { name } : {}),
+            ...((name !== undefined || dto.nameI18n !== undefined)
+              ? { nameI18n: mergeCatalogNameI18n(name ?? cur.name, cur.nameI18n, dto.nameI18n) }
+              : {}),
+            ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+          },
           select: ITEM,
         });
       }),
@@ -84,7 +91,10 @@ export async function resolvePositionByName(tx: Tx, tenantId: string, name: stri
     if (!hit.isActive && hit.id !== currentId) throw badRequest('camp.err.catalog.position_inactive', { name: hit.name });
     return { id: hit.id, name: hit.name, created: false };
   }
-  const p = await tx.hrPosition.create({ data: { tenantId, name: clean }, select: { id: true, name: true } });
+  const p = await tx.hrPosition.create({
+    data: { tenantId, name: clean, nameI18n: mergeCatalogNameI18n(clean) },
+    select: { id: true, name: true },
+  });
   return { ...p, created: true };
 }
 

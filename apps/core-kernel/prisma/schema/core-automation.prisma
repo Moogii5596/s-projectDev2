@@ -1,0 +1,35 @@
+model CoreSequence {
+  id            String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  sequenceType  String   @map("sequence_type")
+  scopeKey      String   @default("") @map("scope_key")
+  prefix        String
+  sequenceYear  Int      @map("sequence_year")
+  digits        Int
+  currentValue  Int      @map("current_value")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, sequenceType, scopeKey, prefix, sequenceYear], map: "uq_core_sequences_scope")
+  @@index([tenantId, sequenceType], map: "idx_core_sequences_type")
+  @@map("core_sequences")
+}
+
+model CoreScheduledJob {
+  jobKey          String    @id @map("job_key")
+  moduleId        String    @map("module_id")
+  cronExpression  String    @map("cron_expression")
+  lockToken       String?   @map("lock_token") @db.Uuid
+  leaseUntil      DateTime? @map("lease_until") @db.Timestamptz
+  lastStartedAt   DateTime? @map("last_started_at") @db.Timestamptz
+  lastFinishedAt  DateTime? @map("last_finished_at") @db.Timestamptz
+  lastStatus      String?   @map("last_status")
+  lastResult      Json?     @map("last_result")
+  lastError       String?   @map("last_error")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("core_scheduled_jobs")
+}

@@ -32,19 +32,19 @@ export const FIXTURE_USERS = {
   /** TEST-027: профайлын хэлийг өөрчилдөг e2e (camp-v020) — devAdmin-ийг бусад spec зэрэг ашигладаг */
   devLangAdmin: { tenant: 'dev', role: 'ADMIN' },
 } as const satisfies Record<string, { tenant: FixtureTenantKey | 'dev'; role: FixtureRole }>;
-export type FixtureUserKey = keyof typeof FIXTURE_USERS;
+type FixtureUserKey = keyof typeof FIXTURE_USERS;
 
 /** a, b-д MR илгээх боломжтой байх энгийн definition (wf-д тест өөрөө API-аар үүсгэнэ) */
 export const SIMPLE_STEPS = [{ order: 1, role: 'APPROVER', quorum: 1 }];
 
-export interface FixtureTenant {
+interface FixtureTenant {
   id: string;
   slug: string;
   /** API хүсэлтийн Host header (subdomain → slug). DEV tenant-д localhost */
   host: string;
 }
 
-export interface FixtureUser {
+interface FixtureUser {
   email: string;
   password: string;
   role: FixtureRole;
@@ -84,7 +84,7 @@ export interface FixtureDb {
 export const tenantHost = (slug: string): string => `${slug}.e2e.test`;
 
 /** Supabase-ийн шаардлагыг хангах санамсаргүй нууц үг */
-export const randomPassword = (): string => `${randomBytes(12).toString('base64url')}Aa1!`;
+const randomPassword = (): string => `${randomBytes(12).toString('base64url')}Aa1!`;
 
 export async function setupFixture(
   deps: { auth: FixtureAuth; db: FixtureDb },

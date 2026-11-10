@@ -20,7 +20,7 @@ export interface AssignmentRow {
   current: string[];
 }
 
-export interface ApplyPreviewItem {
+interface ApplyPreviewItem {
   userRoleId: string;
   userId: string;
   campId: string | null;

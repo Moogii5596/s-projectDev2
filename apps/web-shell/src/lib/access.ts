@@ -1,3 +1,7 @@
+import { visibleSettingsSections } from './settings-registry'
+export { canSeeSettingsSection, visibleSettingsSections } from './settings-registry'
+export type { SettingsSection } from './settings-registry'
+
 /**
  * v0.2.3 Блок 3 (PIL-19, ADR-007 B3-3) — цэс, хэсгийг нуух дүрмийн ГАНЦ эх сурвалж.
  * Backend-ийн шалгалтыг дагана (зөрвөл хэрэглэгч «эрх алга» харна эсвэл эрхтэй хэсгээ харахгүй):
@@ -18,7 +22,7 @@ export interface AccessSnapshot {
 
 export type AppModuleKey = 'hr' | 'camp'
 
-export const MASTER_MANAGE = 'camp.master.manage'
+const MASTER_MANAGE = 'camp.master.manage'
 
 /** Дээд цэсний модуль харагдах эсэх */
 export function canSeeModule(a: AccessSnapshot | undefined, mod: AppModuleKey): boolean {
@@ -33,7 +37,7 @@ export function canSeeModule(a: AccessSnapshot | undefined, mod: AppModuleKey): 
 export function firstVisiblePath(a: AccessSnapshot | undefined, enabled: { camp: boolean; hr: boolean }): string | null {
   if (enabled.camp && canSeeModule(a, 'camp')) return '/camp'
   if (enabled.hr && canSeeModule(a, 'hr')) return '/hr'
-  if (enabled.hr && visibleSettingsSections(a).length > 0) return '/settings'
+  if (visibleSettingsSections(a).length > 0) return '/settings'
   return null
 }
 
@@ -52,7 +56,7 @@ export function accessibleSites<T extends { id: string }>(a: AccessSnapshot | un
 type Rule = 'access' | 'admin'
 
 /** «Хүний нөөц»-ийн хэсэг → дүрэм (`hr-sections.ts`-ийн HR_SECTIONS) */
-export const HR_SECTION_RULE: Readonly<Record<string, Rule>> = {
+const HR_SECTION_RULE: Readonly<Record<string, Rule>> = {
   employees: 'access',
   users: 'admin',
   departments: 'access',
@@ -67,20 +71,6 @@ export function canSeeHrSection(a: AccessSnapshot | undefined, campId: string, s
   const rule = HR_SECTION_RULE[section]
   if (!a || !rule) return false
   return rule === 'admin' ? a.isTenantAdmin : hasSiteAccess(a, campId)
-}
-
-/** Системийн тохиргоо (`/settings/:section`) */
-export const SETTINGS_SECTIONS = ['roles', 'user-roles', 'organizations', 'translations'] as const
-export type SettingsSection = (typeof SETTINGS_SECTIONS)[number]
-
-export function canSeeSettingsSection(a: AccessSnapshot | undefined, section: string): boolean {
-  if (!a) return false
-  if (a.isTenantAdmin) return (SETTINGS_SECTIONS as readonly string[]).includes(section)
-  return section === 'organizations' && a.permissions.includes(MASTER_MANAGE)
-}
-
-export function visibleSettingsSections(a: AccessSnapshot | undefined): SettingsSection[] {
-  return SETTINGS_SECTIONS.filter((s) => canSeeSettingsSection(a, s))
 }
 
 /** «Кемпийн тохиргоо» (`/camp/system`) — кемп, байрны төрөл, хөрөнгийн ангилал: удирдах = админ эсвэл бүх кемпийн master.manage */

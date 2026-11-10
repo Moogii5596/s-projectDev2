@@ -50,9 +50,9 @@ describe('v0.2.1 HrEmployeesService — албан тушаал, хоолны б
     s.tx.campMealLocation.findMany.mockResolvedValueOnce([{ id: 'loc-own', name: 'Өөрийн' }, { id: 'loc-mine', name: 'Уул' }, { id: 'loc-camp', name: 'Кемп' }]);
     const res = await svc.list('t1', 'a1', 'c1', {});
     expect(res.data.map((r) => r.effective)).toEqual([
-      { mealLocationId: 'loc-own', mealLocationName: 'Өөрийн', mealLocationSource: 'EMPLOYEE', mealsIncluded: true, mealsIncludedSource: 'EMPLOYEE' },
-      { mealLocationId: 'loc-mine', mealLocationName: 'Уул', mealLocationSource: 'POSITION', mealsIncluded: false, mealsIncludedSource: 'POSITION' },
-      { mealLocationId: 'loc-camp', mealLocationName: 'Кемп', mealLocationSource: 'DEFAULT', mealsIncluded: true, mealsIncludedSource: 'DEFAULT' },
+      { mealLocationId: 'loc-own', mealLocationName: 'Өөрийн', mealLocationNameI18n: null, mealLocationSource: 'EMPLOYEE', mealsIncluded: true, mealsIncludedSource: 'EMPLOYEE' },
+      { mealLocationId: 'loc-mine', mealLocationName: 'Уул', mealLocationNameI18n: null, mealLocationSource: 'POSITION', mealsIncluded: false, mealsIncludedSource: 'POSITION' },
+      { mealLocationId: 'loc-camp', mealLocationName: 'Кемп', mealLocationNameI18n: null, mealLocationSource: 'DEFAULT', mealsIncluded: true, mealsIncludedSource: 'DEFAULT' },
     ]);
   });
 

@@ -13,8 +13,20 @@ export const CAMP_AUDIT_ENTITIES = [
   'role', 'role_apply', 'user_role', 'user_permission', 'position_template',
   // v0.2.2 Блок 3
   'user_account', 'user_invite',
+  // v0.2.4 SYS-01
+  'tenant_settings',
+  'installed_module',
+  'holiday_calendar',
+  'calendar_holiday',
+  // v0.2.4 WF-06
+  'approval_definition',
+  'approval_delegation',
+  'site',
+  'attachment_name_pattern',
+  // v0.2.4 DBG-01
+  'debug_action',
 ] as const;
-export type CampAuditEntity = (typeof CAMP_AUDIT_ENTITIES)[number];
+type CampAuditEntity = (typeof CAMP_AUDIT_ENTITIES)[number];
 
 export type AuditScalar = string | number | boolean | null;
 export type AuditDiff = Record<string, { from: AuditScalar; to: AuditScalar }>;

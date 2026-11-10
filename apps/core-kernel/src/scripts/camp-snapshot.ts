@@ -9,7 +9,8 @@
  *   - perms    — эрхийн жагсаалт "<core_users.id>|<эрх>|<кемпийн код | *>" (хувийн мэдээлэлгүй):
  *                legacy = (core|camp)_user_roles ⋈ (core|camp)_role_permissions (v0.2.1 schema дээр ч), effective = (core|camp)_user_permissions (байвал),
  *                campAdmins = Кемп админ рольтой олголт "<user>|<кемп | *>" (Q9-ийн хүлээгдэж буй зөрүүг тооцоход)
- *                v0.2.3 (ADR-007): хүснэгт core_* (site_id), код hr.* — харьцуулахдаа хоёр талын кодыг alias-аар хөрвүүлж, устгасан кодыг хасна.
+ *                v0.2.3 (ADR-007): хуучин snapshot-ийг шинэ хувилбартай харьцуулахад зөвхөн энд migration mapping хэрэглэнэ;
+ *                API/permission registry-д хуучин кодын alias байхгүй.
  *
  * Зөвхөн УНШИНА (READ ONLY transaction). Хуучин хувилбарын schema дээр ч ажиллана: v0.1.6-д байсан багана л уншина.
  */
@@ -18,11 +19,11 @@ import { addDays } from '../modules/camp/common/camp-date';
 import { loadPresence } from '../modules/camp/attendance/camp-presence.service';
 import { computeRoomBoard } from '../modules/camp/attendance/camp-rooms.service';
 import type { Tx } from '../modules/camp/common/camp-tx';
-import { RETIRED_PERMISSIONS, normalizePermissionCode } from '../modules/core/permissions/permission-registry';
+import { RETIRED_PERMISSIONS } from '../modules/core/permissions/permission-registry';
 
-export const SNAPSHOT_FORMAT = 'camp-snapshot/1';
+const SNAPSHOT_FORMAT = 'camp-snapshot/1';
 
-export interface CampSnapshotDay {
+interface CampSnapshotDay {
   present: number;
   personDays: string;
   /** "BREAKFAST@<байршлын нэр>" → тоо */
@@ -30,7 +31,7 @@ export interface CampSnapshotDay {
   unknownShift: number;
 }
 
-export interface CampSnapshotCamp {
+interface CampSnapshotCamp {
   code: string;
   name: string;
   meals: Record<string, CampSnapshotDay>;
@@ -61,27 +62,33 @@ export interface CampSnapshotPerms {
 }
 
 /** Guard-ийн бодитоор шалгадаг эрх: v0.2.2+ → effective, v0.2.1 → legacy */
-export const enforcedPerms = (p: CampSnapshotPerms): string[] => p.effective ?? p.legacy;
+const enforcedPerms = (p: CampSnapshotPerms): string[] => p.effective ?? p.legacy;
 
 /**
- * ADR-007 (v0.2.3): "<user>|<код>|<кемп>" мөрийн кодыг шинэ нэр рүү (alias) хөрвүүлж, устгасан кодыг (`camp.roles.manage`) хасна.
- * A (≤ v0.2.2, хуучин код) ба B (v0.2.3) хоёуланд хэрэглэнэ — нэрлэлт өөрчлөгдсөн нь зөрүү биш.
+ * ADR-007 snapshot compatibility: хуучин, хадгалсан snapshot-ийг шинэ хувилбартай харьцуулахад хэрэглэнэ.
  */
 export function normalizePermKeys(keys: readonly string[]): string[] {
   const out = new Set<string>();
   for (const k of keys) {
     const [user, code, camp] = k.split('|');
     if (code === undefined || RETIRED_PERMISSIONS.includes(code)) continue;
-    out.add(`${user}|${normalizePermissionCode(code)}|${camp}`);
+    out.add(`${user}|${SNAPSHOT_PERMISSION_MIGRATIONS[code] ?? code}|${camp}`);
   }
   return [...out].sort();
 }
+
+const SNAPSHOT_PERMISSION_MIGRATIONS: Readonly<Record<string, string>> = {
+  'camp.employee.manage': 'hr.employee.manage',
+  'camp.employee.terminate': 'hr.employee.terminate',
+  'camp.movement.import': 'hr.attendance.import',
+  'camp.shift.adjust': 'hr.shift.adjust',
+};
 
 /**
  * v0.2.2-ын хүлээгдэж буй нэмэлт: Кемп админ олголт бүрт засвар эхлүүлэх (parts) + хаах (close) — Q9 (20261013003),
  * ажлаас гаргах / дахин ажилд авах — B5-Q2 (20261017002). Нэр нь хуучнаараа (`--expect=v022-q9`).
  */
-export const Q9_PERMS = ['camp.maintenance.parts', 'camp.maintenance.close', 'camp.employee.terminate'] as const;
+const Q9_PERMS = ['camp.maintenance.parts', 'camp.maintenance.close', 'camp.employee.terminate'] as const;
 
 /** A → B-д хүлээгдэж буй (зөвхөн нэмэгдэх) мөрүүд: B-ийн Кемп админ олголт × Q9, A-д байгаагүй нь */
 export function expectedQ9Additions(a: CampSnapshotPerms, b: CampSnapshotPerms): Set<string> {
@@ -90,7 +97,7 @@ export function expectedQ9Additions(a: CampSnapshotPerms, b: CampSnapshotPerms):
   for (const g of b.campAdmins) {
     const [user, camp] = g.split('|');
     for (const code of Q9_PERMS) {
-      const k = `${user}|${normalizePermissionCode(code)}|${camp}`;
+      const k = `${user}|${SNAPSHOT_PERMISSION_MIGRATIONS[code] ?? code}|${camp}`;
       if (!had.has(k)) out.add(k);
     }
   }

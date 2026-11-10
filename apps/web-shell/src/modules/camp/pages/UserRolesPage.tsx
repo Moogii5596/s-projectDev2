@@ -3,16 +3,16 @@ import { assignedRoleIds } from '../lib/granted'
 import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
 import type { UserRole } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { isSystemAdmin } from '../lib/permissions'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, NoAccess, PageHeader, Table, inputCls, inputSmCls, td } from '../components/ui'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { isSystemAdmin } from '../../../core/permissions'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, NoAccess, PageHeader, Table, inputCls, inputSmCls, td } from '../../../core/ui'
 import { useTranslation } from 'react-i18next'
 
 /** /camp/admin/user-roles — хэрэглэгчид роль оноох: бүх кемпэд (campId = null) эсвэл тодорхой кемпэд */
 export default function UserRolesPage() {
   const { t } = useTranslation()
-  const perms = useCampPermissions()
+  const perms = useAppPermissions()
   const canManage = isSystemAdmin(perms.data)
   const users = useQuery({ queryKey: campKeys.users, queryFn: campApi.users, enabled: canManage })
   const roles = useQuery({ queryKey: campKeys.roles, queryFn: campApi.roles, enabled: canManage })
@@ -23,12 +23,12 @@ export default function UserRolesPage() {
   // PIL-18: сонгосон хэрэглэгч + хүрээнд гараар олгосон роль → «олгогдсон», идэвхгүй
   const assignedIds = f.userId ? assignedRoleIds(assigned.data ?? [], f.userId, f.campId || null) : new Set<string>()
 
-  const assign = useCampMutation(
+  const assign = useAppMutation(
     () => campApi.assignUserRole({ userId: f.userId, roleId: f.roleId, campId: f.campId || null }),
     [campKeys.userRoles, campKeys.roles, campKeys.all],
     () => setF((p) => ({ ...p, roleId: '' })),
   )
-  const remove = useCampMutation((id: string) => campApi.removeUserRole(id), [campKeys.userRoles, campKeys.roles, campKeys.all])
+  const remove = useAppMutation((id: string) => campApi.removeUserRole(id), [campKeys.userRoles, campKeys.roles, campKeys.all])
 
   if (perms.isLoading) return <Loading />
   if (!canManage) return <NoAccess what={t('camp.system.section.user-roles')} />

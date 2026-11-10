@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CampOrgServiceType, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
@@ -8,11 +8,12 @@ import { withCampErrors } from '../common/camp-errors';
 import { assertMealLocation, getCampOr404 } from '../common/camp-lookup';
 import { CreateMealLocationDto, QueryActiveDto, UpdateCampSettingsDto, UpdateMealLocationDto } from './camp-settings.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
+import { mergeCatalogNameI18n } from '../common/catalog-name-i18n';
 
 const P = CAMP_PERMISSIONS;
 
 /** Тохиргоо байхгүй кемпийн анхдагч утга (DB DEFAULT-тай ижил) */
-export const CAMP_SETTINGS_DEFAULTS = {
+const CAMP_SETTINGS_DEFAULTS = {
   vatRate: '10',
   changeoverWeekday: 3,
   rosterOnDays: 14,
@@ -24,7 +25,7 @@ export const CAMP_SETTINGS_DEFAULTS = {
   mealOrderLeadDays: 1,
   mealOrderAfterCutoff: 'BLOCK',
   mealOrderRequiresAccept: true,
-  mealOrderEditAfterAccept: 'FORBID',
+  mealOrderEditAfterAccept: 'TWO_SIDED',
   mealOrderDefaultFill: 'EMPTY',
   mealOrderAllowSelfAccept: false,
 };
@@ -144,10 +145,17 @@ export class CampSettingsService {
 
   /** Катеринг байгууллага: tenant-д байгаа, идэвхтэй, CATERING үйлчилгээтэй (400) */
   private async assertCateringOrg(tx: Tx, tenantId: string, id: string) {
-    const org = await tx.coreOrganization.findFirst({ where: { id, tenantId }, select: { name: true, isActive: true, serviceTypes: true } });
+    const org = await tx.coreOrganization.findFirst({
+      where: { id, tenantId },
+      select: {
+        name: true,
+        isActive: true,
+        serviceTypes: { where: { serviceType: { code: 'CATERING' } }, select: { serviceTypeId: true } },
+      },
+    });
     if (!org) throw badRequest('camp.err.settings.1');
     if (!org.isActive) throw badRequest('camp.err.settings.2', { name: org.name });
-    if (!org.serviceTypes.includes(CampOrgServiceType.CATERING)) {
+    if (org.serviceTypes.length === 0) {
       throw badRequest('camp.err.settings.3', { name: org.name });
     }
   }
@@ -186,7 +194,7 @@ export class CampSettingsService {
       await getCampOr404(tx, tenantId, campId);
       return tx.campMealLocation.findMany({
         where: { tenantId, campId, ...(q.activeOnly ? { isActive: true } : {}) },
-        select: { id: true, name: true, isActive: true, createdAt: true, updatedAt: true },
+        select: { id: true, name: true, nameI18n: true, isActive: true, createdAt: true, updatedAt: true },
         orderBy: { name: 'asc' },
       });
     });
@@ -200,8 +208,8 @@ export class CampSettingsService {
         const dup = await tx.campMealLocation.findFirst({ where: { tenantId, campId, name: dto.name }, select: { id: true } });
         if (dup) throw conflict('camp.err.settings.4', { name: dto.name });
         return tx.campMealLocation.create({
-          data: { tenantId, campId, name: dto.name },
-          select: { id: true, name: true, isActive: true, createdAt: true, updatedAt: true },
+          data: { tenantId, campId, name: dto.name, nameI18n: mergeCatalogNameI18n(dto.name, undefined, dto.nameI18n) },
+          select: { id: true, name: true, nameI18n: true, isActive: true, createdAt: true, updatedAt: true },
         });
       }),
     );
@@ -211,7 +219,7 @@ export class CampSettingsService {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.SETTINGS_MANAGE);
-        const loc = await tx.campMealLocation.findFirst({ where: { id, tenantId, campId }, select: { id: true } });
+        const loc = await tx.campMealLocation.findFirst({ where: { id, tenantId, campId }, select: { id: true, name: true, nameI18n: true } });
         if (!loc) throw notFound('camp.err.settings.5');
         if (dto.name !== undefined) {
           const dup = await tx.campMealLocation.findFirst({ where: { tenantId, campId, name: dto.name, NOT: { id } }, select: { id: true } });
@@ -231,9 +239,12 @@ export class CampSettingsService {
           where: { id },
           data: {
             ...(dto.name !== undefined ? { name: dto.name } : {}),
+            ...((dto.name !== undefined || dto.nameI18n !== undefined)
+              ? { nameI18n: mergeCatalogNameI18n(dto.name ?? loc.name, loc.nameI18n, dto.nameI18n) }
+              : {}),
             ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
           },
-          select: { id: true, name: true, isActive: true, createdAt: true, updatedAt: true },
+          select: { id: true, name: true, nameI18n: true, isActive: true, createdAt: true, updatedAt: true },
         });
       }),
     );

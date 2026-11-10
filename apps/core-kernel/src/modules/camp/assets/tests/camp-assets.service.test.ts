@@ -41,9 +41,13 @@ describe('CampAssetsService — ангилал (Шат 4.3)', () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.ROOM_MANAGE] }] });
     await expect(svc.createCategory('t1', 'a1', { name: 'Тавилга' })).rejects.toThrow(ForbiddenException);
     setActor(s.tx, { roles: [{ campId: 'c2', perms: [P.ASSET_MANAGE] }] });
-    await svc.createCategory('t1', 'a1', { name: 'Тавилга' });
+    await svc.createCategory('t1', 'a1', { name: 'Тавилга', nameI18n: { en: 'Furniture', zh: '家具' } });
     expectTenantTx(s.tx, 't1');
-    expect(s.tx.campAssetCategory.create.mock.calls[0][0].data).toEqual({ tenantId: 't1', name: 'Тавилга' });
+    expect(s.tx.campAssetCategory.create.mock.calls[0][0].data).toEqual({
+      tenantId: 't1',
+      name: 'Тавилга',
+      nameI18n: { mn: 'Тавилга', en: 'Furniture', zh: '家具' },
+    });
   });
 
   it('create/update: нэр давхардвал (том жижиг үсэг үл харгалзан) → 409', async () => {

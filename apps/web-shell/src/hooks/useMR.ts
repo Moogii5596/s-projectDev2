@@ -3,13 +3,11 @@ import {
   getMRList,
   getMRDetail,
   createMR,
-  updateMR,
-  deleteMR,
   submitMR,
   approveMR,
   rejectMR,
 } from '../api/requisitions'
-import type { CreateMrDto, UpdateMrDto, ApproveMrDto, RejectMrDto, SubmitMrDto } from '../types/mr.types'
+import type { CreateMrDto, ApproveMrDto, RejectMrDto, SubmitMrDto } from '../types/mr.types'
 
 // Query keys
 export const mrKeys = {
@@ -47,27 +45,6 @@ export function useCreateMR() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (dto: CreateMrDto) => createMR(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: mrKeys.list() }),
-  })
-}
-
-// Update
-export function useUpdateMR(id: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (dto: UpdateMrDto) => updateMR(id, dto),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: mrKeys.detail(id) })
-      qc.invalidateQueries({ queryKey: mrKeys.list() })
-    },
-  })
-}
-
-// Delete
-export function useDeleteMR() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => deleteMR(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: mrKeys.list() }),
   })
 }

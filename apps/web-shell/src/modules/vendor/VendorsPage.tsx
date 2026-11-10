@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMe } from '../../hooks/useMe'
-import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Table, inputCls, td } from '../camp/components/ui'
+import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Table, inputCls, td } from '../../core/ui'
 import { createVendor, listVendors, updateVendor, type Vendor } from './api'
 
 /** Phase 6.0.3 — Нийлүүлэгчид (Vendor-lite) */

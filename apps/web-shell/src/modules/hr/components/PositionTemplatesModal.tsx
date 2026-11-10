@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { campApi } from '../../camp/api/camp-api'
-import type { CampTemplateScope, CatalogItem } from '../../camp/api/types'
-import { campKeys } from '../../camp/hooks/useCampPermissions'
-import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { Button, Empty, ErrorBox, Loading, Modal, inputSmCls } from '../../camp/components/ui'
+import { campApi } from '../api/camp-bridge'
+import type { CampTemplateScope, CatalogItem } from '../api/camp-bridge'
+import { campKeys } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { localizedCatalogName } from '../../../core/labels'
+import { Button, Empty, ErrorBox, Loading, Modal, inputSmCls } from '../../../core/ui'
 
 type Row = { roleId: string; scope: CampTemplateScope }
 
@@ -14,7 +15,7 @@ type Row = { roleId: string; scope: CampTemplateScope }
  * автоматаар хэрэгжихгүй — «Ажилтнуудад хэрэгжүүлэх» (Блок 2-ын зарчим: загвар өөрчлөхөд хэрэглэгчийн эрх шууд өөрчлөгдөхгүй).
  */
 export default function PositionTemplatesModal({ position, onClose }: { position: CatalogItem; onClose: () => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const key = campKeys.positionTemplates(position.id)
   const current = useQuery({ queryKey: key, queryFn: () => campApi.positionTemplates(position.id) })
   const roles = useQuery({ queryKey: campKeys.roles, queryFn: campApi.roles })
@@ -24,11 +25,11 @@ export default function PositionTemplatesModal({ position, onClose }: { position
     if (current.data && rows === null) setRows(current.data.templates.map((x) => ({ roleId: x.roleId, scope: x.scope })))
   }, [current.data, rows])
 
-  const save = useCampMutation(() => campApi.setPositionTemplates(position.id, rows ?? []), [key], (res) => {
+  const save = useAppMutation(() => campApi.setPositionTemplates(position.id, rows ?? []), [key], (res) => {
     setRows(res.templates.map((x) => ({ roleId: x.roleId, scope: x.scope })))
     setApplied(null)
   })
-  const apply = useCampMutation(() => campApi.applyPositionTemplates(position.id), [campKeys.users, campKeys.userRoles], (res) => setApplied(res.users))
+  const apply = useAppMutation(() => campApi.applyPositionTemplates(position.id), [campKeys.users, campKeys.userRoles], (res) => setApplied(res.users))
 
   const saved = JSON.stringify(current.data?.templates.map((x) => ({ roleId: x.roleId, scope: x.scope })) ?? [])
   const dirty = rows !== null && JSON.stringify(rows) !== saved
@@ -36,7 +37,7 @@ export default function PositionTemplatesModal({ position, onClose }: { position
 
   return (
     <Modal
-      title={t('hr.tpl.title', { name: position.name })}
+      title={t('hr.tpl.title', { name: localizedCatalogName(position, i18n.resolvedLanguage ?? i18n.language) })}
       onClose={onClose}
       footer={
         <>

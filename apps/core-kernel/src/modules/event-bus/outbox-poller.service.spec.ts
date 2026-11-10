@@ -42,7 +42,11 @@ describe('OutboxPollerService', () => {
     };
     mockPublisher = { publish: vi.fn().mockResolvedValue(undefined) };
     mockDlqService = { createDlqRecord: vi.fn().mockResolvedValue(undefined) };
-    service = new OutboxPollerService(mockPrisma as never, mockPublisher as never, mockDlqService as never);
+    const config = { get: (key: string) => process.env[key] };
+    service = new OutboxPollerService(mockPrisma as never, mockPublisher as never, mockDlqService as never, {
+      register: vi.fn(),
+      run: vi.fn((_id: string, task: () => Promise<unknown>) => task()),
+    } as never, config as never);
   });
 
   it('сонголт нь transaction ДОТОР, FOR UPDATE SKIP LOCKED LIMIT 1 [EVT-001]', async () => {

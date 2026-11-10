@@ -18,8 +18,8 @@ import {
 } from './camp-rbac.dto';
 
 /**
- * Роль, эрх — системийн түвшин (ADR-007, v0.2.3 Блок 3, B3-1): `/api/v1/core/rbac/{permissions,me,users,roles,user-roles,
- * user-permissions,positions/:id/role-templates,invites}`. Хуучин `/api/v1/camp/...` — `CampRbacLegacyController` (Deprecation, v0.2.4-т устгана).
+ * Роль, эрх — системийн түвшин (ADR-007): `/api/v1/core/rbac/{permissions,me,users,roles,user-roles,
+ * user-permissions,positions/:id/role-templates,invites}`.
  * Service нь camp/rbac-д үлдэнэ (ARC-01 — v0.3).
  */
 @Controller('core/rbac')

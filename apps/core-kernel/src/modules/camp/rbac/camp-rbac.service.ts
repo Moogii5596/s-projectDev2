@@ -1,8 +1,9 @@
+import { isAdminBypassExcluded } from '../../core/permissions/permission-registry';
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSION_CODES, campPermissionAvailableIn, isCampPermission } from '../common/camp-permissions';
-import { normalizePermissionCode, permissionModule, withLegacyAliases } from '../../core/permissions/permission-registry';
+import { permissionModule } from '../../core/permissions/permission-registry';
 import { inTenantTx, Tx } from '../common/camp-tx';
 import { withCampErrors } from '../common/camp-errors';
 import {
@@ -86,9 +87,9 @@ export class CampRbacService {
     return { template, rows };
   }
 
-  /** ADR-007 B2-6: хуучин кодыг (alias) шинэ рүү хөрвүүлж, каталогт байхгүй (устгасан `camp.roles.manage` г.м.) бол 400 */
+  /** Каталогт байхгүй эсвэл устгасан permission кодыг хүлээн авахгүй. */
   private normalizeCodes(codes: string[]): string[] {
-    const normalized = [...new Set(codes.map(normalizePermissionCode))];
+    const normalized = [...new Set(codes)];
     const unknown = normalized.filter((c) => !isCampPermission(c));
     if (unknown.length > 0) throw badRequest('camp.err.rbac.1', { codes: unknown.join(', ') });
     return normalized;
@@ -115,14 +116,13 @@ export class CampRbacService {
       const effective = campId
         ? CAMP_PERMISSION_CODES.filter((c) => CampAccessService.has(actor.perms, campId, c))
         : CAMP_PERMISSION_CODES.filter((c) => CampAccessService.has(actor.perms, null, c));
-      // ADR-007 B2-6: шинэ кодын хажууд хуучин alias код (Блок 3-аас өмнөх frontend хуучин кодоор шалгадаг) — v0.2.4-т хасна
-      const byCamp = Object.fromEntries(Object.entries(actor.perms.byCamp).map(([k, v]) => [k, withLegacyAliases(v)]));
+      const byCamp = Object.fromEntries(Object.entries(actor.perms.byCamp).map(([k, v]) => [k, [...new Set(v)].sort()]));
       // v0.2.3 Блок 3 (PIL-19, B3-3): аль модульд (кодын угтвар) аль нэг ажлын байранд эрхтэй — дээд цэс нуухад
       const anyCodes = actor.perms.isTenantAdmin
-        ? CAMP_PERMISSION_CODES
+        ? [...CAMP_PERMISSION_CODES.filter((c) => !isAdminBypassExcluded(c)), ...actor.perms.global, ...Object.values(actor.perms.byCamp).flat()]
         : [...actor.perms.global, ...Object.values(actor.perms.byCamp).flat()];
       const modules = [...new Set(anyCodes.map(permissionModule))].sort();
-      return { userId: actor.userId, isTenantAdmin: actor.perms.isTenantAdmin, campId: campId ?? null, permissions: withLegacyAliases(effective), byCamp, modules };
+      return { userId: actor.userId, isTenantAdmin: actor.perms.isTenantAdmin, campId: campId ?? null, permissions: [...new Set(effective)].sort(), byCamp, modules };
     });
   }
 

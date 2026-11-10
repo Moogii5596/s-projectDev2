@@ -45,6 +45,7 @@ model FeedPost {
   reactions FeedReaction[]
   revisions FeedRevision[]
   reports   FeedReport[]
+  links     FeedLink[]
 
   @@unique([tenantId, id], map: "uq_feed_posts_tenant_id")
   @@index([tenantId, authorId], map: "idx_feed_posts_author")
@@ -155,4 +156,23 @@ model FeedReport {
 
   @@index([tenantId, status, createdAt(sort: Desc)], map: "idx_feed_reports_open")
   @@map("feed_reports")
+}
+
+/// v0.2.4 Блок 10б (FEED-04) — пост ↔ объект (20261107018_feed_links.sql). created_by FK → core_users — зөвхөн SQL-д.
+model FeedLink {
+  id         String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  postId     String   @map("post_id") @db.Uuid
+  objectType String   @map("object_type")
+  objectId   String   @map("object_id") @db.Uuid
+  createdBy  String   @map("created_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  post   FeedPost @relation(fields: [tenantId, postId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_links_post")
+
+  @@unique([tenantId, postId, objectType], map: "uq_feed_links_post_type")
+  @@unique([tenantId, objectType, objectId], map: "uq_feed_links_object")
+  @@map("feed_links")
 }

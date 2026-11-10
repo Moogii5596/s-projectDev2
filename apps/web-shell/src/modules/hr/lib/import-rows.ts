@@ -1,4 +1,4 @@
-import type { Crew, Department, ImportPreview, ImportRow, ImportRowEdit, Organization } from '../../camp/api/types'
+import type { Crew, Department, ImportPreview, ImportRow, ImportRowEdit, Organization } from '../api/camp-bridge'
 
 /**
  * v0.2.3 Блок R4.4–R4.6 — PREVIEW хүснэгт (цэвэр): шүүлт, эх мөрийн байрлал / нэр, засварын горимын payload.
@@ -7,7 +7,7 @@ import type { Crew, Department, ImportPreview, ImportRow, ImportRowEdit, Organiz
 export type RowFilter = 'errors' | 'warnings' | 'all'
 
 export const hasErrors = (r: ImportRow) => !r.deleted && r.errors.length > 0
-export const hasWarnings = (r: ImportRow) => !r.deleted && (r.warnings?.length ?? 0) > 0
+const hasWarnings = (r: ImportRow) => !r.deleted && (r.warnings?.length ?? 0) > 0
 
 export function filterRows(rows: ImportRow[], f: RowFilter): ImportRow[] {
   if (f === 'errors') return rows.filter(hasErrors)
@@ -75,7 +75,7 @@ export const canRegisterNew = (r: ImportRow): boolean => !!r.source && !!(r.sour
 
 const norm = (v: string | null | undefined) => (v ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
 
-export const newReady = (n: NewEmployeeDraft | undefined): n is NewEmployeeDraft => !!n && !!n.organizationId && !!n.departmentId
+const newReady = (n: NewEmployeeDraft | undefined): n is NewEmployeeDraft => !!n && !!n.organizationId && !!n.departmentId
 
 /** Файлын «Хэлтэс» → хэлтэс (код эсвэл нэрээр, идэвхтэй) */
 export function matchDepartment(text: string | undefined, depts: Department[]): string {

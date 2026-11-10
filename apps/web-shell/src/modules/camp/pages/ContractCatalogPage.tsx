@@ -3,23 +3,23 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { contractApi, type ServiceTypeInput, type UnitInput } from '../api/contract-api'
 import { QUANTITY_SOURCES, type QuantitySource, type ServiceTypeView, type UnitView } from '../api/contract-types'
-import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, NoAccess, PageHeader, Table, inputCls, td } from '../components/ui'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { useCampPermissions } from '../hooks/useCampPermissions'
+import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, NoAccess, PageHeader, Table, inputCls, td } from '../../../core/ui'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { useAppPermissions } from '../../../core/useAppPermissions'
 import { contractCatalogName } from '../lib/contract'
-import { canInAnyCamp, P } from '../lib/permissions'
+import { canInAnyCamp, P } from '../../../core/permissions'
 
 const catalogKey = ['camp', 'contract-catalog'] as const
 
 export default function ContractCatalogPage() {
   const { t, i18n } = useTranslation()
-  const permissions = useCampPermissions()
+  const permissions = useAppPermissions()
   const canManage = canInAnyCamp(permissions.data, P.CONTRACT_MANAGE)
   const catalog = useQuery({ queryKey: catalogKey, queryFn: contractApi.catalog, enabled: canManage })
   const [unitDialog, setUnitDialog] = useState<UnitView | 'new' | null>(null)
   const [serviceDialog, setServiceDialog] = useState<ServiceTypeView | 'new' | null>(null)
 
-  const saveUnit = useCampMutation(
+  const saveUnit = useAppMutation(
     (input: { existing: UnitView | null; value: UnitInput }) => {
       if (!input.existing) return contractApi.createUnit(input.value)
       const patch = {
@@ -34,11 +34,11 @@ export default function ContractCatalogPage() {
     [catalogKey],
     () => setUnitDialog(null),
   )
-  const toggleUnit = useCampMutation(
+  const toggleUnit = useAppMutation(
     (unit: UnitView) => contractApi.updateUnit(unit.id, { isActive: !unit.isActive }),
     [catalogKey],
   )
-  const saveService = useCampMutation(
+  const saveService = useAppMutation(
     (input: { existing: ServiceTypeView | null; value: ServiceTypeInput }) => {
       if (!input.existing) return contractApi.createServiceType(input.value)
       const patch = {
@@ -54,7 +54,7 @@ export default function ContractCatalogPage() {
     [catalogKey],
     () => setServiceDialog(null),
   )
-  const toggleService = useCampMutation(
+  const toggleService = useAppMutation(
     (service: ServiceTypeView) => contractApi.updateServiceType(service.id, { isActive: !service.isActive }),
     [catalogKey],
   )

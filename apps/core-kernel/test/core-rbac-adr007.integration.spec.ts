@@ -9,7 +9,7 @@ import { PrismaClient, UserRole } from '@prisma/client';
 import { CampAccessService } from '../src/modules/camp/common/camp-access.service';
 import { CampAuditService } from '../src/modules/camp/common/camp-audit.service';
 import { CampRbacService } from '../src/modules/camp/rbac/camp-rbac.service';
-import { PERMISSIONS as P, PERMISSION_ALIASES, PERMISSION_CODES } from '../src/modules/core/permissions/permission-registry';
+import { PERMISSIONS as P, PERMISSION_CODES } from '../src/modules/core/permissions/permission-registry';
 import { buildSnapshot, comparePerms } from '../src/scripts/camp-snapshot';
 import { ADMIN_DB_URL, APP_USER_DB_URL } from './helpers/db-urls';
 
@@ -64,21 +64,19 @@ describe('v0.2.3 Блок 2 — ADR-007 core RBAC (integration)', () => {
     await rls.$disconnect();
   });
 
-  it('migration: legacy_camp_* мөр бүр (ID-аараа) core_*-д шинэ кодоор, хүрээ хэвээр; хуучин/устгасан код core-д алга', async () => {
-    // Migration дотор A = B шалгалт (RAISE) байгаа; энд — дараа нь app мөр нэмж/устгасан ч (ID ижил мөр) зөрөхгүй байх
-    const wrong = await admin.$queryRaw<{ n: bigint }[]>`
-      SELECT count(*) AS n
-      FROM legacy_camp_user_permissions l
-      JOIN core_user_permissions c ON c.id = l.id
-      LEFT JOIN core_permission_aliases a ON a.old_code = l.permission_code
-      WHERE c.permission_code <> COALESCE(a.new_code, l.permission_code)
-         OR c.site_id IS DISTINCT FROM l.camp_id OR c.user_id <> l.user_id OR c.source::text <> l.source::text`;
-    expect(Number(wrong[0]?.n)).toBe(0);
-    const roleRows = await admin.$queryRaw<{ n: bigint }[]>`
-      SELECT count(*) AS n FROM legacy_camp_user_roles l JOIN core_user_roles c ON c.id = l.id
-      WHERE c.site_id IS DISTINCT FROM l.camp_id OR c.role_id <> l.role_id OR c.user_id <> l.user_id`;
-    expect(Number(roleRows[0]?.n)).toBe(0);
-    const stale = await admin.coreUserPermission.count({ where: { permissionCode: { in: ['camp.roles.manage', ...Object.keys(PERMISSION_ALIASES)] } } });
+  it('ARC-05 cleanup migration: alias, legacy tables, enum болон хуучин permission код байхгүй', async () => {
+    const tables = await admin.$queryRaw<{ name: string; present: boolean }[]>`
+      SELECT name, to_regclass('public.' || name) IS NOT NULL AS present
+      FROM unnest(ARRAY[
+        'legacy_camp_permissions', 'legacy_camp_roles', 'legacy_camp_role_permissions',
+        'legacy_camp_user_roles', 'legacy_camp_user_permissions',
+        'legacy_camp_position_role_templates', 'core_permission_aliases'
+      ]) AS t(name)`;
+    expect(tables.filter((table) => table.present).map((table) => table.name)).toEqual([]);
+    const roleType = await admin.$queryRaw<{ present: boolean }[]>`
+      SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'CampRoleCode') AS present`;
+    expect(roleType[0]?.present).toBe(false);
+    const stale = await admin.coreUserPermission.count({ where: { permissionCode: { in: ['camp.roles.manage', 'camp.employee.manage', 'camp.employee.terminate', 'camp.movement.import', 'camp.shift.adjust'] } } });
     expect(stale).toBe(0);
     expect(await admin.coreRolePermission.count({ where: { permissionCode: 'camp.roles.manage' } })).toBe(0);
   });
@@ -106,36 +104,34 @@ describe('v0.2.3 Блок 2 — ADR-007 core RBAC (integration)', () => {
     expect(Number(perms[0]?.n)).toBe(await admin.coreRolePermission.count({ where: { roleId: role.CAMP_MANAGER } }));
   });
 
-  it('me/permissions: шинэ код + хуучин alias (B2-6), camp.roles.manage алга', async () => {
+  it('me/permissions: зөвхөн шинэ permission код буцаана', async () => {
     const me = await svc.myPermissions(tA, auth.u1, c1);
-    expect(me.permissions).toEqual(expect.arrayContaining([P.SHIFT_ADJUST, 'camp.shift.adjust', P.MOVEMENT_IMPORT, 'camp.movement.import']));
-    expect(me.byCamp[c1]).toEqual(expect.arrayContaining([P.SHIFT_ADJUST, 'camp.shift.adjust']));
+    expect(me.permissions).toEqual(expect.arrayContaining([P.SHIFT_ADJUST, P.MOVEMENT_IMPORT]));
+    expect(me.permissions).not.toContain('camp.shift.adjust');
+    expect(me.byCamp[c1]).toEqual(expect.arrayContaining([P.SHIFT_ADJUST]));
     const owner = await svc.myPermissions(tA, auth.owner);
     expect(owner.permissions).not.toContain('camp.roles.manage');
-    expect(owner.permissions).toHaveLength(PERMISSION_CODES.length + Object.keys(PERMISSION_ALIASES).length);
+    expect(owner.permissions).toHaveLength(PERMISSION_CODES.length);
   });
 
-  it('API оролт: хуучин код → шинэ кодоор хадгална; camp.roles.manage → 400', async () => {
-    const r = await svc.createRole(tA, auth.owner, { name: `ADR7 ${sfx}`, permissionCodes: ['camp.employee.manage', P.EMPLOYEE_MANAGE] });
+  it('API хуучин/устгасан permission кодоос татгалзана', async () => {
+    const r = await svc.createRole(tA, auth.owner, { name: `ADR7 ${sfx}`, permissionCodes: [P.EMPLOYEE_MANAGE] });
     expect((await admin.coreRolePermission.findMany({ where: { roleId: r.id }, select: { permissionCode: true } })).map((x) => x.permissionCode)).toEqual([P.EMPLOYEE_MANAGE]);
-    await svc.grantDirectPermission(tA, auth.owner, user.u1, { permissionCode: 'camp.employee.terminate' });
+    await svc.grantDirectPermission(tA, auth.owner, user.u1, { permissionCode: P.EMPLOYEE_TERMINATE });
     expect(await admin.coreUserPermission.count({ where: { userId: user.u1, source: 'DIRECT', permissionCode: P.EMPLOYEE_TERMINATE } })).toBe(1);
-    await expect(svc.grantDirectPermission(tA, auth.owner, user.u1, { permissionCode: 'camp.roles.manage' })).rejects.toThrow(BadRequestException);
-    await expect(svc.setRolePermissions(tA, auth.owner, r.id, { permissionCodes: ['camp.roles.manage'] })).rejects.toThrow(BadRequestException);
+    for (const code of ['camp.employee.manage', 'camp.roles.manage']) {
+      await expect(svc.grantDirectPermission(tA, auth.owner, user.u1, { permissionCode: code })).rejects.toThrow(BadRequestException);
+      await expect(svc.setRolePermissions(tA, auth.owner, r.id, { permissionCodes: [code] })).rejects.toThrow(BadRequestException);
+    }
   });
 
-  it('RLS (R16): app_user зөвхөн өөрийн tenant-ийн core_*; legacy_camp_* зөвхөн уншина; каталог/alias уншигдана', async () => {
+  it('RLS: app_user зөвхөн өөрийн tenant-ийн core_*; каталог уншигдаж, бичигдэхгүй', async () => {
     await admin.coreUserRole.create({ data: { tenantId: tB, userId: user.b1, roleId: (await admin.coreRole.findFirstOrThrow({ where: { tenantId: tB, systemCode: 'EMPLOYEE' } })).id } });
     const seen = await asTenant(tA, (tx) => tx.coreUserPermission.findMany({ select: { tenantId: true } }));
     expect(seen.length).toBeGreaterThan(0);
     expect(new Set(seen.map((s) => s.tenantId))).toEqual(new Set([tA]));
     expect(await asTenant(tA, (tx) => tx.coreUserRole.count({ where: { tenantId: tB } }))).toBe(0);
-    expect(await asTenant(tA, (tx) => tx.corePermissionAlias.count())).toBe(Object.keys(PERMISSION_ALIASES).length);
-    const legacyRead = await asTenant(tA, (tx) => tx.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM legacy_camp_user_roles`);
-    expect(Number(legacyRead[0]?.n)).toBeGreaterThanOrEqual(0);
-    await expect(
-      asTenant(tA, (tx) => tx.$executeRaw`DELETE FROM legacy_camp_user_permissions`),
-    ).rejects.toThrow(/permission denied/);
+    expect(await asTenant(tA, (tx) => tx.corePermission.count())).toBe(PERMISSION_CODES.length);
     await expect(asTenant(tA, (tx) => tx.$executeRaw`INSERT INTO core_permissions (code, name, module) VALUES ('core.x.y', 'x', 'core')`)).rejects.toThrow(/permission denied/);
   });
 

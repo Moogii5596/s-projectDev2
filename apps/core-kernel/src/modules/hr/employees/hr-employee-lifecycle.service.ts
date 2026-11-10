@@ -25,7 +25,7 @@ import { QueryPiiViewsDto, RehireEmployeeDto, TerminateEmployeeDto } from './hr-
 const P = CAMP_PERMISSIONS;
 const TX = { timeout: 30_000, maxWait: 10_000 };
 /** B5-Q6: нэг хүн × нэг ажилтан — энэ хугацаанд дахин нээвэл шинэ мөр бичихгүй */
-export const PII_DEDUP_MINUTES = 15;
+const PII_DEDUP_MINUTES = 15;
 const TERMINATION_AUDIT_FIELDS = ['status', 'terminatedAt', 'terminationReason', 'terminationNote'] as const;
 
 /** Ажлаас гарахад нэвтрэх эрхийг хаахгүй байх шалтгаан (Блок 4-ийн `deactivateBlocker`-тэй ижил дүрэм, ижил код) */
@@ -339,9 +339,9 @@ export class HrEmployeeLifecycleService {
           organizationId: true, departmentId: true, crewId: true, positionId: true, mealLocationId: true, mealsIncluded: true,
           terminatedAt: true, terminationReason: true, terminationNote: true, createdAt: true, updatedAt: true, userId: true,
           organization: { select: { name: true } },
-          department: { select: { code: true, name: true } },
+          department: { select: { code: true, name: true, nameI18n: true } },
           crew: { select: { code: true } },
-          positionRef: { select: { name: true } },
+          positionRef: { select: { name: true, nameI18n: true } },
           user: { select: { id: true, isActive: true, phone: true, username: true, email: true } },
           rehiredFrom: { select: { id: true, employeeCode: true, terminatedAt: true } },
           rehiredAs: { select: { id: true, employeeCode: true, status: true } },
@@ -434,4 +434,3 @@ export class HrEmployeeLifecycleService {
     });
   }
 }
-

@@ -10,10 +10,10 @@ import { badRequest, payloadTooLarge } from '../common/i18n/app-error';
  * Төрлийг client-ийн mimetype-аас биш, байтаас (sharp) таньна; SVG/PDF/бусад → татгалзана.
  */
 export const IMAGE_MAX_INPUT_BYTES = 15 * 1024 * 1024;
-export const IMAGE_MAX_EDGE = 2048;
-export const IMAGE_THUMB_EDGE = 400;
+const IMAGE_MAX_EDGE = 2048;
+const IMAGE_THUMB_EDGE = 400;
 /** Decompression bomb хамгаалалт (~ 100 MP — утасны панорам багтана) */
-export const IMAGE_MAX_PIXELS = 100_000_000;
+const IMAGE_MAX_PIXELS = 100_000_000;
 
 /** Алдааны код — `common/i18n/messages.ts`-д mn/en/zh (Блок 5) */
 export const IMAGE_ERR = {
@@ -27,7 +27,7 @@ const ACCEPTED_INPUT = new Set(['jpeg', 'png', 'webp', 'gif', 'avif', 'heif', 't
 
 export type ImageOutputFormat = 'webp' | 'jpeg';
 
-export interface ImageVariant {
+interface ImageVariant {
   data: Buffer;
   format: ImageOutputFormat;
   /** Storage key-ийн өргөтгөл */
@@ -57,7 +57,7 @@ const QUALITY = { main: 82, thumbnail: 72 } as const;
 export const IMAGE_VARIANT_WIDTHS = [480, 1080, 2048] as const;
 const VARIANT_QUALITY: Record<number, number> = { 480: 75, 1080: 80, 2048: 82 };
 
-export interface HashedVariant extends ImageVariant {
+interface HashedVariant extends ImageVariant {
   /** sha256(data) hex-ийн эхний 16 тэмдэгт */
   hash: string;
 }

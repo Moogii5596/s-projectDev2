@@ -2,17 +2,17 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { contractApi, type ExchangeRateInput } from '../api/contract-api'
-import { Button, Card, Empty, ErrorBox, Field, Loading, Modal, NoAccess, PageHeader, Table, inputCls, td } from '../components/ui'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { useCampPermissions } from '../hooks/useCampPermissions'
-import { todayUb } from '../lib/dates'
-import { canInAnyCamp, P } from '../lib/permissions'
+import { Button, Card, Empty, ErrorBox, Field, Loading, Modal, NoAccess, PageHeader, Table, inputCls, td } from '../../../core/ui'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { useAppPermissions } from '../../../core/useAppPermissions'
+import { todayUb } from '../../../core/dates'
+import { canInAnyCamp, P } from '../../../core/permissions'
 
 const exchangeRatesKey = ['camp', 'exchange-rates'] as const
 
 export default function ExchangeRatesPage() {
   const { t } = useTranslation()
-  const permissions = useCampPermissions()
+  const permissions = useAppPermissions()
   const canManage = canInAnyCamp(permissions.data, P.CONTRACT_MANAGE)
   const [filters, setFilters] = useState({ from: '', to: '', currency: '' })
   const [adding, setAdding] = useState(false)
@@ -23,7 +23,7 @@ export default function ExchangeRatesPage() {
     queryFn: () => contractApi.exchangeRates(query),
     enabled: canManage,
   })
-  const save = useCampMutation(
+  const save = useAppMutation(
     (input: ExchangeRateInput) => contractApi.upsertExchangeRate({
       ...input,
       baseCurrency: input.baseCurrency.trim().toUpperCase(),
@@ -34,7 +34,7 @@ export default function ExchangeRatesPage() {
     [exchangeRatesKey],
     () => setAdding(false),
   )
-  const remove = useCampMutation((id: string) => contractApi.removeExchangeRate(id), [exchangeRatesKey])
+  const remove = useAppMutation((id: string) => contractApi.removeExchangeRate(id), [exchangeRatesKey])
   const set = <K extends keyof ExchangeRateInput>(key: K, value: ExchangeRateInput[K]) => setForm((old) => ({ ...old, [key]: value }))
 
   if (permissions.isLoading) return <Loading />

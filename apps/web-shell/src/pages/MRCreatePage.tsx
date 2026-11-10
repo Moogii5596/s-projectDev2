@@ -73,7 +73,7 @@ export default function MRCreatePage() {
         notes: notes.trim() || undefined,
         items: dtoItems,
       })
-      navigate(`/requisitions/${created.id}`)
+      navigate(`/debug/modules/mr/${created.id}`)
     } catch (err: any) {
       const msg = err?.response?.data?.message
       setError(Array.isArray(msg) ? msg.join(', ') : (msg ?? 'Үүсгэхэд алдаа гарлаа'))
@@ -83,7 +83,7 @@ export default function MRCreatePage() {
   return (
     <div className="max-w-2xl">
       <button
-        onClick={() => navigate('/requisitions')}
+        onClick={() => navigate('/debug/modules/mr')}
         className="text-gray-400 hover:text-gray-600 text-sm mb-4 block"
       >
         ← Жагсаалт руу буцах
@@ -220,7 +220,7 @@ export default function MRCreatePage() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/requisitions')}
+            onClick={() => navigate('/debug/modules/mr')}
             className="text-gray-600 px-4 py-2.5 rounded-lg text-sm hover:bg-gray-100 transition-colors"
           >
             Болих

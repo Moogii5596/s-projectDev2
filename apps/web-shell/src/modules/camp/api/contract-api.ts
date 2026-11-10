@@ -34,7 +34,7 @@ const patch = async <T>(url: string, body: unknown): Promise<T> => (await apiCli
 const put = async <T>(url: string, body: unknown): Promise<T> => (await apiClient.put<T>(url, body)).data;
 const del = async <T>(url: string): Promise<T> => (await apiClient.delete<T>(url)).data;
 
-export interface CatalogNamesInput {
+interface CatalogNamesInput {
   nameMn: string;
   nameEn?: string | null;
   nameZh?: string | null;

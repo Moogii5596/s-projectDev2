@@ -2,23 +2,36 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
 import type { AssetCategory } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P, canInAnyCamp } from '../lib/permissions'
-import { ActiveBadge, Button, Card, Empty, ErrorBox, Loading, PageHeader, Table, inputCls, td } from '../components/ui'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P, canInAnyCamp } from '../../../core/permissions'
+import { ActiveBadge, Button, Card, Empty, ErrorBox, Loading, PageHeader, Table, td } from '../../../core/ui'
 import { useTranslation } from 'react-i18next'
+import { localizedCatalogName } from '../../../core/labels'
+import { LocalizedNameFields, type LocalizedNameInput } from '../components/LocalizedNameFields'
+
+const emptyName = (): LocalizedNameInput => ({ name: '', nameI18n: { en: '', zh: '' } })
 
 /** /camp/admin/asset-categories — хөрөнгийн ангилал (tenant түвшин; аль нэг кемпэд asset.manage эрхтэй бол засна) */
 export default function AssetCategoriesPage() {
-  const { t } = useTranslation()
-  const perms = useCampPermissions()
+  const { t, i18n } = useTranslation()
+  const perms = useAppPermissions()
   const canEdit = canInAnyCamp(perms.data, P.ASSET_MANAGE)
   const list = useQuery({ queryKey: campKeys.assetCategories, queryFn: () => campApi.assetCategories(false) })
-  const [name, setName] = useState('')
-  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null)
-  const add = useCampMutation(() => campApi.createAssetCategory(name.trim()), [campKeys.assetCategories], () => setName(''))
-  const update = useCampMutation(
-    (v: { c: AssetCategory; name?: string; isActive?: boolean }) => campApi.updateAssetCategory(v.c.id, { name: v.name, isActive: v.isActive }),
+  const [name, setName] = useState<LocalizedNameInput>(emptyName)
+  const [editing, setEditing] = useState<(LocalizedNameInput & { id: string }) | null>(null)
+  const add = useAppMutation(
+    () => campApi.createAssetCategory({ name: name.name.trim(), nameI18n: { en: name.nameI18n.en.trim(), zh: name.nameI18n.zh.trim() } }),
+    [campKeys.assetCategories],
+    () => setName(emptyName()),
+  )
+  const update = useAppMutation(
+    (v: { c: AssetCategory; value?: LocalizedNameInput; isActive?: boolean }) =>
+      campApi.updateAssetCategory(v.c.id, {
+        name: v.value?.name.trim(),
+        nameI18n: v.value ? { en: v.value.nameI18n.en.trim(), zh: v.value.nameI18n.zh.trim() } : undefined,
+        isActive: v.isActive,
+      }),
     [campKeys.assetCategories],
     () => setEditing(null),
   )
@@ -36,9 +49,9 @@ export default function AssetCategoriesPage() {
               <tr key={c.id}>
                 <td className={td}>
                   {editing?.id === c.id ? (
-                    <input aria-label={t('camp.assetcat.name')} className={inputCls} value={editing.name} onChange={(e) => setEditing({ id: c.id, name: e.target.value })} maxLength={100} autoFocus />
+                    <LocalizedNameFields value={editing} onChange={(value) => setEditing({ ...value, id: c.id })} />
                   ) : (
-                    c.name
+                    localizedCatalogName(c, i18n.resolvedLanguage ?? i18n.language)
                   )}
                 </td>
                 <td className={td}>
@@ -48,7 +61,16 @@ export default function AssetCategoriesPage() {
                   {canEdit &&
                     (editing?.id === c.id ? (
                       <>
-                        <Button variant="ghost" disabled={!editing.name.trim() || editing.name.trim() === c.name} onClick={() => update.mutate({ c, name: editing.name.trim() })}>
+                        <Button
+                          variant="ghost"
+                          disabled={
+                            !editing.name.trim() ||
+                            (editing.name.trim() === c.name &&
+                              editing.nameI18n.en.trim() === (c.nameI18n?.en ?? '') &&
+                              editing.nameI18n.zh.trim() === (c.nameI18n?.zh ?? ''))
+                          }
+                          onClick={() => update.mutate({ c, value: editing })}
+                        >
                           {t('camp.common.save')}
                         </Button>
                         <Button variant="ghost" onClick={() => setEditing(null)}>
@@ -57,7 +79,7 @@ export default function AssetCategoriesPage() {
                       </>
                     ) : (
                       <>
-                        <Button variant="ghost" onClick={() => setEditing({ id: c.id, name: c.name })}>
+                        <Button variant="ghost" onClick={() => setEditing({ id: c.id, name: c.name, nameI18n: { en: c.nameI18n?.en ?? '', zh: c.nameI18n?.zh ?? '' } })}>
                           {t('camp.common.rename')}
                         </Button>
                         <Button variant="ghost" onClick={() => update.mutate({ c, isActive: !c.isActive })}>
@@ -75,11 +97,11 @@ export default function AssetCategoriesPage() {
             className="flex gap-2 mt-3"
             onSubmit={(e) => {
               e.preventDefault()
-              if (name.trim()) add.mutate(undefined)
+              if (name.name.trim()) add.mutate(undefined)
             }}
           >
-            <input aria-label={t('camp.assetcat.new')} className={inputCls} placeholder={t('camp.assetcat.new')} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
-            <Button type="submit" loading={add.isPending} disabled={!name.trim()}>
+            <LocalizedNameFields value={name} onChange={setName} />
+            <Button type="submit" loading={add.isPending} disabled={!name.name.trim()}>
               {t('camp.common.add')}
             </Button>
           </form>

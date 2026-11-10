@@ -1,5 +1,5 @@
 import apiClient from '../../api/client'
-import type { FeedImageDto } from '../feed/types'
+import type { FeedImageDto } from './feed-bridge'
 
 /**
  * v0.2.3 Блок F — Санал хүсэлт (`/api/v1/core/feedback`). DTO нэр backend `core-feedback.dto.ts`-тэй ТАМ АДИЛ (RULE-20).
@@ -72,6 +72,9 @@ export const feedbackApi = {
   list: async (q: QueryFeedbackDto = {}): Promise<FeedbackListDto> =>
     (await apiClient.get<FeedbackListDto>(BASE, { params: { ...q, mine: q.mine ? 'true' : undefined, q: q.q || undefined } })).data,
   create: async (dto: CreateFeedbackDto): Promise<FeedbackItemDto> => (await apiClient.post<FeedbackItemDto>(BASE, dto)).data,
+  /** v0.2.4 FEED-05: Feed-ийн постоос */
+  createFromPost: async (postId: string, dto: CreateFeedbackDto): Promise<FeedbackItemDto> =>
+    (await apiClient.post<FeedbackItemDto>(`${BASE}/from-post/${postId}`, dto)).data,
   update: async (id: string, dto: UpdateFeedbackDto): Promise<FeedbackItemDto> =>
     (await apiClient.patch<FeedbackItemDto>(`${BASE}/${id}`, dto)).data,
   addAttachments: async (id: string, files: File[]): Promise<FeedImageDto[]> => {

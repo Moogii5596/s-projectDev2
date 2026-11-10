@@ -1,6 +1,7 @@
-import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { HHMM, toBool, trim } from '../common/camp-dto.util';
+import { CatalogNameI18nDto } from '../common/common.dto';
 
 /** PUT — бүх талбар заавал (бүтэн тохиргоо) */
 export class UpdateCampSettingsDto {
@@ -57,11 +58,17 @@ export class UpdateCampSettingsDto {
 export class CreateMealLocationDto {
   @Transform(trim) @IsString() @IsNotEmpty({ message: 'name шаардлагатай' }) @MaxLength(100)
   name!: string;
+
+  @IsOptional() @IsObject() @ValidateNested() @Type(() => CatalogNameI18nDto)
+  nameI18n?: CatalogNameI18nDto;
 }
 
 export class UpdateMealLocationDto {
   @IsOptional() @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(100)
   name?: string;
+
+  @IsOptional() @IsObject() @ValidateNested() @Type(() => CatalogNameI18nDto)
+  nameI18n?: CatalogNameI18nDto;
 
   @IsOptional() @IsBoolean()
   isActive?: boolean;

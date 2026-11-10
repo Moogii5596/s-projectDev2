@@ -6,7 +6,7 @@ import type { Tx } from '../../camp/common/camp-tx';
  * Дугаарлалт tenant даяар: тухайн угтвартай бүх код (ажлаас гарсныг ч) → хамгийн их + 1 (дахин ашиглахгүй).
  * Угтвар = кемпийн тохиргоо `auto_code_prefix` (анхдагч Z). Зэрэг үүсгэхэд tenant-ийн advisory lock.
  */
-export const AUTO_CODE_DIGITS = 4;
+const AUTO_CODE_DIGITS = 4;
 
 /** Цэвэр: одоо байгаа кодуудаас дараагийнх (`Z0009` → `Z0010`, 9999-ийн дараа 5 орон) */
 export function nextAutoCode(prefix: string, existing: string[]): string {

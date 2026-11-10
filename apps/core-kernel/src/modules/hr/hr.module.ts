@@ -15,6 +15,7 @@ import { HrEmployeeHooks } from './employees/employee-hooks';
 import { HrEmployeeLifecycleService } from './employees/hr-employee-lifecycle.service';
 import { HrDataController } from './import/hr-data.controller';
 import { HrDataImportService } from './import/hr-data-import.service';
+import { CoreModule } from '../core/core.module';
 
 const SERVICES = [
   HrDepartmentsService,
@@ -35,7 +36,7 @@ const SERVICES = [
  * Кемп нь HR-ийг ашиглана (HR → Кемп хамааралгүй); Кемпийн байрлалт `HrAttendanceHooks`-оор холбогдоно.
  */
 @Module({
-  imports: [CampCommonModule],
+  imports: [CampCommonModule, CoreModule],
   controllers: [HrOrgController, HrEmployeesController, HrPositionsController, HrAttendanceController, HrDataController],
   providers: SERVICES,
   exports: SERVICES,

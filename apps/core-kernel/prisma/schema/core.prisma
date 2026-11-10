@@ -15,6 +15,7 @@ model Tenant {
   onboardedAt DateTime? @map("onboarded_at") @db.Timestamptz
 
   users            CoreUser[]
+  tenantSettings   CoreTenantSettings?
   mrHeaders        MrHeader[]
   mrItems          MrItem[]
   outboxEvents     OutboxEvent[]
@@ -65,6 +66,15 @@ model Tenant {
   campServiceTypes            CampServiceType[]
   coreUnits                   CoreUnit[]
   coreExchangeRates           CoreExchangeRate[]
+  holidayCalendars            CoreHolidayCalendar[]
+  sites                      CoreSite[]
+  notifications              CoreNotification[]
+  notificationPrefs           CoreNotificationPref[]
+  attachments                 CoreAttachment[]
+  attachmentAccess            CoreAttachmentAccess[]
+  attachmentNamePatterns      CoreAttachmentNamePattern[]
+  sequences                CoreSequence[]
+  feedLinks                   FeedLink[]
   campHaulRecords             CampHaulRecord[]
   campMealOrders              CampMealOrder[]
   campMealOrderLines          CampMealOrderLine[]
@@ -166,16 +176,6 @@ enum CampOrgType {
   CONTRACTOR
 }
 
-/// Байгууллагын үйлчилгээний төрөл (олон байж болно) — 20261010002
-enum CampOrgServiceType {
-  CATERING
-  WASTE_TRANSPORT
-  SEWAGE_TRANSPORT
-  WASTE_DISPOSAL
-  SEWAGE_DISPOSAL
-  OTHER
-}
-
 /// reg_number давхардал → partial unique index (migration: uq_camp_organizations_reg)
 model CoreOrganization {
   id              String      @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
@@ -183,8 +183,6 @@ model CoreOrganization {
   name            String
   regNumber       String?     @map("reg_number")
   orgType         CampOrgType @map("org_type")
-  /// Катеринг / хог-бохир ус тээвэрлэгч / хүлээн авах цэг … (is_disposal_point-ийг орлосон)
-  serviceTypes    CampOrgServiceType[] @default([]) @map("service_types")
   contactName     String?     @map("contact_name")
   phone           String?
   email           String?
@@ -198,11 +196,24 @@ model CoreOrganization {
   customerContracts CampContract[] @relation("CampContractCustomer")
   costEntries     CampCostEntry[]
   cateringForCamps CampSetting[]
+  serviceTypes   CoreOrganizationServiceType[]
 
   @@unique([tenantId, id], map: "uq_camp_organizations_tenant_id")
   @@index([tenantId, isActive, name], map: "idx_camp_organizations_list")
-  @@index([serviceTypes], type: Gin, map: "idx_camp_organizations_services")
   @@map("camp_organizations")
+}
+
+model CoreOrganizationServiceType {
+  tenantId       String @map("tenant_id") @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  serviceTypeId  String @map("service_type_id") @db.Uuid
+
+  organization CoreOrganization @relation(fields: [tenantId, organizationId], references: [tenantId, id], onDelete: Cascade, map: "fk_camp_org_service_types_org")
+  serviceType  CampServiceType  @relation(fields: [tenantId, serviceTypeId], references: [tenantId, id], onDelete: NoAction, map: "fk_camp_org_service_types_type")
+
+  @@id([tenantId, organizationId, serviceTypeId])
+  @@index([tenantId, serviceTypeId, organizationId], map: "idx_camp_org_service_types_type")
+  @@map("camp_organization_service_types")
 }
 
 // ── v0.2.0 §0.7 — Байгууллагын орчуулгын засвар (20261011005) ─────

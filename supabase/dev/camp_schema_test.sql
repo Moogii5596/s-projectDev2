@@ -1,7 +1,5 @@
--- ⚠️ ХУУЧИРСАН (RBAC хэсэг): v0.2.3 ADR-007-оос хойш camp_roles/... → core_* (20261106005). RBAC-ийн шалгалт →
---    apps/core-kernel/test/core-rbac-adr007.integration.spec.ts. Энэ скриптийн RBAC мөрүүдийг v0.2.4-т (legacy устгахад) цэвэрлэнэ.
 -- ============================================================
--- Camp Module · Шат 1 (+4.1) — DB тест (99 шалгалт): RLS (app_user), composite FK (D2), EXCLUDE, CHECK, trigger, seed, CASCADE
+-- Camp Module — DB тест: RLS (app_user), composite FK (D2), EXCLUDE, CHECK, trigger, CASCADE
 -- ============================================================
 -- Цэвэр/local DB дээр (migration up хийсний дараа) ажиллуулна. Өөрийн 2 tenant үүсгээд төгсгөлд устгана (дахин ажиллуулж болно).
 -- Windows (PowerShell) — файлыг контейнер руу ХУУЛЖ ажиллуулна (pipe БИШ) [ENV-009], superuser-ээр (SET ROLE app_user) [TEST-007]:
@@ -47,45 +45,12 @@ INSERT INTO core_users (id, tenant_id, auth_id, email, role) VALUES
   ('aaaaaaaa-0000-0000-0000-0000000000a2', 'aaaaaaaa-0000-0000-0000-000000000001', gen_random_uuid(), 'cat@a.mn', 'admin'),
   ('bbbbbbbb-0000-0000-0000-0000000000b1', 'bbbbbbbb-0000-0000-0000-000000000001', gen_random_uuid(), 'mgr@b.mn', 'admin');
 
--- ── 1. Анхдагч ролиуд (D3) ────────────────────────────────────
-SELECT t_eq((SELECT count(*) FROM camp_roles WHERE tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001')::int, 3, 'шинэ tenant-д 3 роль trigger-ээр');
-SELECT t_eq((SELECT count(*) FROM camp_roles r JOIN tenants t ON t.id = r.tenant_id)::int, (SELECT count(*) * 3 FROM tenants)::int, 'бүх tenant 3 рольтой (backfill)');
-SELECT t_eq((SELECT count(*) FROM camp_role_permissions p JOIN camp_roles r ON r.id = p.role_id
-             WHERE r.tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001' AND r.system_code = 'CAMP_ADMIN')::int, 11, 'Кемп админ 11 эрх');
-SELECT t_eq((SELECT count(*) FROM camp_role_permissions p JOIN camp_roles r ON r.id = p.role_id
-             WHERE r.tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001' AND r.system_code = 'CAMP_MANAGER')::int, 7, 'Кемп менежер 7 эрх');
-SELECT t_eq((SELECT count(*) FROM camp_role_permissions p JOIN camp_roles r ON r.id = p.role_id
-             WHERE r.tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001' AND r.system_code = 'CATERING_ADMIN')::int, 8, 'Катеринг админ 8 эрх');
--- idempotent + админы зассан эрхийг дарахгүй
-DELETE FROM camp_role_permissions WHERE permission_code = 'camp.report.view'
-  AND role_id = (SELECT id FROM camp_roles WHERE tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001' AND system_code = 'CAMP_MANAGER');
-SELECT camp_seed_default_roles('aaaaaaaa-0000-0000-0000-000000000001');
-SELECT t_eq((SELECT count(*) FROM camp_roles WHERE tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001')::int, 3, 'seed дахин дуудахад давхардахгүй');
-SELECT t_eq((SELECT count(*) FROM camp_role_permissions p JOIN camp_roles r ON r.id = p.role_id
-             WHERE r.tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001' AND r.system_code = 'CAMP_MANAGER')::int, 6, 'seed админы хассан эрхийг сэргээхгүй');
-SELECT t_eq(has_function_privilege('app_user', 'camp_seed_default_roles(uuid)', 'EXECUTE'), false, 'app_user seed функц дуудах эрхгүй');
-SELECT t_eq(has_function_privilege('app_user', 'camp_apply_tenant_rls(regclass)', 'EXECUTE'), false, 'app_user RLS туслах функц дуудах эрхгүй');
-
--- ── 2. RLS: app_user, tenant A context ────────────────────────
+-- ── RLS: app_user, tenant A context ────────────────────────────
 SET ROLE app_user;
-SELECT t_eq((SELECT count(*) FROM camp_roles)::int, 0, 'context-гүй → 0 мөр');
+SELECT t_eq((SELECT count(*) FROM camps)::int, 0, 'context-гүй → 0 кемп');
 BEGIN;
 SELECT set_config('app.tenant_id', 'aaaaaaaa-0000-0000-0000-000000000001', true);
-SELECT t_eq((SELECT count(*) FROM camp_roles)::int, 3, 'A context → зөвхөн A-ийн 3 роль');
-SELECT t_eq((SELECT count(*) FROM camp_permissions)::int, 17, 'каталог 17 эрх (бүгдэд харагдана)');
-SELECT t_fail($$INSERT INTO camp_permissions (code, name) VALUES ('camp.x.y', 'x')$$, '%permission denied%');
 SELECT t_fail($$INSERT INTO camps (tenant_id, code, name) VALUES ('bbbbbbbb-0000-0000-0000-000000000001', 'X', 'x')$$, '%row-level security%');
-SELECT t_fail($$UPDATE camp_roles SET name = 'x' || name WHERE system_code = 'NOPE'$$, '%invalid input value for enum%');
--- системийн роль
-SELECT t_fail($$DELETE FROM camp_roles WHERE system_code = 'CAMP_ADMIN'$$, 'CAMP_SYSTEM_ROLE%');
-SELECT t_fail($$UPDATE camp_roles SET system_code = 'CAMP_MANAGER' WHERE system_code = 'CAMP_ADMIN'$$, 'CAMP_SYSTEM_ROLE%');
-UPDATE camp_roles SET name = 'Кемп админ (засав)' WHERE system_code = 'CAMP_ADMIN';
-SELECT t_eq((SELECT count(*) FROM camp_roles WHERE name = 'Кемп админ (засав)')::int, 1, 'системийн ролийн нэрийг засаж болно');
-SELECT t_fail($$INSERT INTO camp_role_permissions (tenant_id, role_id, permission_code)
-  SELECT tenant_id, id, 'camp.unknown.perm' FROM camp_roles WHERE system_code = 'CAMP_ADMIN'$$, '%foreign key%');
-INSERT INTO camp_roles (tenant_id, name) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'Нягтлан');
-DELETE FROM camp_roles WHERE name = 'Нягтлан';
-SELECT t_eq(true, true, 'энгийн роль үүсгэж/устгаж болно');
 
 -- ── 3. Мастер өгөгдөл (A) ─────────────────────────────────────
 INSERT INTO camps (id, tenant_id, code, name) VALUES
@@ -141,13 +106,6 @@ SELECT t_fail($$INSERT INTO camp_employees (tenant_id, camp_id, organization_id,
 SELECT t_fail($$INSERT INTO camp_employees (tenant_id, camp_id, organization_id, department_id, employee_code, full_name) VALUES
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-1000-0000-0000-000000000001', 'aaaaaaaa-1500-0000-0000-000000000001', 'aaaaaaaa-1200-0000-0000-000000000001', 'E001', 'x')$$,
   '%uq_camp_employees_code%');
--- хэрэглэгчид роль (camp_id NULL = бүх кемп, NULLS NOT DISTINCT)
-INSERT INTO camp_user_roles (tenant_id, user_id, role_id)
-  SELECT tenant_id, 'aaaaaaaa-0000-0000-0000-0000000000a1', id FROM camp_roles WHERE system_code = 'CAMP_MANAGER';
-SELECT t_fail($$INSERT INTO camp_user_roles (tenant_id, user_id, role_id)
-  SELECT tenant_id, 'aaaaaaaa-0000-0000-0000-0000000000a1', id FROM camp_roles WHERE system_code = 'CAMP_MANAGER'$$, '%uq_camp_user_roles%');
-SELECT t_fail($$INSERT INTO camp_user_roles (tenant_id, user_id, role_id)
-  SELECT tenant_id, 'bbbbbbbb-0000-0000-0000-0000000000b1', id FROM camp_roles WHERE system_code = 'CAMP_MANAGER'$$, '%fk_camp_user_roles_user%');  -- өөр tenant-ийн хэрэглэгч
 COMMIT;
 
 -- ── 4. Ирц, ээлж, өрөө (A) ────────────────────────────────────
@@ -339,7 +297,6 @@ SELECT set_config('app.tenant_id', 'bbbbbbbb-0000-0000-0000-000000000001', true)
 SELECT t_eq((SELECT count(*) FROM camps)::int, 0, 'B → A-ийн кемп 0');
 SELECT t_eq((SELECT count(*) FROM camp_cost_entries)::int, 0, 'B → A-ийн зардал 0');
 SELECT t_eq((SELECT count(*) FROM camp_employees)::int, 0, 'B → A-ийн ажилтан 0');
-SELECT t_eq((SELECT count(*) FROM camp_roles)::int, 3, 'B → өөрийн 3 роль');
 UPDATE camp_employees SET full_name = 'hack';   -- 0 мөр
 SELECT t_eq((SELECT count(*) FROM camp_employees)::int, 0, 'B UPDATE A-д хүрэхгүй');
 INSERT INTO camps (id, tenant_id, code, name) VALUES ('bbbbbbbb-1000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000001', 'C1', 'B кемп');
@@ -357,23 +314,23 @@ SELECT t_fail($$INSERT INTO camp_haul_records (tenant_id, camp_id, record_no, ha
 
 -- ── 9. Policy/grant аудит: бүх camp_* хүснэгт ────────────────
 SELECT t_eq((SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-             WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'camp%' AND c.relname <> 'camp_permissions'
+             WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'camp%'
                AND NOT (c.relrowsecurity AND c.relforcerowsecurity))::int, 0, 'бүх camp_* хүснэгт ENABLE+FORCE RLS');
 SELECT t_eq((SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-             WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'camp%' AND c.relname <> 'camp_permissions'
+             WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'camp%'
                AND NOT EXISTS (SELECT 1 FROM pg_policies p WHERE p.tablename = c.relname AND p.permissive = 'PERMISSIVE' AND 'app_user' = ANY (p.roles)))::int,
             0, 'бүх camp_* хүснэгт PERMISSIVE TO app_user policy-тэй');
 SELECT t_eq((SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-             WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'camp%' AND c.relname <> 'camp_permissions'
+             WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'camp%'
                AND NOT has_table_privilege('app_user', c.oid, 'SELECT,INSERT,UPDATE,DELETE'))::int, 0, 'бүх camp_* хүснэгт app_user GRANT');
 SELECT t_eq((SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
              WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'camp%')::int, 31, '31 camp хүснэгт');
 SELECT t_eq((SELECT count(*) FROM information_schema.columns
              WHERE table_schema = 'public' AND table_name LIKE 'camp%' AND column_name = 'id' AND column_default <> 'uuid_generate_v7()')::int, 0, 'id default = uuid_generate_v7() (RULE-11)');
 
--- ── 10. Tenant устгах CASCADE (APPROVED haul, ACCEPTED хоол, зардал, CLOSED засвар, системийн роль) ──
+-- ── 10. Tenant устгах CASCADE (APPROVED haul, ACCEPTED хоол, зардал, CLOSED засвар) ──
 DELETE FROM tenants WHERE id = 'aaaaaaaa-0000-0000-0000-000000000001';
-SELECT t_eq((SELECT count(*) FROM camp_cost_entries)::int + (SELECT count(*) FROM camp_roles WHERE tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001')::int
+SELECT t_eq((SELECT count(*) FROM camp_cost_entries)::int
             + (SELECT count(*) FROM camp_haul_records)::int + (SELECT count(*) FROM camps WHERE tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001')::int,
             0, 'tenant устгахад бүх camp өгөгдөл CASCADE (хамгаалах trigger блоклохгүй)');
 DELETE FROM tenants WHERE id = 'bbbbbbbb-0000-0000-0000-000000000001';

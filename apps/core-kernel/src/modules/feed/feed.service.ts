@@ -1,3 +1,4 @@
+import { FeedLinksService, type FeedLinkDto } from './feed-links.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { FeedReactionKind, FeedReportStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../db/prisma-tenant-client.service';
@@ -36,7 +37,7 @@ import type {
   FeedRevisionListDto,
 } from './feed.dto';
 
-export const FEED_MEDIA_BASE = '/api/v1/core/feed/media';
+const FEED_MEDIA_BASE = '/api/v1/core/feed/media';
 
 const AUTHOR_SELECT = { id: true, fullName: true, username: true, email: true } as const;
 type AuthorRow = { id: string; fullName: string | null; username: string | null; email: string };
@@ -79,6 +80,7 @@ export class FeedService {
     private readonly access: CampAccessService,
     private readonly media: MediaService,
     @Inject(MEDIA_URL_SIGNER) private readonly signer: MediaUrlSigner,
+    private readonly links: FeedLinksService,
   ) {}
 
   /** authId → core_users + модератор эсэх (OWNER/ADMIN = isTenantAdmin → автоматаар) */
@@ -88,7 +90,7 @@ export class FeedService {
   }
 
   // ── DTO ──────────────────────────────────────────────────
-  private postDto(tenantId: string, r: PostRow, v: FeedViewer): FeedPostDto {
+  private postDto(tenantId: string, r: PostRow, v: FeedViewer, links: FeedLinkDto[] = []): FeedPostDto {
     return {
       id: r.id,
       author: authorDto(r.author),
@@ -104,6 +106,7 @@ export class FeedService {
       editedAt: iso(r.editedAt),
       hidden: r.hiddenAt !== null,
       createdAt: r.createdAt.toISOString(),
+      links,
     };
   }
 
@@ -153,14 +156,16 @@ export class FeedService {
         take: limit + 1,
       });
       const { items, nextCursor } = pageOf(rows, limit);
-      return { data: items.map((r) => this.postDto(tenantId, r, v)), nextCursor, canModerate: v.isModerator };
+      const links = await this.links.forPosts(tx, tenantId, items.map((r) => r.id), v.userId);
+      return { data: items.map((r) => this.postDto(tenantId, r, v, links.get(r.id))), nextCursor, canModerate: v.isModerator };
     });
   }
 
   async get(tenantId: string, authId: string, id: string): Promise<FeedPostDto> {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       const v = await this.viewer(tx, tenantId, authId);
-      return this.postDto(tenantId, await this.loadPost(tx, tenantId, id, v), v);
+      const links = await this.links.forPosts(tx, tenantId, [id], v.userId);
+      return this.postDto(tenantId, await this.loadPost(tx, tenantId, id, v), v, links.get(id));
     });
   }
 
@@ -211,11 +216,12 @@ export class FeedService {
         const v = await this.viewer(tx, tenantId, authId);
         const cur = await this.loadPost(tx, tenantId, id, v);
         if (!canEdit(cur, v)) throw forbidden('feed.err.edit_own');
-        if (text === cur.body) return this.postDto(tenantId, cur, v);
+        const links = (await this.links.forPosts(tx, tenantId, [id], v.userId)).get(id);
+        if (text === cur.body) return this.postDto(tenantId, cur, v, links);
         if (isEmptyPost(text, cur.mediaCount)) throw badRequest('feed.err.empty');
         await tx.feedRevision.create({ data: { tenantId, postId: cur.id, body: cur.body, editedBy: v.userId } });
         await tx.feedPost.update({ where: { id: cur.id }, data: { body: text, editedAt: new Date() } });
-        return this.postDto(tenantId, await this.loadPost(tx, tenantId, id, v), v);
+        return this.postDto(tenantId, await this.loadPost(tx, tenantId, id, v), v, links);
       }),
     );
   }

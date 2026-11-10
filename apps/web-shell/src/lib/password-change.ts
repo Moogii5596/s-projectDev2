@@ -3,9 +3,9 @@
  * Цэвэр функц — supabase/API импортгүй (FE-005), unit тестлэгдэнэ.
  */
 export const CHANGE_PASSWORD_PATH = '/change-password'
-export const PASSWORD_CHANGE_REQUIRED = 'auth.password_change_required'
-/** D-12: нууц үг ≥ 12 (backend-тэй ижил). ChangePassword + SetPassword хуудас хуваалцана. */
-export const MIN_PASSWORD_LENGTH = 12
+const PASSWORD_CHANGE_REQUIRED = 'auth.password_change_required'
+/** GoTrue-ийн нийтлэг доод босго; хэрэглэгчийн tenant policy-г backend тусад нь буцаана. */
+export const MIN_PASSWORD_LENGTH = 6
 
 export function isPasswordChangeRequired(error: unknown): boolean {
   const r = (error as { response?: { status?: number; data?: { code?: string } } } | null)?.response

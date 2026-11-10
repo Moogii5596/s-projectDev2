@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
 import type { PermissionDef, Role } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { isComingSoon, isSystemAdmin, mergeRolePermissions, permissionLabel, visiblePermissions } from '../lib/permissions'
-import { SYSTEM_ROLE_LABEL } from '../lib/labels'
-import { Badge, Button, Card, ErrorBox, Field, Loading, Modal, NoAccess, PageHeader, inputCls } from '../components/ui'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { isComingSoon, isSystemAdmin, mergeRolePermissions, permissionLabel, visiblePermissions } from '../../../core/permissions'
+import { SYSTEM_ROLE_LABEL } from '../../../core/labels'
+import { Badge, Button, Card, ErrorBox, Field, Loading, Modal, NoAccess, PageHeader, inputCls } from '../../../core/ui'
 import { useTranslation } from 'react-i18next'
 
 /**
@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next'
 export default function RolesPage() {
   const { t, i18n } = useTranslation()
   const permLabel = (p: PermissionDef) => permissionLabel(p, (k) => i18n.exists(k), (k) => t(k))
-  const perms = useCampPermissions()
+  const perms = useAppPermissions()
   const canManage = isSystemAdmin(perms.data)
   const catalog = useQuery({ queryKey: campKeys.permissions, queryFn: campApi.permissions, enabled: canManage })
   const roles = useQuery({ queryKey: campKeys.roles, queryFn: campApi.roles, enabled: canManage })
@@ -33,7 +33,7 @@ export default function RolesPage() {
   const selectedOf = (r: Role) => draft[r.id] ?? r.permissionCodes.filter((c) => visibleCodes.includes(c))
   const changed = (roles.data ?? []).filter((r) => draft[r.id] !== undefined)
 
-  const save = useCampMutation(
+  const save = useAppMutation(
     async () => {
       const saved: Role[] = []
       for (const r of changed) saved.push(await campApi.setRolePermissions(r.id, mergeRolePermissions(r.permissionCodes, visibleCodes, draft[r.id])))
@@ -156,7 +156,7 @@ function RoleModal({ role, onClose }: { role: Role | null; onClose: () => void }
   const { t } = useTranslation()
   const [name, setName] = useState(role?.name ?? '')
   const [description, setDescription] = useState(role?.description ?? '')
-  const m = useCampMutation(
+  const m = useAppMutation(
     () =>
       role
         ? campApi.updateRole(role.id, { name: name.trim(), description: description.trim() || null })
@@ -190,7 +190,7 @@ function RoleModal({ role, onClose }: { role: Role | null; onClose: () => void }
 
 function DeleteRoleModal({ role, onClose }: { role: Role; onClose: () => void }) {
   const { t } = useTranslation()
-  const m = useCampMutation(() => campApi.deleteRole(role.id), [campKeys.roles, campKeys.all], onClose)
+  const m = useAppMutation(() => campApi.deleteRole(role.id), [campKeys.roles, campKeys.all], onClose)
   return (
     <Modal
       title={t('camp.roles.delete_title')}
@@ -221,7 +221,7 @@ function ApplyRoleModal({ role, onClose }: { role: Role; onClose: () => void }) 
   const preview = useQuery({ queryKey: [...campKeys.roles, 'apply', role.id], queryFn: () => campApi.roleApplyPreview(role.id) })
   const catalog = useQuery({ queryKey: campKeys.permissions, queryFn: campApi.permissions })
   const nameOf = (code: string) => catalog.data?.find((p) => p.code === code)?.name ?? code
-  const m = useCampMutation(() => campApi.applyRole(role.id), [campKeys.roles, campKeys.all], onClose)
+  const m = useAppMutation(() => campApi.applyRole(role.id), [campKeys.roles, campKeys.all], onClose)
   const items = preview.data?.items ?? []
   return (
     <Modal

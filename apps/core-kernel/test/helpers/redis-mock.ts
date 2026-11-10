@@ -17,6 +17,7 @@ export function createRedisMock() {
     get: async (_key: string): Promise<string | null> => null,
     set: async (..._args: unknown[]): Promise<'OK'> => 'OK',
     setex: async (..._args: unknown[]): Promise<'OK'> => 'OK',
+    ping: async (): Promise<'PONG'> => 'PONG', // v0.2.4 DBG-01 health
     del: async (..._keys: string[]): Promise<number> => 1,
     incr: async (_key: string): Promise<number> => 1,
     pexpire: async (_key: string, _ms: number): Promise<number> => 1,

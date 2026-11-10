@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { MealOrdersService } from '../meal-orders.service';
+import { ApprovalEntityRegistry, type ApprovalDecisionContext } from '../../../core/approvals/approval-entity.registry';
 import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
 import { setActor, setup } from '../../common/tests/camp-test-utils';
 
@@ -14,7 +15,7 @@ const settingsRow = (o: Record<string, unknown> = {}) => ({
   mealOrderLeadDays: 1,
   mealOrderAfterCutoff: 'BLOCK',
   mealOrderRequiresAccept: true,
-  mealOrderEditAfterAccept: 'FORBID',
+  mealOrderEditAfterAccept: 'TWO_SIDED',
   mealOrderDefaultFill: 'EMPTY',
   mealOrderAllowSelfAccept: false,
   ...o,
@@ -50,7 +51,27 @@ describe('MealOrdersService (Блок 6а)', () => {
 
   beforeEach(() => {
     s = setup();
-    svc = new MealOrdersService(s.prisma as never, s.access);
+    const registry = new ApprovalEntityRegistry();
+    const approvals = {
+      start: vi.fn(async (_tx, _tenantId, input: { entityType: string }) => ({ id: input.entityType })),
+      decide: vi.fn(async (_tx, tenantId: string, input: { instanceId: string; actorId: string; action: 'APPROVED' | 'REJECTED'; comment?: string | null }) => {
+        const handler = registry.get(input.instanceId);
+        const ctx: ApprovalDecisionContext = {
+          tenantId,
+          entityId: 'o1',
+          instanceId: input.instanceId,
+          actorId: input.actorId,
+          onBehalfOf: null,
+          action: input.action,
+          comment: input.comment ?? null,
+          final: true,
+          status: input.action,
+        };
+        await handler?.onFinal?.(s.tx as never, ctx);
+      }),
+      cancel: vi.fn().mockResolvedValue(undefined),
+    };
+    svc = new MealOrdersService(s.prisma as never, s.access, approvals as never, registry);
     s.tx.camp.findFirst.mockResolvedValue({ id: 'c1', code: 'C1', name: 'C1', isActive: true });
     s.tx.campMealLocation.findFirst.mockResolvedValue({ id: 'loc1', isActive: true });
     settings();
@@ -138,6 +159,13 @@ describe('MealOrdersService (Блок 6а)', () => {
 
   const accepted = (o: Record<string, unknown> = {}) =>
     orderRow({ status: 'ACCEPTED', orderedBy: 'cu-actor', orderedAt: new Date(), reviewedBy: 'cu-caterer', reviewedAt: new Date(), ...o });
+
+  it('тохиргооны мөргүй кемпэд ACCEPTED өөрчлөлт анхдагчаар хоёр талын хүсэлт болно', async () => {
+    s.tx.campSetting.findFirst.mockResolvedValue(null);
+    s.tx.campMealOrder.findFirst.mockResolvedValue(accepted());
+    const view = await svc.get('t1', 'a1', 'c1', FUTURE);
+    expect(view.actions).toContain('requestChange');
+  });
 
   it('ACCEPTED + FORBID: засах → 409', async () => {
     s.tx.campMealOrder.findFirst.mockResolvedValue(accepted());

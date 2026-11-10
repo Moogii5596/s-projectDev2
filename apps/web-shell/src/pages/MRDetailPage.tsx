@@ -9,7 +9,7 @@ import ErrorMessage from '../components/ErrorMessage'
 import RejectModal from '../components/RejectModal'
 import { useMe } from '../hooks/useMe'
 import { approvalState, roleLabel, stepViews } from '../lib/mr-approval'
-import { apiErrorMessage } from '../modules/camp/lib/errors'
+import { apiErrorMessage } from '../core/errors'
 
 const STEP_CLS = {
   done: 'bg-green-50 border-green-200 text-green-700',
@@ -74,7 +74,7 @@ export default function MRDetailPage() {
     <div className="max-w-3xl">
       {/* Back */}
       <button
-        onClick={() => navigate('/requisitions')}
+        onClick={() => navigate('/debug/modules/mr')}
         className="text-gray-400 hover:text-gray-600 text-sm mb-4 block"
       >
         ← Жагсаалт руу буцах

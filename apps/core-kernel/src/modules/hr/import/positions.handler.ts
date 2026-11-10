@@ -9,7 +9,7 @@ import { DataImportHandler, has, PlannedRow } from './import-types';
  * Каталог = байгууллагын түвшин (кемпээс үл хамаарна). Код = ажлын байрны индекс (жнь 1322-11) — давхардаж болно.
  * Дараалал: хэлтэс → албан тушаал → ажилтан (ажилтны импорт албан тушаалыг нэрээр холбоно).
  */
-export const POSITIONS_SPEC: TableSpec = {
+const POSITIONS_SPEC: TableSpec = {
   type: 'positions',
   title: 'table.positions',
   keyColumn: 'name',

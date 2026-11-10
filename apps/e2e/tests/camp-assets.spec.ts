@@ -15,6 +15,7 @@ const CAMP_NAME = `E2E хөрөнгө ${STAMP}`;
 const CATEGORY = `Тавилга ${STAMP}`;
 const INV = `INV-${STAMP}`;
 const YEAR = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ulaanbaatar' }).format(new Date()).slice(0, 4);
+const FILE_DATE = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ulaanbaatar' }).format(new Date()).replace(/-/g, '');
 
 let campId = '';
 
@@ -112,6 +113,42 @@ test.describe.serial('Кемп — хөрөнгө ба засвар', () => {
     await openSection(page, 'Тохиргоо');
     await page.getByRole('navigation', { name: 'Тохиргоо' }).getByRole('link', { name: 'Байр, өрөө' }).click();
     await expect(page.getByRole('row', { name: /102/ }).getByRole('link', { name: /Засварт/ })).toBeVisible();
+  });
+
+  test('засварын жагсаалтаас хавсралтыг загвараар урьдчилан шалгаж, баталж оруулах', async ({ page }) => {
+    await openSection(page, 'Засвар');
+    await page.getByRole('button', { name: '+ Засварын хүсэлт' }).click();
+    const createDialog = page.getByRole('dialog');
+    await createDialog.getByLabel('Өрөө', { exact: true }).selectOption({ label: 'B1-101' });
+    await createDialog.getByLabel('Гарчиг').fill('Хавсралтын E2E хүсэлт');
+    await createDialog.getByRole('button', { name: 'Үүсгэх' }).click();
+    await page.waitForURL(/\/maintenance\/[0-9a-f-]{36}$/);
+    const requestNo = (await page.getByRole('heading', { name: /ZAS-/ }).textContent())?.split(' · ')[0]?.trim();
+    if (!requestNo?.startsWith('ZAS-')) throw new Error('Үүсгэсэн засварын дугаар олдсонгүй');
+    await openSection(page, 'Засвар');
+    await page.getByRole('button', { name: 'Бөөнөөр хавсаргах' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Бөөнөөр хавсаргах' });
+    const input = dialog.locator('input[type="file"]');
+    const commit = dialog.getByRole('button', { name: 'Баталж оруулах' });
+
+    await input.setInputFiles({ name: 'wrong-name.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 invalid name') });
+    await dialog.getByRole('button', { name: 'Урьдчилан шалгах' }).click();
+    await expect(commit).toBeDisabled();
+
+    const fileName = `${requestNo}_REPORT_${FILE_DATE}.pdf`;
+    await input.setInputFiles({ name: fileName, mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 attachment') });
+    await expect(commit).toBeDisabled();
+    await dialog.getByRole('button', { name: 'Урьдчилан шалгах' }).click();
+    const previewRow = dialog.getByRole('row').filter({ hasText: fileName });
+    await expect(previewRow).toContainText(requestNo);
+    await expect(previewRow).toContainText('REPORT');
+    await expect(previewRow).toContainText('Бэлэн');
+    await expect(commit).toBeEnabled();
+    await commit.click();
+    await expect(dialog).toBeHidden();
+
+    await page.getByRole('row').filter({ hasText: requestNo }).getByRole('link', { name: requestNo }).click();
+    await expect(page.getByRole('button', { name: fileName })).toBeVisible();
   });
 
   test('засвар: эхлүүлэх → сэлбэг (катерингийн үнэ заавал) → дуусгах (өрөө суллагдана) → хаах (зардал)', async ({ page }) => {

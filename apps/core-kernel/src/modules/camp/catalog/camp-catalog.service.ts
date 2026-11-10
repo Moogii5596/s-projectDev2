@@ -11,9 +11,10 @@ import { conflict, notFound } from '../../../common/i18n/app-error';
 import { normName } from '../../hr/positions/hr-positions.service';
 import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../common/common.dto';
 import { UpsertPositionSettingDto } from './camp-catalog.dto';
+import { mergeCatalogNameI18n } from '../common/catalog-name-i18n';
 
 const P = CAMP_PERMISSIONS;
-const ITEM = { id: true, name: true, isActive: true, createdAt: true, updatedAt: true } as const;
+const ITEM = { id: true, name: true, nameI18n: true, isActive: true, createdAt: true, updatedAt: true } as const;
 
 
 /**
@@ -53,7 +54,7 @@ export class CampCatalogService {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
         const name = dto.name.replace(/\s+/g, ' ');
         await this.assertUniqueName(tx, tenantId, name);
-        return tx.campBuildingType.create({ data: { tenantId, name }, select: ITEM });
+        return tx.campBuildingType.create({ data: { tenantId, name, nameI18n: mergeCatalogNameI18n(name, undefined, dto.nameI18n) }, select: ITEM });
       }),
     );
   }
@@ -62,13 +63,19 @@ export class CampCatalogService {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
-        const cur = await tx.campBuildingType.findFirst({ where: { id, tenantId }, select: { id: true } });
+        const cur = await tx.campBuildingType.findFirst({ where: { id, tenantId }, select: { id: true, name: true, nameI18n: true } });
         if (!cur) throw notFound('camp.err.catalog.building_type_not_found');
         const name = dto.name?.replace(/\s+/g, ' ');
         if (name) await this.assertUniqueName(tx, tenantId, name, id);
         return tx.campBuildingType.update({
           where: { id },
-          data: { ...(name ? { name } : {}), ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}) },
+          data: {
+            ...(name ? { name } : {}),
+            ...((name !== undefined || dto.nameI18n !== undefined)
+              ? { nameI18n: mergeCatalogNameI18n(name ?? cur.name, cur.nameI18n, dto.nameI18n) }
+              : {}),
+            ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+          },
           select: ITEM,
         });
       }),
@@ -83,12 +90,12 @@ export class CampCatalogService {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       await getCampOr404(tx, tenantId, campId);
       const [positions, settings, counts] = await Promise.all([
-        tx.hrPosition.findMany({ where: { tenantId }, select: { id: true, name: true, isActive: true }, orderBy: { name: 'asc' } }),
+        tx.hrPosition.findMany({ where: { tenantId }, select: { id: true, name: true, nameI18n: true, isActive: true }, orderBy: { name: 'asc' } }),
         tx.campPositionSetting.findMany({
           where: { tenantId, campId },
           select: {
             positionId: true, mealLocationId: true, mealsIncluded: true, updatedAt: true,
-            mealLocation: { select: { name: true } },
+            mealLocation: { select: { name: true, nameI18n: true } },
             shiftPatterns: { select: { dayFrom: true, dayTo: true, shift: true }, orderBy: { dayFrom: 'asc' } },
           },
         }),
@@ -103,10 +110,12 @@ export class CampCatalogService {
           return {
             positionId: p.id,
             name: p.name,
+            nameI18n: p.nameI18n,
             isActive: p.isActive,
             activeEmployees: n.get(p.id) ?? 0,
             mealLocationId: s?.mealLocationId ?? null,
             mealLocationName: s?.mealLocation?.name ?? null,
+            mealLocationNameI18n: s?.mealLocation?.nameI18n ?? null,
             mealsIncluded: s?.mealsIncluded ?? null,
             shiftPattern: s?.shiftPatterns ?? [],
           };

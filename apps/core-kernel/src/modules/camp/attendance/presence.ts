@@ -3,8 +3,9 @@ import { addDays } from '../common/camp-date';
 import { fullDayMeals, MealSlot, movementMealSlots } from '../../hr/attendance/meal-rules';
 import { RosterSettings } from '../../hr/attendance/roster';
 import { AdjustmentRange, PatternSegment, resolveShift, ShiftSource } from '../../hr/attendance/shift-resolver';
+import type { CatalogNameTranslations } from '../common/catalog-name-i18n';
 
-export interface PresenceStay {
+interface PresenceStay {
   startDate: string;
   endDate: string | null;
   arrivalMeals: CampMealType[];
@@ -18,6 +19,7 @@ export interface PresenceEmployee {
   departmentCode: string;
   /** v0.2.1 (C-01): албан тушаалын нэр (каталог) — задаргаанд */
   positionName?: string | null;
+  positionNameI18n?: CatalogNameTranslations | null;
   /**
    * Ажлын хоолны (Өдөр/Шөнө) байршил — ажилтан ?? албан тушаал(кемп) ?? null (= кемпийн анхдагч).
    * v0.2.0 хүртэл хэлтсийн байршил байсан (Q1: хэлтсээс хасав).
@@ -31,7 +33,7 @@ export interface PresenceEmployee {
   stays: PresenceStay[];
 }
 
-export type DayKind = 'MOVEMENT' | 'FULL_DAY';
+type DayKind = 'MOVEMENT' | 'FULL_DAY';
 export interface EmployeeDay {
   employeeId: string;
   kind: DayKind;
@@ -41,7 +43,7 @@ export interface EmployeeDay {
   slots: MealSlot[];
 }
 
-export interface PresenceLine {
+interface PresenceLine {
   mealType: CampMealType;
   mealLocationId: string | null;
   count: number;
@@ -57,6 +59,7 @@ export interface PresenceBreakdown {
 /** Албан тушаалаар задаргаа (v0.2.1) — "хэлтэс / албан тушаал" сонголт */
 export interface PresencePositionBreakdown {
   positionName: string | null;
+  positionNameI18n?: CatalogNameTranslations | null;
   mealType: CampMealType;
   mealLocationId: string | null;
   count: number;
@@ -154,7 +157,13 @@ export function computePresence(employees: PresenceEmployee[], date: string, set
       b.count++;
       breakdown.set(bk, b);
       const pk = `${e.positionName ?? ''}|${slot.meal}|${loc}`;
-      const pb = byPosition.get(pk) ?? { positionName: e.positionName ?? null, mealType: slot.meal, mealLocationId: loc, count: 0 };
+      const pb = byPosition.get(pk) ?? {
+        positionName: e.positionName ?? null,
+        positionNameI18n: e.positionNameI18n ?? null,
+        mealType: slot.meal,
+        mealLocationId: loc,
+        count: 0,
+      };
       pb.count++;
       byPosition.set(pk, pb);
       total++;

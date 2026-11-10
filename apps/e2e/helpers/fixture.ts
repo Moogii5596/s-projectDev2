@@ -13,7 +13,7 @@ export type FixtureUserKey =
   | 'wfReq' | 'wfAppr1' | 'wfAppr2' | 'wfAdmin'
   | 'devReq' | 'devAppr1' | 'devAppr2' | 'devAdmin' | 'devUserAdmin' | 'devLangAdmin';
 
-export interface FixtureUser {
+interface FixtureUser {
   email: string;
   password: string;
   role: string;
@@ -39,7 +39,7 @@ export function fixture(): Fixture {
 }
 
 /** Backend шууд (UI-гүй API тест) */
-export const API_URL = process.env['E2E_API_URL'] ?? 'http://localhost:3000';
+const API_URL = process.env['E2E_API_URL'] ?? 'http://localhost:3000';
 
 /**
  * Хэрэглэгчийн token + tenant-ийн Host header. DEV tenant → Host-гүй (localhost → DEV_TENANT_SLUG).

@@ -22,6 +22,7 @@ import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { configureApp } from '../src/common/http/configure-app';
 import { ADMIN_DB_URL } from './helpers/db-urls';
+import { activateTestModules } from './helpers/activate-test-modules';
 
 const STAMP = Date.now();
 const SLUG = { a: `iso-a-${STAMP}`, b: `iso-b-${STAMP}` };
@@ -53,6 +54,7 @@ beforeAll(async () => {
   for (const t of ['a', 'b'] as const) {
     tenantIds[t] = (await prismaAdmin.tenant.create({ data: { name: `ISO ${t}`, slug: SLUG[t], tier: TierType.TIER1 } })).id;
   }
+  await activateTestModules(prismaAdmin, Object.values(tenantIds), ['mr', 'workflow']);
   defA = (await prismaAdmin.workflowDefinition.create({
     data: { tenantId: tenantIds.a, name: 'A-def', stepsConfig: [{ order: 0, role: 'APPROVER', quorum: 1 }], isActive: true },
   })).id;

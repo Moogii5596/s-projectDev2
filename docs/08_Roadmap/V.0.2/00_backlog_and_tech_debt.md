@@ -91,8 +91,8 @@ tags: [roadmap, v0.2]
 | NTF-01 | Мэдэгдэл: апп доторх хонх + имэйл, хэрэглэгчийн сувгийн тохиргоо | v0.2.4 | P1 | M | 📋 |
 | FILE-01 | Файлын ерөнхий сервис: хавсралт, шифрлэлт, хандалтын лог | v0.2.4 | P1 | M | 📋 |
 | UX-01 | Апп-ын хүрээ: утасны навигаци, профайл, мэдэгдлийн хонх, «Миний батлах» | v0.2.4 | P1 | M | 📋 |
-| CORE-01 | Цөмийг Кемпээс салгах (backend): tenant tx, эрх шалгах service (scope tenant/site), алдаа, DTO, огноо, request → цөм; eslint хамаарлын дүрэм CI-д ([[ADR-009_Module_Engine]]) | v0.2.4 | P1 | L | 📋 |
-| CORE-02 | Цөмийн өгөгдөл: `camp_audit_log` → `core_audit_log`; байгууллагын үйлчилгээний каталог Кемпээс салгах; `core_apply_tenant_rls` | v0.2.4 | P1 | M | 📋 |
+| CORE-01 | Цөмийг Кемпээс салгах (backend): tenant tx, эрх шалгах service (scope tenant/site), алдаа, DTO, огноо, request → цөм; eslint хамаарлын дүрэм CI-д ([[ADR-009_Module_Engine]]) | v0.2.5 | P1 | L | 📋 |
+| CORE-02 | Цөмийн өгөгдөл: `camp_audit_log` → `core_audit_log`; байгууллагын үйлчилгээний каталог Кемпээс салгах; `core_apply_tenant_rls` | v0.2.5 | P1 | M | 📋 |
 | CORE-03 | Frontend цөм: UI kit, hook, lib `modules/camp` → `src/core` | v0.2.4 | P1 | M | 📋 |
 | CORE-04 | Модулийн manifest (backend + frontend нэг гэрээ; эрх, цэс, route, тохиргоо, i18n, audit, батлалт, мэдэгдэл, хавсралт, импорт/экспорт, Feed холбоос, cron, дугаарлалт) | v0.2.4 | P1 | L | 📋 |
 | CORE-05 | Scheduler: cron registry, lock, гүйлтийн түүх (Debug) | v0.2.4 | P1 | S | 📋 |

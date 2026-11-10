@@ -18,7 +18,7 @@ export const MEAL_ORDER_SETTINGS_DEFAULTS: MealOrderSettings = {
   cutoffTime: null,
   afterCutoff: 'BLOCK',
   requiresAccept: true,
-  editAfterAccept: 'FORBID',
+  editAfterAccept: 'TWO_SIDED',
   defaultFill: 'EMPTY',
   allowSelfAccept: false,
 };
@@ -75,7 +75,7 @@ export function decideSubmit(orderDate: string, s: MealOrderSettings, clock: UbC
 }
 
 /** Өөрөө хүлээн авах уу (захиалагч = хянагч) — тохиргоо зөвшөөрсөн эсэх */
-export function canReviewOwn(s: MealOrderSettings): boolean {
+function canReviewOwn(s: MealOrderSettings): boolean {
   return s.allowSelfAccept;
 }
 
@@ -156,7 +156,7 @@ export function defaultLines(mode: DefaultFillMode, src: FillSources): MealOrder
   return out;
 }
 
-export const lineKey = (l: { mealType: MealType; mealLocationId: string }): string => `${l.mealType}|${l.mealLocationId}`;
+const lineKey = (l: { mealType: MealType; mealLocationId: string }): string => `${l.mealType}|${l.mealLocationId}`;
 
 /** Мөрүүдийн давхардал (ижил хоол × байршил) — DB UNIQUE-ээс өмнө 400 өгөх */
 export function duplicateLineKeys(lines: ReadonlyArray<{ mealType: MealType; mealLocationId: string }>): string[] {

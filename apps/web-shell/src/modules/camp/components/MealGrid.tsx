@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import type { MealLocation } from '../api/types'
-import { MEAL_LABEL } from '../lib/labels'
+import { MEAL_LABEL, localizedCatalogName } from '../../../core/labels'
 import { cellKey, MEAL_TYPES, type Grid } from '../lib/meal-order'
-import { Table, inputSmCls, td } from './ui'
+import { Table, inputSmCls, td } from '../../../core/ui'
 
 /** Хоол × байршил тоо оруулах хүснэгт (захиалга, тогтмол загвар). Хоосон нүд = 0 */
 export default function MealGrid({
@@ -19,12 +19,12 @@ export default function MealGrid({
   /** TWO_SIDED: одоогийн утга — өөрчлөгдсөн нүдийг тодруулна */
   compare?: Grid
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   return (
     <Table head={[t('camp.mo.location'), ...MEAL_TYPES.map((m) => MEAL_LABEL[m])]}>
       {locations.map((loc) => (
         <tr key={loc.id}>
-          <td className={`${td} font-medium text-gray-800`}>{loc.name}</td>
+          <td className={`${td} font-medium text-gray-800`}>{localizedCatalogName(loc, i18n.resolvedLanguage ?? i18n.language)}</td>
           {MEAL_TYPES.map((m) => {
             const k = cellKey(m, loc.id)
             const changed = compare !== undefined && (compare[k] ?? 0) !== (values[k] ?? 0)
@@ -35,7 +35,7 @@ export default function MealGrid({
                   min={0}
                   max={100000}
                   inputMode="numeric"
-                  aria-label={`${loc.name} · ${MEAL_LABEL[m]}`}
+                  aria-label={`${localizedCatalogName(loc, i18n.resolvedLanguage ?? i18n.language)} · ${MEAL_LABEL[m]}`}
                   className={`${inputSmCls} w-24 text-right ${changed ? 'bg-yellow-50 border-yellow-400' : ''}`}
                   value={values[k] ?? ''}
                   disabled={disabled}

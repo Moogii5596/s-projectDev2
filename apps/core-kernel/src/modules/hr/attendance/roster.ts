@@ -14,7 +14,7 @@ export interface RosterSettings {
   changeoverWeekday: number;
 }
 
-export const cycleLength = (s: RosterSettings): number => s.rosterOnDays + s.rosterOffDays;
+const cycleLength = (s: RosterSettings): number => s.rosterOnDays + s.rosterOffDays;
 
 /** Багийн мөчлөг дэх өдрийн дугаар (0..cycle-1) */
 export function rosterDayNo(anchor: string, date: string, s: RosterSettings): number {

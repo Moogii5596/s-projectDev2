@@ -2,16 +2,16 @@ import { useState } from 'react'
 import { invalidPhones, joinPhones, splitPhones } from '../lib/phones'
 import { Link, useParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { campApi } from '../../camp/api/camp-api'
+import { campApi } from '../api/camp-bridge'
 import { hrApi, type EmployeeQuery } from '../api/hr-api'
-import type { CatalogItem, Employee, EmployeeStatus, ValueSource } from '../../camp/api/types'
-import { inherited } from '../../camp/lib/effective'
-import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
-import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { P } from '../../camp/lib/permissions'
-import { EMPLOYEE_STATUS_LABEL } from '../../camp/lib/labels'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../camp/components/ui'
-import ImportDialog, { ExportButton } from '../../camp/components/ImportDialog'
+import type { CatalogItem, Employee, EmployeeStatus, ValueSource } from '../api/camp-bridge'
+import { inherited } from '../api/camp-bridge'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { EMPLOYEE_STATUS_LABEL, localizedCatalogName } from '../../../core/labels'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../../core/ui'
+import ImportDialog, { ExportButton } from '../../../core/ImportDialog'
 import { EMPLOYEE_IMPORT_COLUMNS } from '../lib/import-columns'
 import EmployeeAccess from '../components/EmployeeAccess'
 import { useTranslation } from 'react-i18next'
@@ -33,9 +33,9 @@ function SourceTag({ source }: { source: ValueSource }) {
  * v0.2.1: албан тушаал (каталог), ажлын хоолны байршил, хоол авах — эцсийн утга + эх сурвалж; олноор үйлдэл (Д-2).
  */
 export default function EmployeesPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { campId = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const canEdit = perms.can(P.EMPLOYEE_MANAGE)
   const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => hrApi.departments(campId) })
   const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => hrApi.crews(campId) })
@@ -76,7 +76,7 @@ export default function EmployeesPage() {
       title={t('camp.emp.title')}
       actions={
         <div className="flex flex-wrap gap-2">
-          <ExportButton campId={campId} type="employees" />
+          <ExportButton exportFile={() => hrApi.exportFile(campId, 'employees')} />
           {canEdit && (
             <Button size="sm" variant="secondary" onClick={() => setImporting(true)}>
               {t('camp.import.import')}
@@ -104,7 +104,7 @@ export default function EmployeesPage() {
           <option value="">{t('camp.filter.all_departments')}</option>
           {depts.data?.map((d) => (
             <option key={d.id} value={d.id}>
-              {d.code} · {d.name}
+              {d.code} · {localizedCatalogName(d, i18n.resolvedLanguage ?? i18n.language)}
             </option>
           ))}
         </select>
@@ -122,7 +122,7 @@ export default function EmployeesPage() {
           <option value="none">{t('camp.emp.no_position')}</option>
           {positions.data?.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.name}
+              {localizedCatalogName(p, i18n.resolvedLanguage ?? i18n.language)}
             </option>
           ))}
         </select>
@@ -206,13 +206,20 @@ export default function EmployeesPage() {
                   </span>
                 )}
               </td>
-              <td className={`${td} text-gray-600`}>{e.positionRef?.name ?? e.position ?? '—'}</td>
+              <td className={`${td} text-gray-600`}>
+                {e.positionRef ? localizedCatalogName(e.positionRef, i18n.resolvedLanguage ?? i18n.language) : e.position ?? '—'}
+              </td>
               <td className={td}>{e.department.code}</td>
               <td className={td}>{e.crew?.code ?? <span className="text-gray-400">{t('camp.emp.no_crew')}</span>}</td>
               <td className={td}>
                 {e.effective ? (
                   <>
-                    {e.effective.mealLocationName ?? '—'}
+                    {e.effective.mealLocationName
+                      ? localizedCatalogName(
+                          { name: e.effective.mealLocationName, nameI18n: e.effective.mealLocationNameI18n },
+                          i18n.resolvedLanguage ?? i18n.language,
+                        )
+                      : '—'}
                     <SourceTag source={e.effective.mealLocationSource} />
                   </>
                 ) : (
@@ -254,11 +261,15 @@ export default function EmployeesPage() {
       {modal && <EmployeeModal campId={campId} emp={modal === 'new' ? null : modal} onClose={() => setModal(null)} onAutoCode={(e) => setNotice(t('camp.emp.auto_code_done', { code: e.employeeCode, name: e.fullName }))} />}
       {importing && (
         <ImportDialog
-          campId={campId}
-          type="employees"
           title={t('camp.emp.import_title')}
           columns={EMPLOYEE_IMPORT_COLUMNS}
           invalidate={[campKeys.employees(campId), campKeys.departments(campId), campKeys.crews(campId), campKeys.catalog('positions'), ...campKeys.operational(campId)]}
+          templateFileName="employees-template.xlsx"
+          downloadTemplate={() => hrApi.dataTemplate(campId, 'employees')}
+          uploadFile={(file) => hrApi.dataUploadXlsx(campId, 'employees', file)}
+          uploadRows={(rows) => hrApi.dataUploadRows(campId, 'employees', rows)}
+          confirmImport={(id, skipErrors) => hrApi.dataConfirm(campId, 'employees', id, skipErrors)}
+          cancelImport={(id) => hrApi.dataCancel(campId, 'employees', id)}
           onClose={() => setImporting(false)}
         />
       )}
@@ -267,7 +278,7 @@ export default function EmployeesPage() {
 }
 
 function EmployeeModal({ campId, emp, onClose, onAutoCode }: { campId: string; emp: Employee | null; onClose: () => void; onAutoCode?: (e: Employee) => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const orgs = useQuery({ queryKey: [...campKeys.organizations, 'active'], queryFn: () => campApi.organizations({ activeOnly: true }) })
   const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => hrApi.departments(campId) })
   const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => hrApi.crews(campId) })
@@ -313,7 +324,7 @@ function EmployeeModal({ campId, emp, onClose, onAutoCode }: { campId: string; e
     departmentId: f.departmentId,
     crewId: f.crewId || null,
   })
-  const m = useCampMutation(
+  const m = useAppMutation(
     () => (emp ? hrApi.updateEmployee(campId, emp.id, { ...body(), status: f.status }) : hrApi.createEmployee(campId, body())),
     [campKeys.employees(campId), ...campKeys.operational(campId)],
     (saved) => {
@@ -378,7 +389,7 @@ function EmployeeModal({ campId, emp, onClose, onAutoCode }: { campId: string; e
               <option value="">{t('camp.emp.no_position')}</option>
               {usablePositions.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}
+                  {localizedCatalogName(p, i18n.resolvedLanguage ?? i18n.language)}
                   {p.isActive ? '' : ` (${t('camp.common.inactive')})`}
                 </option>
               ))}
@@ -397,10 +408,25 @@ function EmployeeModal({ campId, emp, onClose, onAutoCode }: { campId: string; e
         <Field label={t('camp.emp.col.meal_location')} hint={t('camp.emp.meal_location_hint')}>
           {(id) => (
             <select id={id} className={inputCls} value={f.mealLocationId} onChange={(e) => set('mealLocationId', e.target.value)}>
-              <option value="">{t('camp.emp.inherit', { from: inhFrom, value: inh.locationName ?? '—' })}</option>
+              <option value="">
+                {t('camp.emp.inherit', {
+                  from: inhFrom,
+                  value: inh.locationName
+                    ? localizedCatalogName(
+                        {
+                          name: inh.locationName,
+                          nameI18n:
+                            posSettings.data?.find((p) => p.positionId === f.positionId)?.mealLocationNameI18n ??
+                            locations.data?.find((l) => l.id === settings.data?.defaultMealLocationId)?.nameI18n,
+                        },
+                        i18n.resolvedLanguage ?? i18n.language,
+                      )
+                    : '—',
+                })}
+              </option>
               {usableLocations.map((l) => (
                 <option key={l.id} value={l.id}>
-                  {l.name}
+                  {localizedCatalogName(l, i18n.resolvedLanguage ?? i18n.language)}
                 </option>
               ))}
             </select>
@@ -439,7 +465,7 @@ function EmployeeModal({ campId, emp, onClose, onAutoCode }: { campId: string; e
               <option value="">{t('camp.common.choose')}</option>
               {activeDepts.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.code} · {d.name}
+                  {d.code} · {localizedCatalogName(d, i18n.resolvedLanguage ?? i18n.language)}
                 </option>
               ))}
             </select>
@@ -477,11 +503,11 @@ function EmployeeModal({ campId, emp, onClose, onAutoCode }: { campId: string; e
 
 /** v0.2.1 (Д-2) — сонгосон ажилтнуудад нэг дор: хоол авах / ажлын хоолны байршил / албан тушаал (нэг transaction, түүхэнд) */
 function BulkBar({ campId, ids, positions, onDone }: { campId: string; ids: string[]; positions: CatalogItem[]; onDone: () => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const locations = useQuery({ queryKey: campKeys.mealLocations(campId), queryFn: () => campApi.mealLocations(campId) })
   const [action, setAction] = useState<'' | 'meals' | 'location' | 'position'>('')
   const [value, setValue] = useState('')
-  const m = useCampMutation(
+  const m = useAppMutation(
     () =>
       hrApi.bulkEmployees(campId, {
         ids,
@@ -527,7 +553,7 @@ function BulkBar({ campId, ids, positions, onDone }: { campId: string; ids: stri
             ?.filter((l) => l.isActive)
             .map((l) => (
               <option key={l.id} value={l.id}>
-                {l.name}
+                {localizedCatalogName(l, i18n.resolvedLanguage ?? i18n.language)}
               </option>
             ))}
         </select>
@@ -539,7 +565,7 @@ function BulkBar({ campId, ids, positions, onDone }: { campId: string; ids: stri
             .filter((p) => p.isActive)
             .map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name}
+                {localizedCatalogName(p, i18n.resolvedLanguage ?? i18n.language)}
               </option>
             ))}
         </select>

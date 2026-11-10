@@ -6,14 +6,15 @@ import { CampAccessService, CampPermissionSet } from '../camp-access.service';
 import { toCampHttpError, withCampErrors } from '../camp-errors';
 import { fromDbDate, fromDbTime, inTenantTx, toDbDate, toDbTime } from '../camp-tx';
 import { expectTenantTx, setActor, setup } from './camp-test-utils';
+import { i18nStorage } from '../../../../common/i18n/i18n-context';
 
 const P = CAMP_PERMISSIONS;
 
 describe('Camp permission каталог (Шат 2.1)', () => {
-  it('18 эрх (ADR-007: camp.roles.manage устсан, hr.* 4; v0.2.3 Блок 5: feed.content.moderate), давхардалгүй, <модуль>.<x>.<y> хэлбэртэй (DB CHECK-тэй ижил regex)', () => {
-    expect(CAMP_PERMISSION_CODES).toHaveLength(18);
-    expect(new Set(CAMP_PERMISSION_CODES).size).toBe(18);
-    for (const c of CAMP_PERMISSION_CODES) expect(c).toMatch(/^(camp|hr|core|feed)\.[a-z_]+\.[a-z_]+$/);
+  it('21 эрх (ADR-007: camp.roles.manage устсан, hr.* 4; v0.2.3 feed.content.moderate, v0.2.4 core.debug.view|manage, mr.request.approve), давхардалгүй, <модуль>.<x>.<y> хэлбэртэй (DB CHECK-тэй ижил regex)', () => {
+    expect(CAMP_PERMISSION_CODES).toHaveLength(21);
+    expect(new Set(CAMP_PERMISSION_CODES).size).toBe(21);
+    for (const c of CAMP_PERMISSION_CODES) expect(c).toMatch(/^(camp|hr|core|feed|mr)\.[a-z_]+\.[a-z_]+$/);
     expect(CAMP_PERMISSION_CODES).not.toContain('camp.roles.manage');
   });
   it('isCampPermission', () => {
@@ -133,13 +134,30 @@ describe('camp-errors (Шат 2.1)', () => {
   it('trigger CAMP_* → 409 мессежтэй; EXCLUDE → 409; CHECK → 400; бусад → өөрчлөхгүй', () => {
     const trig = toCampHttpError(new Error('db error: ERROR: CAMP_SYSTEM_ROLE: системийн ролийг устгах боломжгүй (Кемп админ)'));
     expect(trig).toBeInstanceOf(ConflictException);
-    expect((trig as Error).message).toBe('CAMP_SYSTEM_ROLE: системийн ролийг устгах боломжгүй (Кемп админ)');
+    expect((trig as ConflictException).getResponse()).toMatchObject({
+      code: 'camp.err.trigger.system_role',
+      message: 'Системийн ролийг устгах эсвэл кодыг өөрчлөх боломжгүй',
+    });
     expect(toCampHttpError(new Error('conflicting key value violates exclusion constraint "ex_camp_stays_overlap"'))).toBeInstanceOf(ConflictException);
     expect(toCampHttpError(new Error('new row for relation "camp_rooms" violates check constraint "camp_rooms_capacity_check"'))).toBeInstanceOf(BadRequestException);
+    expect((toCampHttpError(new Error('ERROR: CAMP_FUTURE_RULE: ирээдүйн нөхцөл')) as ConflictException).getResponse())
+      .toMatchObject({ code: 'camp.err.errors.4' });
     const other = new Error('connection lost');
     expect(toCampHttpError(other)).toBe(other);
     const http = new NotFoundException('x');
     expect(toCampHttpError(http)).toBe(http);
+  });
+
+  it('known trigger errors use the request language instead of the database detail', () => {
+    const error = i18nStorage.run(
+      { lang: 'en', overrides: new Map() },
+      () => toCampHttpError(new Error('ERROR: CAMP_HAUL_LOCKED: Батлагдсан бүртгэлийг өөрчлөх боломжгүй (H-1)')),
+    );
+    expect(error).toBeInstanceOf(ConflictException);
+    expect((error as ConflictException).getResponse()).toMatchObject({
+      code: 'camp.err.trigger.haul_locked',
+      message: 'Approved transport records cannot be changed or deleted',
+    });
   });
 
   // [PRISMA-003] Prisma 5 PrismaClientUnknownRequestError-ийн БОДИТ хэлбэр (Rust Debug, escape-тэй хашилт)
@@ -169,7 +187,10 @@ describe('camp-errors (Шат 2.1)', () => {
   it('Prisma хэлбэр: trigger мессеж (кирилл) → 409, төгсгөлд хашилт/escape үлдэхгүй', () => {
     const e = toCampHttpError(prismaPg('23514', 'CAMP_HAUL_LOCKED: батлагдсан бүртгэлийг өөрчлөх боломжгүй (H-1)'));
     expect(e).toBeInstanceOf(ConflictException);
-    expect((e as Error).message).toBe('CAMP_HAUL_LOCKED: батлагдсан бүртгэлийг өөрчлөх боломжгүй (H-1)');
+    expect((e as ConflictException).getResponse()).toMatchObject({
+      code: 'camp.err.trigger.haul_locked',
+      message: 'Батлагдсан тээврийн бүртгэлийг өөрчлөх эсвэл устгах боломжгүй',
+    });
   });
 
   it('withCampErrors: амжилт → утга; алдаа → хөрвүүлж шиднэ', async () => {

@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { campApi } from '../../camp/api/camp-api'
-import type { CampUser, PermissionDef } from '../../camp/api/types'
-import { campKeys } from '../../camp/hooks/useCampPermissions'
-import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { isComingSoon, permissionLabel, visiblePermissions } from '../../camp/lib/permissions'
-import { directPermissionCodes } from '../../camp/lib/granted'
-import { Badge, Button, Empty, ErrorBox, Loading, Modal, inputSmCls } from '../../camp/components/ui'
+import { campApi } from '../api/camp-bridge'
+import type { CampUser, PermissionDef } from '../api/camp-bridge'
+import { campKeys } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { isComingSoon, permissionLabel, visiblePermissions } from '../../../core/permissions'
+import { directPermissionCodes } from '../api/camp-bridge'
+import { Badge, Button, Empty, ErrorBox, Loading, Modal, inputSmCls } from '../../../core/ui'
 import { outdatedAssignments, permissionView } from '../lib/user-access'
 
 /**
@@ -22,8 +22,8 @@ export default function UserPermissionsModal({ user, onClose }: { user: CampUser
   const camps = useQuery({ queryKey: campKeys.camps, queryFn: () => campApi.camps(false) })
   const [code, setCode] = useState('')
   const [campId, setCampId] = useState('')
-  const grant = useCampMutation(() => campApi.grantDirect(user.id, { permissionCode: code, campId: campId || null }), [key], () => setCode(''))
-  const revoke = useCampMutation((id: string) => campApi.revokeDirect(id), [key])
+  const grant = useAppMutation(() => campApi.grantDirect(user.id, { permissionCode: code, campId: campId || null }), [key], () => setCode(''))
+  const revoke = useAppMutation((id: string) => campApi.revokeDirect(id), [key])
 
   const visible: PermissionDef[] = visiblePermissions(catalog.data ?? []).sort((a, b) => a.sortOrder - b.sortOrder)
   const label = (c: string) => {

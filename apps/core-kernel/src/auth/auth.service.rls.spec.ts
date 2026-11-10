@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthService } from './auth.service';
+import { DEFAULT_TENANT_SECURITY_POLICY } from './tenant-security-policy.service';
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
@@ -34,17 +35,17 @@ describe('AuthService — RLS холболтууд', () => {
   });
 
   it('register: set_config(tenant) → core_users.create НЭГ transaction-д (өмнө нь тусдаа statement) [RLS-007]', async () => {
-    const svc = new AuthService(config as never, app as never, system as never);
+    const svc = new AuthService(config as never, app as never, { get: async () => DEFAULT_TENANT_SECURITY_POLICY } as never, system as never);
     supa().auth.admin.createUser.mockResolvedValueOnce({ data: { user: { id: 'auth-1' } }, error: null });
     supa().auth.signInWithPassword.mockResolvedValueOnce({ data: { session: { access_token: 't' } }, error: null });
-    await svc.register({ email: 'e@x.mn', password: 'secret1' } as never, TENANT_ID);
+    await svc.register({ email: 'e@x.mn', password: 'Secret123456!' } as never, TENANT_ID);
     expect(app.$transaction).toHaveBeenCalledTimes(1);
     expect(tx.$executeRaw.mock.calls[0][1]).toBe(TENANT_ID);
     expect(tx.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(tx.coreUser.create.mock.invocationCallOrder[0]);
   });
 
   it('login: authId → core_users хайлт СИСТЕМИЙН холболтоор (tenant тодорхойгүй) [4.8.4]', async () => {
-    const svc = new AuthService(config as never, app as never, system as never);
+    const svc = new AuthService(config as never, app as never, { get: async () => DEFAULT_TENANT_SECURITY_POLICY } as never, system as never);
     supa().auth.signInWithPassword.mockResolvedValueOnce({ data: { session: { access_token: 't' }, user: { id: 'auth-1' } }, error: null });
     system.coreUser.findUnique.mockResolvedValueOnce({ id: 'cu', authId: 'auth-1', email: 'e', fullName: null, role: 'OWNER', tenantId: TENANT_ID });
     const r = await svc.login({ email: 'e@x.mn', password: 'secret1' } as never);

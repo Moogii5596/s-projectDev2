@@ -2,7 +2,7 @@
 import { AppModule, homePath, parseModules } from '../lib/modules';
 import { feedEnabledFrom } from '../lib/home';
 
-export const ENABLED_MODULES = parseModules(import.meta.env.VITE_MODULES as string | undefined);
+const ENABLED_MODULES = parseModules(import.meta.env.VITE_MODULES as string | undefined);
 export const HOME_PATH = homePath(ENABLED_MODULES);
 export const isEnabled = (m: AppModule): boolean => ENABLED_MODULES.has(m);
 

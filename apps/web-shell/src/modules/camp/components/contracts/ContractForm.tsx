@@ -1,7 +1,7 @@
 import type { Organization } from '../../api/types'
 import type { ContractInput } from '../../api/contract-api'
 import type { RatePolicy } from '../../api/contract-types'
-import { Button, ErrorBox, Field, inputCls } from '../ui'
+import { Button, ErrorBox, Field, inputCls } from '../../../../core/ui'
 import PaymentTermsEditor from './PaymentTermsEditor'
 import { useTranslation } from 'react-i18next'
 import { paymentTermsPercentTotal } from '../../lib/contract'

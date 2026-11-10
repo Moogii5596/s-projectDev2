@@ -21,7 +21,7 @@ describe('v0.2.1 каталог — normName / resolvePositionByName', () => {
     expect(await resolvePositionByName(s.tx as never, 't1', 'хуучин', 'p2')).toMatchObject({ id: 'p2', created: false });
     s.tx.hrPosition.create.mockResolvedValueOnce({ id: 'p3', name: 'Тогооч' });
     expect(await resolvePositionByName(s.tx as never, 't1', '  Тогооч  ')).toEqual({ id: 'p3', name: 'Тогооч', created: true });
-    expect(s.tx.hrPosition.create.mock.calls[0][0].data).toEqual({ tenantId: 't1', name: 'Тогооч' });
+    expect(s.tx.hrPosition.create.mock.calls[0][0].data).toEqual({ tenantId: 't1', name: 'Тогооч', nameI18n: { mn: 'Тогооч' } });
   });
 });
 
@@ -38,9 +38,13 @@ describe('HrPositionsService — албан тушаалын каталог (v0.
     await expect(svc.create('t1', 'a1', { name: 'Жолооч' })).rejects.toThrow(ForbiddenException);
     setActor(s.tx, { role: UserRole.ADMIN });
     s.tx.hrPosition.findMany.mockResolvedValueOnce([]);
-    await svc.create('t1', 'a1', { name: 'Ахлах   жолооч' });
+    await svc.create('t1', 'a1', { name: 'Ахлах   жолооч', nameI18n: { en: 'Senior driver', zh: '高级司机' } });
     expectTenantTx(s.tx, 't1');
-    expect(s.tx.hrPosition.create.mock.calls[0][0].data).toEqual({ tenantId: 't1', name: 'Ахлах жолооч' });
+    expect(s.tx.hrPosition.create.mock.calls[0][0].data).toEqual({
+      tenantId: 't1',
+      name: 'Ахлах жолооч',
+      nameI18n: { mn: 'Ахлах жолооч', en: 'Senior driver', zh: '高级司机' },
+    });
   });
 
   it('list: албан тушаал бүрт идэвхтэй ажилтны тоо; эрхгүй → 403', async () => {

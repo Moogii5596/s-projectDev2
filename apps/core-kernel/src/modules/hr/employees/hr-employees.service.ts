@@ -43,9 +43,9 @@ const EMPLOYEE_SELECT = {
   createdAt: true,
   updatedAt: true,
   organization: { select: { name: true } },
-  department: { select: { code: true, name: true } },
+  department: { select: { code: true, name: true, nameI18n: true } },
   crew: { select: { code: true } },
-  positionRef: { select: { name: true } },
+  positionRef: { select: { name: true, nameI18n: true } },
   workMealLocation: { select: { name: true } },
   /** v0.2.3 Блок D (S2): нэмэлт утас — хариунд `string[]` */
   extraPhones: { select: { phone: true }, orderBy: { sortOrder: 'asc' } },
@@ -55,7 +55,7 @@ const EMPLOYEE_SELECT = {
 
 type EmployeeRow = Prisma.HrEmployeeGetPayload<{ select: typeof EMPLOYEE_SELECT }>;
 /** Хариу: `extraPhones` → `string[]` */
-export const employeeOut = <T extends Pick<EmployeeRow, 'extraPhones'> & { dataIssues?: Prisma.JsonValue }>(e: T) => ({
+const employeeOut = <T extends Pick<EmployeeRow, 'extraPhones'> & { dataIssues?: Prisma.JsonValue }>(e: T) => ({
   ...e,
   extraPhones: phonesOut(e.extraPhones),
   dataIssues: readIssues(e.dataIssues),
@@ -286,10 +286,10 @@ export class HrEmployeesService {
     if (rows.length === 0) return [];
     const [defaults, locs, settings] = await Promise.all([
       loadPositionDefaults(tx, tenantId, campId),
-      tx.campMealLocation.findMany({ where: { tenantId, campId }, select: { id: true, name: true } }),
+      tx.campMealLocation.findMany({ where: { tenantId, campId }, select: { id: true, name: true, nameI18n: true } }),
       getRosterSettings(tx, tenantId, campId),
     ]);
-    const locName = new Map(locs.map((l) => [l.id, l.name]));
+    const locName = new Map(locs.map((l) => [l.id, l]));
     return rows.map((r) => {
       const eff = effectiveEmployee(r, defaults, []);
       const p = r.positionId ? defaults.get(r.positionId) : undefined;
@@ -298,7 +298,8 @@ export class HrEmployeesService {
         ...r,
         effective: {
           mealLocationId: locId,
-          mealLocationName: locId ? (locName.get(locId) ?? null) : null,
+          mealLocationName: locId ? (locName.get(locId)?.name ?? null) : null,
+          mealLocationNameI18n: locId ? (locName.get(locId)?.nameI18n ?? null) : null,
           mealLocationSource: r.mealLocationId ? 'EMPLOYEE' : p?.mealLocationId ? 'POSITION' : 'DEFAULT',
           mealsIncluded: eff.mealsIncluded,
           mealsIncludedSource: r.mealsIncluded !== null ? 'EMPLOYEE' : p?.mealsIncluded != null ? 'POSITION' : 'DEFAULT',

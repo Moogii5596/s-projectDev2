@@ -10,7 +10,7 @@ export class DateQueryDto {
 }
 
 /** v0.2.1 (C-14): ирцийн жагсаалт — тухайн өдрийн тооцоолсон ээлжээр шүүх */
-export const STAY_SHIFT_GROUPS = ['DAY', 'NIGHT', 'UNKNOWN', 'MOVEMENT'] as const;
+const STAY_SHIFT_GROUPS = ['DAY', 'NIGHT', 'UNKNOWN', 'MOVEMENT'] as const;
 
 export type StayShiftGroup = (typeof STAY_SHIFT_GROUPS)[number];
 

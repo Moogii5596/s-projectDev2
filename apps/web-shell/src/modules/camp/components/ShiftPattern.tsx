@@ -2,13 +2,13 @@ import { useState } from 'react'
 import type { QueryKey } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { ShiftSegment, ShiftType } from '../api/types'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { SHIFT_LABEL, weekdayShort } from '../lib/labels'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { SHIFT_LABEL, weekdayShort } from '../../../core/labels'
 import { type DayShifts, daysToSegments, patternProblem, segmentsToDays } from '../lib/shift-pattern'
-import { Button, ErrorBox, Modal } from './ui'
+import { Button, ErrorBox, Modal } from '../../../core/ui'
 
 /** Ээлжийн загварын нийтлэг харагдац (хэлтэс, албан тушаал — v0.2.1, Д-1) */
-export const CELL: Record<ShiftType | 'NONE', string> = {
+const CELL: Record<ShiftType | 'NONE', string> = {
   DAY: 'bg-amber-200 text-amber-900',
   NIGHT: 'bg-indigo-600 text-white',
   NONE: 'bg-gray-100 text-gray-400',
@@ -58,7 +58,7 @@ export function ShiftPatternModal({
   const { t } = useTranslation()
   const [days, setDays] = useState<DayShifts>(() => segmentsToDays(initial, onDays))
   const problem = patternProblem(days)
-  const m = useCampMutation(() => save(daysToSegments(days)), invalidate, onClose)
+  const m = useAppMutation(() => save(daysToSegments(days)), invalidate, onClose)
   const fill = (fn: (i: number) => ShiftType | null) => setDays(Array.from({ length: onDays }, (_, i) => fn(i)))
   const half = Math.ceil(onDays / 2)
 

@@ -2,7 +2,7 @@
 title: "Тохиргоо, env, script"
 type: "Guide"
 status: "Active"
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 tags: [codebase, config, generated]
 ---
 
@@ -19,7 +19,7 @@ tags: [codebase, config, generated]
 | `NODE_ENV` | `development` | Server |
 | `PORT` | `3000` |  |
 | `DATABASE_URL` | `postgresql://app_user:change_in_production@127.0.0.1:54322/postgres?sc` | Supabase Local (pnpm supabase:start үед автоматаар үүснэ) DATABASE_URL = апп-ын холболт → app_user (NOBYPASSRLS) — RLS бодитоор идэвхтэй (production-тэй ижил).   Апп асахад: `DB role "app_user" — RLS идэвхтэй`. postgres-оор бол RLS алгасагдана (WARN лог).   app_user нууц үг (migration 0002_rls_polic |
-| `SYSTEM_DATABASE_URL` | `postgresql://postgres:postgres@127.0.0.1:54322/postgres?schema=public` | SYSTEM_DATABASE_URL = системийн холболт (BYPASSRLS): tenant lookup, login, super-admin, onboarding, outbox, DLQ, escalation,   integration тестийн бэлтгэл, `pnpm dev:test-user`, e2e fixture. Тохируулаагүй бол DATABASE_URL (Phase 4.8.4). |
+| `SYSTEM_DATABASE_URL` | `postgresql://postgres:postgres@127.0.0.1:54322/postgres?schema=public` | SYSTEM_DATABASE_URL = системийн холболт (BYPASSRLS): tenant lookup, login, super-admin, onboarding, outbox, DLQ, escalation,   integration тестийн бэлтгэл, `pnpm dev:test-user`, e2e fixture. Заавал тохируулна. |
 | `DIRECT_URL` | `postgresql://postgres:postgres@127.0.0.1:54322/postgres?schema=public` | Prisma migrate/introspect (superuser шаардлагатай) |
 | `SUPABASE_URL` | `http://127.0.0.1:54321` |  |
 | `SUPABASE_SERVICE_ROLE_KEY` | `***` |  |
@@ -28,11 +28,16 @@ tags: [codebase, config, generated]
 | `JWT_SECRET` | `***` | JWT (32+ тэмдэгт — production-д аюулгүй random string ашиглана) |
 | `DEV_TENANT_SLUG` | `test-tenant` | Development |
 | `DEPLOYMENT_MODE` | `shared` | Deployment mode (ADR-001): shared = SaaS, олон tenant + RLS (default)                             dedicated = Enterprise VPC, нэг deploy = нэг tenant |
+| `DEBUG_MENU_ENABLED` | `false` | Debug-only модулиудыг зөвшөөрөх (production/pilot анхдагчаар унтраалттай) |
 | `RATE_LIMIT_SHORT` | `100` | Tenant rate limit (Phase 3.1) — 1с / 10с / 60с цонх тус бүрийн хүсэлтийн тоо Load test-д: RATE_LIMIT_SHORT=1000000 RATE_LIMIT_MEDIUM=1000000 RATE_LIMIT_LONG=1000000 |
 | `RATE_LIMIT_MEDIUM` | `500` |  |
 | `RATE_LIMIT_LONG` | `2000` |  |
+| `NODE_CLUSTER_WORKERS` | `1` | Cluster (main.ts, production `pnpm start`): worker тоо, унасан worker-ийг дахин асаах backoff (Phase 3.6.4) |
+| `PRISMA_LOG_LEVELS` | `warn,error` | Prisma лог (Phase 3.6.6) — анхдагч: query биш warn,error; integration тест = warn |
 | `STORAGE_DIR` |  | v0.2.3 Блок 5 (FEED-01): Feed-ийн зургийн хавтас — хоосон бол <repo root>\storage (.gitignore). Пилот: pilot.ps1 PILOT_STORAGE_DIR-ээс дамжуулна; нөөцлөлтөд орно |
 | `MEDIA_URL_SECRET` | `***` | Зургийн гарын үсэгтэй URL-ийн нууц (заавал биш) — хоосон бол JWT_SECRET-ээс гарган авна. Солиход өмнөх зургийн URL хүчингүй (7–14 хоног) |
+| `FILE_ENCRYPTION_KEY` | `***` | v0.2.4 FILE-01 (M-7): хавсралтын AES-256-GCM түлхүүр — base64, 32 байт (openssl rand -base64 32). Хоосон бол JWT_SECRET-ээс гаргана (dev/staging). Production-д заавал тусдаа; солиход хуучин файл уншигдахгүй — нөөцөлж хадгална. |
+| `PILOT_STORAGE_DB_WARN_GB` | `10` | v0.2.4 DBG-01: Debug → Систем-д харагдах build мэдээлэл (CI/pilot.ps1 build-ийн үед) GIT_COMMIT= BUILD_DATE= Пилотын статусын анхааруулах босго (PostgreSQL DB + Feed storage нийлбэр) |
 
 ## `deploy/pilot/.env.pilot.example`
 
@@ -45,6 +50,7 @@ tags: [codebase, config, generated]
 | `DATABASE_URL` | `postgresql://app_user:<APP_USER_PASSWORD>@127.0.0.1:55322/postgres?sch` | ── Өгөгдлийн сан (пилотын Supabase, порт 55322) ───────────── app_user нууц үг: ЗӨВХӨН латин үсэг + тоо, 24+ тэмдэгт. pilot.ps1 init/restore нь DB-д тохируулна. |
 | `SYSTEM_DATABASE_URL` | `postgresql://postgres:postgres@127.0.0.1:55322/postgres?schema=public` |  |
 | `DIRECT_URL` | `postgresql://postgres:postgres@127.0.0.1:55322/postgres?schema=public` |  |
+| `PILOT_DB_ADMIN_PASSWORD` | `***` | postgres / supabase_admin — 32+ random alphanumeric; rotate-db-password sets this in .env. |
 | `SUPABASE_URL` | `http://127.0.0.1:55321` | ── Supabase Auth ──────────────────────────────────────────── |
 | `SUPABASE_AUTH_JWT_SECRET` | `***` | Supabase-ийн JWT нууц (40+ тэмдэгт). СОЛИВОЛ: бүх хэрэглэгч дахин нэвтэрнэ + pilot.ps1 build (anon key өөрчлөгдөнө) |
 | `JWT_SECRET` | `***` | Апп-ын дотоод нууц (40+ тэмдэгт) |
@@ -61,7 +67,8 @@ tags: [codebase, config, generated]
 | `PILOT_BACKUP_PASSWORD` | `***` |  |
 | `PILOT_BACKUP_KEEP_DAYS` | `14` |  |
 | `PILOT_BACKUP_COPY_DIR` |  | 7z.exe PATH-д байхгүй бол: PILOT_7Z=C:\Program Files\7-Zip\7z.exe 2 дахь хуулбар (PIL-05; заавал биш): OneDrive/USB хавтас — PILOT_BACKUP_DIR-ээс ӨӨР. Хадгалах хугацаа = PILOT_BACKUP_KEEP_DAYS |
-| `PILOT_STORAGE_DIR` |  | Feed-ийн зургийн хавтас (анхдагч <root>\storage; backend-ийн STORAGE_DIR-тэй ЯГ ИЖИЛ байх). backup/restore-д орно, status хэмжээ + дискний сул зай харуулна |
+| `PILOT_STORAGE_DIR` |  | Feed-ийн зургийн хавтас (анхдагч <root>\storage; backend-ийн STORAGE_DIR-тэй ЯГ ИЖИЛ байх). backup/restore-д орно |
+| `PILOT_STORAGE_DB_WARN_GB` | `10` | status/watchdog анхааруулга: PostgreSQL DB + storage нийлбэр хэмжээний босго (GB) |
 | `PILOT_HEALTHCHECK_URL` |  | ── Мониторинг (PIL-04; заавал биш) ─────────────────────────── healthchecks.io → 2 check үүсгэ: (1) пилот — Period 10 мин, Grace 10 мин; (2) нөөц — Period 1 өдөр, Grace 2 цаг. Ping URL нь нууц үг биш (зөвхөн ping хүлээн авна), гэхдээ нийтэд бүү тавь. |
 | `PILOT_HEALTHCHECK_BACKUP_URL` |  |  |
 | `PILOT_HEALTHCHECK_INTERVAL_SEC` | `300` | watchdog-ийн ping давтамж (сек). Асуудал гарвал шууд /fail |
@@ -160,7 +167,7 @@ tags: [codebase, config, generated]
 | `build` | `tsc --noEmit && vite build` |
 | `preview` | `vite preview` |
 | `type-check` | `tsc --noEmit` |
-| `lint` | `eslint src --ext .ts,.tsx` |
+| `lint` | `eslint src --ext .ts,.tsx --rulesdir eslint-rules` |
 | `clean` | `rm -rf dist` |
 | `test` | `vitest run` |
 
@@ -168,6 +175,7 @@ tags: [codebase, config, generated]
 
 | Script | Команд |
 |---|---|
+| `terms:convert` | `node scripts/convert-exact-term-references.mjs` |
 
 ### `packages/prisma-rls-extension/package.json` — @s-project/prisma-rls-extension
 

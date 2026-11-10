@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, inputCls, inputSmCls } from '../camp/components/ui'
-import { useCampMutation } from '../camp/hooks/useCampMutation'
-import { downloadBlob } from '../camp/lib/download'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, inputCls, inputSmCls } from '../../core/ui'
+import { useAppMutation } from '../../core/useAppMutation'
+import { downloadBlob } from '../../core/download'
 import { currentLang, INTL_LOCALE } from '../../i18n'
-import FeedImageGrid from '../feed/components/FeedImageGrid'
-import { useDataSaver } from '../feed/lib/data-saver'
+import { FeedImageGrid, useDataSaver } from './feed-bridge'
 import {
   FEEDBACK_KINDS,
   FEEDBACK_STATUSES,
@@ -53,9 +52,9 @@ export default function FeedbackPage() {
   }, [search])
 
   const list = useQuery({ queryKey: feedbackKeys.list(q), queryFn: () => feedbackApi.list(q) })
-  const vote = useCampMutation((it: FeedbackItemDto) => feedbackApi.vote(it.id, !it.votedByMe), [feedbackKeys.all])
-  const remove = useCampMutation((id: string) => feedbackApi.remove(id), [feedbackKeys.all], () => setDeleting(null))
-  const exportX = useCampMutation(() => feedbackApi.exportXlsx(), [], (blob) => downloadBlob(blob, 'feedback.xlsx'))
+  const vote = useAppMutation((it: FeedbackItemDto) => feedbackApi.vote(it.id, !it.votedByMe), [feedbackKeys.all])
+  const remove = useAppMutation((id: string) => feedbackApi.remove(id), [feedbackKeys.all], () => setDeleting(null))
+  const exportX = useAppMutation(() => feedbackApi.exportXlsx(), [], (blob) => downloadBlob(blob, 'feedback.xlsx'))
 
   const canManage = list.data?.canManage ?? false
   const items = list.data?.data ?? []
@@ -252,7 +251,7 @@ function FeedbackForm({ item, pagePath, onClose }: { item: FeedbackItemDto | nul
   const [attachments, setAttachments] = useState(item?.attachments ?? [])
   const [files, setFiles] = useState<File[]>([])
   const [createdItem, setCreatedItem] = useState<FeedbackItemDto | null>(null)
-  const upload = useCampMutation(
+  const upload = useAppMutation(
     ({ id, selected }: { id: string; selected: File[] }) => feedbackApi.addAttachments(id, selected),
     [feedbackKeys.all],
     (result) => {
@@ -260,7 +259,7 @@ function FeedbackForm({ item, pagePath, onClose }: { item: FeedbackItemDto | nul
       setFiles([])
     },
   )
-  const removeAttachment = useCampMutation(
+  const removeAttachment = useAppMutation(
     async (attId: string) => {
       await feedbackApi.removeAttachment(attId)
       return attId
@@ -268,13 +267,13 @@ function FeedbackForm({ item, pagePath, onClose }: { item: FeedbackItemDto | nul
     [feedbackKeys.all],
     (attId) => setAttachments((current) => current.filter((attachment) => attachment.id !== attId)),
   )
-  const saveText = useCampMutation(
+  const saveText = useAppMutation(
     ({ id, dto }: { id: string; dto: { kind: FeedbackKind; title: string; body: string } }) =>
       feedbackApi.update(id, dto),
     [feedbackKeys.all],
     (result) => setCreatedItem(result),
   )
-  const create = useCampMutation(
+  const create = useAppMutation(
     (dto: { kind: FeedbackKind; title: string; body: string; pagePath: string | null }) => feedbackApi.create(dto),
     [feedbackKeys.all],
     (result) => setCreatedItem(result),
@@ -354,7 +353,7 @@ function ManageForm({ item, onClose }: { item: FeedbackItemDto; onClose: () => v
   const [status, setStatus] = useState<FeedbackStatus>(item.status)
   const [reply, setReply] = useState(item.adminReply ?? '')
   const [version, setVersion] = useState(item.doneVersion ?? '')
-  const save = useCampMutation(
+  const save = useAppMutation(
     () => feedbackApi.setStatus(item.id, { status, adminReply: reply.trim() || null, doneVersion: status === 'DONE' ? version.trim() : null }),
     [feedbackKeys.all],
     onClose,

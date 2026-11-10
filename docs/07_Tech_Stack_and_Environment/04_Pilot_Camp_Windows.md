@@ -2,14 +2,14 @@
 title: "04 — Кемп пилот: нэг Windows машин дээр интернэтэд нээх (v0.1.6, шинэчлэл/staging — v0.2.0)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-11-07
 tags: [camp, pilot, stack]
 ---
 
 # 04 — Кемп пилот: нэг Windows машин дээр интернэтэд нээх (v0.1.6, шинэчлэл/staging — v0.2.0)
 
 > Үүсгэсэн: 2026-10-10 (v0.1.6) | Байгууллага: **Sino Hydro** (`sinohydro`) | Модуль: **Кемп**
-> Холбоотой: `deploy/pilot/` (скрипт, тохиргоо), [[02_Local_Supabase_Docker_Windows]] (dev орчин),
+> Холбоотой: `deploy/pilot/` (скрипт, тохиргоо), [[ADR-002_Hosting]] (хостинг), [[02_Local_Supabase_Docker_Windows]] (dev орчин),
 > [[03_Enterprise_VPC_Deployment]] (бүрэн VPC), [[LL-03_Env_Ops_Pilot]] §20
 
 > **Пилотын хаяг (2026-10-13-аас): `https://sino.gobiverse.website`** — Cloudflare Tunnel (`cloudflared` Windows service), заавар [[05_Cloudflare_Tunnel]], шийдвэр [[ADR-005_Org_Connectivity_Domains]]. Tailscale Funnel **хаагдсан** (§7 — түүх/нөөц).
@@ -43,10 +43,11 @@ Docker Desktop:  Supabase "s-project-pilot" (553xx)  ·  Redis "s-project-pilot-
 Хоёулаа зэрэг ажиллана. **Пилотын хавтсанд `pnpm supabase:*`, `pnpm dev`, `pnpm test*` ажиллуулахгүй** — dev-ийн тохиргоо (54321, demo нууц) асна.
 
 ### Аюулгүй байдлын загвар
-- Интернэтэд **зөвхөн Caddy** (Funnel → 127.0.0.1:8088). DB (55322), Supabase API (55321), backend (3100), Redis — гаднаас хаалттай (Firewall §6).
+- Гадаад хүсэлт зөвхөн Cloudflare Tunnel → 127.0.0.1:8088 Caddy-ээр орно. DB (55322), Supabase API (55321), backend (3100), Redis — гаднаас хаалттай (Firewall §6).
 - Supabase-ийн **өөрийн JWT нууц** (`SUPABASE_AUTH_JWT_SECRET`). Local Supabase-ийн demo нууц олон нийтэд ил — түүгээр хэн ч service key үүсгэж чадна. `pilot.ps1` demo нууцыг илрүүлбэл асахгүй.
 - **Нээлттэй бүртгэл хаалттай** (`enable_signup = false` + Caddy `/auth/v1/signup` 404). Хэрэглэгчийг зөвхөн `pilot.ps1 onboard|user`.
 - Апп `app_user` (RLS)-ээр, нууц үг нь анхдагч биш. `NODE_ENV=production`, `DEPLOYMENT_MODE=dedicated`.
+- Supabase-ийн published port-уудыг Docker-ийн `127.0.0.1` host-binding network-д ажиллуулна (`pilot.ps1 init`); `pilot.ps1 status` loopback binding болон Firewall дүрмийг шалгана. Алдаа гарвал Firewall-ийг унтрааж тойрохгүй.
 - Нөөц **AES-256 шифрлэсэн** (7-Zip, файлын нэр ч шифрлэгдэнэ).
 - Зөвлөмж: дискэнд **BitLocker**, Windows хэрэглэгчид хүчтэй нууц үг, дэлгэц түгжих.
 
@@ -89,12 +90,20 @@ notepad .env
 | `DATABASE_URL`-ийн `<APP_USER_PASSWORD>` | зөвхөн үсэг+тоо, 24+ |
 | `SUPABASE_AUTH_JWT_SECRET`, `JWT_SECRET` | 40 тэмдэгт; хоёр өөр утга |
 | `PILOT_BACKUP_PASSWORD` | үсэг+тоо, 24+. **Нууц үгийн менежерт хадгална** — алдвал нөөц нээгдэхгүй |
+| `PILOT_DB_ADMIN_PASSWORD` | `postgres` / `supabase_admin`-д тусдаа, үсэг+тоо 32+. Staging ба pilot-д өөр нууц хэрэглэнэ; rotator `.env`-д хадгална |
 | `PILOT_BACKUP_DIR` | боломжтой бол өөр диск / OneDrive-ийн хавтас |
 
 ```powershell
 .\deploy\pilot\pilot.ps1 check
 ```
 `[OK] .env зөв` гарах ёстой. (Script ажиллахгүй бол: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.)
+
+**DB administrator-ийн нууц:** шинээр асаахад `.env`-д `PILOT_DB_ADMIN_PASSWORD`-ийг санамсаргүй 32+ үсэг/тоон утгаар бөглөнө. Өмнө нь `postgres` анхдагч нууцтай суусан бол эхлээд staging дээр пилотоос тусдаа тестийн хуулбараар дараах командыг ажиллуулж, дараа нь пилотод баталгаажуул:
+```powershell
+.\deploy\pilot\pilot.ps1 rotate-db-password -Profile staging -Root E:\MoogiiDev\Staging\s-project
+.\deploy\pilot\pilot.ps1 rotate-db-password -Profile pilot -Yes
+```
+Команд шинэ нууцыг хоёр удаа secure prompt-оор авч, DB-д transaction-аар сольж, амжилттай болсны дараа `.env`-г шинэчилнэ; нууцыг дэлгэц/логт хэвлэхгүй. Пилотод `-Yes` болон байгууллагын slug-аар баталгаажуулна. Нууцыг нууц үгийн менежерт хадгал.
 
 ## 4. Анхны асаалт
 
@@ -125,27 +134,13 @@ cd E:\MoogiiDev\Pilot\s-project
 .\deploy\pilot\pilot.ps1 firewall
 ```
 Гаднаас (LAN, Tailscale-ийн бусад төхөөрөмж) хаагдах TCP: 3000, 3100, 3200, 5173, 5174, 6379, 8088, 8089, 54320–54329, 55320–55329, 56379, 56520–56529, 56579 (v0.2.0: staging-ийн портууд нэмэгдсэн → **v0.2.0 суулгасны дараа нэг удаа дахин ажиллуулна**).
-Энэ машин дээрээс (localhost) болон Funnel-ээр ажиллахад нөлөөлөхгүй. Dev-ийг өөр төхөөрөмжөөс (утаснаас :5173) нээх боломжгүй болно.
+`pilot.ps1 status` дүрэм идэвхтэй эсэх, Docker-ийн API/Postgres/Studio published port-ууд болон Supabase network-ийн host binding-ийг шалгана. 127.0.0.1-ээс өөр host binding байвал анхааруулна. Энэ машин дээрээс (localhost) болон Cloudflare Tunnel-ээр ажиллахад нөлөөлөхгүй. Dev-ийг өөр төхөөрөмжөөс (утаснаас :5173) нээх боломжгүй болно.
 
 > Supabase-ийн DB (`postgres`/`supabase_admin`) нууц үг нь local-ийн анхдагч `postgres` хэвээр — тиймээс энэ дүрэм **заавал**.
 
-## 7. Интернэтэд нээх — Tailscale Funnel (⛔ 2026-10-13 хаасан — түүх / яаралтай нөөц)
+## 7. Tailscale Funnel — хаалттай
 
-> **Одоо:** [[05_Cloudflare_Tunnel]]. Funnel-ийг дахин асаах нь `CF-Connecting-IP` хуурамчаар тавих эрсдэлтэй ([[ADR-005_Org_Connectivity_Domains]] §2.3) — зөвхөн Tunnel бүрэн унасан үед, түр.
-
-> **Холболт (2026-10-12):** `https://desktop-13n3elv.tail7fe33e.ts.net` ✅ ажиллаж байна. Домэйн `sino.gobiverse.website` (Spaceship DNS) нь CNAME → энэ хаяг, гэхдээ **Funnel өөрийн домэйныг дэмждэггүй** (зөвхөн `*.ts.net` сертификат) → домэйнээр нээхэд TLS алдаа. Шийдэл (2026-10-12): **Cloudflare Tunnel** — ADR-005, заавар [[05_Cloudflare_Tunnel]]. Funnel нь шилжилтийн үед нөөц хаяг, дараа нь хаана.
-
-1. Tailscale-ийг нээж нэвтэрнэ (Google/Microsoft/GitHub бүртгэлээр, үнэгүй).
-2. https://login.tailscale.com/admin/dns → **MagicDNS** ба **HTTPS Certificates** → Enable.
-3. PowerShell:
-   ```powershell
-   tailscale funnel --bg 8088
-   ```
-   Анх удаа Funnel-ийг идэвхжүүлэх холбоос гарвал нээж зөвшөөрнө, дахин ажиллуулна. Гаралт:
-   `Available on the internet: https://<машин>.<tailnet>.ts.net/` → **энэ бол пилотын хаяг**.
-4. `tailscale funnel status` — тохиргоо. Хаах: `tailscale funnel reset`.
-
-Funnel-ийн тохиргоо Tailscale-д хадгалагдана (дахин асаахад сэргэнэ). Нөөц хувилбар (Tailscale ажиллахгүй үед, түр): `cloudflared tunnel --url http://127.0.0.1:8088` (хаяг дахин асаах бүрт өөрчлөгдөнө).
+Гадаад хэрэглэгчийн урсгал зөвхөн [[05_Cloudflare_Tunnel]]-ээр орно. `tailscale funnel --bg` ажиллуулахгүй; өмнөх тохиргоо үлдсэн бол `tailscale funnel reset` ажиллуулж, `pilot.ps1 status`-д Funnel унтраалттайг батална. Funnel-ийг нөөц зам болгон асаах нь Cloudflare-ийн итгэмжлэгдсэн header-ийг хуурамчаар тавих эрсдэлтэй ([[ADR-005_Org_Connectivity_Domains]] §2.3).
 
 ## 8. Гаднаас шалгах (заавал)
 
@@ -205,7 +200,7 @@ Windows Update: Settings → Windows Update → **Active hours** (ажлын ц�
 - `backup`: амжилттай бол backup check руу OK; нөөц эсвэл хуулбар бүтэлгүйтвэл `/fail`. `PILOT_HEALTHCHECK_BACKUP_URL` хоосон бол зөвхөн алдааг `PILOT_HEALTHCHECK_URL` руу `/fail` илгээнэ.
 - Ping амжилтгүй бол пилотыг зогсоохгүй, зөвхөн `logs\pilot.log`-д бичнэ (URL-ийг логт бичихгүй).
 
-**Гаднаас uptime шалгалт (нэмэлт):** UptimeRobot (үнэгүй, 5 мин) → HTTP(s) monitor → `https://sino.gobiverse.website/api/v1/health` (хариу 200; Funnel үед `…ts.net` байсан бол солино). Энэ нь Cloudflare Tunnel + Caddy + backend-ийг интернэтээс шалгана — healthchecks нь машин дотроос, UptimeRobot нь гаднаас.
+**Гаднаас uptime шалгалт (нэмэлт):** UptimeRobot (үнэгүй, 5 мин) → HTTP(s) monitor → `https://sino.gobiverse.website/api/v1/health` (хариу 200). Энэ нь Cloudflare Tunnel + Caddy + backend-ийг интернэтээс шалгана — healthchecks нь машин дотроос, UptimeRobot нь гаднаас.
 
 ## 10. Хэрэглэгч удирдах
 
@@ -236,7 +231,7 @@ Windows Update: Settings → Windows Update → **Active hours** (ажлын ц�
 
 | Команд | Юу |
 |---|---|
-| `pilot.ps1 status` | Процесс, health, контейнер, Funnel, сүүлийн нөөц |
+| `pilot.ps1 status` | Процесс, health, контейнер, port binding, Firewall, Funnel, DB + storage хэмжээ, сүүлийн нөөц |
 | `pilot.ps1 stop` | backend + Caddy (+watchdog) зогсооно. Дахин: `Start-ScheduledTask 'S-Project Pilot'` |
 | `pilot.ps1 stop -All` | + Supabase, Redis (өгөгдөл **хадгалагдана**) |
 | `pilot.ps1 backup` | Гараар нөөц авах |
@@ -248,6 +243,7 @@ Windows Update: Settings → Windows Update → **Active hours** (ажлын ц�
 - Агуулга: `public` schema-ийн бүх өгөгдөл + `auth.users`, `auth.identities` (нэвтрэх эрх, нууц үгийн hash) + migration жагсаалт + manifest. Schema нь кодын migration-оос.
 - Файл: `PILOT_BACKUP_DIR\sinohydro-YYYYMMDD-HHMMSS.7z`, `PILOT_BACKUP_KEEP_DAYS` (14) хоногоос хуучныг устгана.
 - **2 дахь хуулбар (v0.2.1, PIL-05):** `.env`-д `PILOT_BACKUP_COPY_DIR=` (OneDrive / USB / өөр диск — `PILOT_BACKUP_DIR`-ээс ӨӨР) тохируулбал нөөц бүрийг тэнд хуулж SHA256-аар тулгана, хуучныг ижил `PILOT_BACKUP_KEEP_DAYS`-ээр устгана. Хуулбар бүтэлгүйтвэл үндсэн нөөц хэвээр, `backup.log`-д `COPY FAIL` + мониторинг `/fail`. `pilot.ps1 status` сүүлийн хуулбарыг харуулна.
+- Feed-ийн `storage/` хавтас нөөцөд орж, сэргээхэд нөөцийн хуулбараар солигдоно. `status` болон 5 минут тутмын watchdog шалгалт PostgreSQL DB + storage нийлбэрийг `.env`-ийн `PILOT_STORAGE_DB_WARN_GB` (анхдагч 10 GB)-тэй харьцуулж, босго давбал анхааруулга болон healthcheck `/fail` илгээнэ. Мөн storage байгаа дискний сул зай 10 GB эсвэл 10%-иас доош бол анхааруулна.
 - Хуулбар тохируулаагүй бол **7 хоногт нэг удаа** нөөцийг өөр төхөөрөмж рүү (USB / OneDrive) гараар хуулна.
 
 Сэргээх (**одоогийн өгөгдөл устна** — slug бичиж баталгаажуулна):
@@ -376,7 +372,7 @@ git switch main ; git merge release/v0.1   # засварыг v0.2-т ч ору�
 | `web build-ийн anon key … таарахгүй` | JWT нууц солигдсон → `pilot.ps1 build` → `start` |
 | `backend эхэлсэнгүй` | `run\logs\backend.err.log`. Ихэвчлэн `.env` эсвэл DB (Docker асаагүй) |
 | `Docker Desktop ажиллахгүй` | Docker Desktop-ийг нээнэ; `run` 15 мин хүлээнэ |
-| Funnel хаяг нээгдэхгүй | `tailscale status` (нэвтэрсэн?), `tailscale funnel status`, `pilot.ps1 status` (gateway health) |
+| Пилотын гадаад хаяг нээгдэхгүй | Cloudflare Tunnel service, `pilot.ps1 status` (Tunnel ба gateway health); Funnel-ийг асаахгүй |
 | `/login` ↔ `/camp` төгсгөлгүй шилжинэ | v0.1.6.1-ээс өмнөх build (FE-007). Түр: сайтын өгөгдлийг устгах (🔒 → Site settings → Delete data) |
 | Нэвтрэх → "Email logins are disabled" | `config.toml`-д `[auth.email] enable_signup = false` (OPS-003) → `true`; `pilot.ps1 stop -All` → `start` |
 | Нэвтрэх → "Invalid login credentials" | Нууц үг буруу → `pilot.ps1 user … --reset-password` |

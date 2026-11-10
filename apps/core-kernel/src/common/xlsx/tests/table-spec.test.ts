@@ -99,6 +99,11 @@ describe('buildTemplate / buildExport', () => {
     expect(wb.worksheets[0].getRow(2).getCell(1).value).toBe('KITCHEN');
     expect(wb.worksheets[0].getCell('C2').dataValidation?.type).toBe('list');
 
+    const exportZh = await buildExport(DEPARTMENTS_SPEC, [{ code: 'KITCHEN', name: '厨房', active: true }], 'zh');
+    const exportWb = new ExcelJS.Workbook();
+    await exportWb.xlsx.load(exportZh as unknown as ArrayBuffer);
+    expect(exportWb.worksheets[0].getRow(1).values).toEqual(wb.worksheets[0].getRow(1).values);
+
     const exp = await buildExport(EMPLOYEES_SPEC, [
       { employeeCode: 'E1', fullName: 'Бат', position: null, phone: '99112233', email: null, organization: 'R1', department: 'ADM', crew: null, status: 'INACTIVE' },
     ], 'en');

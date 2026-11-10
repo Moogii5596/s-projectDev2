@@ -13,6 +13,8 @@ import { SystemPrismaService } from '../db/system-prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserAdminService } from './user-admin.service';
+import { TenantSecurityPolicyService } from './tenant-security-policy.service';
+import { badRequest } from '../common/i18n/app-error';
 
 export interface AuthResponse {
   accessToken: string;
@@ -34,6 +36,7 @@ export class AuthService {
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaTenantClientService,
+    private readonly securityPolicy: TenantSecurityPolicyService,
     // Phase 4.8.4: login — tenant тодорхойгүй (authId → core_users) тул системийн холболт
     @Optional() private readonly system?: SystemPrismaService,
   ) {
@@ -59,6 +62,10 @@ export class AuthService {
    * 2. core_users-д sync хийх (tenant context шаардана)
    */
   async register(dto: RegisterDto, tenantId: string): Promise<AuthResponse> {
+    const policy = await this.securityPolicy.get(tenantId);
+    if (dto.password.length < policy.passwordMinLength) {
+      throw badRequest('auth.password_min_length', { min: policy.passwordMinLength });
+    }
     // v0.2.2 Блок 3 (SEC-005 нэгтгэл): GoTrue + core_users үүсгэх ганц газар — UserAdminService (rollback-тай)
     const coreUser = await this.userAdmin.createUser({
       tenantId,
@@ -81,6 +88,10 @@ export class AuthService {
     };
   }
 
+  async passwordPolicy(tenantId: string): Promise<{ passwordMinLength: number }> {
+    const policy = await this.securityPolicy.get(tenantId);
+    return { passwordMinLength: policy.passwordMinLength };
+  }
 
   /**
    * Email + нууц үгээр нэвтрэх

@@ -12,10 +12,10 @@ import { cellText, looksLikeXlsx, normToken, parseDateCell } from './cells';
  *   - Толгой/утгыг 3 хэлээр (mn/en/zh) + кодоор таньна; загвар нь хэрэглэгчийн хэлээр.
  *   - Мөрийн алдаа = код + параметр (хэлээр нь хариу өгөх үед орчуулна).
  */
-export const TABLE_MAX_BYTES = 2 * 1024 * 1024;
+const TABLE_MAX_BYTES = 2 * 1024 * 1024;
 export const TABLE_MAX_ROWS = 5000;
 
-export type CellType = 'text' | 'int' | 'enum' | 'date' | 'bool' | 'phone' | 'email';
+type CellType = 'text' | 'int' | 'enum' | 'date' | 'bool' | 'phone' | 'email';
 export type CellValue = string | number | boolean | null;
 
 export interface ColumnSpec {
@@ -76,12 +76,12 @@ export interface ParsedTableRow {
 const langLabels = (key: MessageCode): string[] => LANGS.map((l: Lang) => t(key, {}, l));
 
 /** Баганын хүлээн авах толгойнууд (normToken) */
-export function headerTokens(col: ColumnSpec): Set<string> {
+function headerTokens(col: ColumnSpec): Set<string> {
   return new Set([col.key, col.key.replace(/([a-z])([A-Z])/g, '$1_$2'), ...langLabels(col.label), ...(col.aliases ?? [])].map(normToken));
 }
 
 /** enum: хүлээн авах токен → утга */
-export function enumTokens(col: ColumnSpec): Map<string, string> {
+function enumTokens(col: ColumnSpec): Map<string, string> {
   const map = new Map<string, string>();
   for (const [value, label] of Object.entries(col.enumValues ?? {})) {
     map.set(normToken(value), value);

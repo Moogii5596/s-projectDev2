@@ -1,7 +1,7 @@
 /**
  * Эрхийн каталог — системийн түвшин (ADR-007, v0.2.3 Блок 2).
  *
- * DB-ийн `core_permissions` / `core_permission_aliases` (20261106005_core_rbac_adr007.sql)-тэй ЯГ ИЖИЛ байх ёстой —
+ * DB-ийн `core_permissions` (20261106005_core_rbac_adr007.sql)-тэй ЯГ ИЖИЛ байх ёстой —
  * integration тест (`test/camp-master.integration.spec.ts`) тулгана.
  * Код: `<модуль>.<объект>.<үйлдэл>` — `hr.*`, `camp.*`, (нөөц) `core.*` (B2-4: core.users/roles код үүсгэхгүй, SEC-009).
  * Шинэ эрх: (1) migration-д `INSERT INTO core_permissions`, (2) энд нэмэх, (3) хэрэгтэй бол `core_seed_default_roles` → `pnpm docs:gen`.
@@ -27,9 +27,21 @@ export const PERMISSIONS = {
   REPORT_VIEW: 'camp.report.view',
   /** v0.2.3 Блок 5 (FEED-01): бусдын пост/сэтгэгдэл устгах, report шийдвэрлэх. OWNER/ADMIN — автоматаар */
   FEED_MODERATE: 'feed.content.moderate',
+  /** v0.2.4 D-1: Debug модуль, системийн мэдээлэл харах. OWNER-д автоматаар олгоно. */
+  DEBUG_VIEW: 'core.debug.view',
+  /** v0.2.4 D-1: Debug-ийн үйлдэлтэй хэрэгсэл (audit-тай). OWNER-д автоматаар. */
+  DEBUG_MANAGE: 'core.debug.manage',
+  /** v0.2.4 WF-06: материалын хүсэлт (MR, Debug модуль) батлах — батлах урсгалын алхамд */
+  MR_APPROVE: 'mr.request.approve',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+
+/**
+ * v0.2.4: tenant admin (OWNER/ADMIN)-д АВТОМАТААР олгогдохгүй эрх — Debug (OWNER-ийн runtime шалгалт эсвэл шууд олголт),
+ * Debug модулийн (mr) эрх (MR батлалтад OWNER/ADMIN хөдөлгүүрийн override-оор эрхтэй).
+ */
+export const isAdminBypassExcluded = (code: string): boolean => code.startsWith('core.debug.') || code.startsWith('mr.');
 
 export const PERMISSION_CODES: readonly Permission[] = Object.values(PERMISSIONS);
 
@@ -42,39 +54,8 @@ export function isPermission(code: string): code is Permission {
 /** Кодын модуль (`core_permissions.module`) */
 export const permissionModule = (code: string): string => code.split('.')[0] ?? '';
 
-/**
- * ADR-007 B2-6 — хуучин код → шинэ код. **Нэг хувилбар (v0.2.3)**, v0.2.4-т устгана.
- * DB-ийн `core_permission_aliases`-тэй ижил (integration тест тулгана).
- */
-export const PERMISSION_ALIASES: Readonly<Record<string, Permission>> = {
-  'camp.employee.manage': PERMISSIONS.EMPLOYEE_MANAGE,
-  'camp.employee.terminate': PERMISSIONS.EMPLOYEE_TERMINATE,
-  'camp.movement.import': PERMISSIONS.MOVEMENT_IMPORT,
-  'camp.shift.adjust': PERMISSIONS.SHIFT_ADJUST,
-};
-
 /** Q-R3 — устгасан код (юу ч зөвшөөрдөггүй байсан, SEC-009). Оролтод ирвэл алдаа */
 export const RETIRED_PERMISSIONS: readonly string[] = ['camp.roles.manage'];
-
-/** API оролт: хуучин кодыг шинэ рүү (alias), бусдыг хэвээр (шалгалтыг дуудагч хийнэ) */
-export function normalizePermissionCode(code: string): string {
-  return PERMISSION_ALIASES[code] ?? code;
-}
-
-const REVERSE_ALIASES: ReadonlyMap<string, string[]> = Object.entries(PERMISSION_ALIASES).reduce((m, [oldCode, newCode]) => {
-  m.set(newCode, [...(m.get(newCode) ?? []), oldCode]);
-  return m;
-}, new Map<string, string[]>());
-
-/**
- * API гаралт (`me/permissions`): шинэ кодын хажууд хуучин alias кодыг нэмнэ — Блок 3-аас өмнөх frontend
- * хуучин кодоор шалгадаг (B2-6). Давхардалгүй, эрэмбэтэй.
- */
-export function withLegacyAliases(codes: readonly string[]): string[] {
-  const out = new Set(codes);
-  for (const c of codes) for (const old of REVERSE_ALIASES.get(c) ?? []) out.add(old);
-  return [...out].sort();
-}
 
 /**
  * Хувилбарын хүрээ: бохир ус/хог, зардлын тайлан → V2; гэрээ, хоолны захиалга v0.2.3-д хэрэгжсэн.
@@ -98,5 +79,4 @@ export function permissionAvailableIn(code: string): ReleaseScope {
 }
 
 /** Анхдагч системийн ролийн код (`core_roles.system_code`, TEXT — B2-5) */
-export const SYSTEM_ROLE_CODES = ['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN', 'EMPLOYEE'] as const;
-export type SystemRoleCode = (typeof SYSTEM_ROLE_CODES)[number];
+const SYSTEM_ROLE_CODES = ['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN', 'EMPLOYEE'] as const;

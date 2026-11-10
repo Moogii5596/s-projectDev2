@@ -1,11 +1,10 @@
 import {
-  ConflictException,
   Injectable,
   NotFoundException,
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { MrHeader, MrStatus, Prisma, UserRole } from '@prisma/client';
+import { MrHeader, MrStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CreateMrDto } from '../dto/create-mr.dto';
 import { UpdateMrDto } from '../dto/update-mr.dto';
@@ -21,15 +20,11 @@ import { MrLifecycleService } from '../../mr-lifecycle/mr-lifecycle.service';
 import { inTenantTx, TenantTx } from '../../../db/tenant-tx';
 import { EventBusService } from '../../event-bus/event-bus.service';
 import { EventTypes } from '../../event-bus/interfaces/cloud-event.interface';
-import {
-  ApprovalActor,
-  ApprovalStep,
-  approvalDenial,
-  MrWorkflowSummary,
-  normalizeSteps,
-  quorumReached,
-  summarizeWorkflow,
-} from '../mr-approval';
+import { ApprovalActor, MrWorkflowSummary, normalizeSteps, summarizeWorkflow } from '../mr-approval';
+import { ApprovalEngineService, LEGACY_ENTITY_TYPE } from '../../core/approvals/approval-engine.service';
+import { ApprovalEntityRegistry, type ApprovalDecisionContext } from '../../core/approvals/approval-entity.registry';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
+import { SequenceService } from '../../core/sequences/sequence.service';
 
 const MR_DETAIL_INCLUDE = {
   items: { orderBy: { lineNumber: 'asc' } },
@@ -55,11 +50,6 @@ const MR_WORKFLOW_INCLUDE = {
 export type MrDetailWithWorkflow = MrDetail & { workflow: MrWorkflowSummary };
 
 /** Батлалтын үед ачаалах workflow (instance-гүй хуучин MR → LEGACY_STEPS) */
-interface MrFlow {
-  instance: { id: string; currentStep: number; definition: { slaHours: number } } | null;
-  steps: ApprovalStep[];
-  index: number;
-}
 
 /**
  * Phase 4.8.3 (2026-10-10): бүх DB хандалт `inTenantTx` (set_config + query нэг transaction) дотор —
@@ -76,7 +66,19 @@ export class MaterialRequisitionService {
     private readonly cache: CacheService,
     private readonly lifecycle: MrLifecycleService, // Phase 4: Budget (+Inventory) — transaction дотор
     private readonly eventBus: EventBusService, // Phase 5.1 [EVT-003]: CloudEvent id/type/source outbox-д
-  ) {}
+    private readonly engine: ApprovalEngineService, // v0.2.4 WF-06: батлах урсгалын нэгдсэн хөдөлгүүр (цөм)
+    registry: ApprovalEntityRegistry,
+    private readonly sequences: SequenceService,
+  ) {
+    registry.register({
+      entityType: LEGACY_ENTITY_TYPE,
+      module: 'mr',
+      labelKey: 'approval.entity.mr',
+      approvePermissions: [PERMISSIONS.MR_APPROVE],
+      onStep: (tx, ctx) => this.onApprovalStep(tx as TenantTx, ctx),
+      onFinal: (tx, ctx) => this.onApprovalFinal(tx as TenantTx, ctx),
+    });
+  }
 
   // ────────────────────────────────────────────────
   // PRIVATE: Supabase authId → core_users.id (RULE-13) — tenant transaction дотор
@@ -131,57 +133,6 @@ export class MaterialRequisitionService {
     if (rows.length === 0) {
       throw new NotFoundException(`MR олдсонгүй (id: ${id})`);
     }
-  }
-
-  private async loadFlow(tx: TenantTx, tenantId: string, mr: { workflowInstanceId: string | null }): Promise<MrFlow> {
-    if (!mr.workflowInstanceId) {
-      return { instance: null, steps: normalizeSteps(null), index: 0 };
-    }
-    const instance = await tx.workflowInstance.findFirst({
-      where: { id: mr.workflowInstanceId, tenantId },
-      select: { id: true, currentStep: true, resolvedSteps: true, definition: { select: { slaHours: true } } },
-    });
-    if (!instance) {
-      return { instance: null, steps: normalizeSteps(null), index: 0 };
-    }
-    return { instance, steps: normalizeSteps(instance.resolvedSteps), index: instance.currentStep };
-  }
-
-  /** Алхмын SLA — тухайн role-той идэвхтэй эхний хэрэглэгч (MR үүсгэгчээс бусад) */
-  private async assignSla(
-    tx: TenantTx,
-    tenantId: string,
-    instanceId: string,
-    step: ApprovalStep,
-    requesterId: string,
-    slaHours: number,
-  ): Promise<void> {
-    // Enum-д байхгүй role (хуучин/гараар оруулсан тохиргоо) → Prisma validation 500-аас сэргийлж SLA-гүй
-    if (!(Object.values(UserRole) as string[]).includes(step.role)) return;
-    const assignee = await tx.coreUser.findFirst({
-      where: { tenantId, isActive: true, role: step.role as UserRole, id: { not: requesterId } },
-      select: { id: true },
-      orderBy: { createdAt: 'asc' },
-    });
-    if (!assignee) return;
-    await tx.workflowSlaLog.create({
-      data: {
-        tenantId,
-        instanceId,
-        stepOrder: step.order,
-        assignedToId: assignee.id,
-        dueAt: new Date(Date.now() + slaHours * 60 * 60 * 1000),
-        status: 'PENDING',
-      },
-    });
-  }
-
-  /** Алхам шийдэгдсэн → тухайн instance-ийн PENDING SLA → COMPLETED (escalation scheduler дахин хөндөхгүй) */
-  private async completeSla(tx: TenantTx, tenantId: string, instanceId: string): Promise<void> {
-    await tx.workflowSlaLog.updateMany({
-      where: { tenantId, instanceId, status: 'PENDING' },
-      data: { status: 'COMPLETED', completedAt: new Date() },
-    });
   }
 
   /** [CACHE-001] MR өөрчлөгдсөний дараа tenant-ийн жагсаалт/дэлгэрэнгүй cache-ийг цэвэрлэнэ */
@@ -478,34 +429,7 @@ export class MaterialRequisitionService {
         totalAmount: header.totalAmount,
       });
 
-      const definition = await tx.workflowDefinition.findFirst({
-        where: { tenantId, isActive: true },
-        orderBy: { createdAt: 'asc' },
-      });
-      if (!definition) {
-        throw new ForbiddenException('Идэвхтэй workflow definition олдсонгүй');
-      }
-
-      // Phase 6.0b: эрэмбэлсэн, шалгасан алхмууд (хоосон бол LEGACY: 1 алхам APPROVER)
-      const resolvedSteps = normalizeSteps(
-        this.amountRouter.resolveStepsFromConfig(Number(header.totalAmount), definition.stepsConfig),
-      );
-      const instance = await tx.workflowInstance.create({
-        data: {
-          tenantId,
-          definitionId: definition.id,
-          entityType: 'MATERIAL_REQUISITION',
-          entityId: id,
-          currentStep: 0,
-          status: 'PENDING',
-          resolvedSteps: resolvedSteps as unknown as Prisma.InputJsonValue,
-        },
-      });
-      await this.assignSla(tx, tenantId, instance.id, resolvedSteps[0], requesterId, definition.slaHours);
-      await tx.mrHeader.update({
-        where: { id },
-        data: { workflowInstanceId: instance.id },
-      });
+      await this.startFlow(tx, tenantId, { id, mrNumber: header.mrNumber, totalAmount: header.totalAmount, requesterId });
 
       await this.eventBus.emit({
         tx: tx as never,
@@ -554,97 +478,13 @@ export class MaterialRequisitionService {
       if (existing.status !== MrStatus.PENDING_APPROVAL) {
         throw new ForbiddenException('Зөвхөн PENDING_APPROVAL статуст батлах боломжтой');
       }
-      const flow = await this.loadFlow(tx, tenantId, existing);
-      const step = flow.steps[flow.index];
-      if (!step) {
-        throw new ConflictException('Workflow-ийн бүх алхам аль хэдийн шийдэгдсэн');
-      }
-      const denial = approvalDenial(actor, existing.requesterId, step);
-      if (denial) {
-        throw new ForbiddenException(denial);
-      }
-
+      const instanceId = existing.workflowInstanceId ?? (await this.startFlow(tx, tenantId, existing));
+      // v0.2.4 WF-06: эрх, quorum, алхам, SLA, мэдэгдэл — хөдөлгүүр; MR-ийн төлөв/төсөв/event — onApprovalStep/onApprovalFinal
+      const r = await this.engine.decide(tx, tenantId, { instanceId, actorId: actor.id, action: 'APPROVED', comment: dto.notes });
       await tx.approvalLog.create({
         data: { tenantId, mrId: id, approverId: actor.id, action: 'APPROVED', notes: dto.notes },
       });
-
-      let approvedCount = 1;
-      if (flow.instance) {
-        await tx.workflowStepLog.create({
-          data: {
-            tenantId,
-            instanceId: flow.instance.id,
-            stepOrder: flow.index,
-            actorId: actor.id,
-            action: 'APPROVED',
-            comment: dto.notes,
-          },
-        });
-        approvedCount = await tx.workflowStepLog.count({
-          where: { tenantId, instanceId: flow.instance.id, stepOrder: flow.index, action: 'APPROVED' },
-        });
-      }
-
-      // quorum хүрээгүй → алхам хэвээр (MR-ийн version л өснө)
-      if (!quorumReached(approvedCount, step)) {
-        await tx.mrHeader.update({ where: { id }, data: { version: { increment: 1 } } });
-        return { changed: true as const, final: false, header: await this.loadDetail(tx, tenantId, id) };
-      }
-
-      if (flow.instance) {
-        await this.completeSla(tx, tenantId, flow.instance.id);
-      }
-
-      const nextIndex = flow.index + 1;
-      if (nextIndex < flow.steps.length && flow.instance) {
-        // Завсрын алхам дууслаа → дараагийн алхам
-        await tx.workflowInstance.update({
-          where: { id: flow.instance.id },
-          data: { currentStep: nextIndex, lockedBy: null, lockedAt: null },
-        });
-        await this.assignSla(
-          tx,
-          tenantId,
-          flow.instance.id,
-          flow.steps[nextIndex],
-          existing.requesterId,
-          flow.instance.definition.slaHours,
-        );
-        await tx.mrHeader.update({ where: { id }, data: { version: { increment: 1 } } });
-        return { changed: true as const, final: false, header: await this.loadDetail(tx, tenantId, id) };
-      }
-
-      // Сүүлийн алхам → APPROVED
-      if (flow.instance) {
-        await tx.workflowInstance.update({
-          where: { id: flow.instance.id },
-          data: { status: 'APPROVED', currentStep: flow.steps.length, lockedBy: null, lockedAt: null },
-        });
-      }
-      const header = await tx.mrHeader.update({
-        where: { id },
-        data: {
-          status: MrStatus.APPROVED,
-          approvedBy: actor.id,
-          approvedAt: new Date(),
-          version: { increment: 1 },
-        },
-      });
-
-      // Phase 4.1: төсөв COMMITTED → SPENT
-      await this.lifecycle.onApproved(tx, tenantId, id);
-
-      await this.eventBus.emit({
-        tx: tx as never,
-        tenantId,
-        eventType: 'MR_APPROVED', // outbox.event_type (хуучин нэр хэвээр)
-        cloudEventType: EventTypes.MR_APPROVED,
-        aggregateType: 'MR',
-        aggregateId: id,
-        data: { mrId: id, mrNumber: header.mrNumber, approverId: actor.id },
-      });
-
-      return { changed: true as const, final: true, header: await this.loadDetail(tx, tenantId, id) };
+      return { changed: true as const, final: r.final, header: await this.loadDetail(tx, tenantId, id) };
     });
 
     if (!result.changed) return result.header;
@@ -660,7 +500,7 @@ export class MaterialRequisitionService {
 
   /**
    * Phase 6.0b [SEC-004]: одоогийн алхмын эрхтэй хүн татгалзана → MR, workflow REJECTED,
-   * төсөв RELEASED, SLA хаагдана. MR үүсгэгч өөрөө татгалзахгүй.
+   * төсөв RELEASED, SLA хаагдана. MR үүсгэгч өөрөө татгалзахгүй. v0.2.4: хөдөлгүүрээр (WF-06).
    */
   async reject(tenantId: string, id: string, authId: string, dto: RejectMrDto): Promise<MrDetailWithWorkflow> {
     const result = await inTenantTx(this.prisma, tenantId, async (tx) => {
@@ -680,56 +520,11 @@ export class MaterialRequisitionService {
       if (existing.status !== MrStatus.PENDING_APPROVAL) {
         throw new ForbiddenException('Зөвхөн PENDING_APPROVAL статуст татгалзах боломжтой');
       }
-      const flow = await this.loadFlow(tx, tenantId, existing);
-      const step = flow.steps[flow.index];
-      if (!step) {
-        throw new ConflictException('Workflow-ийн бүх алхам аль хэдийн шийдэгдсэн');
-      }
-      const denial = approvalDenial(actor, existing.requesterId, step);
-      if (denial) {
-        throw new ForbiddenException(denial);
-      }
-
-      const header = await tx.mrHeader.update({
-        where: { id },
-        data: { status: MrStatus.REJECTED, version: { increment: 1 } },
-      });
-
-      // Phase 4.1: төсөв COMMITTED → RELEASED
-      await this.lifecycle.onRejected(tx, tenantId, id);
-
+      const instanceId = existing.workflowInstanceId ?? (await this.startFlow(tx, tenantId, existing));
+      await this.engine.decide(tx, tenantId, { instanceId, actorId: actor.id, action: 'REJECTED', comment: dto.reason });
       await tx.approvalLog.create({
         data: { tenantId, mrId: id, approverId: actor.id, action: 'REJECTED', reason: dto.reason, notes: dto.notes },
       });
-
-      if (flow.instance) {
-        await tx.workflowStepLog.create({
-          data: {
-            tenantId,
-            instanceId: flow.instance.id,
-            stepOrder: flow.index,
-            actorId: actor.id,
-            action: 'REJECTED',
-            comment: dto.reason,
-          },
-        });
-        await tx.workflowInstance.update({
-          where: { id: flow.instance.id },
-          data: { status: 'REJECTED', lockedBy: null, lockedAt: null },
-        });
-        await this.completeSla(tx, tenantId, flow.instance.id);
-      }
-
-      await this.eventBus.emit({
-        tx: tx as never,
-        tenantId,
-        eventType: 'MR_REJECTED', // outbox.event_type (хуучин нэр хэвээр)
-        cloudEventType: EventTypes.MR_REJECTED,
-        aggregateType: 'MR',
-        aggregateId: id,
-        data: { mrId: id, mrNumber: header.mrNumber, approverId: actor.id, reason: dto.reason },
-      });
-
       return { changed: true as const, header: await this.loadDetail(tx, tenantId, id) };
     });
 
@@ -737,6 +532,77 @@ export class MaterialRequisitionService {
     await this.invalidate(tenantId);
     this.logger.log(`MR rejected: ${result.header.mrNumber} (tenant: ${tenantId})`);
     return result.header;
+  }
+
+  /**
+   * v0.2.4 WF-06: MR-ийн батлах урсгал эхлүүлэх (submit, эсвэл урсгалгүй хуучин MR-ийн анхны шийдвэр).
+   * entity_type-тай (шинэ) тодорхойлолт → хөдөлгүүр алхмыг тооцно; хуучин (NULL) → amount_rules / role алхам.
+   */
+  private async startFlow(
+    tx: TenantTx,
+    tenantId: string,
+    mr: { id: string; mrNumber: string; totalAmount: Prisma.Decimal | number; requesterId: string },
+  ): Promise<string> {
+    const definition = await this.engine.activeDefinition(tx, tenantId, LEGACY_ENTITY_TYPE);
+    if (!definition) {
+      throw new ForbiddenException('Идэвхтэй workflow definition олдсонгүй');
+    }
+    const amount = Number(mr.totalAmount);
+    const steps = definition.entityType
+      ? undefined
+      : normalizeSteps(this.amountRouter.resolveStepsFromConfig(amount, definition.stepsConfig));
+    const instance = await this.engine.start(tx, tenantId, {
+      entityType: LEGACY_ENTITY_TYPE,
+      entityId: mr.id,
+      requesterId: mr.requesterId,
+      amount,
+      title: mr.mrNumber,
+      link: `/debug/modules/mr/${mr.id}`,
+      steps,
+    });
+    await tx.mrHeader.update({ where: { id: mr.id }, data: { workflowInstanceId: instance.id } });
+    return instance.id;
+  }
+
+  /** Хөдөлгүүрийн алхам бүрт — MR-ийн version (optimistic UI) */
+  private async onApprovalStep(tx: TenantTx, ctx: ApprovalDecisionContext): Promise<void> {
+    if (ctx.final) return;
+    await tx.mrHeader.update({ where: { id: ctx.entityId }, data: { version: { increment: 1 } } });
+  }
+
+  /** Урсгал дуусахад — MR төлөв, төсөв (SPENT/RELEASED), outbox event */
+  private async onApprovalFinal(tx: TenantTx, ctx: ApprovalDecisionContext): Promise<void> {
+    if (ctx.status === 'APPROVED') {
+      const header = await tx.mrHeader.update({
+        where: { id: ctx.entityId },
+        data: { status: MrStatus.APPROVED, approvedBy: ctx.actorId, approvedAt: new Date(), version: { increment: 1 } },
+      });
+      await this.lifecycle.onApproved(tx, ctx.tenantId, ctx.entityId);
+      await this.eventBus.emit({
+        tx: tx as never,
+        tenantId: ctx.tenantId,
+        eventType: 'MR_APPROVED', // outbox.event_type (хуучин нэр хэвээр)
+        cloudEventType: EventTypes.MR_APPROVED,
+        aggregateType: 'MR',
+        aggregateId: ctx.entityId,
+        data: { mrId: ctx.entityId, mrNumber: header.mrNumber, approverId: ctx.actorId },
+      });
+      return;
+    }
+    const header = await tx.mrHeader.update({
+      where: { id: ctx.entityId },
+      data: { status: MrStatus.REJECTED, version: { increment: 1 } },
+    });
+    await this.lifecycle.onRejected(tx, ctx.tenantId, ctx.entityId);
+    await this.eventBus.emit({
+      tx: tx as never,
+      tenantId: ctx.tenantId,
+      eventType: 'MR_REJECTED', // outbox.event_type (хуучин нэр хэвээр)
+      cloudEventType: EventTypes.MR_REJECTED,
+      aggregateType: 'MR',
+      aggregateId: ctx.entityId,
+      data: { mrId: ctx.entityId, mrNumber: header.mrNumber, approverId: ctx.actorId, reason: ctx.comment },
+    });
   }
 
   // ────────────────────────────────────────────────
@@ -751,14 +617,11 @@ export class MaterialRequisitionService {
    */
   private async generateMrNumber(tx: TenantTx, tenantId: string): Promise<string> {
     const year = new Date().getFullYear();
-    const prefix = `MR-${year}-`;
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`mr-number:${tenantId}:${year}`}))`;
-    const rows = await tx.$queryRaw<{ max: number | null }[]>`
-      SELECT max(substring(mr_number FROM ${`^${prefix}([0-9]+)$`})::int) AS max
-      FROM mr_headers
-      WHERE tenant_id = ${tenantId}::uuid AND mr_number LIKE ${`${prefix}%`}
-    `;
-    const seq = Number(rows[0]?.max ?? 0) + 1;
-    return `${prefix}${String(seq).padStart(4, '0')}`;
+    return this.sequences.next(tx, {
+      tenantId,
+      module: 'mr',
+      key: 'material_requisition.number',
+      year,
+    });
   }
 }

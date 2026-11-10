@@ -102,6 +102,11 @@ export class I18nController {
     return this.overrides.listOverrides(user(req).tenantId, user(req).id);
   }
 
+  @Get('admin/catalog')
+  catalog(@Req() req: FastifyRequest) {
+    return this.overrides.listCatalog(user(req).tenantId, user(req).id);
+  }
+
   @Get('admin/history')
   history(@Req() req: FastifyRequest, @Query() q: HistoryQueryDto) {
     return this.overrides.history(user(req).tenantId, user(req).id, q.key);

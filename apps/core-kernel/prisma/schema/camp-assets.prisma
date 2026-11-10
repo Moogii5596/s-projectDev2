@@ -31,6 +31,7 @@ model CampAssetCategory {
   id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
   name      String
+  nameI18n  Json     @default("{}") @map("name_i18n")
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz

@@ -9,13 +9,13 @@ describe('resolveSystemDatabaseUrl (Phase 4.8.4)', () => {
     expect(resolveSystemDatabaseUrl({ DATABASE_URL: APP, SYSTEM_DATABASE_URL: SYS })).toBe(SYS);
   });
 
-  it('байхгүй / хоосон / зай → DATABASE_URL (шилжилтийн үе)', () => {
-    expect(resolveSystemDatabaseUrl({ DATABASE_URL: SYS })).toBe(SYS);
-    expect(resolveSystemDatabaseUrl({ DATABASE_URL: SYS, SYSTEM_DATABASE_URL: '' })).toBe(SYS);
-    expect(resolveSystemDatabaseUrl({ DATABASE_URL: SYS, SYSTEM_DATABASE_URL: '  ' })).toBe(SYS);
+  it('DATABASE_URL нь fallback болохгүй; системийн URL дутвал fail-fast', () => {
+    expect(() => resolveSystemDatabaseUrl({ DATABASE_URL: SYS })).toThrow(/SYSTEM_DATABASE_URL/);
+    expect(() => resolveSystemDatabaseUrl({ DATABASE_URL: SYS, SYSTEM_DATABASE_URL: '' })).toThrow(/SYSTEM_DATABASE_URL/);
+    expect(() => resolveSystemDatabaseUrl({ DATABASE_URL: SYS, SYSTEM_DATABASE_URL: '  ' })).toThrow(/SYSTEM_DATABASE_URL/);
   });
 
-  it('хоёулаа байхгүй → undefined (Prisma schema-ийн env("DATABASE_URL") анхдагч)', () => {
-    expect(resolveSystemDatabaseUrl({})).toBeUndefined();
+  it('хоёулаа байхгүй бол fail-fast', () => {
+    expect(() => resolveSystemDatabaseUrl({})).toThrow(/SYSTEM_DATABASE_URL/);
   });
 });

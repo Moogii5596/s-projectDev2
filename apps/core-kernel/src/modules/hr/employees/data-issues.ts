@@ -6,7 +6,7 @@ import type { RowError } from '../../../common/xlsx/table-spec';
  * Импортын буруу утга жинхэнэ талбарт ОРОХГҮЙ — энд эх утгатай хадгалагдаж, HR засна. Статустай холбоогүй.
  */
 /** v0.2.3 R9: `employeeCode` = HR ID хүлээгдэж байна (ShiftChange `NEW` мөрөөс түр кодтой бүртгэсэн; код солиход арилна) */
-export const DATA_ISSUE_FIELDS = ['email', 'phone', 'extraPhones', 'terminatedAt', 'employeeCode'] as const;
+const DATA_ISSUE_FIELDS = ['email', 'phone', 'extraPhones', 'terminatedAt', 'employeeCode'] as const;
 export type DataIssueField = (typeof DATA_ISSUE_FIELDS)[number];
 export interface DataIssue {
   field: DataIssueField;

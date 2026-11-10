@@ -3,8 +3,9 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Logger } from '@nestjs/common';
 import { AppModule } from './app/app.module';
-import { EnvConfig } from './config/env.config';
+import { EnvConfig, resolveClusterWorkers } from './config/env.config';
 import { configureApp, JSON_BODY_LIMIT } from './common/http/configure-app';
+import { RecentLogLogger } from './common/logging/recent-log.logger';
 import { RestartPolicy, resolveRestartPolicyOptions, startClusterPrimary } from './config/cluster-restart';
 
 async function bootstrap() {
@@ -16,6 +17,8 @@ async function bootstrap() {
     new FastifyAdapter({ logger: false, bodyLimit: JSON_BODY_LIMIT }),
     { bufferLogs: true },
   );
+  // v0.2.4 DBG-01: error/warn → Debug цэсний «Лог» (санах ойн буфер, нууцлалтай)
+  app.useLogger(new RecentLogLogger());
 
   // Pipe (implicit conversion, forbidNonWhitelisted), 'api/v1' prefix, multipart — integration тестүүдтэй ИЖИЛ [VALID-001]
   await configureApp(app);
@@ -28,15 +31,16 @@ async function bootstrap() {
   logger.log(`📊 Environment: ${config.NODE_ENV}`);
 }
 
-const workers = Number.parseInt(process.env.NODE_CLUSTER_WORKERS ?? '1', 10);
+const logger = new Logger('Bootstrap');
+const workers = resolveClusterWorkers();
 
 if (cluster.isPrimary && workers > 1) {
-  console.log(`Master PID ${process.pid} — spawning ${workers} workers`);
+  logger.log(`Master PID ${process.pid} — spawning ${workers} workers`);
   // Phase 3.6.4: crash-loop backoff (config/cluster-restart.ts). Ганц унасан worker → шууд, давтагдвал 1с→30с
   startClusterPrimary(cluster, workers, new RestartPolicy(resolveRestartPolicyOptions()));
 } else {
   bootstrap().catch((err) => {
-    console.error('Failed to start Core Kernel:', err);
+    logger.error('Failed to start Core Kernel', err instanceof Error ? err.stack : String(err));
     process.exit(1);
   });
 }

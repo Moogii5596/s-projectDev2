@@ -11,6 +11,12 @@ const uuid = () => new ParseUUIDPipe();
 export class CoreOrganizationsController {
   constructor(private readonly orgs: CoreOrganizationsService) {}
 
+  @Get('service-types')
+  serviceTypes(@Req() req: FastifyRequest) {
+    const u = reqUser(req);
+    return this.orgs.serviceTypeCatalog(u.tenantId, u.id);
+  }
+
   @Get()
   list(@Req() req: FastifyRequest, @Query() q: QueryOrganizationsDto) {
     const u = reqUser(req);

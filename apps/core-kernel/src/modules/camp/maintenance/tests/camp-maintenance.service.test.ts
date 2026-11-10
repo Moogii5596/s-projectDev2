@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CampAssetCondition, CampMaintenanceStatus as S, CampPartSource, CampRoomStatus, Prisma, UserRole } from '@prisma/client';
 import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
@@ -50,6 +50,10 @@ const part = (id: string, source: CampPartSource, qty: string, price: string | n
 
 /** $executeRaw дуудлагуудын SQL текст */
 const rawSqls = (s: ReturnType<typeof setup>) => s.tx.$executeRaw.mock.calls.map((c) => (c[0] as TemplateStringsArray).join('?'));
+const sequenceStub = () => ({
+  next: vi.fn(async (_tx: unknown, input: { year: number; values?: Readonly<Record<string, string | number>> }) =>
+    `ZAS-${String(input.values?.campCode)}-${input.year}-0001`),
+});
 
 describe('maintenance-flow (Шат 4.4)', () => {
   it('дугаар: ZAS-{code}-{YYYY}-{0001}, 9999-өөс хойш өргөснө', () => {
@@ -92,9 +96,11 @@ describe('maintenance-flow (Шат 4.4)', () => {
 describe('CampMaintenanceService — үүсгэх (Шат 4.4)', () => {
   let s: ReturnType<typeof setup>;
   let svc: CampMaintenanceService;
+  let sequences: ReturnType<typeof sequenceStub>;
   beforeEach(() => {
     s = setup();
-    svc = new CampMaintenanceService(s.prisma as never, s.access);
+    sequences = sequenceStub();
+    svc = new CampMaintenanceService(s.prisma as never, s.access, sequences);
     setActor(s.tx, { userId: 'cu-rep', roles: [{ campId: 'c1', perms: [P.MAINTENANCE_CREATE] }] });
     s.tx.camp.findFirst.mockResolvedValue(CAMP);
     s.tx.campRoom.findFirst.mockResolvedValue({ id: 'r1', roomNo: '101', status: CampRoomStatus.ACTIVE });
@@ -103,21 +109,18 @@ describe('CampMaintenanceService — үүсгэх (Шат 4.4)', () => {
     s.tx.$queryRaw.mockResolvedValue([{ max: 41 }]);
   });
 
-  it('дугаар: advisory lock (кемп+он) → MAX+1; анхны нь 0001', async () => {
+  it('дугаар: core sequence-д кемп/он scope-оор хуваарилна', async () => {
     const year = todayUb().slice(0, 4);
     await svc.create('t1', 'a1', 'c1', { roomId: 'r1', title: 'T' });
     expectTenantTx(s.tx, 't1');
-    const lock = s.tx.$executeRaw.mock.calls.find((c) => (c[0] as TemplateStringsArray).join('?').includes('pg_advisory_xact_lock'));
-    expect(lock?.[1]).toBe(`camp-maintenance-no:t1:c1:${year}`);
-    const q = s.tx.$queryRaw.mock.calls[0];
-    expect((q[0] as TemplateStringsArray).join('?')).toContain('starts_with(request_no, ?)');
-    expect(q).toContain(`ZAS-C1-${year}-`);
-    expect(s.tx.campMaintenanceRequest.create.mock.calls[0][0].data).toMatchObject({
-      tenantId: 't1', campId: 'c1', requestNo: `ZAS-C1-${year}-0042`, roomId: 'r1', assetId: null, blocksRoom: false, reportedBy: 'cu-rep',
+    expect(sequences.next.mock.calls[0]?.[0]).toBe(s.tx);
+    expect(sequences.next.mock.calls[0]?.[1]).toEqual({
+      tenantId: 't1', module: 'camp', key: 'maintenance.request_no', scopeKey: 'c1',
+      year: Number(year), values: { campCode: 'C1' },
     });
-    s.tx.$queryRaw.mockResolvedValueOnce([{ max: null }]);
-    await svc.create('t1', 'a1', 'c1', { roomId: 'r1', title: 'T' });
-    expect(s.tx.campMaintenanceRequest.create.mock.calls[1][0].data.requestNo).toBe(`ZAS-C1-${year}-0001`);
+    expect(s.tx.campMaintenanceRequest.create.mock.calls[0][0].data).toMatchObject({
+      tenantId: 't1', campId: 'c1', requestNo: `ZAS-C1-${year}-0001`, roomId: 'r1', assetId: null, blocksRoom: false, reportedBy: 'cu-rep',
+    });
   });
 
   it('blocksRoom = false → өрөөг хөндөхгүй', async () => {
@@ -175,7 +178,7 @@ describe('CampMaintenanceService — төлөв шилжилт (Шат 4.4)', ()
   const withStatus = (status: S, extra: Partial<typeof REQ> = {}) => s.tx.campMaintenanceRequest.findFirst.mockResolvedValue({ ...REQ, status, ...extra });
   beforeEach(() => {
     s = setup();
-    svc = new CampMaintenanceService(s.prisma as never, s.access);
+    svc = new CampMaintenanceService(s.prisma as never, s.access, sequenceStub());
     setActor(s.tx, { userId: 'cu1', roles: [{ campId: 'c1', perms: [P.MAINTENANCE_PARTS, P.MAINTENANCE_CLOSE, P.MAINTENANCE_CREATE] }] });
     s.tx.campSetting.findFirst.mockResolvedValue({ vatRate: D(10), cateringOrganizationId: 'org-cat' });
     s.tx.campRoom.findFirst.mockResolvedValue({ roomNo: '101', status: CampRoomStatus.ACTIVE });
@@ -343,7 +346,7 @@ describe('CampMaintenanceService — сэлбэг (Шат 4.4)', () => {
   let svc: CampMaintenanceService;
   beforeEach(() => {
     s = setup();
-    svc = new CampMaintenanceService(s.prisma as never, s.access);
+    svc = new CampMaintenanceService(s.prisma as never, s.access, sequenceStub());
     setActor(s.tx, { userId: 'cu1', roles: [{ campId: 'c1', perms: [P.MAINTENANCE_PARTS] }] });
     s.tx.campMaintenanceRequest.findFirst.mockResolvedValue({ ...REQ, status: S.IN_PROGRESS });
     s.tx.campMaintenancePart.create.mockResolvedValue(part('p1', CampPartSource.CATERING_PURCHASED, '2', '1500'));

@@ -3,25 +3,8 @@
  * (backend DTO + frontend props). DTO нэр frontend-тэй ТАМ АДИЛ (R20).
  * Prisma enum-ийг энд давтахгүй (R02) — string literal union нь `@prisma/client`-ийн утгатай таарна.
  */
-export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'NIGHT';
+type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'NIGHT';
 export type MealOrderStatus = 'DRAFT' | 'ORDERED' | 'ACCEPTED' | 'REJECTED' | 'CHANGE_REQUESTED';
-
-export type AfterCutoffMode = 'BLOCK' | 'APPROVAL' | 'FREE';
-export type EditAfterAcceptMode = 'FORBID' | 'ALLOW' | 'TWO_SIDED';
-export type DefaultFillMode = 'EMPTY' | 'COPY_PREV' | 'TEMPLATE';
-
-/** camp_settings.meal_order_* (G-8) — урсгалын БҮХ дүрэм энд; кодод тогтмол дүрэм алга */
-export interface MealOrderSettings {
-  /** захиалгын өдрөөс хэдэн өдрийн өмнө cutoff (0 = тухайн өдөр) */
-  leadDays: number;
-  /** 'HH:MM' (Asia/Ulaanbaatar) эсвэл null = өдрийн төгсгөл */
-  cutoffTime: string | null;
-  afterCutoff: AfterCutoffMode;
-  requiresAccept: boolean;
-  editAfterAccept: EditAfterAcceptMode;
-  defaultFill: DefaultFillMode;
-  allowSelfAccept: boolean;
-}
 
 export interface MealOrderLineView {
   mealType: MealType;
@@ -29,7 +12,7 @@ export interface MealOrderLineView {
   baseCount: number;
 }
 
-export interface MealOrderExtraView {
+interface MealOrderExtraView {
   id: string;
   mealType: MealType;
   mealLocationId: string;

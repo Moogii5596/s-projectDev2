@@ -3,13 +3,14 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { campApi, type PartInput } from '../api/camp-api'
 import type { MaintenanceAction, MaintenanceDetail, MaintenancePart, MaintenancePriority, PartSource } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
-import { MAINT_STATUS_LABEL, PART_SOURCE_LABEL, PRIORITY_LABEL } from '../lib/labels'
-import { formatMoney } from '../lib/money'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { MAINT_STATUS_LABEL, PART_SOURCE_LABEL, PRIORITY_LABEL } from '../../../core/labels'
+import { formatMoney } from '../../../core/money'
 import { ACTION_LABEL, type MaintenanceActor, STATUS_TONE, availableActions, canEditDetails, canEditParts } from '../lib/maintenance'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, td } from '../components/ui'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, td } from '../../../core/ui'
+import { Attachments } from '../api/core-bridge'
 import { useTranslation } from 'react-i18next'
 
 const FLOW: { status: MaintenanceDetail['status'] }[] = [{ status: 'OPEN' }, { status: 'IN_PROGRESS' }, { status: 'DONE' }, { status: 'CLOSED' }]
@@ -19,7 +20,7 @@ const ts = (v: string | null) => (v ? v.slice(0, 16).replace('T', ' ') : '—')
 export default function MaintenanceDetailPage() {
   const { t } = useTranslation()
   const { campId = '', id = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const q = useQuery({ queryKey: [...campKeys.maintenance(campId), 'detail', id], queryFn: () => campApi.maintenance(campId, id) })
   const [confirm, setConfirm] = useState<MaintenanceAction | null>(null)
   const [notice, setNotice] = useState<string[] | null>(null)
@@ -32,7 +33,7 @@ export default function MaintenanceDetailPage() {
     canCreate: perms.can(P.MAINTENANCE_CREATE),
     isReporter: !!m && perms.data?.userId === m.reportedBy,
   }
-  const removePart = useCampMutation((partId: string) => campApi.removePart(campId, id, partId), [campKeys.maintenance(campId)])
+  const removePart = useAppMutation((partId: string) => campApi.removePart(campId, id, partId), [campKeys.maintenance(campId)])
 
   if (q.isLoading) return <Loading />
   if (q.isError || !m) return <ErrorBox error={q.error} onRetry={() => q.refetch()} />
@@ -151,6 +152,9 @@ export default function MaintenanceDetailPage() {
         )}
       </Card>
 
+      {/* v0.2.4 FILE-01: хавсралт (зураг, акт) — кемпийн эрхээр */}
+      <Attachments entityType="CAMP_MAINTENANCE" entityId={m.id} />
+
       <Card
         title={t('camp.part.title')}
         actions={
@@ -252,7 +256,7 @@ function TransitionModal({
 }) {
   const { t } = useTranslation()
   const [reason, setReason] = useState('')
-  const m = useCampMutation(
+  const m = useAppMutation(
     () => campApi.transitionMaintenance(campId, detail.id, action, action === 'cancel' ? reason.trim() : undefined),
     [campKeys.maintenance(campId), campKeys.rooms(campId), campKeys.roomBoard(campId), campKeys.assets(campId)],
     (res) => {
@@ -301,7 +305,7 @@ function EditModal({ campId, detail, onClose }: { campId: string; detail: Mainte
   const [title, setTitle] = useState(detail.title)
   const [description, setDescription] = useState(detail.description ?? '')
   const [priority, setPriority] = useState<MaintenancePriority>(detail.priority)
-  const m = useCampMutation(
+  const m = useAppMutation(
     () => campApi.updateMaintenance(campId, detail.id, { title: title.trim(), description: description.trim() || null, priority }),
     [campKeys.maintenance(campId)],
     onClose,
@@ -355,7 +359,7 @@ function PartModal({ campId, requestId, part, onClose }: { campId: string; reque
   const priceBad = price !== null && !(price >= 0)
   const needPrice = f.source === 'CATERING_PURCHASED' && price === null
   const body = (): PartInput => ({ partName: f.partName.trim(), quantity: qty, unit: f.unit.trim() || t('camp.part.unit_default'), unitPrice: price, vatIncluded: f.vatIncluded, source: f.source })
-  const m = useCampMutation(
+  const m = useAppMutation(
     () => (part ? campApi.updatePart(campId, requestId, part.id, body()) : campApi.addPart(campId, requestId, body())),
     [campKeys.maintenance(campId)],
     onClose,

@@ -2,16 +2,17 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { campApi } from '../api/camp-api'
-import { campKeys } from '../hooks/useCampPermissions'
-import { MEAL_LABEL, PRESENCE_GROUP_LABEL } from '../lib/labels'
-import { addDays, todayUb } from '../lib/dates'
+import { campKeys } from '../../../core/useAppPermissions'
+import { MEAL_LABEL, PRESENCE_GROUP_LABEL } from '../../../core/labels'
+import { addDays, todayUb } from '../../../core/dates'
 import { pivotPresence } from '../lib/presence'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Table, inputSmCls, td } from '../components/ui'
+import { localizedCatalogName } from '../../../core/labels'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Table, inputSmCls, td } from '../../../core/ui'
 import { useTranslation } from 'react-i18next'
 
 /** /camp/:campId/meals — D өдрийн хоолны суурь тоо (хоол × байршил), задаргаа, анхааруулга. Зөвхөн харах */
 export default function PresencePage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { campId = '' } = useParams()
   const [date, setDate] = useState(todayUb())
   const q = useQuery({ queryKey: [...campKeys.presence(campId), date], queryFn: () => campApi.presence(campId, date), enabled: !!date })
@@ -19,7 +20,12 @@ export default function PresencePage() {
   const [showBreakdown, setShowBreakdown] = useState(false)
   // v0.2.1: задаргаа хэлтэс × ээлж эсвэл албан тушаалаар
   const [by, setBy] = useState<'department' | 'position'>('department')
-  const locName = (id: string | null) => q.data?.lines.find((l) => l.mealLocationId === id)?.mealLocationName ?? t('camp.presence.no_location')
+  const locName = (id: string | null) => {
+    const location = q.data?.lines.find((line) => line.mealLocationId === id)
+    return location?.mealLocationName
+      ? localizedCatalogName({ name: location.mealLocationName, nameI18n: location.mealLocationNameI18n }, i18n.resolvedLanguage ?? i18n.language)
+      : t('camp.presence.no_location')
+  }
 
   return (
     <div className="space-y-5">
@@ -111,7 +117,11 @@ export default function PresencePage() {
             <Table head={[t('camp.emp.col.position'), t('camp.att.col.meals'), t('camp.common.location'), t('camp.meals.count')]}>
               {(q.data.byPosition ?? []).map((b, i) => (
                 <tr key={i}>
-                  <td className={td}>{b.positionName ?? t('camp.emp.no_position')}</td>
+                  <td className={td}>
+                    {b.positionName
+                      ? localizedCatalogName({ name: b.positionName, nameI18n: b.positionNameI18n }, i18n.resolvedLanguage ?? i18n.language)
+                      : t('camp.emp.no_position')}
+                  </td>
                   <td className={td}>{MEAL_LABEL[b.mealType]}</td>
                   <td className={td}>{locName(b.mealLocationId)}</td>
                   <td className={`${td} tabular-nums`}>{b.count}</td>

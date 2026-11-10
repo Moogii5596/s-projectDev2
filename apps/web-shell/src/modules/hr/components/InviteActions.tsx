@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { campApi } from '../../camp/api/camp-api'
-import { campKeys } from '../../camp/hooks/useCampPermissions'
-import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { Button, ErrorBox, inputSmCls } from '../../camp/components/ui'
+import { campApi } from '../api/camp-bridge'
+import { campKeys } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { Button, ErrorBox, inputSmCls } from '../../../core/ui'
 import { inviteLink } from '../lib/user-access'
 
 /**
@@ -17,11 +17,11 @@ export default function InviteActions({ userId, hasRealEmail }: { userId: string
   const [link, setLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [sent, setSent] = useState(false)
-  const byLink = useCampMutation(() => campApi.inviteUser(userId, 'LINK'), [campKeys.users], (res) => {
+  const byLink = useAppMutation(() => campApi.inviteUser(userId, 'LINK'), [campKeys.users], (res) => {
     setLink(inviteLink(res, window.location.origin))
     setCopied(false)
   })
-  const byEmail = useCampMutation(() => campApi.inviteUser(userId, 'EMAIL'), [campKeys.users], () => setSent(true))
+  const byEmail = useAppMutation(() => campApi.inviteUser(userId, 'EMAIL'), [campKeys.users], () => setSent(true))
 
   const copy = async () => {
     if (!link) return

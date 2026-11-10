@@ -33,6 +33,7 @@ import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { configureApp } from '../src/common/http/configure-app';
 import { ADMIN_DB_URL } from './helpers/db-urls';
+import { activateTestModules } from './helpers/activate-test-modules';
 
 // ── Redis mock — нийтлэг helper [TEST-003] (апп-ын бүх Redis командтай) ──
 const redisMock = createRedisMock();
@@ -93,6 +94,7 @@ beforeAll(async () => {
     create: { name: 'Test Tenant', slug: TEST_SLUG, tier: TierType.TIER1 },
   });
   testTenantId = upsertedTenant.id;
+  await activateTestModules(prismaAdmin, [testTenantId], ['mr', 'workflow', 'budget']);
 
   // 3. NestJS TestingModule
   const moduleRef = await Test.createTestingModule({

@@ -24,6 +24,19 @@ export class CampMaintenanceController {
     return this.maintenance.create(u.tenantId, u.id, campId, dto);
   }
 
+  /** v0.2.4 FEED-03: Feed-ийн постоос засварын хүсэлт (пост ↔ хүсэлт холбоос, төлөв постод) */
+  @Post('from-post/:postId')
+  @HttpCode(201)
+  createFromPost(
+    @Req() req: FastifyRequest,
+    @Param('campId', uuid()) campId: string,
+    @Param('postId', uuid()) postId: string,
+    @Body() dto: CreateMaintenanceDto,
+  ) {
+    const u = reqUser(req);
+    return this.maintenance.create(u.tenantId, u.id, campId, dto, postId);
+  }
+
   @Get(':id')
   get(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Param('id', uuid()) id: string) {
     const u = reqUser(req);

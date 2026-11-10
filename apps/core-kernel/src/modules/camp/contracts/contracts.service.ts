@@ -117,7 +117,7 @@ const LOCKED_WHEN_ACTIVE = ['contractNo', 'organizationId', 'currency', 'startDa
 /** ACTIVE гэрээнд өөрчлөгдвөл TERMS нэмэлт өөрчлөлт автоматаар бичигдэнэ */
 const TERMS_FIELDS = ['customerOrganizationId', 'paymentCurrency', 'vatRate', 'ratePolicy', 'fixedRate', 'paymentTerms'] as const;
 
-export function toPriceView(p: PriceRowDb): ContractPriceView {
+function toPriceView(p: PriceRowDb): ContractPriceView {
   return {
     id: p.id,
     effectiveFrom: fromDbDate(p.effectiveFrom),
@@ -130,7 +130,7 @@ export function toPriceView(p: PriceRowDb): ContractPriceView {
   };
 }
 
-export function toItemView(i: ItemRow, today: string): ContractItemView {
+function toItemView(i: ItemRow, today: string): ContractItemView {
   const prices = i.prices.map(toPriceView);
   return {
     id: i.id,
@@ -168,7 +168,7 @@ function toListItem(r: ListRow): ContractListItem {
   };
 }
 
-export function parsePaymentTerms(v: Prisma.JsonValue): PaymentTerm[] {
+function parsePaymentTerms(v: Prisma.JsonValue): PaymentTerm[] {
   if (!Array.isArray(v)) return [];
   return v.map((x) => {
     const o = (x ?? {}) as Record<string, unknown>;

@@ -27,6 +27,7 @@ import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { configureApp } from '../src/common/http/configure-app';
 import { ADMIN_DB_URL } from './helpers/db-urls';
+import { activateTestModules } from './helpers/activate-test-modules';
 
 const SLUG = `budget-it-${Date.now()}`;
 const HOST = `${SLUG}.example.com`;
@@ -76,6 +77,7 @@ beforeAll(async () => {
 
   const tenant = await prismaAdmin.tenant.create({ data: { name: 'Budget IT Tenant', slug: SLUG, tier: TierType.TIER1 } });
   tenantId = tenant.id;
+  await activateTestModules(prismaAdmin, [tenantId], ['mr', 'workflow', 'budget']);
   // MR submit идэвхтэй workflow definition шаарддаг (шинэ tenant-д migration seed хийгээгүй)
   await prismaAdmin.workflowDefinition.create({
     data: { tenantId, name: 'Budget IT', stepsConfig: [{ order: 0, role: 'APPROVER', quorum: 1 }], isActive: true },

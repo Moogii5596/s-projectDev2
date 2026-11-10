@@ -3,9 +3,15 @@
   "version": "0.2.2",
   "private": true,
   "description": "v0.2.0 §0.7 — Frontend-ийн анхдагч орчуулга (mn/en/zh). Backend орчуулгын Excel экспорт/шалгалтад уншина.",
+  "scripts": {
+    "terms:convert": "node scripts/convert-exact-term-references.mjs"
+  },
   "files": [
     "web.mn.json",
     "web.en.json",
-    "web.zh.json"
+    "web.zh.json",
+    "terms.mn.json",
+    "terms.en.json",
+    "terms.zh.json"
   ]
 }

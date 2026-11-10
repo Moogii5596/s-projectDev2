@@ -19,6 +19,7 @@ export default function SetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState<{ login: string | null } | null>(null)
+  const minPasswordLength = info?.valid ? info.passwordMinLength : MIN_PASSWORD_LENGTH
 
   useEffect(() => {
     let alive = true
@@ -33,7 +34,7 @@ export default function SetPasswordPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (password.length < MIN_PASSWORD_LENGTH) return setError(t('auth.change.min', { n: MIN_PASSWORD_LENGTH }))
+    if (password.length < minPasswordLength) return setError(t('auth.change.min', { n: minPasswordLength }))
     if (password !== confirm) return setError(t('auth.change.mismatch'))
     setSubmitting(true)
     try {
@@ -87,8 +88,8 @@ export default function SetPasswordPage() {
             <input type="text" name="username" autoComplete="username" value={info.login ?? ''} readOnly hidden />
             <div>
               <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">{t('auth.change.new')}</label>
-              <input id="new-password" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD_LENGTH} value={password} onChange={(e) => setPassword(e.target.value)} className={input} />
-              <p className="mt-1 text-xs text-gray-500">{t('auth.change.min', { n: MIN_PASSWORD_LENGTH })}</p>
+              <input id="new-password" type="password" autoComplete="new-password" required minLength={minPasswordLength} value={password} onChange={(e) => setPassword(e.target.value)} className={input} />
+              <p className="mt-1 text-xs text-gray-500">{t('auth.change.min', { n: minPasswordLength })}</p>
             </div>
             <div>
               <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">{t('auth.change.confirm')}</label>

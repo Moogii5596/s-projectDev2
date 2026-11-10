@@ -1,13 +1,15 @@
 import { Prisma } from '@prisma/client';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Cron }       from '@nestjs/schedule';
 import { SystemPrismaService } from '../../db/system-prisma.service'; // Phase 4.8.4
 import { RedisPublisherService }  from './redis-publisher.service';
 import { CloudEventsAdapter, OutboxRow } from './cloud-events.adapter';
 import { DlqService }            from './dlq.service';
 import { EVENT_SOURCE }          from './event-bus.service';
+import { ScheduledJobRegistry } from '../core/scheduler/scheduled-job.registry';
 
-export const OUTBOX_MAX_RETRIES = 3;
+const OUTBOX_MAX_RETRIES = 3;
 export const OUTBOX_BATCH = 50;
 /** retry n (1-ээс) → 30с, 120с, 480с */
 export const outboxBackoffSeconds = (attempt: number): number => 30 * Math.pow(4, attempt - 1);
@@ -29,16 +31,20 @@ export class OutboxPollerService {
     private readonly prisma:     SystemPrismaService,
     private readonly publisher:  RedisPublisherService,
     private readonly dlqService: DlqService,
-  ) {}
+    private readonly jobs: ScheduledJobRegistry,
+    private readonly config?: ConfigService,
+  ) {
+    this.jobs.register({ id: 'outbox-poller', module: 'core', cron: '*/5 * * * * *' });
+  }
 
   /**
    * 5 секунд бүр. `OUTBOX_POLLER_CRON=off` → cron алгасна (integration тест: зэрэгцээ ажиллах тест файлуудын
    * app-ууд бие биеийн outbox-ийг боловсруулахаас сэргийлнэ; тест `pollAndPublish()`-ийг шууд дуудна).
    */
-  @Cron('*/5 * * * * *')
+  @Cron('*/5 * * * * *', { name: 'outbox-poller' })
   async onTick(): Promise<void> {
-    if (process.env.OUTBOX_POLLER_CRON?.trim().toLowerCase() === 'off') return;
-    await this.pollAndPublish();
+    if (this.config?.get<string>('OUTBOX_POLLER_CRON')?.trim().toLowerCase() === 'off') return;
+    await this.jobs.run('outbox-poller', () => this.pollAndPublish());
   }
 
   async pollAndPublish(): Promise<number> {

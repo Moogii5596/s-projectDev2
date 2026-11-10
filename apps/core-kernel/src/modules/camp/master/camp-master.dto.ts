@@ -3,7 +3,6 @@ import { Transform, Type } from 'class-transformer';
 import { CampRoomStatus } from '@prisma/client';
 import { trim, trimOrNull } from '../common/camp-dto.util';
 import { CODE, CODE_MSG } from '../common/common.dto';
-export { QueryActiveOnlyDto } from '../common/common.dto';
 
 // ── Кемп ─────────────────────────────────────────────────────
 export class CreateCampDto {

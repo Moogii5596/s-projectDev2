@@ -53,12 +53,12 @@ describe('computePresence — v0.2.1', () => {
       { mealType: D, mealLocationId: 'loc-camp', count: 2 },
     ]);
     expect(r.byPosition).toEqual([
-      { positionName: null, mealType: B, mealLocationId: 'loc-camp', count: 1 },
-      { positionName: null, mealType: L, mealLocationId: 'loc-camp', count: 1 },
-      { positionName: null, mealType: D, mealLocationId: 'loc-camp', count: 1 },
-      { positionName: 'Жолооч', mealType: B, mealLocationId: 'loc-camp', count: 1 },
-      { positionName: 'Жолооч', mealType: L, mealLocationId: 'loc-mine', count: 1 },
-      { positionName: 'Жолооч', mealType: D, mealLocationId: 'loc-camp', count: 1 },
+      { positionName: null, positionNameI18n: null, mealType: B, mealLocationId: 'loc-camp', count: 1 },
+      { positionName: null, positionNameI18n: null, mealType: L, mealLocationId: 'loc-camp', count: 1 },
+      { positionName: null, positionNameI18n: null, mealType: D, mealLocationId: 'loc-camp', count: 1 },
+      { positionName: 'Жолооч', positionNameI18n: null, mealType: B, mealLocationId: 'loc-camp', count: 1 },
+      { positionName: 'Жолооч', positionNameI18n: null, mealType: L, mealLocationId: 'loc-mine', count: 1 },
+      { positionName: 'Жолооч', positionNameI18n: null, mealType: D, mealLocationId: 'loc-camp', count: 1 },
     ]);
   });
 

@@ -1,5 +1,5 @@
 // Роль, эрх — системийн түвшин (ADR-007, v0.2.3 Блок 2; өмнө camp-rbac.prisma / camp_*) — S Project Prisma schema (хэсэг; ерөнхий дүрэм → _base.prisma)
-// Migration: 20261106005_core_rbac_adr007.sql. Хөлдөөсөн legacy_camp_* хуулбарт Prisma model байхгүй (зөвхөн SQL — snapshot, тест).
+// Migration: 20261106005_core_rbac_adr007.sql. Legacy-ийн хуулбарууд ARC-05 cleanup migration-аар устсан.
 // site_id: ажлын байр (одоо camps.id), NULL = tenant даяар. Prisma-ийн талбар `campId` (API-тай ижил) — ADR-008 хүртэл.
 // scope_type (TENANT | SITE) — DB-ийн GENERATED багана, Prisma model-д оруулаагүй (бичих боломжгүй).
 
@@ -28,21 +28,8 @@ model CorePermission {
 
   rolePermissions CoreRolePermission[]
   userPermissions CoreUserPermission[]
-  aliases         CorePermissionAlias[]
 
   @@map("core_permissions")
-}
-
-/// ADR-007 B2-6 — хуучин код → шинэ код (нэг хувилбар, v0.2.4-т устгана)
-model CorePermissionAlias {
-  oldCode   String   @id @map("old_code")
-  newCode   String   @map("new_code")
-  removeIn  String   @default("v0.2.4") @map("remove_in")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  permission CorePermission @relation(fields: [newCode], references: [code], onDelete: NoAction, onUpdate: NoAction)
-
-  @@map("core_permission_aliases")
 }
 
 /// Системийн роль (isSystem) устгагдахгүй, systemCode солигдохгүй (trigger). systemCode — TEXT (ADR-007 B2-5)

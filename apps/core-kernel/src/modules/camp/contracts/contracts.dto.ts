@@ -35,11 +35,11 @@ import {
 
 /** v0.2.3 Блок 6б — гэрээ, каталог, ханш. Мөнгө/ханш/хуваагч — string (Decimal) */
 export const CURRENCY = /^[A-Z]{3}$/;
-export const CATALOG_CODE = /^[A-Z][A-Z0-9_]{0,39}$/;
-export const MONEY = /^\d{1,16}(\.\d{1,2})?$/;
+const CATALOG_CODE = /^[A-Z][A-Z0-9_]{0,39}$/;
+const MONEY = /^\d{1,16}(\.\d{1,2})?$/;
 export const RATE = /^\d{1,12}(\.\d{1,6})?$/;
-export const VAT_RATE = /^\d{1,2}(\.\d{1,2})?$/;
-export const DIVISOR = /^\d{1,6}(\.\d{1,2})?$/;
+const VAT_RATE = /^\d{1,2}(\.\d{1,2})?$/;
+const DIVISOR = /^\d{1,6}(\.\d{1,2})?$/;
 
 const upper = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim().toUpperCase() : value);
 

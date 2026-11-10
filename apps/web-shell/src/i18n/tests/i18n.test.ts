@@ -4,6 +4,9 @@ import { join } from 'node:path'
 import mn from '@s-project/i18n/web.mn.json'
 import en from '@s-project/i18n/web.en.json'
 import zh from '@s-project/i18n/web.zh.json'
+import termsMn from '@s-project/i18n/terms.mn.json'
+import termsEn from '@s-project/i18n/terms.en.json'
+import termsZh from '@s-project/i18n/terms.zh.json'
 import i18n, { applyOverrides, setLanguage } from '../index'
 
 /**
@@ -55,6 +58,22 @@ describe('орчуулгын каталог', () => {
     }
   })
 
+  it('term каталог гурван хэлэнд бүтэн бөгөөд бүх web холбоос defaults-оороо задрана', () => {
+    const terms = { mn: termsMn, en: termsEn, zh: termsZh }
+    const termKeys = Object.keys(terms.mn).sort()
+    expect(Object.keys(terms.en).sort()).toEqual(termKeys)
+    expect(Object.keys(terms.zh).sort()).toEqual(termKeys)
+    for (const lang of ['mn', 'en', 'zh'] as const) {
+      const fixedT = i18n.getFixedT(lang)
+      for (const termKey of termKeys) expect(terms[lang][termKey as keyof typeof terms.mn].trim(), `${lang}:${termKey}`).not.toBe('')
+      for (const [key, value] of Object.entries({ mn, en, zh }[lang])) {
+        const refs = [...value.matchAll(/\$t\((term\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)\)/g)].map((match) => match[1])
+        for (const ref of refs) expect(termKeys, `${lang}:${key} → ${ref}`).toContain(ref)
+        if (refs.length) expect(fixedT(key)).toBe(value.replace(/\$t\((term\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)\)/g, (_, ref: string) => terms[lang][ref as keyof typeof terms.mn]))
+      }
+    }
+  })
+
   it('кемп модуль, нэвтрэх, цэсэнд кирилл текст үлдээгүй (тайлбараас гадуур)', () => {
     const bad: string[] = []
     for (const f of SCOPE) {
@@ -94,11 +113,62 @@ describe('i18n ажиллагаа', () => {
     expect(i18n.t('camp.att.rows', { n: 3 })).toBe('3 行')
     setLanguage('en')
     expect(i18n.t('nav.camp')).toBe('Camp')
+    applyOverrides('en', { 'term.camp.nom': 'Worksite' })
+    expect(i18n.t('nav.camp')).toBe('Worksite')
+    applyOverrides('en', {})
+    expect(i18n.t('nav.camp')).toBe('Camp')
     applyOverrides('en', { 'nav.camp': 'Base' })
     expect(i18n.t('nav.camp')).toBe('Base')
     applyOverrides('en', {})
     expect(i18n.t('nav.camp')).toBe('Camp')
     setLanguage('mn')
     expect(i18n.t('nav.camp')).toBe('Кемп')
+  })
+
+  it('term interpolation preserves the existing translation text across all locales', () => {
+    const expected = {
+      mn: {
+        'camp.att.col.dept_crew': 'Хэлтэс / ростер',
+        'camp.att.shift_optional': 'Ээлж (заавал биш)',
+        'camp.day.shift': 'Ээлж (тооцоолсон)',
+        'camp.meals.by_department': 'Хэлтэс × ээлж',
+        'camp.section.employees': 'Ажилтан',
+        'camp.section.rooms': 'Өрөөний самбар',
+        'camp.settings.section.departments': 'Хэлтэс, ээлж',
+        'camp.system.section.organizations': 'Байгууллага',
+        'hr.import.kind.employees': 'Ажилтан',
+        'hr.section.employees': 'Ажилтан',
+      },
+      en: {
+        'camp.att.col.dept_crew': 'Department / roster',
+        'camp.att.shift_optional': 'Shift (optional)',
+        'camp.day.shift': 'Shift (computed)',
+        'camp.meals.by_department': 'Department × shift',
+        'camp.section.employees': 'Employees',
+        'camp.section.rooms': 'Room board',
+        'camp.settings.section.departments': 'Departments, shifts',
+        'camp.system.section.organizations': 'Organizations',
+        'hr.import.kind.employees': 'Employees',
+        'hr.section.employees': 'Employees',
+      },
+      zh: {
+        'camp.att.col.dept_crew': '部门 / 轮班表',
+        'camp.att.shift_optional': '班次（可选）',
+        'camp.day.shift': '班次（计算）',
+        'camp.meals.by_department': '部门 × 班次',
+        'camp.section.employees': '员工',
+        'camp.section.rooms': '房间看板',
+        'camp.settings.section.departments': '部门、班次',
+        'camp.system.section.organizations': '单位',
+        'hr.import.kind.employees': '员工',
+        'hr.section.employees': '员工',
+      },
+    } as const
+    for (const lang of ['mn', 'en', 'zh'] as const) {
+      const fixedT = i18n.getFixedT(lang)
+      for (const [key, text] of Object.entries(expected[lang])) {
+        expect(fixedT(key), `${lang}:${key}`).toBe(text)
+      }
+    }
   })
 })

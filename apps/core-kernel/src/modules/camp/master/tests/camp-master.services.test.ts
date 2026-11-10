@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { CampEmployeeStatus, CampOrgServiceType, CampOrgType, CampShiftType, UserRole } from '@prisma/client';
+import { CampEmployeeStatus, CampOrgType, CampShiftType, UserRole } from '@prisma/client';
 import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
 import { CampsService } from '../camps.service';
@@ -136,8 +136,12 @@ describe('CoreOrganizationsService (Шат 2.4)', () => {
 
   it('list: аль нэг кемпэд эрхтэй бол уншина; шүүлт', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.HAUL_CREATE] }] });
-    await svc.list('t1', 'a1', { serviceType: CampOrgServiceType.SEWAGE_DISPOSAL, orgType: CampOrgType.CONTRACTOR });
-    expect(s.tx.coreOrganization.findMany.mock.calls[0][0].where).toEqual({ tenantId: 't1', serviceTypes: { has: 'SEWAGE_DISPOSAL' }, orgType: 'CONTRACTOR' });
+    await svc.list('t1', 'a1', { serviceType: 'SEWAGE_DISPOSAL', orgType: CampOrgType.CONTRACTOR });
+    expect(s.tx.coreOrganization.findMany.mock.calls[0][0].where).toEqual({
+      tenantId: 't1',
+      serviceTypes: { some: { serviceType: { code: 'SEWAGE_DISPOSAL' } } },
+      orgType: 'CONTRACTOR',
+    });
   });
 
   it('create: кемпийн master.manage хангалтгүй → 403; давхар регистр → 409', async () => {
@@ -150,32 +154,49 @@ describe('CoreOrganizationsService (Шат 2.4)', () => {
 
   it('регистргүй байгууллага давхардал шалгахгүй; null талбарууд', async () => {
     setActor(s.tx, { role: UserRole.ADMIN });
-    await svc.create('t1', 'a1', { name: 'X', orgType: CampOrgType.CONTRACTOR, serviceTypes: [CampOrgServiceType.CATERING] });
+    s.tx.coreOrganization.findFirstOrThrow.mockResolvedValue({
+      id: 'new-id', name: 'X', regNumber: null, orgType: 'CONTRACTOR', serviceTypes: [],
+      contactName: null, phone: null, email: null, isActive: true, createdAt: new Date(), updatedAt: new Date(),
+    });
+    await svc.create('t1', 'a1', { name: 'X', orgType: CampOrgType.CONTRACTOR });
     expect(s.tx.coreOrganization.findFirst).not.toHaveBeenCalled();
     expect(s.tx.coreOrganization.create.mock.calls[0][0].data).toEqual({
-      tenantId: 't1', name: 'X', regNumber: null, orgType: 'CONTRACTOR', serviceTypes: ['CATERING'], contactName: null, phone: null, email: null,
+      tenantId: 't1', name: 'X', regNumber: null, orgType: 'CONTRACTOR', contactName: null, phone: null, email: null,
     });
   });
 
   it('кемпийн катеринг байгууллагаас CATERING хасах / идэвхгүй болгох → 409 (кемпийн кодыг нэрлэнэ); бусад төрөл өөрчлөхөд шалгахгүй', async () => {
     setActor(s.tx, { role: UserRole.ADMIN });
-    s.tx.coreOrganization.findFirst.mockResolvedValue({ id: 'o1' });
+    s.tx.coreOrganization.findFirst.mockResolvedValue({ id: 'o1', serviceTypes: [{ serviceType: { code: 'CATERING' } }] });
     s.tx.campSetting.findMany.mockResolvedValue([{ camp: { code: 'C1' } }]);
-    await expect(svc.update('t1', 'a1', 'o1', { serviceTypes: [CampOrgServiceType.OTHER] })).rejects.toThrow(/катеринг байгууллага \(C1\)/);
+    await expect(svc.update('t1', 'a1', 'o1', { serviceTypes: ['OTHER'] })).rejects.toThrow(/катеринг байгууллага \(C1\)/);
     await expect(svc.update('t1', 'a1', 'o1', { isActive: false })).rejects.toThrow(/C1/);
     expect(s.tx.campSetting.findMany).toHaveBeenCalledWith({ where: { tenantId: 't1', cateringOrganizationId: 'o1' }, select: { camp: { select: { code: true } } } });
     s.tx.campSetting.findMany.mockClear();
-    await svc.update('t1', 'a1', 'o1', { serviceTypes: [CampOrgServiceType.CATERING, CampOrgServiceType.OTHER] });
+    s.tx.campServiceType.findMany.mockResolvedValue([
+      { id: 'st-catering', code: 'CATERING', isActive: true },
+      { id: 'st-other', code: 'OTHER', isActive: true },
+    ]);
+    s.tx.coreOrganization.findFirstOrThrow.mockResolvedValue({
+      id: 'o1', name: 'X', regNumber: null, orgType: 'CONTRACTOR',
+      serviceTypes: [{ serviceType: { code: 'CATERING' } }, { serviceType: { code: 'OTHER' } }],
+      contactName: null, phone: null, email: null, isActive: true, createdAt: new Date(), updatedAt: new Date(),
+    });
+    await svc.update('t1', 'a1', 'o1', { serviceTypes: ['CATERING', 'OTHER'] });
     expect(s.tx.campSetting.findMany).not.toHaveBeenCalled();
   });
 
   it('идэвхгүй болгох: идэвхтэй ажилтан / гэрээ → 409; зөвхөн ирсэн талбарыг шинэчилнэ', async () => {
     setActor(s.tx, { role: UserRole.ADMIN });
-    s.tx.coreOrganization.findFirst.mockResolvedValue({ id: 'o1' });
+    s.tx.coreOrganization.findFirst.mockResolvedValue({ id: 'o1', serviceTypes: [] });
     s.tx.hrEmployee.count.mockResolvedValueOnce(0);
     s.tx.campContract.count.mockResolvedValueOnce(1);
     await expect(svc.update('t1', 'a1', 'o1', { isActive: false })).rejects.toThrow(/0 ажилтан, 1 гэрээ/);
-    s.tx.coreOrganization.findFirst.mockResolvedValueOnce({ id: 'o1' }).mockResolvedValueOnce(null);
+    s.tx.coreOrganization.findFirst.mockResolvedValueOnce({ id: 'o1', serviceTypes: [] }).mockResolvedValueOnce(null);
+    s.tx.coreOrganization.findFirstOrThrow.mockResolvedValue({
+      id: 'o1', name: 'X', regNumber: '222', orgType: 'CONTRACTOR', serviceTypes: [],
+      contactName: null, phone: null, email: null, isActive: true, createdAt: new Date(), updatedAt: new Date(),
+    });
     await svc.update('t1', 'a1', 'o1', { phone: null, regNumber: '222' });
     expect(s.tx.coreOrganization.update.mock.calls[0][0].data).toEqual({ phone: null, regNumber: '222' });
   });

@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, Field, inputCls, Modal } from '../../camp/components/ui'
+import { Button, Field, inputCls, Modal } from '../../../core/ui'
 import { FEED_REPORT_REASONS, type FeedReportReason } from '../types'
 
-export const MAX_REPORT_NOTE = 500
+const MAX_REPORT_NOTE = 500
 
 interface Props {
   onSubmit: (v: { reason: FeedReportReason; note: string }) => void

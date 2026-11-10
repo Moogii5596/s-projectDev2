@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { AxiosError, AxiosHeaders } from 'axios'
 import { daysToSegments, formatRanges, missingDays, patternProblem, segmentsToDays } from '../shift-pattern'
-import { P, isComingSoon, isSystemAdmin, makeCan, mergeRolePermissions, visiblePermissions } from '../permissions'
-import { apiErrorMessage } from '../errors'
-import { addDays, isoWeekday, todayUb } from '../dates'
+import { P, isComingSoon, isSystemAdmin, makeCan, mergeRolePermissions, visiblePermissions } from '../../../../core/permissions'
+import { apiErrorMessage } from '../../../../core/errors'
+import { addDays, isoWeekday, todayUb } from '../../../../core/dates'
 
 const axiosErr = (status: number | null, data?: unknown) => {
   const e = new AxiosError('fail')

@@ -4,13 +4,14 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
 import type { Building, BulkRoomsInput, Room, RoomStatus } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
-import { ROOM_STATUS_LABEL } from '../lib/labels'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { ROOM_STATUS_LABEL, localizedCatalogName } from '../../../core/labels'
 import { BULK_ROOMS_MAX, planRooms } from '../lib/room-range'
-import { ExportButton } from '../components/ImportDialog'
-import { ActiveBadge, Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../components/ui'
+import { ExportButton } from '../../../core/ImportDialog'
+import { campHrBridge } from '../api/camp-hr.bridge'
+import { ActiveBadge, Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../../core/ui'
 
 const STATUS_TONE: Record<RoomStatus, 'green' | 'yellow' | 'gray'> = { ACTIVE: 'green', MAINTENANCE: 'yellow', INACTIVE: 'gray' }
 
@@ -22,7 +23,7 @@ const STATUS_TONE: Record<RoomStatus, 'green' | 'yellow' | 'gray'> = { ACTIVE: '
 export default function FacilitiesPage() {
   const { t } = useTranslation()
   const { campId = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const buildings = useQuery({ queryKey: campKeys.buildings(campId), queryFn: () => campApi.buildings(campId) })
   const rooms = useQuery({ queryKey: campKeys.rooms(campId), queryFn: () => campApi.rooms(campId) })
   const [buildingFilter, setBuildingFilter] = useState('')
@@ -69,7 +70,7 @@ export default function FacilitiesPage() {
                 </option>
               ))}
             </select>
-            <ExportButton campId={campId} type="rooms" />
+            <ExportButton exportFile={() => campHrBridge.exportRoomFile(campId)} />
             {canRoom && (
               <Button size="sm" onClick={() => setRoomModal('new')} disabled={activeBuildings.length === 0} title={activeBuildings.length === 0 ? t('camp.facilities.add_building_first') : undefined}>
                 {t('camp.facilities.add_room')}
@@ -151,7 +152,7 @@ function Buildings({
   canEdit: boolean
   canRoom: boolean
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [withRooms, setWithRooms] = useState(false)
@@ -161,7 +162,7 @@ function Buildings({
   const types = useQuery({ queryKey: campKeys.catalog('building-types'), queryFn: () => campApi.catalog('building-types') })
   const activeTypes = (types.data ?? []).filter((x) => x.isActive)
   const plan = withRooms ? planRooms(rangeInput(range), []) : null
-  const add = useCampMutation(
+  const add = useAppMutation(
     () => campApi.createBuilding(campId, { code: code.trim(), name: name.trim(), typeId: typeId || null, ...(withRooms ? { rooms: rangeInput(range) } : {}) }),
     [campKeys.buildings(campId), campKeys.rooms(campId), campKeys.catalog('building-types')],
     () => {
@@ -172,8 +173,8 @@ function Buildings({
       setRange(defaultRange())
     },
   )
-  const toggle = useCampMutation((b: Building) => campApi.updateBuilding(campId, b.id, { isActive: !b.isActive }), [campKeys.buildings(campId)])
-  const setType = useCampMutation(
+  const toggle = useAppMutation((b: Building) => campApi.updateBuilding(campId, b.id, { isActive: !b.isActive }), [campKeys.buildings(campId)])
+  const setType = useAppMutation(
     (v: { b: Building; typeId: string }) => campApi.updateBuilding(campId, v.b.id, { typeId: v.typeId || null }),
     [campKeys.buildings(campId), campKeys.catalog('building-types')],
   )
@@ -197,7 +198,7 @@ function Buildings({
                 <span>
                   <span className="font-mono text-gray-500 mr-2">{b.code}</span>
                   {b.name}
-                  {b.type && !canEdit && <span className="ml-2 text-xs text-gray-500">· {b.type.name}</span>}
+                  {b.type && !canEdit && <span className="ml-2 text-xs text-gray-500">· {localizedCatalogName(b.type, i18n.resolvedLanguage ?? i18n.language)}</span>}
                 </span>
                 <span className="flex items-center gap-2 text-gray-500 whitespace-nowrap">
                   {t('camp.facilities.rooms_beds', { rooms: b.activeRooms ?? b._count?.rooms ?? 0, beds: b.capacity ?? 0 })}
@@ -219,7 +220,7 @@ function Buildings({
                       .filter((x) => x.isActive || x.id === b.typeId)
                       .map((x) => (
                         <option key={x.id} value={x.id}>
-                          {x.name}
+                          {localizedCatalogName(x, i18n.resolvedLanguage ?? i18n.language)}
                         </option>
                       ))}
                   </select>
@@ -332,7 +333,7 @@ function BulkRoomsModal({ campId, building, existing, onClose }: { campId: strin
   const { t } = useTranslation()
   const [f, setF] = useState<RangeForm>(defaultRange())
   const plan = planRooms(rangeInput(f), existing)
-  const m = useCampMutation(() => campApi.bulkRooms(campId, building.id, rangeInput(f)), [campKeys.buildings(campId), campKeys.rooms(campId)], onClose)
+  const m = useAppMutation(() => campApi.bulkRooms(campId, building.id, rangeInput(f)), [campKeys.buildings(campId), campKeys.rooms(campId)], onClose)
   const n = plan.ok ? (f.skip ? plan.create.length : plan.all.length) : 0
   return (
     <Modal
@@ -379,7 +380,7 @@ function RoomModal({
   })
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }))
   const base = () => ({ roomNo: f.roomNo.trim(), floor: f.floor === '' ? null : Number(f.floor), capacity: Number(f.capacity), note: f.note.trim() || null })
-  const m = useCampMutation(
+  const m = useAppMutation(
     () => (room ? campApi.updateRoom(campId, room.id, { ...base(), status: f.status }) : campApi.createRoom(campId, { ...base(), buildingId: f.buildingId })),
     [campKeys.rooms(campId), campKeys.buildings(campId)],
     onClose,

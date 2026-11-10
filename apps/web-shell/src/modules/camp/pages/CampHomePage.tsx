@@ -4,12 +4,12 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
 import { useAuth } from '../../../hooks/useAuth'
 import { getLastCamp, resolveLastCamp } from '../lib/last-camp'
-import { P } from '../lib/permissions'
-import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, inputCls } from '../components/ui'
+import { P } from '../../../core/permissions'
+import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, inputCls } from '../../../core/ui'
 
 /**
  * /camp — FB-11 (v0.2.0): сүүлд орсон кемп рүү шууд (идэвхтэй, эрхтэй бол). `?list=1` эсвэл сүүлийнх алга → жагсаалт.
@@ -19,7 +19,7 @@ export default function CampHomePage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [params] = useSearchParams()
-  const perms = useCampPermissions()
+  const perms = useAppPermissions()
   const camps = useQuery({ queryKey: campKeys.camps, queryFn: () => campApi.camps(false) })
   const [creating, setCreating] = useState(false)
 
@@ -101,7 +101,7 @@ export function CreateCampModal({ onClose }: { onClose: () => void }) {
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [location, setLocation] = useState('')
-  const m = useCampMutation(
+  const m = useAppMutation(
     () => campApi.createCamp({ code: code.trim(), name: name.trim(), location: location.trim() || null }),
     [campKeys.camps],
     onClose,

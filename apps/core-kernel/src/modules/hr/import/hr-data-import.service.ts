@@ -24,6 +24,7 @@ import { employeesHandler } from './employees.handler';
 import { formerEmployeesHandler } from './former-employees.handler';
 import { positionsHandler } from './positions.handler';
 import { DataImportHandler, ImportCtx, PlannedRow } from './import-types';
+import { DataTransferRegistry } from '../../core/import-export/data-transfer.registry';
 
 /**
  * URL-ийн төрөл → handler. HR-ийн өөрийнх энд; бусад модуль `registerHandler`-ээр нэмнэ
@@ -83,38 +84,40 @@ export class HrDataImportService {
     private readonly prisma: PrismaTenantClientService,
     private readonly access: CampAccessService,
     private readonly audit: CampAuditService,
-  ) {}
-
-  private readonly extraExports = new Map<string, ExtraExport>();
-  private readonly handlers = new Map<string, DataImportHandler>(Object.entries(BUILT_IN));
-  private readonly byEnum = new Map<CampDataImportType, DataImportHandler>(Object.values(BUILT_IN).map((h) => [h.type, h]));
+    private readonly transfers: DataTransferRegistry,
+  ) {
+    for (const [type, handler] of Object.entries(BUILT_IN)) {
+      this.registerHandler(type, handler, 'hr');
+      this.registerExport(type, { spec: handler.spec, rows: handler.exportRows }, 'hr');
+    }
+  }
 
   /** Импортын нэмэлт төрөл бүртгэх (Кемп: өрөөний тохиргоо, байрлуулалт) — `CampHrBridge.onModuleInit` */
-  registerHandler(type: string, handler: DataImportHandler): void {
-    this.handlers.set(type, handler);
-    this.byEnum.set(handler.type, handler);
+  registerHandler(type: string, handler: DataImportHandler, module: string): void {
+    this.transfers.registerImport({ module, type, specType: handler.spec.type, handler });
   }
 
   /** Бүртгэлтэй импортын төрлүүд (URL) */
   types(): string[] {
-    return [...this.handlers.keys()];
+    return this.transfers.importTypes();
   }
 
   private handlerFor(type: string): DataImportHandler {
-    const h = this.handlers.get(type);
+    const h = this.transfers.getImport<DataImportHandler>(type);
     if (!h) throw badRequest('import.unknown_type', { type });
     return h;
   }
 
   private handlerOf(type: CampDataImportType): DataImportHandler {
-    const h = this.byEnum.get(type);
+    const h = this.types().map((key) => this.transfers.getImport<DataImportHandler>(key))
+      .find((handler) => handler?.type === type);
     if (!h) throw badRequest('import.unknown_type', { type });
     return h;
   }
 
   /** Нэмэлт экспорт бүртгэх (Кемп: `rooms`) — `CampHrBridge.onModuleInit` */
-  registerExport(type: string, exporter: ExtraExport): void {
-    this.extraExports.set(type, exporter);
+  registerExport(type: string, exporter: ExtraExport, module: string): void {
+    this.transfers.registerExport({ module, type, specType: exporter.spec.type, handler: exporter });
   }
 
   template(type: string): Promise<Buffer> {
@@ -223,8 +226,8 @@ export class HrDataImportService {
 
   /** Экспорт = импортын формат (хэрэглэгчийн хэлээр) */
   async export(tenantId: string, authId: string, campId: string, type: string): Promise<{ buffer: Buffer; fileName: string }> {
-    const extra = this.extraExports.get(type);
-    if (!extra && !this.handlers.has(type)) throw badRequest('import.unknown_type', { type });
+    const extra = this.transfers.getExport<ExtraExport>(type);
+    if (!extra && !this.transfers.getImport<DataImportHandler>(type)) throw badRequest('import.unknown_type', { type });
     const lang = currentLang();
     const { spec, rows, campCode } = await inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);

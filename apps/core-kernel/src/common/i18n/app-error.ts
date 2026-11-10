@@ -13,7 +13,7 @@ export interface AppErrorBody {
 }
 
 /** Хариуны body (кодтой) */
-export function appErrorBody(status: number, code: string, params: I18nParams = {}, extra: Record<string, unknown> = {}): AppErrorBody {
+function appErrorBody(status: number, code: string, params: I18nParams = {}, extra: Record<string, unknown> = {}): AppErrorBody {
   return { statusCode: status, code, params, message: t(code, params, currentLang()), ...extra };
 }
 

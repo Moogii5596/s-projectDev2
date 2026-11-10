@@ -1,8 +1,8 @@
 /** Огноо = 'YYYY-MM-DD' string (UTC, цагийн бүсгүй). Кемпийн бүх тооцоо өдрийн нарийвчлалтай. */
 const DAY_MS = 86_400_000;
 
-export const isoToMs = (iso: string): number => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
-export const msToIso = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
+const isoToMs = (iso: string): number => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
+const msToIso = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
 export const addDays = (iso: string, n: number): string => msToIso(isoToMs(iso) + n * DAY_MS);
 /** b − a (өдрөөр) */
 export const diffDays = (a: string, b: string): number => Math.round((isoToMs(b) - isoToMs(a)) / DAY_MS);

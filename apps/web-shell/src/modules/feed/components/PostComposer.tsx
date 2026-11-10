@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Button, ErrorBox } from '../../camp/components/ui'
+import { Button, ErrorBox } from '../../../core/ui'
 import { feedApi, feedKeys, type FeedListDto } from '../api'
 import { prependPost } from '../lib/feed'
 import ImagePicker from './ImagePicker'

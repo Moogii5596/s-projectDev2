@@ -6,6 +6,7 @@
   "editor.codeActionsOnSave": { "source.fixAll.eslint": "explicit" },
   "files.eol": "\n",
   "typescript.tsdk": "node_modules/typescript/lib",
+  "eslint.options": { "rulePaths": ["${workspaceFolder}/apps/web-shell/eslint-rules"] },
   "eslint.workingDirectories": [{ "mode": "auto" }],
   "search.exclude": {
     "**/node_modules": true, "**/dist": true, "**/.turbo": true,

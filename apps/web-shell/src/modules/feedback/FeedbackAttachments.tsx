@@ -1,8 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { Button } from '../camp/components/ui'
-import FeedImageGrid from '../feed/components/FeedImageGrid'
-import ImagePicker from '../feed/components/ImagePicker'
-import type { FeedImageDto } from '../feed/types'
+import { Button } from '../../core/ui'
+import { FeedImageGrid, ImagePicker, type FeedImageDto } from './feed-bridge'
 import { remainingAttachmentSlots } from './lib'
 
 interface Props {

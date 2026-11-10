@@ -2,12 +2,12 @@ import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { campApi } from '../../camp/api/camp-api'
-import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
+import { campApi } from '../api/camp-bridge'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
 import { accessibleSites, canSeeHrSection } from '../../../lib/access'
 import { useAuth } from '../../../hooks/useAuth'
-import { setLastCamp } from '../../camp/lib/last-camp'
-import { Badge, ErrorBox, Loading, inputSmCls } from '../../camp/components/ui'
+import { setLastCamp } from '../api/camp-bridge'
+import { Badge, ErrorBox, Loading, inputSmCls } from '../../../core/ui'
 import { HR_SECTIONS, hrPath, sectionFromPath } from '../lib/hr-sections'
 import PageSuspense from '../../../components/PageSuspense'
 
@@ -24,7 +24,7 @@ export default function HrLayout() {
   const site = useQuery({ queryKey: campKeys.camp(campId), queryFn: () => campApi.camp(campId), enabled: !!campId })
   const sites = useQuery({ queryKey: campKeys.camps, queryFn: () => campApi.camps(false) })
   // v0.2.3 Блок 3 (PIL-19): зөвхөн хандах эрхтэй ажлын байр, хэсэг
-  const perms = useCampPermissions()
+  const perms = useAppPermissions()
   const siteList = accessibleSites(perms.data, sites.data ?? [])
   const sections = HR_SECTIONS.filter((s) => canSeeHrSection(perms.data, campId, s))
 

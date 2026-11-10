@@ -122,7 +122,7 @@ function headerMap(values: string[]): Partial<Record<Field, number>> | null {
 const rowValues = (row: ExcelJS.Row, width: number): string[] =>
   Array.from({ length: width }, (_, i) => cellText(row.getCell(i + 1).value).trim());
 
-export function parseShiftChangeSheet(ws: ExcelJS.Worksheet): { rows: ShiftChangeRow[]; skipped: SkippedSheet | null } {
+function parseShiftChangeSheet(ws: ExcelJS.Worksheet): { rows: ShiftChangeRow[]; skipped: SkippedSheet | null } {
   const width = Math.max(ws.columnCount, 1);
   const title = rowValues(ws.getRow(1), width).find(Boolean) ?? '';
   const kind = sheetKind(ws.name, title);

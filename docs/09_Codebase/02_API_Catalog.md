@@ -2,7 +2,7 @@
 title: "API каталог (core-kernel)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 tags: [codebase, api, generated]
 ---
 
@@ -10,29 +10,37 @@ tags: [codebase, api, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Нийт **258** endpoint, 35 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
+Нийт **292** endpoint, 42 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
 
 **Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). **OWNER·ADMIN** = зөвхөн системийн роль (`requireTenantAdmin` — хэрэглэгч / роль удирдах, SEC-009), `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].
 
 ## Агуулга
 
 - [[#app]] — 1
-- [[#auth]] — 11
-- [[#common/i18n]] — 7
+- [[#auth]] — 12
+- [[#common/i18n]] — 8
 - [[#modules/budget]] — 6
 - [[#modules/camp/assets]] — 10
 - [[#modules/camp/attendance]] — 6
 - [[#modules/camp/audit]] — 1
 - [[#modules/camp/catalog]] — 5
 - [[#modules/camp/contracts]] — 19
-- [[#modules/camp/maintenance]] — 12
+- [[#modules/camp/maintenance]] — 13
 - [[#modules/camp/master]] — 11
 - [[#modules/camp/meal-orders]] — 15
 - [[#modules/camp/rbac]] — 25
 - [[#modules/camp/settings]] — 5
+- [[#modules/core/approvals]] — 11
+- [[#modules/core/attachments]] — 8
+- [[#modules/core/calendars]] — 5
+- [[#modules/core/debug]] — 11
 - [[#modules/core/exchange-rates]] — 3
-- [[#modules/core/feedback]] — 11
-- [[#modules/core/organizations]] — 3
+- [[#modules/core/feedback]] — 12
+- [[#modules/core/modules]] — 3
+- [[#modules/core/notifications]] — 6
+- [[#modules/core/organizations]] — 4
+- [[#modules/core/settings]] — 3
+- [[#modules/core/sites]] — 4
 - [[#modules/feed]] — 17
 - [[#modules/health]] — 1
 - [[#modules/hr/attendance]] — 15
@@ -47,7 +55,6 @@ tags: [codebase, api, generated]
 - [[#modules/tenant-admin]] — 1
 - [[#modules/vendor]] — 3
 - [[#modules/workflow]] — 7
-- [[#modules/camp/legacy]] — 22
 
 ## app
 
@@ -60,16 +67,17 @@ tags: [codebase, api, generated]
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
 | POST | `/api/v1/auth/register` | `AuthController.register` → `AuthService.getMe` | — | `auth.controller.ts:56` |
-| POST | `/api/v1/auth/login` | `AuthController.login` → `AuthService.login` | — | `auth.controller.ts:71` |
-| POST | `/api/v1/auth/sign-in` | `AuthController.signIn` → `SignInService.signIn` | — | 🌐 `auth.controller.ts:87` |
-| GET | `/api/v1/auth/invites/:token` | `AuthController.inspectInvite` → `InviteService.inspect` | — | 🌐 `auth.controller.ts:94` |
-| POST | `/api/v1/auth/invites/:token/accept` | `AuthController.acceptInvite` → `InviteService.accept` | — | 🌐 `auth.controller.ts:102` |
-| POST | `/api/v1/auth/forgot-password` | `AuthController.forgotPassword` → `InviteService.forgot` | — | 🌐 `auth.controller.ts:110` |
-| POST | `/api/v1/auth/change-password` | `AuthController.changePassword` → `SignInService.changePassword` | — | AllowPasswordChangeRequired `auth.controller.ts:118` |
-| GET | `/api/v1/auth/sessions` | `AuthController.sessions` → `SessionRevokeService.list` | — | AllowPasswordChangeRequired `auth.controller.ts:128` |
-| DELETE | `/api/v1/auth/sessions/others` | `AuthController.revokeOtherSessions` → `SessionRevokeService.revokeOthers` | — | AllowPasswordChangeRequired `auth.controller.ts:137` |
-| DELETE | `/api/v1/auth/sessions/:id` | `AuthController.revokeSession` → `SessionRevokeService.revokeOne` | — | AllowPasswordChangeRequired `auth.controller.ts:146` |
-| GET | `/api/v1/auth/me` | `AuthController.me` → `AuthService.getMe` | — | AllowPasswordChangeRequired UseGuards(TenantAuthGuard) UseInterceptors `auth.controller.ts:156` |
+| GET | `/api/v1/auth/password-policy` | `AuthController.passwordPolicy` → `AuthService.passwordPolicy` | — | AllowPasswordChangeRequired `auth.controller.ts:68` |
+| POST | `/api/v1/auth/login` | `AuthController.login` → `AuthService.login` | — | `auth.controller.ts:78` |
+| POST | `/api/v1/auth/sign-in` | `AuthController.signIn` → `SignInService.signIn` | — | 🌐 `auth.controller.ts:94` |
+| GET | `/api/v1/auth/invites/:token` | `AuthController.inspectInvite` → `InviteService.inspect` | — | 🌐 `auth.controller.ts:101` |
+| POST | `/api/v1/auth/invites/:token/accept` | `AuthController.acceptInvite` → `InviteService.accept` | — | 🌐 `auth.controller.ts:109` |
+| POST | `/api/v1/auth/forgot-password` | `AuthController.forgotPassword` → `InviteService.forgot` | — | 🌐 `auth.controller.ts:117` |
+| POST | `/api/v1/auth/change-password` | `AuthController.changePassword` → `SignInService.changePassword` | — | AllowPasswordChangeRequired `auth.controller.ts:125` |
+| GET | `/api/v1/auth/sessions` | `AuthController.sessions` → `SessionRevokeService.list` | — | AllowPasswordChangeRequired `auth.controller.ts:135` |
+| DELETE | `/api/v1/auth/sessions/others` | `AuthController.revokeOtherSessions` → `SessionRevokeService.revokeOthers` | — | AllowPasswordChangeRequired `auth.controller.ts:144` |
+| DELETE | `/api/v1/auth/sessions/:id` | `AuthController.revokeSession` → `SessionRevokeService.revokeOne` | — | AllowPasswordChangeRequired `auth.controller.ts:153` |
+| GET | `/api/v1/auth/me` | `AuthController.me` → `AuthService.getMe` | — | AllowPasswordChangeRequired UseGuards(TenantAuthGuard) UseInterceptors `auth.controller.ts:163` |
 
 ## common/i18n
 
@@ -81,7 +89,8 @@ tags: [codebase, api, generated]
 | POST | `/api/v1/i18n/admin/preview` | `I18nController.preview` → `I18nOverridesService.preview` | — | `i18n.controller.ts:79` |
 | POST | `/api/v1/i18n/admin/apply` | `I18nController.apply` → `I18nOverridesService.apply` | — | `i18n.controller.ts:96` |
 | GET | `/api/v1/i18n/admin/overrides` | `I18nController.list` → `I18nOverridesService.listOverrides` | — | `i18n.controller.ts:101` |
-| GET | `/api/v1/i18n/admin/history` | `I18nController.history` → `I18nOverridesService.history` | — | `i18n.controller.ts:106` |
+| GET | `/api/v1/i18n/admin/catalog` | `I18nController.catalog` → `I18nOverridesService.listCatalog` | — | `i18n.controller.ts:106` |
+| GET | `/api/v1/i18n/admin/history` | `I18nController.history` → `I18nOverridesService.history` | — | `i18n.controller.ts:111` |
 
 ## modules/budget
 
@@ -166,16 +175,17 @@ tags: [codebase, api, generated]
 |---|---|---|---|---|
 | GET | `/api/v1/camp/camps/:campId/maintenance` | `CampMaintenanceController.list` → `CampMaintenanceService.list` | гишүүн | `camp-maintenance.controller.ts:15` |
 | POST | `/api/v1/camp/camps/:campId/maintenance` | `CampMaintenanceController.create` → `CampMaintenanceService.create` | `camp.maintenance.create` | `camp-maintenance.controller.ts:22` |
-| GET | `/api/v1/camp/camps/:campId/maintenance/:id` | `CampMaintenanceController.get` → `CampMaintenanceService.get` | гишүүн | `camp-maintenance.controller.ts:28` |
-| PATCH | `/api/v1/camp/camps/:campId/maintenance/:id` | `CampMaintenanceController.update` → `CampMaintenanceService.update` | `camp.maintenance.close` `camp.maintenance.create` | `camp-maintenance.controller.ts:34` |
-| POST | `/api/v1/camp/camps/:campId/maintenance/:id/start` | `CampMaintenanceController.start` → `CampMaintenanceService.transition` | `camp.maintenance.parts` (`TRANSITIONS`) | `camp-maintenance.controller.ts:41` |
-| POST | `/api/v1/camp/camps/:campId/maintenance/:id/complete` | `CampMaintenanceController.complete` → `CampMaintenanceService.transition` | `camp.maintenance.parts` (`TRANSITIONS`) | `camp-maintenance.controller.ts:48` |
-| POST | `/api/v1/camp/camps/:campId/maintenance/:id/reopen` | `CampMaintenanceController.reopen` → `CampMaintenanceService.transition` | `camp.maintenance.close` (`TRANSITIONS`) | `camp-maintenance.controller.ts:55` |
-| POST | `/api/v1/camp/camps/:campId/maintenance/:id/close` | `CampMaintenanceController.close` → `CampMaintenanceService.transition` | `camp.maintenance.close` (`TRANSITIONS`) | `camp-maintenance.controller.ts:62` |
-| POST | `/api/v1/camp/camps/:campId/maintenance/:id/cancel` | `CampMaintenanceController.cancel` → `CampMaintenanceService.transition` | `camp.maintenance.close` (`TRANSITIONS`) | `camp-maintenance.controller.ts:69` |
-| POST | `/api/v1/camp/camps/:campId/maintenance/:id/parts` | `CampMaintenanceController.addPart` → `CampMaintenanceService.addPart` | `camp.maintenance.parts` | `camp-maintenance.controller.ts:76` |
-| PATCH | `/api/v1/camp/camps/:campId/maintenance/:id/parts/:partId` | `CampMaintenanceController.updatePart` → `CampMaintenanceService.updatePart` | `camp.maintenance.parts` | `camp-maintenance.controller.ts:82` |
-| DELETE | `/api/v1/camp/camps/:campId/maintenance/:id/parts/:partId` | `CampMaintenanceController.removePart` → `CampMaintenanceService.removePart` | `camp.maintenance.parts` | `camp-maintenance.controller.ts:94` |
+| POST | `/api/v1/camp/camps/:campId/maintenance/from-post/:postId` | `CampMaintenanceController.createFromPost` → `CampMaintenanceService.create` | `camp.maintenance.create` | `camp-maintenance.controller.ts:30` |
+| GET | `/api/v1/camp/camps/:campId/maintenance/:id` | `CampMaintenanceController.get` → `CampMaintenanceService.get` | гишүүн | `camp-maintenance.controller.ts:41` |
+| PATCH | `/api/v1/camp/camps/:campId/maintenance/:id` | `CampMaintenanceController.update` → `CampMaintenanceService.update` | `camp.maintenance.close` `camp.maintenance.create` | `camp-maintenance.controller.ts:47` |
+| POST | `/api/v1/camp/camps/:campId/maintenance/:id/start` | `CampMaintenanceController.start` → `CampMaintenanceService.transition` | `camp.maintenance.parts` (`TRANSITIONS`) | `camp-maintenance.controller.ts:54` |
+| POST | `/api/v1/camp/camps/:campId/maintenance/:id/complete` | `CampMaintenanceController.complete` → `CampMaintenanceService.transition` | `camp.maintenance.parts` (`TRANSITIONS`) | `camp-maintenance.controller.ts:61` |
+| POST | `/api/v1/camp/camps/:campId/maintenance/:id/reopen` | `CampMaintenanceController.reopen` → `CampMaintenanceService.transition` | `camp.maintenance.close` (`TRANSITIONS`) | `camp-maintenance.controller.ts:68` |
+| POST | `/api/v1/camp/camps/:campId/maintenance/:id/close` | `CampMaintenanceController.close` → `CampMaintenanceService.transition` | `camp.maintenance.close` (`TRANSITIONS`) | `camp-maintenance.controller.ts:75` |
+| POST | `/api/v1/camp/camps/:campId/maintenance/:id/cancel` | `CampMaintenanceController.cancel` → `CampMaintenanceService.transition` | `camp.maintenance.close` (`TRANSITIONS`) | `camp-maintenance.controller.ts:82` |
+| POST | `/api/v1/camp/camps/:campId/maintenance/:id/parts` | `CampMaintenanceController.addPart` → `CampMaintenanceService.addPart` | `camp.maintenance.parts` | `camp-maintenance.controller.ts:89` |
+| PATCH | `/api/v1/camp/camps/:campId/maintenance/:id/parts/:partId` | `CampMaintenanceController.updatePart` → `CampMaintenanceService.updatePart` | `camp.maintenance.parts` | `camp-maintenance.controller.ts:95` |
+| DELETE | `/api/v1/camp/camps/:campId/maintenance/:id/parts/:partId` | `CampMaintenanceController.removePart` → `CampMaintenanceService.removePart` | `camp.maintenance.parts` | `camp-maintenance.controller.ts:107` |
 
 ## modules/camp/master
 
@@ -253,6 +263,61 @@ tags: [codebase, api, generated]
 | POST | `/api/v1/camp/camps/:campId/meal-locations` | `CampSettingsController.createLocation` → `CampSettingsService.createMealLocation` | `camp.settings.manage` | `camp-settings.controller.ts:32` |
 | PATCH | `/api/v1/camp/camps/:campId/meal-locations/:id` | `CampSettingsController.updateLocation` → `CampSettingsService.updateMealLocation` | `camp.settings.manage` | `camp-settings.controller.ts:38` |
 
+## modules/core/approvals
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/core/approvals/inbox` | `ApprovalsController.inbox` → `ApprovalsService.inbox` | — | `approvals.controller.ts:13` |
+| GET | `/api/v1/core/approvals/mine` | `ApprovalsController.mine` → `ApprovalsService.mine` | — | `approvals.controller.ts:19` |
+| GET | `/api/v1/core/approvals/entity-types` | `ApprovalsController.entityTypes` → `ApprovalsService.entityTypes` | **OWNER·ADMIN** | `approvals.controller.ts:25` |
+| GET | `/api/v1/core/approvals/definitions` | `ApprovalsController.definitions` → `ApprovalsService.definitions` | **OWNER·ADMIN** | `approvals.controller.ts:31` |
+| POST | `/api/v1/core/approvals/definitions` | `ApprovalsController.saveDefinition` → `ApprovalsService.saveDefinition` | **OWNER·ADMIN** | `approvals.controller.ts:37` |
+| GET | `/api/v1/core/approvals/delegates` | `ApprovalsController.delegates` → `ApprovalsService.delegateCandidates` | — | `approvals.controller.ts:43` |
+| GET | `/api/v1/core/approvals/delegations` | `ApprovalsController.delegations` → `ApprovalsService.delegations` | — | `approvals.controller.ts:49` |
+| POST | `/api/v1/core/approvals/delegations` | `ApprovalsController.createDelegation` → `ApprovalsService.createDelegation` | — | `approvals.controller.ts:55` |
+| DELETE | `/api/v1/core/approvals/delegations/:id` | `ApprovalsController.revokeDelegation` → `ApprovalsService.revokeDelegation` | — | `approvals.controller.ts:61` |
+| GET | `/api/v1/core/approvals/instances/:id` | `ApprovalsController.detail` → `ApprovalsService.detail` | — | `approvals.controller.ts:67` |
+| POST | `/api/v1/core/approvals/instances/:id/decide` | `ApprovalsController.decide` → `ApprovalsService.decide` | — | `approvals.controller.ts:73` |
+
+## modules/core/attachments
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/core/attachments/patterns` | `AttachmentsController.patterns` → `AttachmentsService.listNamePatterns` | — | `attachments.controller.ts:37` |
+| PUT | `/api/v1/core/attachments/patterns` | `AttachmentsController.savePattern` → `AttachmentsService.saveNamePattern` | — | `attachments.controller.ts:43` |
+| POST | `/api/v1/core/attachments/bulk/preview` | `AttachmentsController.previewBulk` → `AttachmentsService.previewBulk` | — | `attachments.controller.ts:49` |
+| POST | `/api/v1/core/attachments/bulk/commit` | `AttachmentsController.commitBulk` → `AttachmentsService.commitBulk` | — | `attachments.controller.ts:56` |
+| GET | `/api/v1/core/attachments` | `AttachmentsController.list` → `AttachmentsService.list` | — | `attachments.controller.ts:63` |
+| POST | `/api/v1/core/attachments` | `AttachmentsController.upload` → `AttachmentTypeRegistry.get` | — | `attachments.controller.ts:69` |
+| GET | `/api/v1/core/attachments/:id/download` | `AttachmentsController.download` → `AttachmentsService.download` | — | `attachments.controller.ts:78` |
+| DELETE | `/api/v1/core/attachments/:id` | `AttachmentsController.remove` → `AttachmentsService.remove` | — | `attachments.controller.ts:90` |
+
+## modules/core/calendars
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/core/calendars` | `CoreCalendarController.list` → `CoreCalendarService.list` | **OWNER·ADMIN** | `core-calendar.controller.ts:12` |
+| POST | `/api/v1/core/calendars` | `CoreCalendarController.create` → `CoreCalendarService.create` | **OWNER·ADMIN** | `core-calendar.controller.ts:18` |
+| PATCH | `/api/v1/core/calendars/:id` | `CoreCalendarController.update` → `CoreCalendarService.update` | **OWNER·ADMIN** | `core-calendar.controller.ts:24` |
+| POST | `/api/v1/core/calendars/:id/holidays` | `CoreCalendarController.addHoliday` → `CoreCalendarService.addHoliday` | **OWNER·ADMIN** | `core-calendar.controller.ts:30` |
+| DELETE | `/api/v1/core/calendars/:calendarId/holidays/:id` | `CoreCalendarController.removeHoliday` → `CoreCalendarService.removeHoliday` | **OWNER·ADMIN** | `core-calendar.controller.ts:36` |
+
+## modules/core/debug
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/core/debug/me` | `DebugController.me` → `DebugService.canManage` | `core.debug.manage` | `debug.controller.ts:25` |
+| GET | `/api/v1/core/debug/system` | `DebugController.system` → `DebugService.systemInfo` | — | `debug.controller.ts:31` |
+| GET | `/api/v1/core/debug/health` | `DebugController.health` → `DebugService.health` | — | `debug.controller.ts:36` |
+| GET | `/api/v1/core/debug/users` | `DebugController.users` → `DebugService.users` | — | `debug.controller.ts:41` |
+| GET | `/api/v1/core/debug/permissions/:userId` | `DebugController.permissions` → `DebugService.permissions` | `core.debug.view` | `debug.controller.ts:46` |
+| GET | `/api/v1/core/debug/logs` | `DebugController.logs` → `DebugService.logs` | — | `debug.controller.ts:51` |
+| GET | `/api/v1/core/debug/audit` | `DebugController.audit` → `DebugService.auditLog` | — | `debug.controller.ts:57` |
+| GET | `/api/v1/core/debug/i18n-missing` | `DebugController.i18nMissing` → `DebugService.i18nMissing` | — | `debug.controller.ts:62` |
+| GET | `/api/v1/core/debug/outbox` | `DebugController.outbox` → `DebugService.outbox` | — | `debug.controller.ts:67` |
+| POST | `/api/v1/core/debug/actions/cache-clear` | `DebugController.clearCaches` → `DebugService.clearCaches` | гишүүн | `debug.controller.ts:72` |
+| POST | `/api/v1/core/debug/actions/outbox/:id/retry` | `DebugController.retryOutbox` → `DebugService.retryOutbox` | гишүүн | `debug.controller.ts:78` |
+
 ## modules/core/exchange-rates
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
@@ -271,19 +336,57 @@ tags: [codebase, api, generated]
 | GET | `/api/v1/core/feedback` | `CoreFeedbackController.list` → `CoreFeedbackService.list` | — | `core-feedback.controller.ts:64` |
 | GET | `/api/v1/core/feedback/export` | `CoreFeedbackController.export` → `CoreFeedbackService.exportXlsx` | — | `core-feedback.controller.ts:71` |
 | POST | `/api/v1/core/feedback` | `CoreFeedbackController.create` → `CoreFeedbackService.create` | — | `core-feedback.controller.ts:80` |
-| PATCH | `/api/v1/core/feedback/:id` | `CoreFeedbackController.update` → `CoreFeedbackService.update` | — | `core-feedback.controller.ts:86` |
-| PATCH | `/api/v1/core/feedback/:id/status` | `CoreFeedbackController.setStatus` → `CoreFeedbackService.setStatus` | — | `core-feedback.controller.ts:92` |
-| DELETE | `/api/v1/core/feedback/:id` | `CoreFeedbackController.remove` → `CoreFeedbackService.remove` | — | `core-feedback.controller.ts:98` |
-| POST | `/api/v1/core/feedback/:id/vote` | `CoreFeedbackController.vote` → `CoreFeedbackService.vote` | — | `core-feedback.controller.ts:105` |
-| DELETE | `/api/v1/core/feedback/:id/vote` | `CoreFeedbackController.unvote` → `CoreFeedbackService.vote` | — | `core-feedback.controller.ts:111` |
+| POST | `/api/v1/core/feedback/from-post/:postId` | `CoreFeedbackController.createFromPost` → `CoreFeedbackService.create` | — | `core-feedback.controller.ts:88` |
+| PATCH | `/api/v1/core/feedback/:id` | `CoreFeedbackController.update` → `CoreFeedbackService.update` | — | `core-feedback.controller.ts:94` |
+| PATCH | `/api/v1/core/feedback/:id/status` | `CoreFeedbackController.setStatus` → `CoreFeedbackService.setStatus` | — | `core-feedback.controller.ts:100` |
+| DELETE | `/api/v1/core/feedback/:id` | `CoreFeedbackController.remove` → `CoreFeedbackService.remove` | — | `core-feedback.controller.ts:106` |
+| POST | `/api/v1/core/feedback/:id/vote` | `CoreFeedbackController.vote` → `CoreFeedbackService.vote` | — | `core-feedback.controller.ts:113` |
+| DELETE | `/api/v1/core/feedback/:id/vote` | `CoreFeedbackController.unvote` → `CoreFeedbackService.vote` | — | `core-feedback.controller.ts:119` |
+
+## modules/core/modules
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/me/modules` | `CoreTenantModulesController.myModules` → `CoreTenantModulesService.getMyModules` | `core.debug.view` | `core-tenant-modules.controller.ts:12` |
+| GET | `/api/v1/core/modules` | `CoreTenantModulesController.list` → `CoreTenantModulesService.list` | **OWNER·ADMIN** | `core-tenant-modules.controller.ts:18` |
+| PATCH | `/api/v1/core/modules/:moduleId` | `CoreTenantModulesController.update` → `CoreTenantModulesService.update` | **OWNER·ADMIN** | `core-tenant-modules.controller.ts:24` |
+
+## modules/core/notifications
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/core/notifications` | `NotificationsController.list` → `NotificationService.list` | — | `notifications.controller.ts:13` |
+| GET | `/api/v1/core/notifications/unread-count` | `NotificationsController.unreadCount` → `NotificationService.unreadCount` | — | `notifications.controller.ts:19` |
+| POST | `/api/v1/core/notifications/read-all` | `NotificationsController.readAll` → `NotificationService.markAllRead` | — | `notifications.controller.ts:25` |
+| POST | `/api/v1/core/notifications/:id/read` | `NotificationsController.read` → `NotificationService.markRead` | — | `notifications.controller.ts:31` |
+| GET | `/api/v1/core/notifications/preferences` | `NotificationsController.preferences` → `NotificationService.preferences` | — | `notifications.controller.ts:37` |
+| PUT | `/api/v1/core/notifications/preferences` | `NotificationsController.updatePreferences` → `NotificationService.updatePreferences` | — | `notifications.controller.ts:43` |
 
 ## modules/core/organizations
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| GET | `/api/v1/core/organizations` | `CoreOrganizationsController.list` → `CoreOrganizationsService.list` | гишүүн | `core-organizations.controller.ts:15` |
-| POST | `/api/v1/core/organizations` | `CoreOrganizationsController.create` → `CoreOrganizationsService.create` | `camp.master.manage` | `core-organizations.controller.ts:22` |
-| PATCH | `/api/v1/core/organizations/:id` | `CoreOrganizationsController.update` → `CoreOrganizationsService.update` | `camp.master.manage` | `core-organizations.controller.ts:28` |
+| GET | `/api/v1/core/organizations/service-types` | `CoreOrganizationsController.serviceTypes` → `CoreOrganizationsService.serviceTypeCatalog` | гишүүн | `core-organizations.controller.ts:15` |
+| GET | `/api/v1/core/organizations` | `CoreOrganizationsController.list` → `CoreOrganizationsService.list` | гишүүн | `core-organizations.controller.ts:21` |
+| POST | `/api/v1/core/organizations` | `CoreOrganizationsController.create` → `CoreOrganizationsService.create` | `camp.master.manage` | `core-organizations.controller.ts:28` |
+| PATCH | `/api/v1/core/organizations/:id` | `CoreOrganizationsController.update` → `CoreOrganizationsService.update` | `camp.master.manage` | `core-organizations.controller.ts:34` |
+
+## modules/core/settings
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/core/settings` | `CoreTenantSettingsController.get` → `CoreTenantSettingsService.get` | **OWNER·ADMIN** | `core-tenant-settings.controller.ts:12` |
+| PATCH | `/api/v1/core/settings/profile` | `CoreTenantSettingsController.updateProfile` → `CoreTenantSettingsService.updateProfile` | **OWNER·ADMIN** | `core-tenant-settings.controller.ts:18` |
+| PATCH | `/api/v1/core/settings/security` | `CoreTenantSettingsController.updateSecurity` → `CoreTenantSettingsService.updateSecurity` | **OWNER·ADMIN** | `core-tenant-settings.controller.ts:24` |
+
+## modules/core/sites
+
+| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
+|---|---|---|---|---|
+| GET | `/api/v1/core/sites` | `CoreSitesController.list` → `CoreSitesService.list` | **OWNER·ADMIN** | `core-sites.controller.ts:12` |
+| POST | `/api/v1/core/sites` | `CoreSitesController.create` → `CoreSitesService.create` | **OWNER·ADMIN** | `core-sites.controller.ts:18` |
+| PATCH | `/api/v1/core/sites/:id` | `CoreSitesController.update` → `CoreSitesService.update` | **OWNER·ADMIN** | `core-sites.controller.ts:24` |
+| DELETE | `/api/v1/core/sites/:id` | `CoreSitesController.archive` → `CoreSitesService.archive` | **OWNER·ADMIN** | `core-sites.controller.ts:30` |
 
 ## modules/feed
 
@@ -439,30 +542,3 @@ tags: [codebase, api, generated]
 | GET | `/api/v1/workflow/definitions` | `WorkflowDefinitionController.list` → `WorkflowDefinitionService.list` | — | `workflow-definition.controller.ts:16` |
 | POST | `/api/v1/workflow/definitions` | `WorkflowDefinitionController.create` → `WorkflowDefinitionService.create` | — | `workflow-definition.controller.ts:21` |
 | PUT | `/api/v1/workflow/definitions/:id` | `WorkflowDefinitionController.update` → `WorkflowDefinitionService.update` | — | `workflow-definition.controller.ts:27` |
-
-## modules/camp/legacy
-
-| Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
-|---|---|---|---|---|
-| GET | `/api/v1/camp/permissions` | `CampRbacLegacyController (extends CoreRbacController).permissions` → `CampRbacService.listPermissions` | — | Deprecated `rbac-legacy.controller.ts:10` |
-| GET | `/api/v1/camp/me/permissions` | `CampRbacLegacyController (extends CoreRbacController).myPermissions` → `CampRbacService.myPermissions` | — | Deprecated `rbac-legacy.controller.ts:10` |
-| GET | `/api/v1/camp/users` | `CampRbacLegacyController (extends CoreRbacController).users` → `CampRbacService.listUsers` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| GET | `/api/v1/camp/roles` | `CampRbacLegacyController (extends CoreRbacController).roles` → `CampRbacService.listRoles` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| POST | `/api/v1/camp/roles` | `CampRbacLegacyController (extends CoreRbacController).createRole` → `CampRbacService.createRole` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| PATCH | `/api/v1/camp/roles/:id` | `CampRbacLegacyController (extends CoreRbacController).updateRole` → `CampRbacService.updateRole` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| DELETE | `/api/v1/camp/roles/:id` | `CampRbacLegacyController (extends CoreRbacController).deleteRole` → `CampRbacService.deleteRole` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| PUT | `/api/v1/camp/roles/:id/permissions` | `CampRbacLegacyController (extends CoreRbacController).setPermissions` → `CampRbacService.setRolePermissions` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| GET | `/api/v1/camp/user-roles` | `CampRbacLegacyController (extends CoreRbacController).userRoles` → `CampRbacService.listUserRoles` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| POST | `/api/v1/camp/user-roles` | `CampRbacLegacyController (extends CoreRbacController).assign` → `CampRbacService.assignUserRole` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| DELETE | `/api/v1/camp/user-roles/:id` | `CampRbacLegacyController (extends CoreRbacController).remove` → `CampRbacService.removeUserRole` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| GET | `/api/v1/camp/roles/:id/apply-preview` | `CampRbacLegacyController (extends CoreRbacController).applyPreview` → `CampRbacService.previewRoleApply` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| POST | `/api/v1/camp/roles/:id/apply` | `CampRbacLegacyController (extends CoreRbacController).apply` → `CampRbacService.applyRoleTemplate` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| GET | `/api/v1/camp/users/:userId/permissions` | `CampRbacLegacyController (extends CoreRbacController).userPermissions` → `CampRbacService.listUserPermissions` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| POST | `/api/v1/camp/users/:userId/permissions` | `CampRbacLegacyController (extends CoreRbacController).grantDirect` → `CampRbacService.grantDirectPermission` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| DELETE | `/api/v1/camp/user-permissions/:id` | `CampRbacLegacyController (extends CoreRbacController).revokeDirect` → `CampRbacService.revokeDirectPermission` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| GET | `/api/v1/camp/positions/:positionId/role-templates` | `CampRbacLegacyController (extends CoreRbacController).positionTemplates` → `CampRbacService.getPositionTemplates` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| PUT | `/api/v1/camp/positions/:positionId/role-templates` | `CampRbacLegacyController (extends CoreRbacController).setPositionTemplates` → `CampRbacService.setPositionTemplates` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| POST | `/api/v1/camp/positions/:positionId/role-templates/apply` | `CampRbacLegacyController (extends CoreRbacController).applyPositionTemplates` → `CampEmployeeLoginService.applyPositionTemplates` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| POST | `/api/v1/camp/users/:userId/invites` | `CampRbacLegacyController (extends CoreRbacController).inviteUser` → `CampUserAccessService.invite` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| PATCH | `/api/v1/camp/users/:userId` | `CampRbacLegacyController (extends CoreRbacController).setUserActive` → `CampUserAccessService.setActive` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |
-| GET | `/api/v1/camp/invites/options` | `CampRbacLegacyController (extends CoreRbacController).inviteOptions` → `CampUserAccessService.options` | **OWNER·ADMIN** | Deprecated `rbac-legacy.controller.ts:10` |

@@ -13,6 +13,7 @@ let it_: CampIt;
 const L = (mealType: string, baseCount: number, mealLocationId?: string) => ({ mealType, mealLocationId: mealLocationId ?? it_.ids.loc, baseCount });
 const day = (n: number) => `2099-03-${String(n).padStart(2, '0')}`;
 const PAST = '2020-01-06';
+const CORE_RBAC = '/api/v1/core/rbac';
 
 const putSettings = (extra: Record<string, unknown>) =>
   it_.api().put(it_.camp('/settings')).set(it_.as('admin')).send({
@@ -24,9 +25,9 @@ const post = (who: 'admin' | 'manager' | 'nobody', date: string, path: string, b
 
 beforeAll(async () => {
   it_ = await createCampIt('v023meal');
-  const roles = (await it_.api().get('/api/v1/camp/roles').set(it_.as('admin'))).body as { id: string; systemCode: string | null }[];
+  const roles = (await it_.api().get(`${CORE_RBAC}/roles`).set(it_.as('admin'))).body as { id: string; systemCode: string | null }[];
   const caterer = roles.find((r) => r.systemCode === 'CATERING_ADMIN')!.id;
-  const r = await it_.api().post('/api/v1/camp/user-roles').set(it_.as('admin')).send({ userId: it_.coreIds.nobody, roleId: caterer, campId: it_.ids.c1 });
+  const r = await it_.api().post(`${CORE_RBAC}/user-roles`).set(it_.as('admin')).send({ userId: it_.coreIds.nobody, roleId: caterer, campId: it_.ids.c1 });
   expect(r.status).toBeLessThan(300);
 }, 120_000);
 
@@ -96,6 +97,10 @@ describe('Тохиргоо B — хүлээн авах + TWO_SIDED + өөрөө 
     const sub = await post('manager', d, '/submit');
     expect(sub.body).toMatchObject({ status: 'ORDERED', totalMeals: 100 });
     expect(sub.body.actions).toEqual(expect.arrayContaining(['edit', 'submit']));
+    const approval = await it_.prismaAdmin.workflowInstance.findFirstOrThrow({
+      where: { tenantId: it_.tenantId, entityType: 'CAMP_MEAL_ORDER', entityId: sub.body.id },
+    });
+    expect(approval.status).toBe('PENDING');
 
     expect((await post('manager', d, '/accept')).status).toBe(409);
     const view = await it_.api().get(order(d)).set(it_.as('nobody'));
@@ -104,6 +109,7 @@ describe('Тохиргоо B — хүлээн авах + TWO_SIDED + өөрөө 
     const acc = await post('nobody', d, '/accept');
     expect(acc.status).toBe(200);
     expect(acc.body).toMatchObject({ status: 'ACCEPTED', reviewedBy: it_.coreIds.nobody, orderedBy: it_.coreIds.manager });
+    expect((await it_.prismaAdmin.workflowInstance.findUniqueOrThrow({ where: { id: approval.id } })).status).toBe('APPROVED');
   });
 
   it('ACCEPTED: шууд засах 409; DB түгжээ — шууд UPDATE CAMP_MEAL_LOCKED', async () => {
@@ -119,10 +125,15 @@ describe('Тохиргоо B — хүлээн авах + TWO_SIDED + өөрөө 
     expect(req.body).toMatchObject({ status: 'CHANGE_REQUESTED', changeReason: 'Хүн нэмэгдсэн', totalMeals: 100 });
     expect(req.body.pendingLines).toHaveLength(2);
     expect(req.body.actions).toEqual(['withdrawChange']);
+    const changeApproval = await it_.prismaAdmin.workflowInstance.findFirstOrThrow({
+      where: { tenantId: it_.tenantId, entityType: 'CAMP_MEAL_ORDER_CHANGE', entityId: req.body.id },
+    });
+    expect(changeApproval.status).toBe('PENDING');
 
     const ok = await post('nobody', d, '/approve-change');
     expect(ok.status).toBe(200);
     expect(ok.body).toMatchObject({ status: 'ACCEPTED', totalMeals: 110, revisionNo: 1, pendingLines: null });
+    expect((await it_.prismaAdmin.workflowInstance.findUniqueOrThrow({ where: { id: changeApproval.id } })).status).toBe('APPROVED');
   });
 
   it('өөрчлөлтийг татгалзвал мөр хэвээр; саналаа цуцалж болно; шалтгаангүй татгалзах 400', async () => {
@@ -134,6 +145,10 @@ describe('Тохиргоо B — хүлээн авах + TWO_SIDED + өөрөө 
     await post('manager', d, '/request-change', { reason: 'Буцаах', lines: [L('BREAKFAST', 1)] });
     const wd = await post('manager', d, '/withdraw-change');
     expect(wd.body).toMatchObject({ status: 'ACCEPTED', totalMeals: 110 });
+    const cancelled = await it_.prismaAdmin.workflowInstance.findFirstOrThrow({
+      where: { tenantId: it_.tenantId, entityType: 'CAMP_MEAL_ORDER_CHANGE', entityId: wd.body.id, status: 'CANCELLED' },
+    });
+    expect(cancelled.status).toBe('CANCELLED');
   });
 
   it('татгалзах: шалтгаан заавал; REJECTED-ийг дахин засч илгээж болно', async () => {
@@ -153,6 +168,47 @@ describe('Тохиргоо B — хүлээн авах + TWO_SIDED + өөрөө 
     await put('manager', d3, [L('LUNCH', 3)]);
     await post('manager', d3, '/submit');
     expect((await post('manager', d3, '/reject', { reason: 'x' })).status).toBe(409);
+  });
+
+  it('allowSelfAccept=true үед requester хадгалагдаж, хүсэгч өөрөө батална', async () => {
+    const d4 = day(23);
+    await putSettings({ mealOrderRequiresAccept: true, mealOrderEditAfterAccept: 'TWO_SIDED', mealOrderAllowSelfAccept: true });
+    expect((await put('admin', d4, [L('LUNCH', 7)])).status).toBe(200);
+    const sub = await post('admin', d4, '/submit');
+    expect(sub.body.status).toBe('ORDERED');
+    const approval = await it_.prismaAdmin.workflowInstance.findFirstOrThrow({
+      where: { tenantId: it_.tenantId, entityType: 'CAMP_MEAL_ORDER', entityId: sub.body.id },
+    });
+    expect(approval.requesterId).toBe(it_.coreIds.admin);
+    const mine = await it_.api().get('/api/v1/core/approvals/mine').set(it_.as('admin'));
+    expect(mine.body.items.some((item: { id: string }) => item.id === approval.id)).toBe(true);
+    const inbox = await it_.api().get('/api/v1/core/approvals/inbox').set(it_.as('admin'));
+    expect(inbox.body.items.some((item: { id: string }) => item.id === approval.id)).toBe(true);
+
+    const accepted = await post('admin', d4, '/accept');
+    expect(accepted.status).toBe(200);
+    expect(accepted.body.status).toBe('ACCEPTED');
+    expect((await it_.prismaAdmin.workflowInstance.findUniqueOrThrow({ where: { id: approval.id } })).status).toBe('APPROVED');
+  });
+
+  it('workflow instance-гүй хуучин ORDERED мөрийг шийдэх үед approval instance нөхөн үүсгэнэ', async () => {
+    const d5 = day(24);
+    const draft = await put('manager', d5, [L('LUNCH', 9)]);
+    await it_.prismaAdmin.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.meal_order_edit', '1', true)`;
+      await tx.campMealOrder.update({
+        where: { id: draft.body.id },
+        data: { status: 'ORDERED', orderedBy: it_.coreIds.manager, orderedAt: new Date() },
+      });
+    });
+
+    const accepted = await post('nobody', d5, '/accept');
+    expect(accepted.status).toBe(200);
+    expect(accepted.body.status).toBe('ACCEPTED');
+    const approval = await it_.prismaAdmin.workflowInstance.findFirstOrThrow({
+      where: { tenantId: it_.tenantId, entityType: 'CAMP_MEAL_ORDER', entityId: draft.body.id },
+    });
+    expect(approval).toMatchObject({ status: 'APPROVED', requesterId: it_.coreIds.manager });
   });
 });
 

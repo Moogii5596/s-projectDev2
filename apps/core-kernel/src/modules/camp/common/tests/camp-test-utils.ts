@@ -23,7 +23,7 @@ const DEFAULTS: Record<string, unknown> = {
   updateMany: { count: 1 },
 };
 
-export function createTx(): TxMock {
+function createTx(): TxMock {
   const models: Record<string, ModelMock> = {};
   const executeRaw = vi.fn().mockResolvedValue(1);
   const queryRaw = vi.fn().mockResolvedValue([]);
@@ -41,11 +41,11 @@ export function createTx(): TxMock {
   });
 }
 
-export function createPrisma(tx: TxMock) {
+function createPrisma(tx: TxMock) {
   return { $transaction: vi.fn(async (fn: (t: unknown) => unknown, _options?: { timeout?: number; maxWait?: number }) => fn(tx)) };
 }
 
-export function createCache() {
+function createCache() {
   return {
     buildKey: (m: string, t: string, r: string, id?: string) => (id ? `cache:${m}:${t}:${r}:${id}` : `cache:${m}:${t}:${r}`),
     get: vi.fn().mockResolvedValue(null),

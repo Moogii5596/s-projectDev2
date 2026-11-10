@@ -1,10 +1,10 @@
-import type { ImportFormat, ImportPreview, SkippedSheetReason } from '../../camp/api/types'
+import type { ImportFormat, ImportPreview, SkippedSheetReason } from '../api/camp-bridge'
 
 /**
  * v0.2.3 Блок R4.3 — ирцийн импортын PREVIEW-ийн дээд хэсэг (цэвэр): badge-ууд, алгассан хуудас, ростерын зөрүү.
  * Текст = i18n түлхүүр (`camp.att.*`), тоо = `{n}`.
  */
-export type BadgeTone = 'gray' | 'green' | 'yellow' | 'red' | 'blue'
+type BadgeTone = 'gray' | 'green' | 'yellow' | 'red' | 'blue'
 export interface PreviewBadge {
   key: string
   n?: number

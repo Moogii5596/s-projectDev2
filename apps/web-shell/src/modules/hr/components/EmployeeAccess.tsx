@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { campApi } from '../../camp/api/camp-api'
-import type { Employee } from '../../camp/api/types'
-import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
-import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { isSystemAdmin } from '../../camp/lib/permissions'
-import { Badge, Button, ErrorBox, inputSmCls } from '../../camp/components/ui'
+import { campApi } from '../api/camp-bridge'
+import type { Employee } from '../api/camp-bridge'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { isSystemAdmin } from '../../../core/permissions'
+import { Badge, Button, ErrorBox, inputSmCls } from '../../../core/ui'
 import InviteActions from './InviteActions'
 import { loginName, userState } from '../lib/user-access'
 
@@ -19,14 +19,14 @@ const STATE_TONE = { ACTIVE: 'green', INVITED: 'yellow', NO_INVITE: 'gray', INAC
  */
 export default function EmployeeAccess({ campId, emp }: { campId: string; emp: Employee }) {
   const { t } = useTranslation()
-  const perms = useCampPermissions()
+  const perms = useAppPermissions()
   const canManage = isSystemAdmin(perms.data)
   const [createdId, setCreatedId] = useState<string | null>(null)
   const userId = emp.userId ?? createdId
   const users = useQuery({ queryKey: campKeys.users, queryFn: campApi.users, enabled: canManage && !!userId })
   const [noEmail, setNoEmail] = useState(!emp.email)
   const [email, setEmail] = useState(emp.email ?? '')
-  const create = useCampMutation(
+  const create = useAppMutation(
     () => campApi.createEmployeeUser(campId, emp.id, noEmail ? null : email.trim() || null),
     [campKeys.users, campKeys.employees(campId)],
     (res) => setCreatedId(res.userId),

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Badge, Button, ErrorBox } from '../../camp/components/ui'
+import { Badge, Button, ErrorBox } from '../../../core/ui'
 import { feedApi, feedKeys, type FeedListDto } from '../api'
 import { isLongBody, patchPost, relativeTime, toggleLike } from '../lib/feed'
 import type { FeedPostDto, FeedReportReason } from '../types'
@@ -9,6 +9,7 @@ import CommentsSection from './CommentsSection'
 import FeedImageGrid from './FeedImageGrid'
 import ReportDialog from './ReportDialog'
 import RevisionsDialog from './RevisionsDialog'
+import { FeedbackFromPostDialog, MaintenanceFromPostDialog, PostLinkChips, usePostLinkActions, useRefreshFeed } from './PostLinks'
 
 type ListData = InfiniteData<FeedListDto, string | null>
 
@@ -46,6 +47,11 @@ export default function PostCard({ post, dataSaver }: { post: FeedPostDto; dataS
   const [showComments, setShowComments] = useState(false)
   const [reporting, setReporting] = useState(false)
   const [menu, setMenu] = useState(false)
+  // v0.2.4 FEED-03/05 — пост → засварын хүсэлт / санал хүсэлт
+  const [linkDialog, setLinkDialog] = useState<'maintenance' | 'feedback' | null>(null)
+  const [linked, setLinked] = useState(false)
+  const linkActions = usePostLinkActions(post)
+  const refreshFeed = useRefreshFeed()
 
   const patch = (fn: (p: FeedPostDto) => FeedPostDto | null) =>
     qc.setQueryData<ListData>(feedKeys.list(), (d) => patchPost(d, post.id, fn))
@@ -109,6 +115,16 @@ export default function PostCard({ post, dataSaver }: { post: FeedPostDto; dataS
                   {t('feed.delete')}
                 </button>
               )}
+              {linkActions.canMaintenance && (
+                <button type="button" className="block w-full px-3 py-1.5 text-left hover:bg-gray-50" onClick={() => { setLinkDialog('maintenance'); setMenu(false) }}>
+                  {t('feed.link.to_maintenance')}
+                </button>
+              )}
+              {linkActions.canFeedback && (
+                <button type="button" className="block w-full px-3 py-1.5 text-left hover:bg-gray-50" onClick={() => { setLinkDialog('feedback'); setMenu(false) }}>
+                  {t('feed.link.to_feedback')}
+                </button>
+              )}
               {!post.isMine && (
                 <button
                   type="button"
@@ -148,6 +164,8 @@ export default function PostCard({ post, dataSaver }: { post: FeedPostDto; dataS
       </div>
 
       {post.images.length > 0 && <FeedImageGrid images={post.images} dataSaver={dataSaver} />}
+      <PostLinkChips post={post} />
+      {linked && <p className="px-4 pb-2 text-xs text-green-700">{t('feed.link.created')}</p>}
 
       <footer className="flex items-center gap-4 border-t border-gray-100 px-4 py-2 text-sm">
         <button
@@ -174,6 +192,12 @@ export default function PostCard({ post, dataSaver }: { post: FeedPostDto; dataS
         <ReportDialog onCancel={() => setReporting(false)} onSubmit={(v) => report.mutate(v)} isLoading={report.isPending} />
       )}
       {report.isError && <div className="px-4 pb-2"><ErrorBox error={report.error} /></div>}
+      {linkDialog === 'maintenance' && linkActions.maintenanceCamps && (
+        <MaintenanceFromPostDialog post={post} camps={linkActions.maintenanceCamps} onClose={() => setLinkDialog(null)} onDone={() => { setLinkDialog(null); setLinked(true); void refreshFeed() }} />
+      )}
+      {linkDialog === 'feedback' && (
+        <FeedbackFromPostDialog post={post} onClose={() => setLinkDialog(null)} onDone={() => { setLinkDialog(null); setLinked(true); void refreshFeed() }} />
+      )}
     </article>
   )
 }

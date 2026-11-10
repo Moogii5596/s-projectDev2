@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Badge, Button, ErrorBox, Loading } from '../../camp/components/ui'
+import { Badge, Button, ErrorBox, Loading } from '../../../core/ui'
 import { feedApi, feedKeys } from '../api'
 import type { FeedCommentDto, FeedReportReason } from '../types'
 import { EditedLink, TimeAgo } from './PostCard'

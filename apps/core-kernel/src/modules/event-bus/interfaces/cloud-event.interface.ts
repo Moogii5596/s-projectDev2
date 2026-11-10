@@ -17,5 +17,3 @@ export const EventTypes = {
   MR_APPROVED:  'mn.s-project.requisition.approved',
   MR_REJECTED:  'mn.s-project.requisition.rejected',
 } as const;
-
-export type EventType = typeof EventTypes[keyof typeof EventTypes];

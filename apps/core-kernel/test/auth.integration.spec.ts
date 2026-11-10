@@ -1,4 +1,5 @@
 import { AuthService } from '../src/auth/auth.service';
+import { DEFAULT_TENANT_SECURITY_POLICY } from '../src/auth/tenant-security-policy.service';
 import { PrismaTenantClientService } from '../src/db/prisma-tenant-client.service';
 import { SystemPrismaService } from '../src/db/system-prisma.service';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
@@ -14,7 +15,7 @@ describe('AuthService Integration', () => {
 
   const TEST_TENANT_ID = '00000000-0000-0000-0000-000000000003';
   const TEST_EMAIL = `integration-${Date.now()}@example.com`;
-  const TEST_PASSWORD = 'Test1234!';
+  const TEST_PASSWORD = 'Test1234!567';
 
   beforeAll(async () => {
     // ConfigService mock — process.env-ээс унших
@@ -22,9 +23,9 @@ describe('AuthService Integration', () => {
       get: <T = string>(key: string): T => process.env[key] as T,
     } as any;
 
-    prisma = new PrismaTenantClientService();
-    system = new SystemPrismaService();
-    authService = new AuthService(configServiceMock, prisma, system);
+    prisma = new PrismaTenantClientService(configServiceMock);
+    system = new SystemPrismaService(configServiceMock);
+    authService = new AuthService(configServiceMock, prisma, { get: async () => DEFAULT_TENANT_SECURITY_POLICY } as never, system);
 
     supabaseAdmin = createClient(
       process.env['SUPABASE_URL']!,

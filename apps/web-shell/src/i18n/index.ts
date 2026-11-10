@@ -3,6 +3,9 @@ import { initReactI18next } from 'react-i18next'
 import mn from '@s-project/i18n/web.mn.json'
 import en from '@s-project/i18n/web.en.json'
 import zh from '@s-project/i18n/web.zh.json'
+import termsMn from '@s-project/i18n/terms.mn.json'
+import termsEn from '@s-project/i18n/terms.en.json'
+import termsZh from '@s-project/i18n/terms.zh.json'
 
 /**
  * v0.2.0 §0.7 — Олон хэл: Монгол (анхдагч) · English · 中文.
@@ -20,6 +23,7 @@ export const LANG_LABELS: Record<Lang, string> = { mn: 'МН', en: 'EN', zh: '�
 export const INTL_LOCALE: Record<Lang, string> = { mn: 'mn-MN', en: 'en-GB', zh: 'zh-CN' }
 
 const DEFAULTS: Record<Lang, Record<string, string>> = { mn, en, zh }
+const TERMS: Record<Lang, Record<string, string>> = { mn: termsMn, en: termsEn, zh: termsZh }
 const STORAGE_KEY = 's-project.lang'
 
 export const isLang = (v: unknown): v is Lang => typeof v === 'string' && (LANGS as readonly string[]).includes(v)
@@ -33,12 +37,12 @@ function storedLang(): Lang | null {
   }
 }
 
-export function initialLang(): Lang {
+function initialLang(): Lang {
   return storedLang() ?? 'mn'
 }
 
 void i18n.use(initReactI18next).init({
-  resources: Object.fromEntries(LANGS.map((l) => [l, { translation: { ...DEFAULTS[l] } }])),
+  resources: Object.fromEntries(LANGS.map((l) => [l, { translation: { ...DEFAULTS[l], ...TERMS[l] } }])),
   lng: initialLang(),
   fallbackLng: 'mn',
   keySeparator: false,
@@ -62,7 +66,7 @@ export function setLanguage(lang: Lang): void {
 
 /** Байгууллагын засварыг анхдагч дээр давхарлана (өмнөх засварыг цэвэрлэж — буцаасан түлхүүр анхдагч болно) */
 export function applyOverrides(lang: Lang, messages: Record<string, string>): void {
-  i18n.addResourceBundle(lang, 'translation', { ...DEFAULTS[lang], ...messages }, false, true)
+  i18n.addResourceBundle(lang, 'translation', { ...DEFAULTS[lang], ...TERMS[lang], ...messages }, false, true)
   if (lang === currentLang()) void i18n.changeLanguage(lang) // дахин render
 }
 

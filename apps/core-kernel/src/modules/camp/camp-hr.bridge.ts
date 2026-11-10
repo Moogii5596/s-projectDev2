@@ -26,9 +26,25 @@ export class CampHrBridge implements OnModuleInit {
   onModuleInit(): void {
     this.hooks.registerStayStore(this.stayStore);
     this.employeeHooks.registerSitePort(this.employeeSite);
-    this.data.registerHandler('building-types', buildingTypesHandler);
-    this.data.registerHandler('buildings', buildingsHandler);
-    this.data.registerHandler('rooms', roomsHandler);
-    this.data.registerHandler('room-allocations', roomAllocationsHandler);
+    this.data.registerHandler('building-types', buildingTypesHandler, 'camp');
+    this.data.registerExport('building-types', {
+      spec: buildingTypesHandler.spec,
+      rows: buildingTypesHandler.exportRows,
+    }, 'camp');
+    this.data.registerHandler('buildings', buildingsHandler, 'camp');
+    this.data.registerExport('buildings', {
+      spec: buildingsHandler.spec,
+      rows: buildingsHandler.exportRows,
+    }, 'camp');
+    this.data.registerHandler('rooms', roomsHandler, 'camp');
+    this.data.registerExport('rooms', {
+      spec: roomsHandler.spec,
+      rows: roomsHandler.exportRows,
+    }, 'camp');
+    this.data.registerHandler('room-allocations', roomAllocationsHandler, 'camp');
+    this.data.registerExport('room-allocations', {
+      spec: roomAllocationsHandler.spec,
+      rows: roomAllocationsHandler.exportRows,
+    }, 'camp');
   }
 }

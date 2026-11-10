@@ -19,7 +19,7 @@ import { ApplyCtx, DataImportHandler, has, ImportCtx, PlannedRow, upper } from '
  *  - Хэрэглэгч (нэвтрэх эрх) үүсгэхгүй. Кемпийн хоолны тоо/өрөөнд TERMINATED тоологдохгүй (одоогийн дүрэм).
  *  - Баталгаажуулахад `rehired_from_id` гинж: ижил кодын бүртгэлүүд гарсан огноогоор → идэвхтэй (байвал) сүүлд.
  */
-export const FORMER_EMPLOYEES_SPEC: TableSpec = {
+const FORMER_EMPLOYEES_SPEC: TableSpec = {
   type: 'former-employees',
   title: 'table.former_employees',
   columns: [
@@ -91,7 +91,7 @@ async function loadRefs(tx: Tx, ctx: ImportCtx, codes: string[]) {
  * Ижил кодын бүртгэлүүдийг гинжлэх: гарсан огноогоор өсөхөөр, идэвхтэй/идэвхгүй (TERMINATED биш) бүртгэл хамгийн сүүлд.
  * Аль хэдийн холбогдсон (`rehired_from_id` эсвэл өөр бүртгэлийн өмнөх болсон) бүртгэлийг хөндөхгүй (uq_camp_employees_rehired_from).
  */
-export async function linkRehireChains(tx: Tx, tenantId: string, codes: readonly string[]): Promise<number> {
+async function linkRehireChains(tx: Tx, tenantId: string, codes: readonly string[]): Promise<number> {
   if (codes.length === 0) return 0;
   const recs = await tx.hrEmployee.findMany({
     where: { tenantId, employeeCode: { in: [...new Set(codes)], mode: 'insensitive' } },

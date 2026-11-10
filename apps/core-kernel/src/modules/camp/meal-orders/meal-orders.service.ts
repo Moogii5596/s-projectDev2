@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { CampMealOrderStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
@@ -31,6 +31,11 @@ import type {
   MealOrderView,
   MealType,
 } from './meal-order.types';
+import { NotificationService } from '../../core/notifications/notification.service';
+import { NotificationTypeRegistry } from '../../core/notifications/notification-type.registry';
+import { usersWithPermission } from '../../core/notifications/permission-recipients';
+import { ApprovalEngineService } from '../../core/approvals/approval-engine.service';
+import { ApprovalEntityRegistry, type ApprovalDecisionContext } from '../../core/approvals/approval-entity.registry';
 import type { AddMealExtraDto, MealReasonDto, PutMealTemplateDto, QueryMealOrdersDto, RequestMealChangeDto, UpsertMealOrderDto } from './meal-orders.dto';
 
 const P = CAMP_PERMISSIONS;
@@ -76,12 +81,44 @@ function parsePending(v: Prisma.JsonValue | null): MealOrderLineView[] | null {
  * Нэхэмжлэх тоо = захиалга (ирцээс хамаарахгүй, G-2). ACCEPTED/CHANGE_REQUESTED/REJECTED-ийн DB түгжээг
  * зөвхөн энд (бодлого шалгасны дараа) `app.meal_order_edit=1` (tx-local) тавьж тойрно.
  */
+type MealNotifyKind = 'submitted' | 'accepted' | 'rejected' | 'change_requested' | 'change_approved' | 'change_rejected' | 'change_withdrawn';
+
+/** v0.2.4 NTF-01: Кемп модулийн мэдэгдлийн төрлүүд (цөмийн бүртгэлд) */
+const MEAL_NOTIFICATION_TYPES = [
+  { type: 'camp.meal_order.submitted', module: 'camp', labelKey: 'notify.type.camp.meal_order.submitted', defaultInApp: true, defaultEmail: false },
+  { type: 'camp.meal_order.reviewed', module: 'camp', labelKey: 'notify.type.camp.meal_order.reviewed', defaultInApp: true, defaultEmail: false },
+  { type: 'camp.meal_order.change', module: 'camp', labelKey: 'notify.type.camp.meal_order.change', defaultInApp: true, defaultEmail: false },
+] as const;
+
 @Injectable()
 export class MealOrdersService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
     private readonly access: CampAccessService,
-  ) {}
+    private readonly approvals: ApprovalEngineService,
+    registry: ApprovalEntityRegistry,
+    @Optional() private readonly notifications?: NotificationService,
+    @Optional() notificationRegistry?: NotificationTypeRegistry,
+  ) {
+    for (const def of MEAL_NOTIFICATION_TYPES) notificationRegistry?.register(def);
+    const defaultSteps = [{ order: 0, permission: P.MEAL_ACCEPT, quorum: 1 }] as const;
+    registry.register({
+      entityType: 'CAMP_MEAL_ORDER',
+      module: 'camp',
+      labelKey: 'approval.entity.camp_meal_order',
+      approvePermissions: [P.MEAL_ACCEPT],
+      defaultSteps,
+      onFinal: (tx, ctx) => this.onApprovalFinal(tx, ctx, 'order'),
+    });
+    registry.register({
+      entityType: 'CAMP_MEAL_ORDER_CHANGE',
+      module: 'camp',
+      labelKey: 'approval.entity.camp_meal_order_change',
+      approvePermissions: [P.MEAL_ACCEPT],
+      defaultSteps,
+      onFinal: (tx, ctx) => this.onApprovalFinal(tx, ctx, 'change'),
+    });
+  }
 
   // ── Унших ────────────────────────────────────────────────
 
@@ -211,6 +248,7 @@ export class MealOrdersService {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const { actor, settings } = await this.begin(tx, tenantId, authId, campId, true);
+        await this.lockOrder(tx, tenantId, campId, date);
         const row = await this.mustFind(tx, tenantId, campId, date);
         this.require(row, settings, actor, 'submit');
         if (isEmptyOrder(row.lines, row.extras)) throw badRequest('camp.err.mealorder.6');
@@ -234,6 +272,17 @@ export class MealOrdersService {
             rejectReason: null,
           },
         });
+        if (d.nextStatus === CampMealOrderStatus.ORDERED) {
+          await this.approvals.start(tx, tenantId, {
+            entityType: 'CAMP_MEAL_ORDER',
+            entityId: row.id,
+            requesterId: actor.userId,
+            allowRequester: settings.allowSelfAccept,
+            siteId: campId,
+            title: date,
+            link: `/camp/${campId}/meal-orders?date=${date}`,
+          });
+        }
         return this.reload(tx, tenantId, campId, date, settings, actor);
       }),
     );
@@ -252,6 +301,7 @@ export class MealOrdersService {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const { actor, settings } = await this.begin(tx, tenantId, authId, campId, true);
+        await this.lockOrder(tx, tenantId, campId, date);
         await this.assertLines(tx, tenantId, campId, dto.lines);
         const row = await this.mustFind(tx, tenantId, campId, date);
         this.require(row, settings, actor, 'requestChange');
@@ -263,6 +313,15 @@ export class MealOrdersService {
             pendingLines: dto.lines.map(({ mealType, mealLocationId, baseCount }) => ({ mealType, mealLocationId, baseCount })),
             changeReason: dto.reason,
           },
+        });
+        await this.approvals.start(tx, tenantId, {
+          entityType: 'CAMP_MEAL_ORDER_CHANGE',
+          entityId: row.id,
+          requesterId: actor.userId,
+          allowRequester: settings.allowSelfAccept,
+          siteId: campId,
+          title: date,
+          link: `/camp/${campId}/meal-orders?date=${date}`,
         });
         return this.reload(tx, tenantId, campId, date, settings, actor);
       }),
@@ -317,13 +376,12 @@ export class MealOrdersService {
         const { actor, settings } = await this.begin(tx, tenantId, authId, campId, true);
         const row = await this.mustFind(tx, tenantId, campId, date);
         this.require(row, settings, actor, action);
-        await this.unlock(tx);
-        await tx.campMealOrder.update({
-          where: { id: row.id },
-          data:
-            action === 'accept'
-              ? { status: CampMealOrderStatus.ACCEPTED, reviewedBy: actor.userId, reviewedAt: new Date(), rejectReason: null }
-              : { status: CampMealOrderStatus.REJECTED, reviewedBy: actor.userId, reviewedAt: new Date(), rejectReason: reason },
+        const instance = await this.pendingApproval(tx, tenantId, row, 'CAMP_MEAL_ORDER', row.orderedBy, settings.allowSelfAccept);
+        await this.approvals.decide(tx, tenantId, {
+          instanceId: instance.id,
+          actorId: actor.userId,
+          action: action === 'accept' ? 'APPROVED' : 'REJECTED',
+          comment: reason,
         });
         return this.reload(tx, tenantId, campId, date, settings, actor);
       }),
@@ -347,23 +405,157 @@ export class MealOrdersService {
         this.require(row, settings, actor, action);
         const pending = parsePending(row.pendingLines);
         if (!pending) throw conflict('camp.err.mealorder.11');
-        await this.unlock(tx);
-        const back = { status: CampMealOrderStatus.ACCEPTED, pendingLines: Prisma.DbNull, changeReason: null };
-        if (action === 'approveChange') {
-          await tx.campMealOrderLine.deleteMany({ where: { tenantId, orderId: row.id } });
-          if (pending.length > 0) {
-            await tx.campMealOrderLine.createMany({ data: pending.map((l) => ({ tenantId, campId, orderId: row.id, ...l })) });
-          }
+        const instance = await this.pendingApproval(
+          tx,
+          tenantId,
+          row,
+          'CAMP_MEAL_ORDER_CHANGE',
+          row.orderedBy,
+          settings.allowSelfAccept,
+        );
+        if (action === 'withdrawChange') {
+          await this.approvals.cancel(tx, tenantId, instance.id);
+          await this.unlock(tx);
           await tx.campMealOrder.update({
             where: { id: row.id },
-            data: { ...back, revisionNo: { increment: 1 }, revisedAt: new Date(), reviewedBy: actor.userId, reviewedAt: new Date() },
+            data: { status: CampMealOrderStatus.ACCEPTED, pendingLines: Prisma.DbNull, changeReason: null },
           });
+          await this.notifyMeal(tx, tenantId, campId, date, 'change_withdrawn', actor.userId, [P.MEAL_ORDER, P.MEAL_ACCEPT], row.orderedBy);
         } else {
-          await tx.campMealOrder.update({ where: { id: row.id }, data: { ...back, ...(action === 'rejectChange' ? { rejectReason: reason } : {}) } });
+          await this.approvals.decide(tx, tenantId, {
+            instanceId: instance.id,
+            actorId: actor.userId,
+            action: action === 'approveChange' ? 'APPROVED' : 'REJECTED',
+            comment: reason,
+          });
         }
         return this.reload(tx, tenantId, campId, date, settings, actor);
       }),
     );
+  }
+
+  private async pendingApproval(
+    tx: Tx,
+    tenantId: string,
+    row: OrderRow,
+    entityType: 'CAMP_MEAL_ORDER' | 'CAMP_MEAL_ORDER_CHANGE',
+    requesterId: string | null,
+    allowRequester: boolean,
+  ) {
+    const instance = await tx.workflowInstance.findFirst({
+      where: { tenantId, entityId: row.id, entityType, status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    if (instance) return instance;
+    await this.lockOrder(tx, tenantId, row.campId, fromDbDate(row.orderDate));
+    const retried = await tx.workflowInstance.findFirst({
+      where: { tenantId, entityId: row.id, entityType, status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    if (retried) return retried;
+    const created = await this.approvals.start(tx, tenantId, {
+      entityType,
+      entityId: row.id,
+      requesterId,
+      allowRequester,
+      siteId: row.campId,
+      title: fromDbDate(row.orderDate),
+      link: `/camp/${row.campId}/meal-orders?date=${fromDbDate(row.orderDate)}`,
+    });
+    return { id: created.id };
+  }
+
+  private async onApprovalFinal(tx: Tx, ctx: ApprovalDecisionContext, kind: 'order' | 'change') {
+    const row = await tx.campMealOrder.findFirst({
+      where: { tenantId: ctx.tenantId, id: ctx.entityId },
+      select: { id: true, campId: true, pendingLines: true, status: true },
+    });
+    if (!row) throw notFound('camp.err.mealorder.2');
+    if ((kind === 'order' && row.status !== CampMealOrderStatus.ORDERED) ||
+      (kind === 'change' && row.status !== CampMealOrderStatus.CHANGE_REQUESTED)) {
+      throw conflict('core.approvals.not_pending');
+    }
+    await this.unlock(tx);
+    if (kind === 'order') {
+      await tx.campMealOrder.update({
+        where: { id: row.id },
+        data: {
+          status: ctx.status === 'APPROVED' ? CampMealOrderStatus.ACCEPTED : CampMealOrderStatus.REJECTED,
+          reviewedBy: ctx.actorId,
+          reviewedAt: new Date(),
+          rejectReason: ctx.status === 'REJECTED' ? ctx.comment : null,
+        },
+      });
+      return;
+    }
+
+    if (ctx.status === 'APPROVED') {
+      const pending = parsePending(row.pendingLines);
+      if (!pending) throw conflict('camp.err.mealorder.11');
+      await tx.campMealOrderLine.deleteMany({ where: { tenantId: ctx.tenantId, orderId: row.id } });
+      if (pending.length > 0) {
+        await tx.campMealOrderLine.createMany({
+          data: pending.map((line) => ({ tenantId: ctx.tenantId, campId: row.campId, orderId: row.id, ...line })),
+        });
+      }
+      await tx.campMealOrder.update({
+        where: { id: row.id },
+        data: {
+          status: CampMealOrderStatus.ACCEPTED,
+          pendingLines: Prisma.DbNull,
+          changeReason: null,
+          revisionNo: { increment: 1 },
+          revisedAt: new Date(),
+          reviewedBy: ctx.actorId,
+          reviewedAt: new Date(),
+          rejectReason: null,
+        },
+      });
+      return;
+    }
+
+    await tx.campMealOrder.update({
+      where: { id: row.id },
+      data: {
+        status: CampMealOrderStatus.ACCEPTED,
+        pendingLines: Prisma.DbNull,
+        changeReason: null,
+        rejectReason: ctx.comment,
+      },
+    });
+  }
+
+  /**
+   * v0.2.4 NTF-01: хоолны захиалгын мэдэгдэл (бизнесийн transaction дотор). Хүлээн авагч = кемпийн тухайн эрхтэй
+   * хэрэглэгчид (tenant admin-ыг өдөр бүрийн урсгалд оруулахгүй) + захиалга илгээсэн хүн; үйлдэл хийсэн хүн өөрөө авахгүй.
+   */
+  private async notifyMeal(
+    tx: Tx,
+    tenantId: string,
+    campId: string,
+    date: string,
+    kind: MealNotifyKind,
+    actorId: string,
+    perms: readonly string[],
+    orderedBy?: string | null,
+    reason?: string,
+  ) {
+    if (!this.notifications) return;
+    const recipients = perms.length ? await usersWithPermission(tx, tenantId, perms, campId, { includeTenantAdmins: false }) : [];
+    if (orderedBy) recipients.push(orderedBy);
+    if (recipients.length === 0) return;
+    const camp = await tx.camp.findFirst({ where: { tenantId, id: campId }, select: { name: true } });
+    await this.notifications.notify(tx, tenantId, {
+      type: kind === 'submitted' ? 'camp.meal_order.submitted' : kind === 'accepted' || kind === 'rejected' ? 'camp.meal_order.reviewed' : 'camp.meal_order.change',
+      recipients,
+      excludeUserId: actorId,
+      titleKey: `notify.camp.meal_order.${kind}`,
+      bodyKey: reason ? 'notify.camp.meal_order.reason' : null,
+      params: { camp: camp?.name ?? '', date, reason: reason ?? '' },
+      link: `/camp/${campId}/meal-orders?date=${date}`,
+    });
   }
 
   /** Эрх + кемп + тохиргоо. write=true → camp.meal.order эсвэл camp.meal.accept аль нэг заавал */
@@ -395,6 +587,13 @@ export class MealOrdersService {
 
   private async unlock(tx: Tx) {
     await tx.$executeRaw`SELECT set_config('app.meal_order_edit', '1', true)`;
+  }
+
+  private async lockOrder(tx: Tx, tenantId: string, campId: string, date: string) {
+    await tx.$queryRaw`
+      SELECT id FROM camp_meal_orders
+      WHERE tenant_id = ${tenantId}::uuid AND camp_id = ${campId}::uuid AND order_date = ${toDbDate(date)}
+      FOR UPDATE`;
   }
 
   private find(tx: Tx, tenantId: string, campId: string, date: string) {
@@ -517,7 +716,7 @@ export class MealOrdersService {
 }
 
 /** camp_settings.meal_order_* → MealOrderSettings (тохиргоо байхгүй бол анхдагч) */
-export async function loadMealOrderSettings(tx: Tx, tenantId: string, campId: string): Promise<MealOrderSettings> {
+async function loadMealOrderSettings(tx: Tx, tenantId: string, campId: string): Promise<MealOrderSettings> {
   const s = await tx.campSetting.findFirst({
     where: { tenantId, campId },
     select: {

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import type { ImportPreview } from '../../camp/api/types'
-import { Badge } from '../../camp/components/ui'
+import type { ImportPreview } from '../api/camp-bridge'
+import { Badge } from '../../../core/ui'
 import { SKIP_REASON_KEY, previewBadges, rosterGapTotals } from '../lib/import-preview'
 
 /**

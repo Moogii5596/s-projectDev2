@@ -13,7 +13,7 @@ import { I18nParams, t, templateVars } from './translate';
 
 const ADMIN_ROLES = [UserRole.OWNER, UserRole.ADMIN];
 const CACHE_MS = 60_000;
-export const I18N_MAX_TEXT = 500;
+const I18N_MAX_TEXT = 500;
 const MAX_BYTES = 2 * 1024 * 1024;
 
 type Tx = Parameters<Parameters<PrismaTenantClientService['$transaction']>[0]>[0];
@@ -36,7 +36,7 @@ export interface I18nRowError {
 }
 
 /** CSV (RFC 4180): UTF-8 BOM, таслал / цэг таслал / tab-ыг толгойгоос таньна */
-export function parseCsv(text: string): string[][] {
+function parseCsv(text: string): string[][] {
   const src = text.replace(/^\uFEFF/, '');
   const firstLine = src.split(/\r?\n/, 1)[0] ?? '';
   const count = (ch: string) => firstLine.split(ch).length - 1;
@@ -143,7 +143,7 @@ export class I18nOverridesService extends I18nOverridesLoader {
     const cat = catalog();
     for (const [k, text] of map) {
       const [l, key] = [k.slice(0, 2), k.slice(3)];
-      if (l === lang && cat.get(key)?.section === 'web') messages[key] = text;
+      if (l === lang && ['web', 'term'].includes(cat.get(key)?.section ?? '')) messages[key] = text;
     }
     return { lang, version, messages };
   }
@@ -277,5 +277,17 @@ export class I18nOverridesService extends I18nOverridesLoader {
       const cat = catalog();
       return rows.map((r) => ({ key: r.key, lang: r.lang, text: r.text, default: cat.get(r.key)?.defaults[r.lang as Lang] ?? null, updatedAt: r.updatedAt }));
     });
+  }
+
+  /** Бүрэн засварлах каталог: анхдагч текст, хэсэг, tenant override. */
+  async listCatalog(tenantId: string, authId: string) {
+    await this.tx(tenantId, (tx) => requireRole(tx, tenantId, authId, ADMIN_ROLES));
+    const { map } = await this.entry(tenantId);
+    return [...catalog().values()].map((item) => ({
+      key: item.key,
+      section: item.section,
+      defaults: item.defaults,
+      texts: Object.fromEntries(LANGS.map((lang) => [lang, map.get(`${lang}:${item.key}`) ?? item.defaults[lang]])) as Record<Lang, string>,
+    }));
   }
 }

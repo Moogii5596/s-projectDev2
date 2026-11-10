@@ -3,12 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
 import type { CampSettings } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
 import { gridToLines, linesToGrid, type Grid } from '../lib/meal-order'
 import MealGrid from './MealGrid'
-import { Button, Card, Empty, ErrorBox, Field, Loading, inputCls } from './ui'
+import { Button, Card, Empty, ErrorBox, Field, Loading, inputCls } from '../../../core/ui'
 
 type AfterCutoff = NonNullable<CampSettings['mealOrderAfterCutoff']>
 type EditAfter = NonNullable<CampSettings['mealOrderEditAfterAccept']>
@@ -17,7 +17,7 @@ type Fill = NonNullable<CampSettings['mealOrderDefaultFill']>
 /** Кемпийн тохиргоо → «Хоолны захиалга»: урсгалын дүрэм (G-8) + тогтмол загвар. Бүгд тохиргоо — кодод тогтмол дүрэм алга */
 export default function MealOrderSettings({ campId }: { campId: string }) {
   const { t } = useTranslation()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const canEdit = perms.can(P.SETTINGS_MANAGE)
   const settings = useQuery({ queryKey: campKeys.settings(campId), queryFn: () => campApi.settings(campId) })
   const locations = useQuery({ queryKey: campKeys.mealLocations(campId), queryFn: () => campApi.mealLocations(campId) })
@@ -28,7 +28,7 @@ export default function MealOrderSettings({ campId }: { campId: string }) {
     leadDays: String(s?.mealOrderLeadDays ?? 1),
     afterCutoff: (s?.mealOrderAfterCutoff ?? 'BLOCK') as AfterCutoff,
     requiresAccept: s?.mealOrderRequiresAccept ?? true,
-    editAfterAccept: (s?.mealOrderEditAfterAccept ?? 'FORBID') as EditAfter,
+    editAfterAccept: (s?.mealOrderEditAfterAccept ?? 'TWO_SIDED') as EditAfter,
     defaultFill: (s?.mealOrderDefaultFill ?? 'EMPTY') as Fill,
     allowSelfAccept: s?.mealOrderAllowSelfAccept ?? false,
   })
@@ -38,7 +38,7 @@ export default function MealOrderSettings({ campId }: { campId: string }) {
   useEffect(() => setTpl(linesToGrid(template.data?.lines ?? [])), [template.data])
 
   // PUT /settings нь бүтэн тохиргоо (одоогийн утгууд + шинэ талбарууд)
-  const saveSettings = useCampMutation(
+  const saveSettings = useAppMutation(
     () =>
       campApi.saveSettings(campId, {
         vatRate: Number(s!.vatRate),
@@ -56,7 +56,7 @@ export default function MealOrderSettings({ campId }: { campId: string }) {
       }),
     [campKeys.settings(campId), campKeys.mealOrderAll(campId)],
   )
-  const saveTemplate = useCampMutation(() => campApi.saveMealTemplate(campId, gridToLines(tpl)), [campKeys.mealTemplate(campId), campKeys.mealOrderAll(campId)])
+  const saveTemplate = useAppMutation(() => campApi.saveMealTemplate(campId, gridToLines(tpl)), [campKeys.mealTemplate(campId), campKeys.mealOrderAll(campId)])
 
   if (settings.isLoading || locations.isLoading || template.isLoading) return <Loading />
   if (!s) return <ErrorBox error={settings.error} />

@@ -10,12 +10,14 @@ import { CreateDepartmentDto, SetShiftPatternDto, UpdateDepartmentDto } from './
 import { QueryActiveOnlyDto } from '../../camp/common/common.dto';
 import { normalizeShiftPattern, ShiftSegment } from './shift-pattern';
 import { conflict, notFound } from '../../../common/i18n/app-error';
+import { mergeCatalogNameI18n } from '../../camp/common/catalog-name-i18n';
 
 const P = CAMP_PERMISSIONS;
 const DEPT_SELECT = {
   id: true,
   code: true,
   name: true,
+  nameI18n: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -23,7 +25,7 @@ const DEPT_SELECT = {
 } as const;
 
 /** Түүхэд харьцуулах талбарууд (§0.4); ээлжийн загвар JSON-оор */
-const DEPT_AUDIT_FIELDS = ['code', 'name', 'isActive', 'shiftPatterns'] as const;
+const DEPT_AUDIT_FIELDS = ['code', 'name', 'nameI18n', 'isActive', 'shiftPatterns'] as const;
 
 /** Хэлтэс + ээлжийн загвар (Шат 2.4). Бичих: тухайн кемпийн `camp.master.manage`. */
 @Injectable()
@@ -97,7 +99,7 @@ export class HrDepartmentsService {
         const dup = await tx.hrDepartment.findFirst({ where: { tenantId, campId, code: dto.code }, select: { id: true } });
         if (dup) throw conflict('camp.err.departments.2', { code: dto.code });
         const d = await tx.hrDepartment.create({
-          data: { tenantId, campId, code: dto.code, name: dto.name },
+          data: { tenantId, campId, code: dto.code, name: dto.name, nameI18n: mergeCatalogNameI18n(dto.name, undefined, dto.nameI18n) },
           select: { id: true },
         });
         if (dto.shiftPattern) await this.replacePattern(tx, tenantId, campId, d.id, dto.shiftPattern);
@@ -122,6 +124,9 @@ export class HrDepartmentsService {
           where: { id },
           data: {
             ...(dto.name !== undefined ? { name: dto.name } : {}),
+            ...((dto.name !== undefined || dto.nameI18n !== undefined)
+              ? { nameI18n: mergeCatalogNameI18n(dto.name ?? before.name, before.nameI18n, dto.nameI18n) }
+              : {}),
             ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
           },
         });

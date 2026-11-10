@@ -27,6 +27,26 @@ afterAll(async () => {
 }, 30_000);
 
 describe('🌐 Орчуулгын Excel', () => {
+  it('шууд засварлах catalog: owner/admin л бүх түлхүүр, хэсэг, анхдагч ба override-ийг авна', async () => {
+    expect((await it_.api().get('/api/v1/i18n/admin/catalog').set(it_.as('manager'))).status).toBe(403);
+    const response = await it_.api().get('/api/v1/i18n/admin/catalog').set(it_.as('admin')).expect(200);
+    expect(response.body.length).toBeGreaterThan(800);
+    expect(response.body).toContainEqual({
+      key: 'nav.camp',
+      section: 'web',
+      defaults: { mn: 'Кемп', en: 'Camp', zh: '营地' },
+      texts: { mn: 'Кемп', en: 'Camp', zh: '营地' },
+    });
+    expect(response.body.find((row: { key: string }) => row.key === 'import.empty')).toMatchObject({
+      section: 'server',
+      texts: { mn: 'Өгөгдлийн мөр алга', en: 'There are no data rows', zh: '没有数据行' },
+    });
+    expect(response.body.find((row: { key: string }) => row.key === 'term.camp.gen')).toMatchObject({
+      section: 'term',
+      defaults: { mn: 'Кемпийн', en: "Camp's", zh: '营地' },
+    });
+  });
+
   it('татах: OWNER/ADMIN л; key, хэсэг (web/server), анхдагч, mn/en/zh', async () => {
     expect((await it_.api().get('/api/v1/i18n/admin/export').set(it_.as('manager'))).status).toBe(403);
     const res = await it_.api().get('/api/v1/i18n/admin/export').set(it_.as('admin')).buffer(true).parse(binary as never);

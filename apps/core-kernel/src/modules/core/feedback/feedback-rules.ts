@@ -5,7 +5,7 @@ import { CoreFeedbackStatus, UserRole } from '@prisma/client';
  * Хэрэглэгчийн шийдвэр (2026-10-19 15:41): бүгд бусдынхыг харж «+1» дарна; төлөв / хариу — OWNER / ADMIN.
  */
 
-export const FEEDBACK_ADMIN_ROLES: readonly UserRole[] = [UserRole.OWNER, UserRole.ADMIN];
+const FEEDBACK_ADMIN_ROLES: readonly UserRole[] = [UserRole.OWNER, UserRole.ADMIN];
 
 export const isFeedbackAdmin = (role: UserRole): boolean => FEEDBACK_ADMIN_ROLES.includes(role);
 
@@ -40,9 +40,6 @@ export function resolveDoneVersion(patch: StatusPatch): string | null | 'invalid
   if (patch.status !== CoreFeedbackStatus.DONE) return null;
   return normalizeVersion(patch.doneVersion) ?? 'invalid';
 }
-
-/** Жагсаалтын эрэмбэ: 'votes' — «+1» олноос, дараа нь шинээс; 'new' — шинээс */
-export type FeedbackSort = 'new' | 'votes';
 
 /** Илгээгчийн харагдах нэр: бүтэн нэр → нэвтрэх нэр → имэйлийн @-ийн өмнөх хэсэг (дотоод .login.invalid имэйлийг харуулахгүй) */
 export function displayAuthor(u: { fullName: string | null; username: string | null; email: string }): string {

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '../../camp/components/ui'
+import { Button } from '../../../core/ui'
 import type { FeedImageDto } from '../types'
 import FeedImage, { largestVariant } from './FeedImage'
 
-export const MAX_GRID_IMAGES = 6
+const MAX_GRID_IMAGES = 6
 
 // Утсанд эхэлж: 6 баганат сүлжээ; нүд бүрийн span/харьцаа зургийн тоогоор
 function cellClass(n: number, i: number): string {

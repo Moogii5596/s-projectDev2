@@ -16,12 +16,12 @@ import {
 import type { ContractItemView, ContractView, ManualAmendmentType } from '../api/contract-types'
 import ContractForm from '../components/contracts/ContractForm'
 import ContractItemEditor from '../components/contracts/ContractItemEditor'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, NoAccess, PageHeader, Table, inputCls, td } from '../components/ui'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, NoAccess, PageHeader, Table, inputCls, td } from '../../../core/ui'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
 import { contractCatalogName, contractStatusTone } from '../lib/contract'
-import { todayUb } from '../lib/dates'
-import { formatMoney } from '../lib/money'
+import { todayUb } from '../../../core/dates'
+import { formatMoney } from '../../../core/money'
 
 const catalogKey = ['camp', 'contract-catalog'] as const
 const contractListKey = (campId: string) => ['camp', campId, 'contracts'] as const
@@ -49,7 +49,7 @@ export default function ContractDetailPage() {
   const { t, i18n } = useTranslation()
   const { campId = '', contractId = '' } = useParams()
   const navigate = useNavigate()
-  const permissions = useCampPermissions(campId)
+  const permissions = useAppPermissions(campId)
   const canManage = permissions.can('camp.contract.manage')
   const contract = useQuery({
     queryKey: contractDetailKey(campId, contractId),
@@ -68,6 +68,10 @@ export default function ContractDetailPage() {
   const [priceItem, setPriceItem] = useState<ContractItemView | null>(null)
   const [amending, setAmending] = useState(false)
   const [terminating, setTerminating] = useState(false)
+  // v0.2.4 10в: идэвхтэй гэрээний нөхцөл өөрчлөхөд баримтын дугаар; ажлын тайлбар засах
+  const [documentNo, setDocumentNo] = useState('')
+  const [descItem, setDescItem] = useState<ContractItemView | null>(null)
+  const [descDraft, setDescDraft] = useState('')
   const [quoteForm, setQuoteForm] = useState({ itemId: '', date: todayUb(), quantity: '1' })
   const [quoteRequest, setQuoteRequest] = useState<{ itemId: string; date: string; quantity: string } | null>(null)
 
@@ -77,18 +81,18 @@ export default function ContractDetailPage() {
 
   const detailKey = contractDetailKey(campId, contractId)
   const invalidates = [detailKey, contractListKey(campId)]
-  const update = useCampMutation(
+  const update = useAppMutation(
     (input: ContractPatch) => contractApi.update(campId, contractId, input),
     invalidates,
     () => setEditing(false),
   )
-  const activate = useCampMutation(() => contractApi.activate(campId, contractId), invalidates)
-  const remove = useCampMutation(
+  const activate = useAppMutation(() => contractApi.activate(campId, contractId), invalidates)
+  const remove = useAppMutation(
     () => contractApi.remove(campId, contractId),
     [contractListKey(campId)],
     () => navigate(`/camp/${campId}/contracts`),
   )
-  const addOrUpdateItem = useCampMutation(
+  const addOrUpdateItem = useAppMutation(
     (input: { existing: ContractItemView | null; value: ContractItemInput }) => {
       if (!input.existing) return contractApi.addItem(campId, contractId, input.value)
       const patch: ContractItemPatch = {
@@ -103,7 +107,16 @@ export default function ContractDetailPage() {
     invalidates,
     () => setItemDialog(null),
   )
-  const removeItem = useCampMutation((itemId: string) => contractApi.removeItem(campId, contractId, itemId), invalidates)
+  const removeItem = useAppMutation((itemId: string) => contractApi.removeItem(campId, contractId, itemId), invalidates)
+  const removePrice = useAppMutation(
+    (p: { itemId: string; priceId: string }) => contractApi.removePrice(campId, contractId, p.itemId, p.priceId),
+    invalidates,
+  )
+  const saveDescription = useAppMutation(
+    (p: { itemId: string; description: string | null }) => contractApi.updateItem(campId, contractId, p.itemId, { description: p.description }),
+    invalidates,
+    () => setDescItem(null),
+  )
   const quote = useQuery({
     queryKey: [...detailKey, 'quote', quoteRequest],
     queryFn: () => contractApi.quote(campId, contractId, quoteRequest!),
@@ -130,6 +143,7 @@ export default function ContractDetailPage() {
       paymentTerms: form.paymentTerms ?? [],
       note: form.note?.trim() || null,
     }
+    if (isActive) body.documentNo = documentNo.trim() || null
     if (isDraft) {
       body.contractNo = form.contractNo.trim()
       body.organizationId = form.organizationId
@@ -170,6 +184,13 @@ export default function ContractDetailPage() {
       <ErrorBox error={contract.error ?? catalog.error ?? organizations.error ?? update.error ?? activate.error ?? remove.error} onRetry={() => contract.refetch()} />
       {editing && form && organizations.data && (
         <Card title={t('camp.ct.edit_contract')}>
+          {isActive && (
+            <div className="mb-3 max-w-xs">
+              <Field label={t('camp.ct.document_no')} hint={t('camp.ct.terms_document_hint')}>
+                {(id) => <input id={id} className={inputCls} maxLength={60} value={documentNo} onChange={(e) => setDocumentNo(e.target.value)} />}
+              </Field>
+            </div>
+          )}
           <ContractForm
             value={form}
             onChange={setForm}
@@ -237,20 +258,38 @@ export default function ContractDetailPage() {
                       </Button>
                     </div>
                   )}
+                  {isActive && (
+                    <Button variant="ghost" onClick={() => { setDescItem(item); setDescDraft(item.description ?? '') }}>{t('camp.ct.edit_description')}</Button>
+                  )}
                   {current.status !== 'TERMINATED' && <Button size="sm" variant="secondary" onClick={() => setPriceItem(item)}>{t('camp.ct.add_price')}</Button>}
                 </div>
                 <div className="mt-3">
                   <h4 className="text-xs font-semibold text-gray-600 mb-1">{t('camp.ct.price_history')}</h4>
                   {item.prices.length === 0 ? <p className="text-xs text-gray-400">{t('camp.ct.no_prices')}</p> : (
-                    <Table head={[t('camp.ct.effective_from'), t('camp.ct.unit_price'), t('camp.ct.vat_included'), t('camp.ct.price_note')]}>
-                      {item.prices.map((price) => (
-                        <tr key={price.id}>
-                          <td className={td}>{price.effectiveFrom}</td>
-                          <td className={td}>{formatMoney(price.unitPrice, price.currency)}</td>
-                          <td className={td}>{t(price.vatIncluded ? 'camp.ct.yes' : 'camp.ct.no')}</td>
-                          <td className={td}>{price.note || '—'}</td>
-                        </tr>
-                      ))}
+                    <Table head={[t('camp.ct.effective_from'), t('camp.ct.unit_price'), t('camp.ct.vat_included'), t('camp.ct.price_note'), '']}>
+                      {item.prices.map((price) => {
+                        // backend removePrice-тэй ижил дүрэм: ноорог гэрээ эсвэл идэвхтэй гэрээний ирээдүйн үнэ
+                        const deletable = isDraft || (isActive && price.effectiveFrom > todayUb())
+                        return (
+                          <tr key={price.id}>
+                            <td className={td}>{price.effectiveFrom}</td>
+                            <td className={td}>{formatMoney(price.unitPrice, price.currency)}</td>
+                            <td className={td}>{t(price.vatIncluded ? 'camp.ct.yes' : 'camp.ct.no')}</td>
+                            <td className={td}>{price.note || '—'}</td>
+                            <td className={td}>
+                              {deletable && (
+                                <Button
+                                  variant="ghost"
+                                  disabled={removePrice.isPending}
+                                  onClick={() => window.confirm(t('camp.ct.confirm_delete_price', { date: price.effectiveFrom })) && removePrice.mutate({ itemId: item.id, priceId: price.id })}
+                                >
+                                  {t('camp.ct.remove')}
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </Table>
                   )}
                 </div>
@@ -258,8 +297,23 @@ export default function ContractDetailPage() {
             )
           })}
         </div>
-        <ErrorBox error={addOrUpdateItem.error ?? removeItem.error} />
+        <ErrorBox error={addOrUpdateItem.error ?? removeItem.error ?? removePrice.error} />
       </Card>
+      {descItem && (
+        <Modal
+          title={t('camp.ct.edit_description')}
+          onClose={() => setDescItem(null)}
+          footer={<>
+            <Button variant="secondary" onClick={() => setDescItem(null)}>{t('camp.common.cancel')}</Button>
+            <Button loading={saveDescription.isPending} onClick={() => saveDescription.mutate({ itemId: descItem.id, description: descDraft.trim() || null })}>{t('camp.common.save')}</Button>
+          </>}
+        >
+          <Field label={t('camp.ct.item_description')}>
+            {(id) => <textarea id={id} className={inputCls} rows={3} maxLength={500} value={descDraft} onChange={(e) => setDescDraft(e.target.value)} />}
+          </Field>
+          <ErrorBox error={saveDescription.error} />
+        </Modal>
+      )}
       <Card title={t('camp.ct.amendments')} actions={isActive && <Button size="sm" onClick={() => setAmending(true)}>{t('camp.ct.add_amendment')}</Button>}>
         {current.amendments.length === 0 ? <Empty>{t('camp.ct.no_amendments')}</Empty> : (
           <Table head={[t('camp.ct.amendment_type'), t('camp.ct.effective_date'), t('camp.ct.amendment_range'), t('camp.ct.document_no'), t('camp.ct.note')]}>
@@ -338,7 +392,7 @@ function PriceModal({ campId, contract, item, onClose }: { campId: string; contr
   const { t } = useTranslation()
   const active = contract.status === 'ACTIVE'
   const [form, setForm] = useState<PriceInput>({ effectiveFrom: todayUb(), unitPrice: '', vatIncluded: false, note: null, documentNo: '' })
-  const save = useCampMutation(
+  const save = useAppMutation(
     () => contractApi.addPrice(campId, contract.id, item.id, {
       ...form,
       unitPrice: form.unitPrice.trim(),
@@ -369,7 +423,7 @@ function PriceModal({ campId, contract, item, onClose }: { campId: string; contr
 function AmendmentModal({ campId, contractId, onClose, invalidate }: { campId: string; contractId: string; onClose: () => void; invalidate: readonly (readonly unknown[])[] }) {
   const { t } = useTranslation()
   const [form, setForm] = useState<AmendmentInput>({ amendmentType: 'EXTENSION', effectiveDate: todayUb(), newEndDate: null, documentNo: '', note: '' })
-  const save = useCampMutation((input: AmendmentInput) => contractApi.addAmendment(campId, contractId, {
+  const save = useAppMutation((input: AmendmentInput) => contractApi.addAmendment(campId, contractId, {
     ...input,
     newEndDate: input.amendmentType === 'EXTENSION' ? input.newEndDate : undefined,
     documentNo: input.documentNo?.trim() || null,
@@ -399,7 +453,7 @@ function AmendmentModal({ campId, contractId, onClose, invalidate }: { campId: s
 function TerminateModal({ campId, contractId, onClose, invalidate }: { campId: string; contractId: string; onClose: () => void; invalidate: readonly (readonly unknown[])[] }) {
   const { t } = useTranslation()
   const [form, setForm] = useState<TerminateInput>({ terminatedAt: todayUb(), note: '', documentNo: '' })
-  const save = useCampMutation((input: TerminateInput) => contractApi.terminate(campId, contractId, {
+  const save = useAppMutation((input: TerminateInput) => contractApi.terminate(campId, contractId, {
     ...input,
     note: input.note.trim(),
     documentNo: input.documentNo?.trim() || null,

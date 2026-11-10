@@ -6,6 +6,7 @@ import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
 import { addDays } from '../common/camp-date';
 import { computePresence, PresenceEmployee, PresenceResult } from './presence';
 import { assertDate } from '../../hr/attendance/range';
+import { readCatalogNameI18n } from '../common/catalog-name-i18n';
 
 /** D өдрийн хоолны суурь тоо (Шат 3.5) — V2-ийн хоолны захиалга (Шат 6, D8) үүнийг ашиглана */
 @Injectable()
@@ -21,11 +22,15 @@ export class CampPresenceService {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       await getCampOr404(tx, tenantId, campId);
       const result = await this.compute(tx, tenantId, campId, date);
-      const locs = await tx.campMealLocation.findMany({ where: { tenantId, campId }, select: { id: true, name: true } });
-      const name = new Map(locs.map((l) => [l.id, l.name]));
+      const locs = await tx.campMealLocation.findMany({ where: { tenantId, campId }, select: { id: true, name: true, nameI18n: true } });
+      const name = new Map(locs.map((l) => [l.id, l]));
       return {
         ...result,
-        lines: result.lines.map((l) => ({ ...l, mealLocationName: l.mealLocationId ? (name.get(l.mealLocationId) ?? null) : null })),
+        lines: result.lines.map((l) => ({
+          ...l,
+          mealLocationName: l.mealLocationId ? (name.get(l.mealLocationId)?.name ?? null) : null,
+          mealLocationNameI18n: l.mealLocationId ? readCatalogNameI18n(name.get(l.mealLocationId)?.nameI18n) : null,
+        })),
       };
     });
   }
@@ -36,7 +41,7 @@ export class CampPresenceService {
   }
 }
 
-export { effectiveEmployee, loadPositionDefaults } from '../common/position-defaults';
+export { effectiveEmployee,  } from '../common/position-defaults';
 export type { PositionDefaults } from '../common/position-defaults';
 import { effectiveEmployee, loadPositionDefaults, type PositionDefaults } from '../common/position-defaults';
 
@@ -77,7 +82,7 @@ export async function loadPresenceEmployees(
       }))
     : await tx.hrEmployee.findMany({
         where: { tenantId, campId, stays: { some: stayWhere } },
-        select: { ...base, positionId: true, mealLocationId: true, mealsIncluded: true, positionRef: { select: { name: true } } },
+        select: { ...base, positionId: true, mealLocationId: true, mealsIncluded: true, positionRef: { select: { name: true, nameI18n: true } } },
       });
   const defaults = opts.legacy ? (new Map() as PositionDefaults) : await loadPositionDefaults(tx, tenantId, campId);
   const employees: PresenceEmployee[] = emps.map((e) => {
@@ -88,6 +93,7 @@ export async function loadPresenceEmployees(
       fullName: e.fullName,
       departmentCode: e.department.code,
       positionName: e.positionRef?.name ?? e.position ?? null,
+      positionNameI18n: e.positionRef ? readCatalogNameI18n(e.positionRef.nameI18n) : null,
       workMealLocationId: eff.workMealLocationId,
       mealsIncluded: eff.mealsIncluded,
       crewAnchor: e.crew ? fromDbDate(e.crew.rosterAnchorDate) : null,

@@ -96,6 +96,10 @@ model WorkflowDefinition {
   slaHours    Int      @default(48) @map("sla_hours")
   escalationEnabled Boolean @default(false) @map("escalation_enabled")
   delegationEnabled Boolean @default(false) @map("delegation_enabled")
+  /// v0.2.4 WF-06 — объектын төрөл (NULL = v0.2.4-өөс өмнөх MR), хувилбар, үүсгэсэн core_users.id
+  entityType  String?  @map("entity_type")
+  version     Int      @default(1)
+  createdBy   String?  @map("created_by") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -127,6 +131,13 @@ model WorkflowInstance {
   slaLogs    WorkflowSlaLog[]
   mrHeaders  MrHeader[]
   escalationCount Int @default(0) @map("escalation_count")
+  /// v0.2.4 WF-06 — «Миний батлах» жагсаалт ба эрхийн хүрээ
+  requesterId  String?   @map("requester_id") @db.Uuid
+  siteId       String?   @map("site_id") @db.Uuid
+  title        String?
+  link         String?
+  amount       Decimal?  @db.Decimal(18, 2)
+  decidedAt    DateTime? @map("decided_at") @db.Timestamptz
 
   @@index([tenantId, entityType, entityId])
   @@map("workflow_instances")
@@ -142,12 +153,15 @@ model WorkflowStepLog {
   actorId    String   @map("actor_id") @db.Uuid   // core_users.id — RULE-13
   action     String   // 'APPROVED' | 'REJECTED' | 'DELEGATED'
   comment    String?
+  /// v0.2.4 WF-06 — орлон гүйцэтгэгч хэний өмнөөс (core_users.id)
+  onBehalfOf String?  @map("on_behalf_of") @db.Uuid
   actedAt    DateTime @default(now()) @map("acted_at") @db.Timestamptz
 
   tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   instance WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, instanceId])
+  @@index([tenantId, instanceId, stepOrder, actorId], map: "idx_workflow_step_logs_step")
   @@map("workflow_step_logs")
 }
 

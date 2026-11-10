@@ -26,6 +26,7 @@ import { configureApp } from '../src/common/http/configure-app';
 import { OutboxPollerService } from '../src/modules/event-bus/outbox-poller.service';
 import { EventTypes } from '../src/modules/event-bus/interfaces/cloud-event.interface';
 import { ADMIN_DB_URL } from './helpers/db-urls';
+import { activateTestModules } from './helpers/activate-test-modules';
 
 const STAMP = Date.now();
 const SLUG = { ok: `evt-ok-${STAMP}`, fail: `evt-fail-${STAMP}` };
@@ -61,6 +62,7 @@ beforeAll(async () => {
   await prismaAdmin.$connect();
   tenant.ok = (await prismaAdmin.tenant.create({ data: { name: 'EVT ok', slug: SLUG.ok, tier: TierType.TIER1 } })).id;
   tenant.fail = (await prismaAdmin.tenant.create({ data: { name: 'EVT fail', slug: SLUG.fail, tier: TierType.TIER1 } })).id;
+  await activateTestModules(prismaAdmin, [tenant.ok, tenant.fail], ['mr', 'workflow', 'budget']);
   await prismaAdmin.workflowDefinition.create({
     data: { tenantId: tenant.ok, name: 'evt', stepsConfig: [{ order: 0, role: 'APPROVER', quorum: 1 }], isActive: true },
   });

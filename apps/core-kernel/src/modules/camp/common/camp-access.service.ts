@@ -4,6 +4,7 @@ import { CacheService } from '../../../cache/cache.service';
 import { CampPermission } from './camp-permissions';
 import { Tx } from './camp-tx';
 import { forbidden } from '../../../common/i18n/app-error';
+import { isAdminBypassExcluded } from '../../core/permissions/permission-registry';
 
 /** Tenant-ийн эдгээр role бүх кемпийн бүх эрхтэй (анхны тохиргоо хийх боломж, ERD v4 §2.1) */
 const TENANT_ADMIN_ROLES: readonly UserRole[] = [UserRole.OWNER, UserRole.ADMIN];
@@ -68,7 +69,7 @@ export class CampAccessService {
 
   /** Тухайн кемпэд (null = tenant түвшин) эрх байгаа эсэх */
   static has(perms: CampPermissionSet, campId: string | null, code: CampPermission): boolean {
-    if (perms.isTenantAdmin || perms.global.includes(code)) return true;
+    if ((perms.isTenantAdmin && !isAdminBypassExcluded(code)) || perms.global.includes(code)) return true;
     return campId !== null && (perms.byCamp[campId]?.includes(code) ?? false);
   }
 

@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { campApi } from '../../camp/api/camp-api'
-import type { CampUser } from '../../camp/api/types'
-import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
-import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { isSystemAdmin } from '../../camp/lib/permissions'
+import { campApi } from '../api/camp-bridge'
+import type { CampUser } from '../api/camp-bridge'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { isSystemAdmin } from '../../../core/permissions'
 import { currentLang, INTL_LOCALE } from '../../../i18n'
-import { Badge, Button, Card, Empty, ErrorBox, Loading, Modal, NoAccess, Table, inputSmCls, td } from '../../camp/components/ui'
+import { Badge, Button, Card, Empty, ErrorBox, Loading, Modal, NoAccess, Table, inputSmCls, td } from '../../../core/ui'
 import InviteActions from '../components/InviteActions'
 import UserPermissionsModal from '../components/UserPermissionsModal'
 import { type UserState, filterUsers, loginName, userState } from '../lib/user-access'
@@ -27,7 +27,7 @@ const fmtSignIn = (iso: string | null | undefined, neverLabel: string): string =
  */
 export default function HrUsersPage() {
   const { t } = useTranslation()
-  const perms = useCampPermissions()
+  const perms = useAppPermissions()
   const canManage = isSystemAdmin(perms.data)
   const users = useQuery({ queryKey: campKeys.users, queryFn: campApi.users, enabled: canManage })
   const [q, setQ] = useState('')
@@ -114,7 +114,7 @@ export default function HrUsersPage() {
 function ToggleActiveModal({ user, onClose }: { user: CampUser; onClose: () => void }) {
   const { t } = useTranslation()
   const next = !user.isActive
-  const m = useCampMutation(() => campApi.setUserActive(user.id, next), [campKeys.users], onClose)
+  const m = useAppMutation(() => campApi.setUserActive(user.id, next), [campKeys.users], onClose)
   return (
     <Modal
       title={next ? t('hr.users.activate_title') : t('hr.users.deactivate_title')}

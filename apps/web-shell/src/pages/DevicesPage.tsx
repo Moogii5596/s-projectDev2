@@ -5,8 +5,8 @@ import { Link } from 'react-router-dom'
 import { currentLang, INTL_LOCALE } from '../i18n'
 import { listSessions, revokeOtherSessions, revokeSession, sessionKeys } from '../api/sessions'
 import { deviceTitle, otherDevices, sortDevices } from '../lib/devices'
-import { useCampMutation } from '../modules/camp/hooks/useCampMutation'
-import { Badge, Button, Card, ErrorBox, Loading, Modal, PageHeader } from '../modules/camp/components/ui'
+import { useAppMutation } from '../core/useAppMutation'
+import { Badge, Button, Card, ErrorBox, Loading, Modal, PageHeader } from '../core/ui'
 
 const fmt = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString(INTL_LOCALE[currentLang()], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'
@@ -21,8 +21,8 @@ export default function DevicesPage() {
   const [confirmAll, setConfirmAll] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
-  const revokeOne = useCampMutation((id: string) => revokeSession(id), [sessionKeys.all], () => setNotice(null))
-  const revokeAll = useCampMutation(() => revokeOtherSessions(), [sessionKeys.all], (n) => {
+  const revokeOne = useAppMutation((id: string) => revokeSession(id), [sessionKeys.all], () => setNotice(null))
+  const revokeAll = useAppMutation(() => revokeOtherSessions(), [sessionKeys.all], (n) => {
     setConfirmAll(false)
     setNotice(t('devices.revoked_n', { n }))
   })

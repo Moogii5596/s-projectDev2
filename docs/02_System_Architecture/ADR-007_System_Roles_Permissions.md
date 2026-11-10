@@ -47,17 +47,17 @@ v0.2.2 хүртэл роль, эрх Кемп модулийн хүснэгтү�
 | Хүснэгт (v0.2.3) | Өмнөх | Тайлбар |
 |---|---|---|
 | `core_permissions` | `camp_permissions` | глобал каталог (tenant-гүй, app_user: SELECT). + `module`, `available_in` (`v1`/`v2`) |
-| `core_permission_aliases` | — | `old_code → new_code` (глобал, SELECT). v0.2.4-т устгана |
+| `core_permission_aliases` | — | `old_code → new_code` (v0.2.3 шилжилтийн үед; migration `20261107006`-аар устгасан) |
 | `core_roles` | `camp_roles` | `system_code TEXT` (`CAMP_ADMIN`, `CAMP_MANAGER`, `CATERING_ADMIN`, `EMPLOYEE`) |
 | `core_role_permissions` | `camp_role_permissions` | роль ↔ эрх |
 | `core_user_roles` | `camp_user_roles` | олголт: `site_id` (NULL = tenant даяар), `scope_type` (generated), `source_position_id` |
 | `core_user_permissions` | `camp_user_permissions` | **эцсийн эрх** (guard зөвхөн үүнийг уншина, ADR-003 D-01); `site_id`, `scope_type` |
 | `core_position_role_templates` | `camp_position_role_templates` | албан тушаал → роль-загвар |
-| `legacy_camp_*` (6) | — | migration-ийн өмнөх хөлдөөсөн хуулбар, зөвхөн SELECT, v0.2.4-т устгана |
+| `legacy_camp_*` (6) | — | migration-ийн өмнөх хөлдөөсөн хуулбар байсан; migration `20261107006`-аар устгасан |
 
 Функц / trigger: `core_roles_protect_system`, `core_user_roles_apply_template`, `core_seed_default_roles(tenant)`, `core_tenants_after_insert` (`trg_tenants_core_seed_roles`); `camp_employees_sync_position_roles` (HR хүснэгт дээр, нэр хэвээр) шинэ хүснэгтийг бичнэ. Хуучин `camp_seed_default_roles`, `camp_roles_protect_system`, `camp_user_roles_apply_template`, `camp_tenants_after_insert` устгагдсан. Trigger-ийн алдааны угтвар `CAMP_SYSTEM_ROLE` хэвээр (API 409 mapping).
 
-Enum `CampPermissionSource`, `CampTemplateScope` (утга `ALL_CAMPS` / `EMPLOYEE_CAMP`) нэр, утгаараа хэвээр — API/DTO-д ил (R20); ADR-008-ийн «ажлын байр»-тай хамт шинэчилнэ. `CampRoleCode` enum зөвхөн `legacy_camp_roles`-д үлдэнэ.
+Enum `CampPermissionSource`, `CampTemplateScope` (утга `ALL_CAMPS` / `EMPLOYEE_CAMP`) нэр, утгаараа хэвээр — API/DTO-д ил (R20); ADR-008-ийн «ажлын байр»-тай хамт шинэчилнэ. `CampRoleCode` enum legacy хүснэгтүүдтэй хамт migration `20261107006`-аар устсан.
 
 ## 5. Шилжилт (migration `20261106005_core_rbac_adr007.sql`)
 
@@ -67,21 +67,22 @@ Enum `CampPermissionSource`, `CampTemplateScope` (утга `ALL_CAMPS` / `EMPLOY
 4. `system_code` → TEXT; функц, trigger шинэчлэх.
 5. **Шалгалт migration дотор:** legacy ↔ core мөрийн тоо (`camp.roles.manage`-ээс бусад) таарахгүй бол `RAISE EXCEPTION` → migration бүхэлдээ буцна.
 6. A = B: `pnpm camp:snapshot` (A — v0.2.2, B — v0.2.3). Харьцуулалт хоёр талын кодыг alias-аар хөрвүүлж, устгасан кодыг хасна; бусад ямар ч зөрүү = алдаа.
+7. `20261107006_adr007_cleanup.sql`: нэг хувилбарын alias, `legacy_camp_*` 6 хуулбар болон ашиглагдахаа больсон `CampRoleCode` enum-ийг устгана. Хадгалсан хуучин snapshot-ийг тулгах permission-code mapping нь зөвхөн `camp:snapshot` хэрэгсэлд үлдсэн; API болон permission registry-д хуучин alias байхгүй.
 
 Redis-ийн эрхийн cache-ийн түлхүүр солигдсон (`perms2`) → шинэчлэлийн дараа хуучин кодтой cache уншигдахгүй (AUTH-004, CACHE-001).
 
-## 6. Alias (нэг хувилбар — v0.2.3)
+## 6. Alias — v0.2.3 шилжилтийн үе (v0.2.4-с хассан)
 
 - API оролт (`PUT roles/:id/permissions`, `POST users/:id/permissions`): хуучин код → шинэ код руу хөрвөнө; устгасан код → `400`.
 - `GET me/permissions`: шинэ кодын хажууд хуучин alias кодыг **нэмж** буцаана (Блок 3-аас өмнөх frontend, e2e эвдрэхгүй).
 - `GET permissions` (каталог): зөвхөн шинэ код.
-- v0.2.4: alias хүснэгт, кодын alias, `legacy_camp_*` устгана (backlog).
+- v0.2.4: `20261107006` migration-аар alias хүснэгт, кодын alias, `legacy_camp_*` хуулбар устсан. Хуучин `/camp` RBAC route мөн устсан.
 
 ## 6б. API ба UI (v0.2.3 Блок 3 — B3-1…B3-4, 2026-11-06)
 
 | # | Шийдвэр |
 |---|---|
-| **B3-1** | RBAC API → **`/api/v1/core/rbac/*`** (`CoreRbacController`). Хуучин `/api/v1/camp/{permissions,me/permissions,users,roles,user-roles,user-permissions,positions/:id/role-templates,invites}` — `CampRbacLegacyController` (өвлөсөн, `Deprecation: true`), v0.2.4-т устгана. Ажилтны картаас нэвтрэх эрх (`camp/camps/:campId/employees/:id/{user,position-preview,create-user}`) `/camp`-д үлдсэн. Service `camp/rbac`-д (ARC-01 — v0.3). |
+| **B3-1** | RBAC API → **`/api/v1/core/rbac/*`** (`CoreRbacController`). Хуучин `/api/v1/camp/{permissions,me/permissions,users,roles,user-roles,user-permissions,positions/:id/role-templates,invites}` — v0.2.4-с устсан (404). Ажилтны картаас нэвтрэх эрх (`camp/camps/:campId/employees/:id/{user,position-preview,create-user}`) `/camp`-д үлдсэн. Service `camp/rbac`-д (ARC-01 — v0.3). |
 | **B3-2** | UI: **«Системийн тохиргоо»** `/settings/:section` (дээд цэс) — роль ба эрх, хэрэглэгчийн роль, байгууллага, орчуулга. `/camp/system` = **«Кемпийн тохиргоо»** (кемп, байрны төрөл, хөрөнгийн ангилал); хуучин хаяг → redirect. |
 | **B3-3** | Цэс / хэсэг нуух (PIL-19) — `web-shell/src/lib/access.ts` (ганц эх сурвалж, backend-ийн шалгалтыг дагана); `me/permissions.modules` (эрхтэй модуль); `ModuleGate`, `HomeRedirect`; ажлын байрны сонгогчид зөвхөн хандах эрхтэй. |
 | **B3-4** | V2-05: матрицад бүх эрх; хэрэгжээгүй модулийн эрх (бохир ус/хог, зардлын тайлан) «удахгүй». Олгосон роль / шууд эрх «олгогдсон» — идэвхгүй (PIL-18). |

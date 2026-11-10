@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 import { AsyncLocalStorage } from 'async_hooks';
 import { resolvePrismaLogLevels } from '../config/prisma-log';
@@ -15,10 +16,10 @@ export const tenantStorage = new AsyncLocalStorage<TenantContext>();
 export class PrismaTenantClientService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaTenantClientService.name);
 
-  constructor() {
+  constructor(config?: ConfigService) {
     super({
       // Phase 3.6.6: PRISMA_LOG_LEVELS (default warn,error). 'query' log RAM их иддэг — production-д бүү асаа
-      log: resolvePrismaLogLevels(),
+      log: resolvePrismaLogLevels(config?.get<string>('PRISMA_LOG_LEVELS')),
     });
 
     // Phase 4.8.3: өмнөх `$use` middleware УСТСАН — set_config-ийг transaction-ий ГАДНА (тусдаа statement)

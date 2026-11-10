@@ -31,18 +31,47 @@ describe('v0.2.1 CampCatalogService — байрны төрөл, кемп × а�
   it('listSettings: идэвхгүй албан тушаалыг тохиргоо/ажилтангүй бол нууна; анхдагч утгууд', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.REPORT_VIEW] }] });
     s.tx.hrPosition.findMany.mockResolvedValueOnce([
-      { id: 'p1', name: 'Жолооч', isActive: true },
-      { id: 'p2', name: 'Хуучин', isActive: false },
+      { id: 'p1', name: 'Жолооч', nameI18n: { mn: 'Жолооч', en: 'Driver' }, isActive: true },
+      { id: 'p2', name: 'Хуучин', nameI18n: { mn: 'Хуучин', zh: '旧职位' }, isActive: false },
       { id: 'p3', name: 'Хуучин2', isActive: false },
     ]);
     s.tx.campPositionSetting.findMany.mockResolvedValueOnce([
-      { positionId: 'p1', mealLocationId: 'loc1', mealsIncluded: false, updatedAt: new Date(), mealLocation: { name: 'Уул' }, shiftPatterns: [{ dayFrom: 1, dayTo: 14, shift: 'NIGHT' }] },
+      {
+        positionId: 'p1',
+        mealLocationId: 'loc1',
+        mealsIncluded: false,
+        updatedAt: new Date(),
+        mealLocation: { name: 'Уул', nameI18n: { mn: 'Уул', en: 'Hill' } },
+        shiftPatterns: [{ dayFrom: 1, dayTo: 14, shift: 'NIGHT' }],
+      },
     ]);
     s.tx.hrEmployee.groupBy.mockResolvedValueOnce([{ positionId: 'p2', _count: { _all: 1 } }]);
     const rows = await svc.listSettings('t1', 'a1', 'c1');
     expect(rows).toEqual([
-      { positionId: 'p1', name: 'Жолооч', isActive: true, activeEmployees: 0, mealLocationId: 'loc1', mealLocationName: 'Уул', mealsIncluded: false, shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'NIGHT' }] },
-      { positionId: 'p2', name: 'Хуучин', isActive: false, activeEmployees: 1, mealLocationId: null, mealLocationName: null, mealsIncluded: null, shiftPattern: [] },
+      {
+        positionId: 'p1',
+        name: 'Жолооч',
+        nameI18n: { mn: 'Жолооч', en: 'Driver' },
+        isActive: true,
+        activeEmployees: 0,
+        mealLocationId: 'loc1',
+        mealLocationName: 'Уул',
+        mealLocationNameI18n: { mn: 'Уул', en: 'Hill' },
+        mealsIncluded: false,
+        shiftPattern: [{ dayFrom: 1, dayTo: 14, shift: 'NIGHT' }],
+      },
+      {
+        positionId: 'p2',
+        name: 'Хуучин',
+        nameI18n: { mn: 'Хуучин', zh: '旧职位' },
+        isActive: false,
+        activeEmployees: 1,
+        mealLocationId: null,
+        mealLocationName: null,
+        mealLocationNameI18n: null,
+        mealsIncluded: null,
+        shiftPattern: [],
+      },
     ]);
   });
 

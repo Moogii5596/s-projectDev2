@@ -7,7 +7,7 @@ export enum MrStatus {
 }
 
 // MR Item — DB field names: description, unitOfMeasure (NOT itemName, unit)
-export interface MrItem {
+interface MrItem {
   id: string
   headerId: string
   tenantId: string
@@ -40,7 +40,7 @@ export interface MrHeader {
 }
 
 // Phase 6.0b [SEC-004] — workflow-ийн алхам (backend `MrWorkflowSummary`)
-export interface MrWorkflowStep {
+interface MrWorkflowStep {
   order: number
   role: string
   quorum: number
@@ -70,12 +70,6 @@ export interface CreateMrDto {
   title: string
   notes?: string
   items: CreateMrItemDto[]
-}
-
-export interface UpdateMrDto {
-  title?: string
-  notes?: string
-  items?: CreateMrItemDto[]
 }
 
 export interface SubmitMrDto {

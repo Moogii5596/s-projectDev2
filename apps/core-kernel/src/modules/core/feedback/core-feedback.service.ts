@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Injectable, Optional } from '@nestjs/common';
+import { CoreFeedbackStatus, Prisma } from '@prisma/client';
+import { FeedLinksService } from '../../feed/feed-links.service';
+import { NotificationService } from '../notifications/notification.service';
 import type { CoreFeedback, UserRole } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
@@ -39,12 +41,33 @@ const iso = (d: Date | null): string | null => (d ? d.toISOString() : null);
  *   - Зохиогч: өөрийн «Шинэ» саналаа засах / устгах.
  *   - OWNER / ADMIN: төлөв, хариу, хэрэгжсэн хувилбар, Excel экспорт.
  */
+/** v0.2.4 FEED-04: feed_links.object_type */
+export const FEEDBACK_LINK = 'CORE_FEEDBACK';
+
 @Injectable()
 export class CoreFeedbackService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
     private readonly attachments: CoreFeedbackAttachmentsService,
-  ) {}
+    @Optional() private readonly feedLinks?: FeedLinksService,
+    @Optional() private readonly notifications?: NotificationService,
+  ) {
+    // v0.2.4 FEED-05: пост → санал хүсэлт; «Хийгдсэн» төлөв эх постод. Санал хүсэлтийг бүх хэрэглэгч харна.
+    feedLinks?.register({
+      objectType: FEEDBACK_LINK,
+      module: 'core',
+      labelKey: 'feed.link.type.feedback',
+      statuses: async (tx, tenantId, ids) => {
+        const rows = await tx.coreFeedback.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, status: true } });
+        return new Map(rows.map((r) => [r.id, {
+          statusKey: `feed.link.status.feedback.${r.status.toLowerCase()}`,
+          closed: r.status === CoreFeedbackStatus.DONE || r.status === CoreFeedbackStatus.REJECTED,
+          ref: null,
+        }]));
+      },
+      viewLink: async (_tx, _tenantId, _userId, objectId) => `/feedback?id=${objectId}`,
+    });
+  }
 
   /** authId → идэвхтэй core_users (RULE-13). Кемпийн эрхээс хамаарахгүй — системийн бүх хэрэглэгч. */
   private async actor(tx: Tx, tenantId: string, authId: string): Promise<Actor> {
@@ -112,10 +135,15 @@ export class CoreFeedbackService {
     });
   }
 
-  async create(tenantId: string, authId: string, dto: CreateFeedbackDto): Promise<FeedbackItemDto> {
+  /** @param fromPostId v0.2.4 FEED-05: постоос (нэг transaction-д feed_links) */
+  async create(tenantId: string, authId: string, dto: CreateFeedbackDto, fromPostId?: string): Promise<FeedbackItemDto> {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const a = await this.actor(tx, tenantId, authId);
+        if (fromPostId) {
+          if (!this.feedLinks) throw notFound('feed.err.link_type');
+          await this.feedLinks.assertLinkable(tx, tenantId, fromPostId, a.userId, FEEDBACK_LINK);
+        }
         const r = await tx.coreFeedback.create({
           data: {
             tenantId,
@@ -128,6 +156,7 @@ export class CoreFeedbackService {
           },
           include: this.include(a),
         });
+        if (fromPostId) await this.feedLinks!.link(tx, tenantId, { postId: fromPostId, objectType: FEEDBACK_LINK, objectId: r.id, userId: a.userId });
         return this.toDto(r, a);
       }),
     );
@@ -174,6 +203,18 @@ export class CoreFeedbackService {
           },
           include: this.include(a),
         });
+        if (dto.status !== cur.status && this.feedLinks && this.notifications) {
+          for (const p of await this.feedLinks.postAuthors(tx, tenantId, FEEDBACK_LINK, cur.id)) {
+            await this.notifications.notify(tx, tenantId, {
+              type: 'feed.link.status',
+              recipients: [p.authorId],
+              excludeUserId: a.userId,
+              titleKey: 'notify.feed.link.status.title',
+              params: { typeKey: 'feed.link.type.feedback', ref: cur.title, statusKey: `feed.link.status.feedback.${dto.status.toLowerCase()}` },
+              link: `/feed/${p.postId}`,
+            });
+          }
+        }
         return this.toDto(r, a);
       }),
     );

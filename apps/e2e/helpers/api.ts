@@ -27,4 +27,4 @@ export async function api<T = { id: string }>(page: Page, method: string, path: 
 }
 
 /** HR-ийн ажлын байрны зам: `/hr/sites/:campId<path>` */
-export const hrSite = (campId: string, path = ''): string => `/hr/sites/${campId}${path}`;
+const hrSite = (campId: string, path = ''): string => `/hr/sites/${campId}${path}`;

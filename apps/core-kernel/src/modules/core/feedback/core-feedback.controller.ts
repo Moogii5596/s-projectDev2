@@ -82,6 +82,14 @@ export class CoreFeedbackController {
     return this.feedback.create(u.tenantId, u.id, dto);
   }
 
+  /** v0.2.4 FEED-05: Feed-ийн постоос санал хүсэлт */
+  @Post('from-post/:postId')
+  @HttpCode(201)
+  createFromPost(@Req() req: FastifyRequest, @Param('postId', new ParseUUIDPipe()) postId: string, @Body() dto: CreateFeedbackDto) {
+    const u = reqUser(req);
+    return this.feedback.create(u.tenantId, u.id, dto, postId);
+  }
+
   @Patch(':id')
   update(@Req() req: FastifyRequest, @Param('id', uuid()) id: string, @Body() dto: UpdateFeedbackDto) {
     const u = reqUser(req);

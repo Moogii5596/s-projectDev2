@@ -7,24 +7,24 @@
 export const QUANTITY_SOURCES = ['MEAL_ORDER', 'HAUL', 'MANUAL'] as const;
 export type QuantitySource = (typeof QUANTITY_SOURCES)[number];
 
-export const RATE_POLICIES = ['NONE', 'FIXED', 'MONTHLY_MANUAL'] as const;
+const RATE_POLICIES = ['NONE', 'FIXED', 'MONTHLY_MANUAL'] as const;
 export type RatePolicy = (typeof RATE_POLICIES)[number];
 
 /** G-3: хоолноос нэхэмжлэх тоо — нийт ÷ N эсвэл нэг хоолны төрөл (хоол тус бүрийн үнэ = хэд хэдэн MEAL_TYPE мөр) */
-export const QUANTITY_RULES = ['TOTAL_DIV_N', 'MEAL_TYPE'] as const;
+const QUANTITY_RULES = ['TOTAL_DIV_N', 'MEAL_TYPE'] as const;
 export type QuantityRule = (typeof QUANTITY_RULES)[number];
 
-export const CONTRACT_MEAL_TYPES = ['BREAKFAST', 'LUNCH', 'DINNER', 'NIGHT'] as const;
+const CONTRACT_MEAL_TYPES = ['BREAKFAST', 'LUNCH', 'DINNER', 'NIGHT'] as const;
 export type ContractMealType = (typeof CONTRACT_MEAL_TYPES)[number];
 
-export const AMENDMENT_TYPES = ['EXTENSION', 'PRICE_CHANGE', 'TERMS', 'TERMINATION', 'OTHER'] as const;
-export type AmendmentType = (typeof AMENDMENT_TYPES)[number];
+const AMENDMENT_TYPES = ['EXTENSION', 'PRICE_CHANGE', 'TERMS', 'TERMINATION', 'OTHER'] as const;
+type AmendmentType = (typeof AMENDMENT_TYPES)[number];
 /** POST /amendments-аар шууд бүртгэх төрөл (PRICE_CHANGE — үнэ нэмэхэд, TERMINATION — цуцлахад автоматаар) */
-export const MANUAL_AMENDMENT_TYPES = ['EXTENSION', 'TERMS', 'OTHER'] as const;
+const MANUAL_AMENDMENT_TYPES = ['EXTENSION', 'TERMS', 'OTHER'] as const;
 export type ManualAmendmentType = (typeof MANUAL_AMENDMENT_TYPES)[number];
 
 /** Төлбөрийн хуваарийн мөр: баримтаас хойш N ажлын өдөр / N хоног / N сар (амралтын өдрийн календарь — V2-08) */
-export const PAYMENT_TERM_RULES = ['AFTER_INVOICE_WORKDAYS', 'AFTER_INVOICE_DAYS', 'AFTER_MONTHS'] as const;
+const PAYMENT_TERM_RULES = ['AFTER_INVOICE_WORKDAYS', 'AFTER_INVOICE_DAYS', 'AFTER_MONTHS'] as const;
 export type PaymentTermRule = (typeof PAYMENT_TERM_RULES)[number];
 
 export type ContractStatus = 'DRAFT' | 'ACTIVE' | 'TERMINATED';

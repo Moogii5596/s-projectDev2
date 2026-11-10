@@ -22,10 +22,11 @@ import { TenantCacheService } from '../../src/auth/tenant-cache.service';
 import { configureApp } from '../../src/common/http/configure-app';
 import { ADMIN_DB_URL, APP_USER_DB_URL } from './db-urls';
 
-export type Who = 'admin' | 'manager' | 'nobody';
+type Who = 'admin' | 'manager' | 'nobody';
 export const IT_PASSWORD = 'Test1234!';
 export const WEDNESDAY = '2026-10-07';
 export const V1 = '/api/v1/camp';
+const CORE_RBAC = '/api/v1/core/rbac';
 
 export interface CampIt {
   app: NestFastifyApplication;
@@ -125,9 +126,9 @@ export async function createCampIt(prefix: string): Promise<CampIt> {
   ids.b1 = (await must(api().post(camp('/buildings')).set(as('admin')).send({ code: 'B1', name: 'Байр 1' }), 'building')).id;
 
   // manager = "Кемп менежер" (C1)
-  const rolesList = (await api().get(`${V1}/roles`).set(as('admin'))).body as { id: string; systemCode: string | null }[];
+  const rolesList = (await api().get(`${CORE_RBAC}/roles`).set(as('admin'))).body as { id: string; systemCode: string | null }[];
   ids.roleManager = rolesList.find((r) => r.systemCode === 'CAMP_MANAGER')!.id;
-  await must(api().post(`${V1}/user-roles`).set(as('admin')).send({ userId: coreIds.manager, roleId: ids.roleManager, campId: ids.c1 }), 'user-role');
+  await must(api().post(`${CORE_RBAC}/user-roles`).set(as('admin')).send({ userId: coreIds.manager, roleId: ids.roleManager, campId: ids.c1 }), 'user-role');
 
   const close = async () => {
     await prismaAdmin.tenant.delete({ where: { id: tenantId } }).catch((e) => console.error('[cleanup]', e));

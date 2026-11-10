@@ -1,0 +1,8 @@
+export { default as AssetCategoriesPage } from '../camp/pages/AssetCategoriesPage'
+export { default as CatalogPage } from '../camp/pages/CatalogPage'
+export { default as ContractCatalogPage } from '../camp/pages/ContractCatalogPage'
+export { default as ExchangeRatesPage } from '../camp/pages/ExchangeRatesPage'
+export { default as OrganizationsPage } from '../camp/pages/OrganizationsPage'
+export { default as RolesPage } from '../camp/pages/RolesPage'
+export { default as TranslationsPage } from '../camp/pages/TranslationsPage'
+export { default as UserRolesPage } from '../camp/pages/UserRolesPage'

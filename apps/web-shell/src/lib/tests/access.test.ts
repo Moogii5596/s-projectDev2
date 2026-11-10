@@ -18,6 +18,7 @@ const employee: AccessSnapshot = { isTenantAdmin: false, permissions: [], byCamp
 const hrClerk: AccessSnapshot = { isTenantAdmin: false, permissions: [], byCamp: { c2: ['hr.employee.manage'] }, modules: ['hr'] }
 /** Бүх кемпийн мастер өгөгдөл */
 const master: AccessSnapshot = { isTenantAdmin: false, permissions: ['camp.master.manage'], byCamp: {}, modules: ['camp'] }
+const contractManager: AccessSnapshot = { isTenantAdmin: false, permissions: ['camp.contract.manage'], byCamp: {}, modules: ['camp'] }
 const nobody: AccessSnapshot = { isTenantAdmin: false, permissions: [], byCamp: {}, modules: [] }
 
 describe('access (PIL-19, ADR-007 B3-3)', () => {
@@ -46,21 +47,32 @@ describe('access (PIL-19, ADR-007 B3-3)', () => {
     expect(canSeeHrSection(hrClerk, 'c2', 'unknown')).toBe(false)
   })
 
-  it('Системийн тохиргоо: админ 4 хэсэг; бүх кемпийн master.manage → зөвхөн байгууллага; бусад → юу ч үгүй', () => {
-    expect(visibleSettingsSections(admin)).toEqual(['roles', 'user-roles', 'organizations', 'translations'])
-    expect(visibleSettingsSections(master)).toEqual(['organizations'])
+  it('Системийн тохиргоо: registry-ийн эрхээр хэсгүүд харагдана', () => {
+    expect(visibleSettingsSections(admin)).toEqual(['profile', 'security', 'modules', 'calendars', 'approval-flows', 'sites', 'attachment-patterns', 'roles', 'user-roles', 'organizations', 'contract-catalog', 'exchange-rates', 'building-types', 'asset-categories', 'translations'])
+    expect(visibleSettingsSections(master)).toEqual(['organizations', 'building-types'])
+    expect(visibleSettingsSections(contractManager)).toEqual(['contract-catalog', 'exchange-rates'])
     expect(visibleSettingsSections(employee)).toEqual([])
     expect(canSeeSettingsSection(admin, 'nope')).toBe(false)
     expect(canManageCampSystem(master)).toBe(true)
     expect(canManageCampSystem(employee)).toBe(false)
   })
 
+  it('унтраалттай модулийн тохиргоо эзэмшигч модультайгаа хамт нуугдана', () => {
+    const adminWithoutCamp = { ...admin, modules: ['hr'] }
+    expect(visibleSettingsSections(adminWithoutCamp)).toEqual([
+      'profile', 'security', 'modules', 'calendars', 'approval-flows', 'sites', 'attachment-patterns', 'roles', 'user-roles', 'translations',
+    ])
+    expect(canSeeSettingsSection(adminWithoutCamp, 'organizations')).toBe(false)
+  })
+
   it('firstVisiblePath: Кемп → Хүний нөөц → Тохиргоо → null', () => {
     const on = { camp: true, hr: true }
     expect(firstVisiblePath(employee, on)).toBe('/camp')
     expect(firstVisiblePath(hrClerk, on)).toBe('/hr')
-    expect(firstVisiblePath({ ...master, modules: [] }, on)).toBe('/settings')
+    expect(firstVisiblePath({ ...master, modules: [] }, on)).toBeNull()
     expect(firstVisiblePath(nobody, on)).toBeNull()
+    expect(firstVisiblePath(admin, { camp: false, hr: false })).toBe('/settings')
+    expect(firstVisiblePath({ ...master, modules: [] }, { camp: false, hr: false })).toBeNull()
     expect(firstVisiblePath(employee, { camp: false, hr: true })).toBeNull()
   })
 })

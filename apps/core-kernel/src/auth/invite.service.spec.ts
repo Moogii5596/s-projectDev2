@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InviteService, FORGOT_LIMITS } from './invite.service';
 import { hashToken } from './invite-token';
+import { DEFAULT_TENANT_SECURITY_POLICY } from './tenant-security-policy.service';
 
 const TOKEN = 'A'.repeat(43);
 
@@ -17,12 +18,13 @@ function setup(opts: { publicUrl?: string; mail?: boolean; user?: Record<string,
   const mailer = { isEnabled: vi.fn(() => opts.mail ?? true), send: vi.fn().mockResolvedValue(undefined) };
   const tenantCache = { invalidateMember: vi.fn() };
   const signIn = { tenantIdFromHost: vi.fn().mockResolvedValue('t1'), findLoginUser: vi.fn() };
+  const securityPolicy = { get: vi.fn().mockResolvedValue(DEFAULT_TENANT_SECURITY_POLICY) };
   const counters = new Map<string, number>();
   const redis = { incr: vi.fn(async (k: string) => { const n = (counters.get(k) ?? 0) + 1; counters.set(k, n); return n; }), pexpire: vi.fn() };
   const config = { get: (k: string) => (k === 'PUBLIC_APP_URL' ? (opts.publicUrl ?? 'https://sino.gobiverse.website/') : undefined) };
   const sessions = { revokeOthers: vi.fn(), revokeAll: vi.fn().mockResolvedValue(undefined) };
-  const svc = new InviteService(config as never, prisma as never, system as never, userAdmin as never, mailer as never, tenantCache as never, signIn as never, redis as never, sessions as never);
-  return { svc, tx, system, userAdmin, mailer, tenantCache, signIn, sessions };
+  const svc = new InviteService(config as never, prisma as never, system as never, userAdmin as never, mailer as never, tenantCache as never, signIn as never, securityPolicy as never, redis as never, sessions as never);
+  return { svc, tx, system, userAdmin, mailer, tenantCache, signIn, securityPolicy, sessions };
 }
 
 describe('InviteService (v0.2.2 Блок 3)', () => {
@@ -84,10 +86,11 @@ describe('InviteService (v0.2.2 Блок 3)', () => {
 
   it('accept: атом claim → нууц үг → must_change=false → бусад токен цуцлах → cache; claim амжилтгүй → 400', async () => {
     s.system.$queryRaw
+      .mockResolvedValueOnce([{ id: 'i1', tenant_id: 't1', user_id: 'u1', purpose: 'INVITE', expired: false, used: false, revoked: false, is_active: true }])
       .mockResolvedValueOnce([{ id: 'i1', tenant_id: 't1', user_id: 'u1' }])
       .mockResolvedValueOnce([{ auth_id: 'auth1', email: 'e@x', phone: null, username: 'sh1', is_active: true }]);
     expect(await s.svc.accept(TOKEN, 'new-password-123')).toEqual({ done: true, login: 'sh1' });
-    expect((s.system.$queryRaw.mock.calls[0][0] as TemplateStringsArray).join('?')).toContain('used_at IS NULL AND revoked_at IS NULL AND expires_at > now()');
+    expect((s.system.$queryRaw.mock.calls[1][0] as TemplateStringsArray).join('?')).toContain('used_at IS NULL AND revoked_at IS NULL AND expires_at > now()');
     expect(s.userAdmin.setPassword).toHaveBeenCalledWith('auth1', 'new-password-123');
     const sqls = s.system.$executeRaw.mock.calls.map((c) => (c[0] as TemplateStringsArray).join('?'));
     expect(sqls.some((q) => q.includes('must_change_password = false'))).toBe(true);
@@ -95,12 +98,13 @@ describe('InviteService (v0.2.2 Блок 3)', () => {
     expect(s.tenantCache.invalidateMember).toHaveBeenCalledWith('t1', 'auth1');
     // PIL-15: амжилттай accept → бүх session цуцлагдана
     expect(s.sessions.revokeAll).toHaveBeenCalledWith('auth1');
-    s.system.$queryRaw.mockResolvedValueOnce([]);
+    s.system.$queryRaw.mockResolvedValueOnce([{ id: 'i1', tenant_id: 't1', user_id: 'u1', purpose: 'INVITE', expired: false, used: true, revoked: false, is_active: true }]);
     await expect(s.svc.accept(TOKEN, 'new-password-123')).rejects.toMatchObject({ code: 'auth.invite_invalid' });
   });
 
   it('accept: нууц үг тавих амжилтгүй → "ашигласан"-ыг буцаана (дахин оролдох боломжтой)', async () => {
     s.system.$queryRaw
+      .mockResolvedValueOnce([{ id: 'i1', tenant_id: 't1', user_id: 'u1', purpose: 'INVITE', expired: false, used: false, revoked: false, is_active: true }])
       .mockResolvedValueOnce([{ id: 'i1', tenant_id: 't1', user_id: 'u1' }])
       .mockResolvedValueOnce([{ auth_id: 'auth1', email: 'e@x', phone: null, username: null, is_active: true }]);
     s.userAdmin.setPassword.mockRejectedValueOnce(Object.assign(new Error('weak'), { status: 400 }));

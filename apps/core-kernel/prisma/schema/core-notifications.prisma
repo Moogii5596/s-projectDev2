@@ -1,0 +1,38 @@
+// v0.2.4 Блок 7 (NTF-01) — мэдэгдэл (20261107014_core_notifications.sql). FK (tenant_id, user_id) → core_users — зөвхөн SQL-д.
+
+model CoreNotification {
+  id            String    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  type          String
+  titleKey      String    @map("title_key")
+  bodyKey       String?   @map("body_key")
+  params        Json      @default("{}")
+  link          String?
+  inApp         Boolean   @default(true) @map("in_app")
+  readAt        DateTime? @map("read_at") @db.Timestamptz
+  emailStatus   String    @default("NONE") @map("email_status")
+  emailAttempts Int       @default(0) @map("email_attempts") @db.SmallInt
+  emailNextAt   DateTime? @map("email_next_at") @db.Timestamptz
+  emailError    String?   @map("email_error")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("core_notifications")
+}
+
+model CoreNotificationPref {
+  tenantId  String   @map("tenant_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String
+  inApp     Boolean  @map("in_app")
+  email     Boolean
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([tenantId, userId, type])
+  @@map("core_notification_prefs")
+}

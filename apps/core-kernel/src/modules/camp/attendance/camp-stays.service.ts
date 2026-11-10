@@ -6,6 +6,7 @@ import { assertDate } from '../../hr/attendance/range';
 import type { AttendanceStayStore, NewStay, StayRow } from '../../hr/attendance/stay-store';
 import { StayShiftGroup } from './camp-attendance.dto';
 import { loadPresenceEmployees } from './camp-presence.service';
+import { readCatalogNameI18n } from '../common/catalog-name-i18n';
 import { employeeDay } from './presence';
 
 /**
@@ -60,7 +61,7 @@ export class CampStaysService {
         where: { tenantId, campId, startDate: { lte: d }, OR: [{ endDate: null }, { endDate: { gte: d } }] },
         select: {
           id: true, startDate: true, endDate: true,
-          employee: { select: { id: true, employeeCode: true, fullName: true, department: { select: { code: true, name: true } }, crew: { select: { code: true } } } },
+          employee: { select: { id: true, employeeCode: true, fullName: true, department: { select: { code: true, name: true, nameI18n: true } }, crew: { select: { code: true } } } },
         },
         orderBy: { employee: { employeeCode: 'asc' } },
       });
@@ -69,7 +70,7 @@ export class CampStaysService {
         employees.map((e) => {
           const day = employeeDay(e, date, settings);
           const shiftGroup: StayShiftGroup = !day ? 'UNKNOWN' : day.kind === 'MOVEMENT' ? 'MOVEMENT' : (day.shift ?? 'UNKNOWN');
-          return [e.id, { shiftGroup, positionName: e.positionName ?? null, mealsIncluded: e.mealsIncluded !== false }] as const;
+          return [e.id, { shiftGroup, positionName: e.positionName ?? null, positionNameI18n: e.positionNameI18n ?? null, mealsIncluded: e.mealsIncluded !== false }] as const;
         }),
       );
       const out = rows.map((r) => {
@@ -83,6 +84,8 @@ export class CampStaysService {
           dayType: start === date ? 'ARRIVAL' : end === date ? 'DEPARTURE' : 'FULL_DAY',
           shiftGroup: i?.shiftGroup ?? ('UNKNOWN' as StayShiftGroup),
           positionName: i?.positionName ?? null,
+          positionNameI18n: i?.positionNameI18n ?? null,
+          employee: { ...r.employee, department: { ...r.employee.department, nameI18n: readCatalogNameI18n(r.employee.department.nameI18n) } },
           mealsIncluded: i?.mealsIncluded ?? true,
         };
       });

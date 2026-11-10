@@ -10,7 +10,7 @@ type Tx = Prisma.TransactionClient;
  * MR-ийн төлөв солигдох ҮЕД (тухайн transaction дотор) бусад модулийг дуудна.
  * MR батлах 2 зам хоёулаа энийг дуудна:
  *   - MaterialRequisitionService.submit / approve / reject
- *   - WorkflowService.approveStep (сүүлийн алхам) / rejectStep
+ *   - ApprovalEngineService (v0.2.4 WF-06) → MR handler onApprovalFinal
  * Аль нэг модуль алдаа шидвэл бүх transaction rollback (MR төлөв өөрчлөгдөхгүй).
  *
  * Sprint 10-д event consumer руу шилжүүлж болно — интерфэйс нь энэ файл.

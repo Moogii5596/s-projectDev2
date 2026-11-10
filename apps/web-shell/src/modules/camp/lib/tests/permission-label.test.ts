@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import mn from '@s-project/i18n/web.mn.json'
 import en from '@s-project/i18n/web.en.json'
 import zh from '@s-project/i18n/web.zh.json'
-import { P, permissionLabel, permissionLabelKey } from '../permissions'
+import { P, permissionLabel, permissionLabelKey } from '../../../../core/permissions'
 
 describe('permissionLabel', () => {
   const dict: Record<string, string> = { 'perm.camp.employee.manage': 'Хүний нөөц › Ажилтан бүртгэл' }

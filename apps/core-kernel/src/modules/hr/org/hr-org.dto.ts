@@ -1,8 +1,8 @@
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsEnum, IsInt, IsNotEmpty, IsObject, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CampShiftType } from '@prisma/client';
 import { ISO_DATE, trim, trimOrNull } from '../../camp/common/camp-dto.util';
-import { CODE, CODE_MSG } from '../../camp/common/common.dto';
+import { CatalogNameI18nDto, CODE, CODE_MSG } from '../../camp/common/common.dto';
 
 // ── Хэлтэс + ээлжийн загвар ──────────────────────────────────
 export class ShiftSegmentDto {
@@ -29,6 +29,9 @@ export class CreateDepartmentDto {
   @Transform(trim) @IsString() @IsNotEmpty({ message: 'name шаардлагатай' }) @MaxLength(200)
   name!: string;
 
+  @IsOptional() @IsObject() @ValidateNested() @Type(() => CatalogNameI18nDto)
+  nameI18n?: CatalogNameI18nDto;
+
   /** v0.2.1 (Q1): ҮЛ ТООГДОНО — хоолны байршил ажилтан / албан тушаал дээр. Хуучин клиентийн хүсэлт эвдрэхгүйн тулд хүлээн авна */
   @IsOptional() @IsUUID('all', { message: 'mealLocationId UUID байх ёстой' })
   mealLocationId?: string;
@@ -41,6 +44,9 @@ export class CreateDepartmentDto {
 export class UpdateDepartmentDto {
   @IsOptional() @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(200)
   name?: string;
+
+  @IsOptional() @IsObject() @ValidateNested() @Type(() => CatalogNameI18nDto)
+  nameI18n?: CatalogNameI18nDto;
 
   /** v0.2.1 (Q1): ҮЛ ТООГДОНО (хуучин клиент) */
   @IsOptional() @IsUUID('all', { message: 'mealLocationId UUID байх ёстой' })

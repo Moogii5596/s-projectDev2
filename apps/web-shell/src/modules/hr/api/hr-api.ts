@@ -27,7 +27,7 @@ import type {
   RehireResult,
   TerminateResult,
   TerminationReason,
-} from '../../camp/api/types'
+} from './camp-bridge'
 
 /**
  * v0.2.2 H2 — HR модулийн API client ([[ADR-006_HR_Core_Module]] §5.1).
@@ -35,8 +35,8 @@ import type {
  * Tenant-түвшин: албан тушаал `/api/v1/hr/positions` (`campApi.catalog('positions')`), байгууллага `/api/v1/core/organizations` (`campApi`).
  * DTO type-ууд backend-тэй ТАМ АДИЛ (RULE-20) — `camp/api/types.ts`-д хэвээр (v0.3-т салгана).
  */
-export const HR_V1 = '/api/v1/hr'
-export const siteUrl = (campId: string, path = '') => `${HR_V1}/sites/${campId}${path}`
+const HR_V1 = '/api/v1/hr'
+const siteUrl = (campId: string, path = '') => `${HR_V1}/sites/${campId}${path}`
 const get = async <T>(url: string, params?: object): Promise<T> => (await apiClient.get<T>(url, { params })).data
 const post = async <T>(url: string, body?: unknown): Promise<T> => (await apiClient.post<T>(url, body ?? {})).data
 const patch = async <T>(url: string, body: unknown): Promise<T> => (await apiClient.patch<T>(url, body)).data
@@ -46,9 +46,9 @@ const del = async <T>(url: string): Promise<T> => (await apiClient.delete<T>(url
 export const hrApi = {
   // ── Хэлтэс, баг ────────────────────────────────────────────
   departments: (campId: string) => get<Department[]>(siteUrl(campId, '/departments')),
-  createDepartment: (campId: string, body: { code: string; name: string; shiftPattern?: ShiftSegment[] }) =>
+  createDepartment: (campId: string, body: { code: string; name: string; nameI18n?: { en?: string; zh?: string }; shiftPattern?: ShiftSegment[] }) =>
     post<Department>(siteUrl(campId, '/departments'), body),
-  updateDepartment: (campId: string, id: string, body: { name?: string; isActive?: boolean }) =>
+  updateDepartment: (campId: string, id: string, body: { name?: string; nameI18n?: { en?: string; zh?: string }; isActive?: boolean }) =>
     patch<Department>(siteUrl(campId, `/departments/${id}`), body),
   setShiftPattern: (campId: string, id: string, segments: ShiftSegment[]) =>
     put<Department>(siteUrl(campId, `/departments/${id}/shift-pattern`), { segments }),

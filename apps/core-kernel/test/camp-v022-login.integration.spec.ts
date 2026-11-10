@@ -12,6 +12,7 @@ import { CAMP_PERMISSIONS as P } from '../src/modules/camp/common/camp-permissio
 import { CampRbacService } from '../src/modules/camp/rbac/camp-rbac.service';
 import { CampEmployeeLoginService } from '../src/modules/camp/rbac/camp-employee-login.service';
 import { SignInService } from '../src/auth/sign-in.service';
+import { DEFAULT_TENANT_SECURITY_POLICY } from '../src/auth/tenant-security-policy.service';
 import { ADMIN_DB_URL, APP_USER_DB_URL } from './helpers/db-urls';
 
 const cache = { buildKey: (...p: string[]) => p.join(':'), get: async () => null, set: async () => undefined, del: async () => undefined, invalidateTenant: async () => undefined };
@@ -24,7 +25,8 @@ describe('v0.2.2 Блок 2 — нэвтрэх нэр, ажилтан ↔ хэр
   const audit = new CampAuditService(rls as never, access);
   const rbac = new CampRbacService(rls as never, access, audit);
   const login = new CampEmployeeLoginService(rls as never, access, audit, tenantCache as never);
-  const signIn = new SignInService({ get: () => undefined } as never, admin as never, tenantCache as never, {} as never);
+  const securityPolicy = { get: async () => DEFAULT_TENANT_SECURITY_POLICY };
+  const signIn = new SignInService({ get: () => undefined } as never, admin as never, tenantCache as never, securityPolicy as never, {} as never);
 
   const sfx = randomUUID().slice(0, 8);
   const tenantIds: string[] = [];

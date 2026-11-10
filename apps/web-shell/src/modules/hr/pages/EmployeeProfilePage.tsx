@@ -3,12 +3,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { hrApi } from '../api/hr-api'
-import type { EmployeeProfile, TerminationReason } from '../../camp/api/types'
-import { campKeys } from '../../camp/hooks/useCampPermissions'
-import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { DIRECTION_LABEL, EMPLOYEE_STATUS_LABEL, MEAL_LABEL, TERMINATION_REASON_LABEL } from '../../camp/lib/labels'
-import { todayUb } from '../../camp/lib/dates'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, td } from '../../camp/components/ui'
+import type { EmployeeProfile, TerminationReason } from '../api/camp-bridge'
+import { campKeys } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { DIRECTION_LABEL, EMPLOYEE_STATUS_LABEL, MEAL_LABEL, TERMINATION_REASON_LABEL, localizedCatalogName } from '../../../core/labels'
+import { todayUb } from '../../../core/dates'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, td } from '../../../core/ui'
 import { lifecycleActions, terminationEffects, terminationFormError, TERMINATION_REASONS, type TerminationForm } from '../lib/termination'
 
 type Tab = 'info' | 'attendance' | 'rooms' | 'history' | 'views'
@@ -123,7 +123,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 function InfoTab({ p }: { p: EmployeeProfile }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   return (
     <Card>
       {/* v0.2.3 Блок D (S9): «Мэдээлэл дутуу» — импортын буруу эх утга; талбарыг засахад арилна */}
@@ -149,8 +149,12 @@ function InfoTab({ p }: { p: EmployeeProfile }) {
         <Row label={t('camp.emp.col.last_name')}>{p.lastName}</Row>
         <Row label={t('camp.emp.col.first_name')}>{p.firstName ?? p.fullName}</Row>
         <Row label={t('camp.emp.col.family_name')}>{p.familyName}</Row>
-        <Row label={t('camp.emp.col.position')}>{p.positionRef?.name ?? p.position}</Row>
-        <Row label={t('camp.emp.department')}>{`${p.department.code} · ${p.department.name}`}</Row>
+        <Row label={t('camp.emp.col.position')}>
+          {p.positionRef ? localizedCatalogName(p.positionRef, i18n.resolvedLanguage ?? i18n.language) : p.position}
+        </Row>
+        <Row label={t('camp.emp.department')}>
+          {`${p.department.code} · ${localizedCatalogName(p.department, i18n.resolvedLanguage ?? i18n.language)}`}
+        </Row>
         <Row label={t('camp.emp.crew')}>{p.crew?.code ?? t('camp.emp.no_crew')}</Row>
         <Row label={t('camp.emp.organization')}>{p.organization.name}</Row>
         <Row label={t('camp.emp.col.phone')}>{p.phone}</Row>
@@ -268,7 +272,7 @@ function TerminateDialog({ campId, p, onClose }: { campId: string; p: EmployeePr
   const [form, setForm] = useState<TerminationForm>({ date: today, reason: '', note: '' })
   const [touched, setTouched] = useState(false)
   const err = terminationFormError(form, today)
-  const mut = useCampMutation(
+  const mut = useAppMutation(
     () => hrApi.terminateEmployee(campId, p.id, { date: form.date, reason: form.reason as TerminationReason, note: form.note.trim() || null }),
     [campKeys.employees(campId), campKeys.users, campKeys.stays(campId), campKeys.roomBoard(campId), campKeys.allocations(campId), campKeys.movements(campId)],
     onClose,
@@ -329,7 +333,7 @@ function RehireDialog({ campId, p, onClose }: { campId: string; p: EmployeeProfi
   const navigate = useNavigate()
   const [code, setCode] = useState(p.employeeCode)
   const [transferUser, setTransferUser] = useState(true)
-  const mut = useCampMutation(
+  const mut = useAppMutation(
     () => hrApi.rehireEmployee(campId, p.id, { employeeCode: code.trim() === p.employeeCode ? undefined : code.trim(), transferUser: p.user ? transferUser : false }),
     [campKeys.employees(campId), campKeys.users],
     (res) => {

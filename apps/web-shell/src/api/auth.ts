@@ -32,10 +32,14 @@ export async function changePasswordRequest(currentPassword: string, newPassword
   await apiClient.post('/api/v1/auth/change-password', { currentPassword, newPassword })
 }
 
+export async function getPasswordPolicy(): Promise<{ passwordMinLength: number }> {
+  return (await apiClient.get<{ passwordMinLength: number }>('/api/v1/auth/password-policy')).data
+}
+
 // ── v0.2.2 Блок 3: урилга / нууц үг сэргээх (нэвтрэлтгүй — fetch, interceptor-гүй) ──
 
 export type InviteInfo =
-  | { valid: true; purpose: 'INVITE' | 'RESET'; expiresAt: string; name: string | null; login: string | null }
+  | { valid: true; purpose: 'INVITE' | 'RESET'; expiresAt: string; name: string | null; login: string | null; passwordMinLength: number }
   | { valid: false; reason: 'invalid' | 'used' | 'revoked' | 'expired' }
 
 async function publicRequest<T>(method: 'GET' | 'POST', path: string, body: unknown, fallbackError: string): Promise<T> {

@@ -1,7 +1,7 @@
 import { CampMealType, CampShiftType } from '@prisma/client';
 
 /** CAMP = кемпийн гал тогоо (settings.default_meal_location_id), DEPT = хэлтсийн байршил */
-export type MealPlace = 'CAMP' | 'DEPT';
+type MealPlace = 'CAMP' | 'DEPT';
 export interface MealSlot {
   meal: CampMealType;
   place: MealPlace;

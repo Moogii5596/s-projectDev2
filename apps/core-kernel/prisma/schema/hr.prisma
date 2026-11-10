@@ -26,6 +26,7 @@ model HrDepartment {
   campId         String   @map("camp_id") @db.Uuid
   code           String
   name           String
+  nameI18n       Json     @default("{}") @map("name_i18n")
   /// v0.2.1-ээс ашиглагдахгүй (ажилтан / албан тушаал) — v0.2.2-т устгана
   mealLocationId String?  @map("meal_location_id") @db.Uuid
   isActive       Boolean  @default(true) @map("is_active")
@@ -161,6 +162,7 @@ model HrPosition {
   id        String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
   name      String
+  nameI18n  Json     @default("{}") @map("name_i18n")
   /// v0.2.3 Блок D (20261019002): ажлын байрны индекс (жнь 1322-11) — давхардаж болно
   code      String?
   isActive  Boolean  @default(true) @map("is_active")

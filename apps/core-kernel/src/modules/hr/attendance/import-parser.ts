@@ -148,7 +148,7 @@ export async function parseAttendanceXlsx(buffer: Buffer): Promise<ParsedRow[]> 
 }
 
 /** Ирцийн загварын заавар — хуудасны нэр → мөрүүд (I18N-02) */
-export const ATTENDANCE_HELP: Record<string, string[]> = {
+const ATTENDANCE_HELP: Record<string, string[]> = {
   'Заавар_MN': [
     'Ирцийн импорт — заавар',
     'employee_code: ажилтны код (заавал)',

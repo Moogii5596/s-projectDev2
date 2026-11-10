@@ -4,11 +4,12 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
 import type { Camp, CampSettings, MealLocation } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
-import { weekdayName, weekdayNames } from '../lib/labels'
-import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Table, inputCls, td } from '../components/ui'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { localizedCatalogName, weekdayName, weekdayNames } from '../../../core/labels'
+import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Table, inputCls, td } from '../../../core/ui'
+import { LocalizedNameFields, type LocalizedNameInput } from '../components/LocalizedNameFields'
 import FacilitiesPage from './FacilitiesPage'
 import PositionSettingsPage from './PositionSettingsPage'
 import MealOrderSettings from '../components/MealOrderSettings'
@@ -18,8 +19,7 @@ import MealOrderSettings from '../components/MealOrderSettings'
  * зүүн цэс (Ерөнхий · Хоолны байршил · Албан тушаалын хоол/ээлж · Байр, өрөө) → баруун талд тухайн хэсэг.
  * Хуучин /facilities → энд redirect. v0.2.2 H2: хэлтэс, бригад → «Хүний нөөц» (/hr/:campId/...) (CampRoutes).
  */
-export const SETTINGS_SECTIONS = ['general', 'meal-locations', 'meal-orders', 'positions', 'facilities'] as const
-export type SettingsSection = (typeof SETTINGS_SECTIONS)[number]
+const SETTINGS_SECTIONS = ['general', 'meal-locations', 'meal-orders', 'positions', 'facilities'] as const
 
 export default function CampSettingsPage() {
   const { t } = useTranslation()
@@ -56,7 +56,7 @@ export default function CampSettingsPage() {
 function GeneralSection() {
   const { t } = useTranslation()
   const { campId = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const camp = useQuery({ queryKey: campKeys.camp(campId), queryFn: () => campApi.camp(campId) })
   const settings = useQuery({ queryKey: campKeys.settings(campId), queryFn: () => campApi.settings(campId) })
   const locations = useQuery({ queryKey: campKeys.mealLocations(campId), queryFn: () => campApi.mealLocations(campId) })
@@ -77,7 +77,7 @@ function GeneralSection() {
 function MealLocationsSection() {
   const { t } = useTranslation()
   const { campId = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const locations = useQuery({ queryKey: campKeys.mealLocations(campId), queryFn: () => campApi.mealLocations(campId) })
   return (
     <Card title={t('camp.settings.meal_locations')}>
@@ -98,7 +98,7 @@ function CampInfoCard({ camp, canEdit }: { camp: Camp; canEdit: boolean }) {
     setLocation(camp.location ?? '')
     setIsActive(camp.isActive)
   }, [camp])
-  const m = useCampMutation(
+  const m = useAppMutation(
     () => campApi.updateCamp(camp.id, { name: name.trim(), location: location.trim() || null, isActive }),
     [campKeys.camps],
   )
@@ -133,7 +133,7 @@ function CampInfoCard({ camp, canEdit }: { camp: Camp; canEdit: boolean }) {
 }
 
 function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: CampSettings; locations: MealLocation[]; canEdit: boolean }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const catering = useQuery({
     queryKey: [...campKeys.organizations, 'catering'],
     queryFn: () => campApi.organizations({ activeOnly: true, serviceType: 'CATERING' }),
@@ -153,7 +153,7 @@ function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: Ca
   useEffect(() => setF(init()), [s])
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }))
 
-  const m = useCampMutation(
+  const m = useAppMutation(
     () =>
       campApi.saveSettings(campId, {
         vatRate: Number(f.vatRate),
@@ -216,7 +216,7 @@ function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: Ca
             <option value="">{t('camp.common.not_selected')}</option>
             {activeLocations.map((l) => (
               <option key={l.id} value={l.id}>
-                {l.name}
+                {localizedCatalogName(l, i18n.resolvedLanguage ?? i18n.language)}
               </option>
             ))}
           </select>
@@ -263,12 +263,22 @@ function SettingsForm({ campId, s, locations, canEdit }: { campId: string; s: Ca
 }
 
 function MealLocations({ campId, rows, canEdit }: { campId: string; rows: MealLocation[]; canEdit: boolean }) {
-  const { t } = useTranslation()
-  const [name, setName] = useState('')
-  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null)
-  const add = useCampMutation(() => campApi.createMealLocation(campId, name.trim()), [campKeys.mealLocations(campId)], () => setName(''))
-  const update = useCampMutation(
-    (v: { id: string; name?: string; isActive?: boolean }) => campApi.updateMealLocation(campId, v.id, { name: v.name, isActive: v.isActive }),
+  const { t, i18n } = useTranslation()
+  const emptyName = (): LocalizedNameInput => ({ name: '', nameI18n: { en: '', zh: '' } })
+  const [name, setName] = useState<LocalizedNameInput>(emptyName)
+  const [editing, setEditing] = useState<(LocalizedNameInput & { id: string }) | null>(null)
+  const add = useAppMutation(
+    () => campApi.createMealLocation(campId, { name: name.name.trim(), nameI18n: { en: name.nameI18n.en.trim(), zh: name.nameI18n.zh.trim() } }),
+    [campKeys.mealLocations(campId)],
+    () => setName(emptyName()),
+  )
+  const update = useAppMutation(
+    (v: { id: string; value?: LocalizedNameInput; isActive?: boolean }) =>
+      campApi.updateMealLocation(campId, v.id, {
+        name: v.value?.name.trim(),
+        nameI18n: v.value ? { en: v.value.nameI18n.en.trim(), zh: v.value.nameI18n.zh.trim() } : undefined,
+        isActive: v.isActive,
+      }),
     [campKeys.mealLocations(campId), campKeys.departments(campId)],
     () => setEditing(null),
   )
@@ -282,16 +292,9 @@ function MealLocations({ campId, rows, canEdit }: { campId: string; rows: MealLo
             <tr key={l.id}>
               <td className={td}>
                 {editing?.id === l.id ? (
-                  <input
-                    aria-label={t('camp.settings.location_name')}
-                    className={inputCls}
-                    value={editing.name}
-                    onChange={(e) => setEditing({ id: l.id, name: e.target.value })}
-                    maxLength={100}
-                    autoFocus
-                  />
+                  <LocalizedNameFields value={editing} onChange={(value) => setEditing({ ...value, id: l.id })} />
                 ) : (
-                  l.name
+                  localizedCatalogName(l, i18n.resolvedLanguage ?? i18n.language)
                 )}
               </td>
               <td className={td}>
@@ -303,8 +306,13 @@ function MealLocations({ campId, rows, canEdit }: { campId: string; rows: MealLo
                     <>
                       <Button
                         variant="ghost"
-                        disabled={!editing.name.trim() || editing.name.trim() === l.name}
-                        onClick={() => update.mutate({ id: l.id, name: editing.name.trim() })}
+                        disabled={
+                          !editing.name.trim() ||
+                          (editing.name.trim() === l.name &&
+                            editing.nameI18n.en.trim() === (l.nameI18n?.en ?? '') &&
+                            editing.nameI18n.zh.trim() === (l.nameI18n?.zh ?? ''))
+                        }
+                        onClick={() => update.mutate({ id: l.id, value: editing })}
                       >
                         {t('camp.common.save')}
                       </Button>
@@ -314,7 +322,7 @@ function MealLocations({ campId, rows, canEdit }: { campId: string; rows: MealLo
                     </>
                   ) : (
                     <>
-                      <Button variant="ghost" onClick={() => setEditing({ id: l.id, name: l.name })}>
+                      <Button variant="ghost" onClick={() => setEditing({ id: l.id, name: l.name, nameI18n: { en: l.nameI18n?.en ?? '', zh: l.nameI18n?.zh ?? '' } })}>
                         {t('camp.common.rename')}
                       </Button>
                       <Button variant="ghost" onClick={() => update.mutate({ id: l.id, isActive: !l.isActive })}>
@@ -329,21 +337,14 @@ function MealLocations({ campId, rows, canEdit }: { campId: string; rows: MealLo
       )}
       {canEdit && (
         <form
-          className="flex gap-2"
+          className="space-y-2"
           onSubmit={(e) => {
             e.preventDefault()
-            if (name.trim()) add.mutate(undefined)
+            if (name.name.trim()) add.mutate(undefined)
           }}
         >
-          <input
-            aria-label={t('camp.settings.new_location')}
-            className={inputCls}
-            placeholder={t('camp.settings.new_location')}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={100}
-          />
-          <Button type="submit" loading={add.isPending} disabled={!name.trim()}>
+          <LocalizedNameFields value={name} onChange={setName} />
+          <Button type="submit" loading={add.isPending} disabled={!name.name.trim()}>
             {t('camp.common.add')}
           </Button>
         </form>

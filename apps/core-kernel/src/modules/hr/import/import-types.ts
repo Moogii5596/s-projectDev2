@@ -4,7 +4,7 @@ import { CampPermission } from '../../camp/common/camp-permissions';
 import { CampAuditService } from '../../camp/common/camp-audit.service';
 import { Tx } from '../../camp/common/camp-tx';
 
-export type RowOp = 'create' | 'update' | 'unchanged' | 'error';
+type RowOp = 'create' | 'update' | 'unchanged' | 'error';
 
 /** Төлөвлөсөн мөр: задлагдсан мөр + DB-тэй харьцуулсан үйлдэл */
 export interface PlannedRow extends ParsedTableRow {
@@ -40,15 +40,3 @@ export interface DataImportHandler {
 /** Тухайн мөрийн утга (багана файлд байхгүй бол undefined) */
 export const has = (row: ParsedTableRow, key: string) => Object.prototype.hasOwnProperty.call(row.values, key);
 export const upper = (v: CellValue | undefined) => (typeof v === 'string' ? v.trim().toUpperCase() : '');
-
-/** before (DB) ↔ after (файл) — зөвхөн файлд байгаа талбараар */
-export function diffFields(row: ParsedTableRow, current: Record<string, CellValue>, keys: string[]) {
-  const changes: Record<string, { from: CellValue; to: CellValue }> = {};
-  for (const k of keys) {
-    if (!(k in current)) continue;
-    const to = row.values[k] ?? null;
-    const from = current[k] ?? null;
-    if (from !== to) changes[k] = { from, to };
-  }
-  return changes;
-}

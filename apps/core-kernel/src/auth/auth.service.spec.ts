@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthService } from './auth.service';
+import { DEFAULT_TENANT_SECURITY_POLICY } from './tenant-security-policy.service';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 
 // Supabase mock
@@ -81,6 +82,7 @@ describe('AuthService', () => {
     service = new AuthService(
       mockConfigService as never,
       mockPrisma as never,
+      { get: vi.fn().mockResolvedValue(DEFAULT_TENANT_SECURITY_POLICY) } as never,
     );
 
     supabaseMock = (createClient as ReturnType<typeof vi.fn>).mock.results.at(-1)!.value;
@@ -106,7 +108,7 @@ describe('AuthService', () => {
       });
 
       const result = await service.register(
-        { email: 'test@example.com', password: 'Password1!', fullName: 'Тест Хэрэглэгч' },
+        { email: 'test@example.com', password: 'Password123!', fullName: 'Тест Хэрэглэгч' },
         TENANT_ID,
       );
 
@@ -127,7 +129,7 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.register({ email: 'dup@example.com', password: 'Password1!' }, TENANT_ID),
+        service.register({ email: 'dup@example.com', password: 'Password123!' }, TENANT_ID),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -140,7 +142,7 @@ describe('AuthService', () => {
       supabaseMock.auth.admin.deleteUser.mockResolvedValueOnce({ data: {}, error: null });
 
       await expect(
-        service.register({ email: 'fail@example.com', password: 'Password1!' }, TENANT_ID),
+        service.register({ email: 'fail@example.com', password: 'Password123!' }, TENANT_ID),
       ).rejects.toThrow();
 
       expect(supabaseMock.auth.admin.deleteUser).toHaveBeenCalledWith(AUTH_USER_ID);

@@ -3,13 +3,14 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { campApi, type MaintenanceQuery } from '../api/camp-api'
 import type { MaintenancePriority, MaintenanceStatus } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
-import { MAINT_STATUS_LABEL, PRIORITY_LABEL } from '../lib/labels'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { MAINT_STATUS_LABEL, PRIORITY_LABEL } from '../../../core/labels'
 import { STATUS_TONE } from '../lib/maintenance'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../components/ui'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../../core/ui'
 import { useTranslation } from 'react-i18next'
+import { AttachmentBulkUploadDialog } from '../api/core-bridge'
 
 const PRIORITY_TONE: Record<MaintenancePriority, 'gray' | 'blue' | 'yellow' | 'red'> = { LOW: 'gray', MEDIUM: 'blue', HIGH: 'yellow', URGENT: 'red' }
 
@@ -21,11 +22,12 @@ export default function MaintenanceListPage() {
   const { t } = useTranslation()
   const { campId = '' } = useParams()
   const [params, setParams] = useSearchParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const rooms = useQuery({ queryKey: campKeys.rooms(campId), queryFn: () => campApi.rooms(campId) })
   const [filter, setFilter] = useState<MaintenanceQuery>({ roomId: params.get('roomId') ?? undefined })
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState<{ assetId?: string; roomId?: string } | null>(null)
+  const [bulkAttachments, setBulkAttachments] = useState(false)
 
   useEffect(() => {
     if (params.get('new') === '1') {
@@ -51,11 +53,16 @@ export default function MaintenanceListPage() {
     <Card
       title={t('camp.section.maintenance')}
       actions={
-        perms.can(P.MAINTENANCE_CREATE) && (
-          <Button size="sm" onClick={() => setCreating({ roomId: filter.roomId })}>
-            {t('camp.maint.add')}
-          </Button>
-        )
+        <div className="flex gap-2">
+          {perms.can(P.MAINTENANCE_CREATE) && (
+            <Button size="sm" onClick={() => setCreating({ roomId: filter.roomId })}>
+              {t('camp.maint.add')}
+            </Button>
+          )}
+          {(perms.can(P.MAINTENANCE_CREATE) || perms.can(P.MAINTENANCE_CLOSE) || perms.can(P.MAINTENANCE_PARTS)) && (
+            <Button size="sm" variant="secondary" onClick={() => setBulkAttachments(true)}>{t('files.bulk.title')}</Button>
+          )}
+        </div>
       }
     >
       <div className="flex flex-wrap gap-2 mb-3">
@@ -124,6 +131,7 @@ export default function MaintenanceListPage() {
         </div>
       )}
       {creating && <CreateMaintenanceModal campId={campId} preset={creating} onClose={() => setCreating(null)} />}
+      {bulkAttachments && <AttachmentBulkUploadDialog onClose={() => setBulkAttachments(false)} />}
     </Card>
   )
 }
@@ -141,7 +149,7 @@ function CreateMaintenanceModal({ campId, preset, onClose }: { campId: string; p
   const [warnings, setWarnings] = useState<{ id: string; list: string[] } | null>(null)
   // зөвхөн хөрөнгө өгвөл backend түүний одоогийн өрөөг авна
   const effectiveRoom = roomId || asset.data?.roomId || ''
-  const m = useCampMutation(
+  const m = useAppMutation(
     () =>
       campApi.createMaintenance(campId, {
         ...(roomId ? { roomId } : {}),

@@ -11,7 +11,7 @@ import type { ParsedRow, ShiftChangeSource } from './import-parser';
  * PREVIEW ба CONFIRM (transaction дотор DB төлвийг дахин уншиж) хоёулаа үүнийг ашиглана → дүрэм нэг газарт.
  * Нэг ажилтны мөрүүдийг огноогоор (нэг өдөрт DEPARTURE эхэлж) дараалан шалгана.
  */
-export interface PlannerEmployee {
+interface PlannerEmployee {
   id: string;
   campId: string;
   status: CampEmployeeStatus;
@@ -19,7 +19,7 @@ export interface PlannerEmployee {
   /** v0.2.3 Блок R: сунгалтын ээлж (хэлтсийн загвар) */
   departmentId?: string;
 }
-export interface PlannerStay {
+interface PlannerStay {
   id: string;
   startDate: string;
   endDate: string | null;
@@ -57,7 +57,7 @@ export interface PlannedRow {
   /** R4.1: ажилтныг гараар сольсон */
   edited?: { fromCode: string };
 }
-export interface PlannedMovement {
+interface PlannedMovement {
   key: string;
   employeeId: string;
   date: string;

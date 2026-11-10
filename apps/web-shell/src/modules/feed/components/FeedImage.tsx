@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { thumbHashToDataURL } from 'thumbhash'
 import type { FeedImageDto } from '../types'
 
-export function thumbhashUrl(b64: string): string | undefined {
+function thumbhashUrl(b64: string): string | undefined {
   try {
     const bin = atob(b64)
     const bytes = new Uint8Array(bin.length)

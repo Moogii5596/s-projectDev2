@@ -3,10 +3,14 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
 import type { CatalogItem, CatalogKind } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
-import { ActiveBadge, Button, Card, Empty, ErrorBox, Loading, PageHeader, Table, inputCls, td } from '../components/ui'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { localizedCatalogName } from '../../../core/labels'
+import { ActiveBadge, Button, Card, Empty, ErrorBox, Loading, PageHeader, Table, td } from '../../../core/ui'
+import { LocalizedNameFields, type LocalizedNameInput } from '../components/LocalizedNameFields'
+
+const emptyName = (): LocalizedNameInput => ({ name: '', nameI18n: { en: '', zh: '' } })
 
 /**
  * v0.2.1 — Системийн тохиргоо › Албан тушаал (Q2) / Байрны төрөл (Q4): байгууллагын нийтийн каталог.
@@ -15,16 +19,25 @@ import { ActiveBadge, Button, Card, Empty, ErrorBox, Loading, PageHeader, Table,
  */
 /** `rowAction` — v0.2.2 Блок 4: мөрөнд нэмэлт товч (HR албан тушаалын «Эрхийн загвар») */
 export default function CatalogPage({ kind, rowAction }: { kind: CatalogKind; rowAction?: (c: CatalogItem) => ReactNode }) {
-  const { t } = useTranslation()
-  const perms = useCampPermissions()
+  const { t, i18n } = useTranslation()
+  const perms = useAppPermissions()
   const canEdit = perms.can(P.MASTER_MANAGE)
   const key = campKeys.catalog(kind)
   const list = useQuery({ queryKey: key, queryFn: () => campApi.catalog(kind) })
-  const [name, setName] = useState('')
-  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null)
-  const add = useCampMutation(() => campApi.createCatalogItem(kind, name.trim()), [key], () => setName(''))
-  const update = useCampMutation(
-    (v: { c: CatalogItem; name?: string; isActive?: boolean }) => campApi.updateCatalogItem(kind, v.c.id, { name: v.name, isActive: v.isActive }),
+  const [name, setName] = useState<LocalizedNameInput>(emptyName)
+  const [editing, setEditing] = useState<(LocalizedNameInput & { id: string }) | null>(null)
+  const add = useAppMutation(
+    () => campApi.createCatalogItem(kind, { name: name.name.trim(), nameI18n: { en: name.nameI18n.en.trim(), zh: name.nameI18n.zh.trim() } }),
+    [key],
+    () => setName(emptyName()),
+  )
+  const update = useAppMutation(
+    (v: { c: CatalogItem; value?: LocalizedNameInput; isActive?: boolean }) =>
+      campApi.updateCatalogItem(kind, v.c.id, {
+        name: v.value?.name.trim(),
+        nameI18n: v.value ? { en: v.value.nameI18n.en.trim(), zh: v.value.nameI18n.zh.trim() } : undefined,
+        isActive: v.isActive,
+      }),
     [key],
     () => setEditing(null),
   )
@@ -44,10 +57,10 @@ export default function CatalogPage({ kind, rowAction }: { kind: CatalogKind; ro
               <tr key={c.id}>
                 <td className={td}>
                   {editing?.id === c.id ? (
-                    <input aria-label={t('camp.common.name')} className={inputCls} value={editing.name} onChange={(e) => setEditing({ id: c.id, name: e.target.value })} maxLength={100} autoFocus />
+                    <LocalizedNameFields value={editing} onChange={(value) => setEditing({ ...value, id: c.id })} />
                   ) : (
                     <>
-                      {c.name}
+                      {localizedCatalogName(c, i18n.resolvedLanguage ?? i18n.language)}
                       {/* v0.2.3 Блок D (S4): албан тушаалын индекс (импортоор) */}
                       {c.code && <span className="ml-2 font-mono text-xs text-gray-500">{c.code}</span>}
                     </>
@@ -62,7 +75,16 @@ export default function CatalogPage({ kind, rowAction }: { kind: CatalogKind; ro
                   {canEdit &&
                     (editing?.id === c.id ? (
                       <>
-                        <Button variant="ghost" disabled={!editing.name.trim() || editing.name.trim() === c.name} onClick={() => update.mutate({ c, name: editing.name.trim() })}>
+                        <Button
+                          variant="ghost"
+                          disabled={
+                            !editing.name.trim() ||
+                            (editing.name.trim() === c.name &&
+                              editing.nameI18n.en.trim() === (c.nameI18n?.en ?? '') &&
+                              editing.nameI18n.zh.trim() === (c.nameI18n?.zh ?? ''))
+                          }
+                          onClick={() => update.mutate({ c, value: editing })}
+                        >
                           {t('camp.common.save')}
                         </Button>
                         <Button variant="ghost" onClick={() => setEditing(null)}>
@@ -71,7 +93,7 @@ export default function CatalogPage({ kind, rowAction }: { kind: CatalogKind; ro
                       </>
                     ) : (
                       <>
-                        <Button variant="ghost" onClick={() => setEditing({ id: c.id, name: c.name })}>
+                        <Button variant="ghost" onClick={() => setEditing({ id: c.id, name: c.name, nameI18n: { en: c.nameI18n?.en ?? '', zh: c.nameI18n?.zh ?? '' } })}>
                           {t('camp.common.rename')}
                         </Button>
                         <Button variant="ghost" onClick={() => update.mutate({ c, isActive: !c.isActive })}>
@@ -89,11 +111,11 @@ export default function CatalogPage({ kind, rowAction }: { kind: CatalogKind; ro
             className="flex gap-2 mt-3"
             onSubmit={(e) => {
               e.preventDefault()
-              if (name.trim()) add.mutate(undefined)
+              if (name.name.trim()) add.mutate(undefined)
             }}
           >
-            <input aria-label={t(`${prefix}.new`)} className={inputCls} placeholder={t(`${prefix}.new`)} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
-            <Button type="submit" loading={add.isPending} disabled={!name.trim()}>
+            <LocalizedNameFields value={name} onChange={setName} />
+            <Button type="submit" loading={add.isPending} disabled={!name.name.trim()}>
               {t('camp.common.add')}
             </Button>
           </form>

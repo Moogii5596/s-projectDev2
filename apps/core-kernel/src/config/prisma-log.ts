@@ -11,7 +11,7 @@ import type { Prisma } from '@prisma/client';
 const LEVELS: readonly Prisma.LogLevel[] = ['query', 'info', 'warn', 'error'];
 export const DEFAULT_PRISMA_LOG_LEVELS: Prisma.LogLevel[] = ['warn', 'error'];
 
-export function resolvePrismaLogLevels(raw: string | undefined = process.env.PRISMA_LOG_LEVELS): Prisma.LogLevel[] {
+export function resolvePrismaLogLevels(raw?: string): Prisma.LogLevel[] {
   if (raw === undefined || raw.trim() === '') return [...DEFAULT_PRISMA_LOG_LEVELS];
   if (raw.trim().toLowerCase() === 'none') return [];
   const picked = raw

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Badge, Button, Card, Empty, ErrorBox, Loading, PageHeader, Table, td } from '../camp/components/ui'
-import { formatMoney } from '../camp/lib/money'
+import { Badge, Button, Card, Empty, ErrorBox, Loading, PageHeader, Table, td } from '../../core/ui'
+import { formatMoney } from '../../core/money'
 import { downloadReportCsv, getReportSummary } from './api'
 import { barWidth, csvFileName, sortStatuses, statusLabel, utilizationTone } from './lib/report'
 

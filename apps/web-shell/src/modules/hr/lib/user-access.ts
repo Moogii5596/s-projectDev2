@@ -1,7 +1,7 @@
 /**
  * v0.2.2 Блок 4 — хэрэглэгч, нэвтрэх эрх, эрхийн харагдацын цэвэр функцүүд (unit тестлэгдэнэ).
  */
-import type { CampUser, InviteResult, UserPermissions } from '../../camp/api/types'
+import type { CampUser, InviteResult, UserPermissions } from '../api/camp-bridge'
 
 /** Урилгын линк: backend `url` (PUBLIC_APP_URL) → эс бөгөөс одоогийн origin + `path` */
 export function inviteLink(res: Pick<InviteResult, 'url' | 'path'>, origin: string): string | null {

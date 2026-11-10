@@ -2,11 +2,11 @@ import { Link, Navigate } from 'react-router-dom'
 import { accessibleSites } from '../../../lib/access'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { campApi } from '../../camp/api/camp-api'
-import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
+import { campApi } from '../api/camp-bridge'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
 import { useAuth } from '../../../hooks/useAuth'
-import { getLastCamp, resolveLastCamp } from '../../camp/lib/last-camp'
-import { ActiveBadge, Card, Empty, ErrorBox, Loading, PageHeader } from '../../camp/components/ui'
+import { getLastCamp, resolveLastCamp } from '../api/camp-bridge'
+import { ActiveBadge, Card, Empty, ErrorBox, Loading, PageHeader } from '../../../core/ui'
 import { HR_DEFAULT_SECTION, type HrSection, hrPath } from '../lib/hr-sections'
 
 /**
@@ -17,7 +17,7 @@ export default function HrHomePage({ section = HR_DEFAULT_SECTION }: { section?:
   const { t } = useTranslation()
   const { user } = useAuth()
   const sites = useQuery({ queryKey: campKeys.camps, queryFn: () => campApi.camps(false) })
-  const perms = useCampPermissions()
+  const perms = useAppPermissions()
 
   if (sites.isLoading) return <Loading />
   if (sites.isError) {

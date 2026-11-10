@@ -1,7 +1,7 @@
 /**
  * v0.2.2 Блок 5 — ажлаас гаргах / дахин ажилд авах цонхны дүрэм (цэвэр функц, unit тест). Backend дахин шалгана.
  */
-import type { EmployeeProfile, TerminationReason } from '../../camp/api/types'
+import type { EmployeeProfile, TerminationReason } from '../api/camp-bridge'
 
 export const TERMINATION_REASONS: readonly TerminationReason[] = ['RESIGNED', 'DISMISSED', 'CONTRACT_END', 'OTHER']
 

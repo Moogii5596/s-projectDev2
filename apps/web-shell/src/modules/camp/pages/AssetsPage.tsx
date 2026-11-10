@@ -3,13 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { campApi, type AssetQuery } from '../api/camp-api'
 import type { Asset, AssetCondition, Building, Room } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
-import { CONDITION_LABEL } from '../lib/labels'
-import { formatMoney } from '../lib/money'
-import { todayUb } from '../lib/dates'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../components/ui'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { CONDITION_LABEL, localizedCatalogName } from '../../../core/labels'
+import { formatMoney } from '../../../core/money'
+import { todayUb } from '../../../core/dates'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../../core/ui'
 import { decodeLocation, movementFrom, movementTo, roomLabel } from '../lib/asset-location'
 import { useTranslation } from 'react-i18next'
 
@@ -41,9 +41,9 @@ function LocationSelect({ id, value, onChange, rooms, buildings }: { id: string;
 
 /** /camp/:campId/assets — үндсэн хөрөнгө: жагсаалт, бүртгэх, засах, шилжүүлэх, актлах, түүх */
 export default function AssetsPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { campId = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const canEdit = perms.can(P.ASSET_MANAGE)
   const rooms = useQuery({ queryKey: campKeys.rooms(campId), queryFn: () => campApi.rooms(campId) })
   const buildings = useQuery({ queryKey: campKeys.buildings(campId), queryFn: () => campApi.buildings(campId) })
@@ -99,7 +99,7 @@ export default function AssetsPage() {
           <option value="">{t('camp.asset.all_categories')}</option>
           {cats.data?.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name}
+              {localizedCatalogName(c, i18n.resolvedLanguage ?? i18n.language)}
             </option>
           ))}
         </select>
@@ -124,7 +124,7 @@ export default function AssetsPage() {
                 {a.name}
                 {a.serialNo && <span className="text-xs text-gray-400 ml-1">SN {a.serialNo}</span>}
               </td>
-              <td className={td}>{a.category.name}</td>
+              <td className={td}>{localizedCatalogName(a.category, i18n.resolvedLanguage ?? i18n.language)}</td>
               <td className={td}>{roomLabel(a)}</td>
               <td className={td}>
                 <Badge tone={COND_TONE[a.condition]}>{CONDITION_LABEL[a.condition]}</Badge>
@@ -167,7 +167,7 @@ export default function AssetsPage() {
 }
 
 function AssetModal({ campId, asset, rooms, buildings, onClose }: { campId: string; asset: Asset | null; rooms: Room[]; buildings: Building[]; onClose: () => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const cats = useQuery({ queryKey: campKeys.assetCategories, queryFn: () => campApi.assetCategories(false) })
   const [f, setF] = useState({
     inventoryNo: asset?.inventoryNo ?? '',
@@ -191,7 +191,7 @@ function AssetModal({ campId, asset, rooms, buildings, onClose }: { campId: stri
     acquiredCost: f.acquiredCost === '' ? null : Number(f.acquiredCost),
     note: f.note.trim() || null,
   })
-  const m = useCampMutation(
+  const m = useAppMutation(
     () => (asset ? campApi.updateAsset(campId, asset.id, base()) : campApi.createAsset(campId, { ...base(), ...decodeLocation(f.location) })),
     [campKeys.assets(campId)],
     onClose,
@@ -227,7 +227,7 @@ function AssetModal({ campId, asset, rooms, buildings, onClose }: { campId: stri
               <option value="">{t('camp.common.choose')}</option>
               {usableCats.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {localizedCatalogName(c, i18n.resolvedLanguage ?? i18n.language)}
                 </option>
               ))}
             </select>
@@ -279,7 +279,7 @@ function AssetDetailModal({
   onEdit: (a: Asset) => void
   onClose: () => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const asset = useQuery({ queryKey: [...campKeys.assets(campId), 'detail', id], queryFn: () => campApi.asset(campId, id) })
   const history = useQuery({ queryKey: [...campKeys.assets(campId), 'movements', id], queryFn: () => campApi.assetMovements(campId, id) })
@@ -290,7 +290,7 @@ function AssetDetailModal({
     setMode('view')
     setReason('')
   }
-  const move = useCampMutation(
+  const move = useAppMutation(
     () => {
       const to = decodeLocation(toRoom)
       return campApi.moveAsset(campId, id, { toRoomId: to.roomId, toBuildingId: to.buildingId, reason: reason.trim() || null })
@@ -298,7 +298,7 @@ function AssetDetailModal({
     [campKeys.assets(campId), campKeys.roomBoard(campId)],
     reset,
   )
-  const writeOff = useCampMutation(() => campApi.writeOffAsset(campId, id, reason.trim()), [campKeys.assets(campId)], reset)
+  const writeOff = useAppMutation(() => campApi.writeOffAsset(campId, id, reason.trim()), [campKeys.assets(campId)], reset)
   const a = asset.data
   const locked = a?.condition === 'WRITTEN_OFF'
 
@@ -311,7 +311,7 @@ function AssetDetailModal({
           <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
             <div>
               <dt className="text-xs text-gray-500">{t('camp.asset.category')}</dt>
-              <dd>{a.category.name}</dd>
+              <dd>{localizedCatalogName(a.category, i18n.resolvedLanguage ?? i18n.language)}</dd>
             </div>
             <div>
               <dt className="text-xs text-gray-500">{t('camp.common.location')}</dt>

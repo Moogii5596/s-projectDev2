@@ -1,4 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { AttachmentTypeRegistry, DOCUMENT_MIMES } from '../../core/attachments/attachment-type.registry';
+import { FeedLinksService } from '../../feed/feed-links.service';
+import { NotificationService } from '../../core/notifications/notification.service';
+import { NotificationTypeRegistry } from '../../core/notifications/notification-type.registry';
+import { SequenceService } from '../../core/sequences/sequence.service';
+
+/** v0.2.4 FEED-04: feed_links.object_type */
+export const MAINTENANCE_LINK = 'CAMP_MAINTENANCE';
+import { hasSiteAccess, hasSitePermission, loadUserPermissions } from '../../core/notifications/permission-recipients';
 import { CampAssetCondition, CampMaintenanceStatus, CampPartSource, CampRoomStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
@@ -22,11 +31,9 @@ import {
 } from './camp-maintenance.dto';
 import {
   DETAILS_EDITABLE,
-  formatRequestNo,
   MaintenanceAction,
   OPEN_STATUSES,
   PARTS_EDITABLE,
-  requestNoPrefix,
   STATUS_LABEL,
   TRANSITIONS,
 } from './maintenance-flow';
@@ -84,7 +91,7 @@ interface RequestCore {
   reportedBy: string;
 }
 
-export const partView = (p: PartRow) => ({
+const partView = (p: PartRow) => ({
   ...p,
   quantity: p.quantity.toString(),
   unitPrice: p.unitPrice ? p.unitPrice.toFixed(2) : null,
@@ -119,9 +126,77 @@ export class CampMaintenanceService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
     private readonly access: CampAccessService,
-  ) {}
+    private readonly sequences: SequenceService,
+    @Optional() attachments?: AttachmentTypeRegistry,
+    @Optional() private readonly feedLinks?: FeedLinksService,
+    @Optional() private readonly notifications?: NotificationService,
+    @Optional() notificationTypes?: NotificationTypeRegistry,
+  ) {
+    notificationTypes?.register({ type: 'feed.link.status', module: 'feed', labelKey: 'notify.type.feed.link.status', defaultInApp: true, defaultEmail: false });
+    // v0.2.4 FEED-03/04: пост → засвар. Пост дээр зөвхөн төлөв + дугаар (зардал, сэлбэг, PII ✖); линк — кемпийн эрхтэй хүнд
+    feedLinks?.register({
+      objectType: MAINTENANCE_LINK,
+      module: 'camp',
+      labelKey: 'feed.link.type.maintenance',
+      statuses: async (tx, tenantId, ids) => {
+        const rows = await tx.campMaintenanceRequest.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, status: true, requestNo: true } });
+        return new Map(rows.map((r) => [r.id, {
+          statusKey: `feed.link.status.maintenance.${r.status.toLowerCase()}`,
+          closed: r.status === CampMaintenanceStatus.DONE || r.status === CampMaintenanceStatus.CLOSED || r.status === CampMaintenanceStatus.CANCELLED,
+          ref: r.requestNo,
+        }]));
+      },
+      viewLink: async (tx, tenantId, userId, objectId) => {
+        const r = await tx.campMaintenanceRequest.findFirst({ where: { tenantId, id: objectId }, select: { campId: true } });
+        const p = r && (await loadUserPermissions(tx, tenantId, userId));
+        return r && p && hasSiteAccess(p, r.campId) ? `/camp/${r.campId}/maintenance/${objectId}` : null;
+      },
+    });
+    // v0.2.4 FILE-01: засварын хүсэлтийн хавсралт (зураг, акт, баримт) — кемпийн эрхээр
+    attachments?.register({
+      entityType: 'CAMP_MAINTENANCE',
+      module: 'camp',
+      maxFiles: 10,
+      maxBytes: 10 * 1024 * 1024,
+      mimeTypes: DOCUMENT_MIMES,
+      pii: false,
+      canView: async (tx, ctx) => {
+        const r = await tx.campMaintenanceRequest.findFirst({ where: { tenantId: ctx.tenantId, id: ctx.entityId }, select: { campId: true } });
+        const p = r && (await loadUserPermissions(tx, ctx.tenantId, ctx.userId));
+        return !!(r && p && hasSiteAccess(p, r.campId));
+      },
+      canManage: async (tx, ctx) => {
+        const r = await tx.campMaintenanceRequest.findFirst({ where: { tenantId: ctx.tenantId, id: ctx.entityId }, select: { campId: true } });
+        const p = r && (await loadUserPermissions(tx, ctx.tenantId, ctx.userId));
+        return !!(r && p && hasSitePermission(p, r.campId, [P.MAINTENANCE_CREATE, P.MAINTENANCE_CLOSE, P.MAINTENANCE_PARTS]));
+      },
+      resolveObjects: async (tx, tenantId, codes) => {
+        const rows = await tx.campMaintenanceRequest.findMany({
+          where: { tenantId, requestNo: { in: [...codes] } },
+          select: { id: true, requestNo: true },
+        });
+        return new Map(rows.map((row) => [row.requestNo.toUpperCase(), row.id]));
+      },
+    });
+  }
 
   // ── Туслахууд ──────────────────────────────────────────────
+
+  /** FEED-03: холбогдсон постын зохиогчид төлөв өөрчлөгдсөнийг мэдэгдэнэ (засвар хийсэн хүн өөрөө авахгүй) */
+  private async notifyPostAuthors(tx: Tx, tenantId: string, id: string, requestNo: string, status: CampMaintenanceStatus, actorId: string) {
+    if (!this.feedLinks || !this.notifications) return;
+    const posts = await this.feedLinks.postAuthors(tx, tenantId, MAINTENANCE_LINK, id);
+    for (const p of posts) {
+      await this.notifications.notify(tx, tenantId, {
+        type: 'feed.link.status',
+        recipients: [p.authorId],
+        excludeUserId: actorId,
+        titleKey: 'notify.feed.link.status.title',
+        params: { typeKey: 'feed.link.type.maintenance', ref: requestNo, statusKey: `feed.link.status.maintenance.${status.toLowerCase()}` },
+        link: `/feed/${p.postId}`,
+      });
+    }
+  }
 
   private async loadCore(tx: Tx, tenantId: string, campId: string, id: string): Promise<RequestCore> {
     const r = await tx.campMaintenanceRequest.findFirst({
@@ -133,17 +208,14 @@ export class CampMaintenanceService {
   }
 
   private async nextRequestNo(tx: Tx, tenantId: string, campId: string, campCode: string): Promise<string> {
-    const year = todayUb().slice(0, 4);
-    const prefix = requestNoPrefix(campCode, year);
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`camp-maintenance-no:${tenantId}:${campId}:${year}`}))`;
-    // starts_with (LIKE биш — код '_' агуулж болно) + зөвхөн цифр дагавар (өөр кодын угтвартай давхцахаас хамгаална)
-    const rows = await tx.$queryRaw<{ max: number | null }[]>`
-      SELECT MAX(substring(request_no FROM ${prefix.length + 1}::int)::int) AS max
-        FROM camp_maintenance_requests
-       WHERE tenant_id = ${tenantId}::uuid
-         AND starts_with(request_no, ${prefix})
-         AND substring(request_no FROM ${prefix.length + 1}::int) ~ '^[0-9]+$'`;
-    return formatRequestNo(campCode, year, Number(rows[0]?.max ?? 0) + 1);
+    return this.sequences.next(tx, {
+      tenantId,
+      module: 'camp',
+      key: 'maintenance.request_no',
+      scopeKey: campId,
+      year: Number(todayUb().slice(0, 4)),
+      values: { campCode },
+    });
   }
 
   /** Өрөөний мөрийг transaction дуустал түгжинэ (lock/release зэрэгцээ ажиллахгүй) */
@@ -250,10 +322,17 @@ export class CampMaintenanceService {
 
   // ── Үүсгэх / засах ─────────────────────────────────────────
 
-  async create(tenantId: string, authId: string, campId: string, dto: CreateMaintenanceDto) {
+  /**
+   * @param fromPostId v0.2.4 FEED-03: Feed-ийн постоос үүсгэх — пост харагдах, холбоосгүйг шалгаж нэг transaction-д `feed_links`
+   */
+  async create(tenantId: string, authId: string, campId: string, dto: CreateMaintenanceDto, fromPostId?: string) {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const userId = await this.access.require(tx, tenantId, authId, campId, P.MAINTENANCE_CREATE);
+        if (fromPostId) {
+          if (!this.feedLinks) throw notFound('feed.err.link_type');
+          await this.feedLinks.assertLinkable(tx, tenantId, fromPostId, userId, MAINTENANCE_LINK);
+        }
         const camp = await getCampOr404(tx, tenantId, campId);
         if (!dto.roomId && !dto.assetId) throw badRequest('camp.err.maintenance.4');
 
@@ -295,6 +374,7 @@ export class CampMaintenanceService {
           select: { id: true },
         });
         const warnings = blocksRoom && roomId ? await this.blockRoom(tx, tenantId, campId, roomId) : [];
+        if (fromPostId) await this.feedLinks!.link(tx, tenantId, { postId: fromPostId, objectType: MAINTENANCE_LINK, objectId: created.id, userId });
         return { ...(await this.detail(tx, tenantId, campId, created.id)), warnings };
       }),
     );
@@ -390,6 +470,7 @@ export class CampMaintenanceService {
         }
 
         const roomReleased = rule.room === 'release' && r.blocksRoom && r.roomId ? await this.releaseRoom(tx, tenantId, r.roomId, r.id) : false;
+        await this.notifyPostAuthors(tx, tenantId, r.id, r.requestNo, rule.to, r.actorId);
         return { ...(await this.detail(tx, tenantId, campId, id)), warnings, roomReleased, costEntries };
       }),
     );

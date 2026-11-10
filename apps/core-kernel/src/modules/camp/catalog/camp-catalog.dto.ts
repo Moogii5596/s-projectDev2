@@ -17,7 +17,3 @@ export class UpsertPositionSettingDto {
   @IsOptional() @IsArray() @ArrayMaxSize(28) @ValidateNested({ each: true }) @Type(() => ShiftSegmentDto)
   shiftPattern?: ShiftSegmentDto[];
 }
-
-export class PositionIdParam {
-  @IsUUID() positionId!: string;
-}

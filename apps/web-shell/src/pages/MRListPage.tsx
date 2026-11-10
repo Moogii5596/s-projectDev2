@@ -30,7 +30,7 @@ export default function MRListPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Материал хүсэх хуудас</h1>
         <button
-          onClick={() => navigate('/requisitions/new')}
+          onClick={() => navigate('/debug/modules/mr/new')}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
         >
           + Шинэ MR үүсгэх
@@ -42,7 +42,7 @@ export default function MRListPage() {
         <div className="bg-white rounded-xl border border-gray-200 py-16 text-center">
           <p className="text-gray-400 text-sm">Одоогоор MR байхгүй байна</p>
           <button
-            onClick={() => navigate('/requisitions/new')}
+            onClick={() => navigate('/debug/modules/mr/new')}
             className="mt-4 text-blue-600 text-sm hover:underline"
           >
             Эхний MR-аа үүсгэх
@@ -74,7 +74,7 @@ export default function MRListPage() {
                     <div className="px-4"><StatusBadge status={mr.status} /></div>
                     <div className="px-4 text-gray-500">{new Date(mr.createdAt).toLocaleDateString('mn-MN')}</div>
                     <div className="px-4 text-right">
-                      <button onClick={() => navigate(`/requisitions/${mr.id}`)} className="text-blue-600 hover:underline text-sm">
+                      <button onClick={() => navigate(`/debug/modules/mr/${mr.id}`)} className="text-blue-600 hover:underline text-sm">
                         Дэлгэрэнгүй →
                       </button>
                     </div>

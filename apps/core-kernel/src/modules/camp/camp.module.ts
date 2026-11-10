@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { FeedModule } from '../feed/feed.module';
 import { CampCommonModule } from './common/camp-common.module';
 import { CoreModule } from '../core/core.module';
 import { HrModule } from '../hr/hr.module';
@@ -8,7 +9,6 @@ import { CampEmployeeSite } from './attendance/camp-employee-site';
 import { CampAuditController } from './audit/camp-audit.controller';
 import { CampRbacController } from './rbac/camp-rbac.controller';
 import { CoreRbacController } from './rbac/core-rbac.controller';
-import { CampRbacLegacyController } from './legacy/rbac-legacy.controller';
 import { CampRbacService } from './rbac/camp-rbac.service';
 import { CampEmployeeLoginService } from './rbac/camp-employee-login.service';
 import { CampUserAccessService } from './rbac/camp-user-access.service';
@@ -42,13 +42,12 @@ import { CampBuildingTypesController, CampPositionSettingsController } from './c
 import { CampCatalogService } from './catalog/camp-catalog.service';
 
 @Module({
-  imports: [CampCommonModule, CoreModule, HrModule],
+  imports: [CampCommonModule, CoreModule, HrModule, FeedModule],
   controllers: [
     CampBuildingTypesController,
     CampPositionSettingsController,
     CoreRbacController,
     CampRbacController,
-    CampRbacLegacyController,
     CampSettingsController,
     MealOrdersController,
     ContractCatalogController,

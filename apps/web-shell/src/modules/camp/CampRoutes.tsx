@@ -1,7 +1,7 @@
 import { lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import CampLayout from './components/CampLayout'
-import LegacyHrRedirect from '../hr/components/LegacyHrRedirect'
+import { LegacyHrRedirect } from './api/camp-hr.bridge'
 import { CAMP_DEFAULT_SECTION } from './components/CampLayout'
 
 // v0.2.2 Блок 6 (PIL-10): хуудас бүр тусдаа chunk (Suspense — Layout-ийн Outlet)
@@ -13,8 +13,6 @@ const PresencePage = lazy(() => import('./pages/PresencePage'))
 const MealOrdersPage = lazy(() => import('./pages/MealOrdersPage'))
 const ContractsPage = lazy(() => import('./pages/ContractsPage'))
 const ContractDetailPage = lazy(() => import('./pages/ContractDetailPage'))
-const ContractCatalogPage = lazy(() => import('./pages/ContractCatalogPage'))
-const ExchangeRatesPage = lazy(() => import('./pages/ExchangeRatesPage'))
 const AssetsPage = lazy(() => import('./pages/AssetsPage'))
 const MaintenanceListPage = lazy(() => import('./pages/MaintenanceListPage'))
 const MaintenanceDetailPage = lazy(() => import('./pages/MaintenanceDetailPage'))
@@ -47,8 +45,8 @@ export default function CampRoutes() {
         <Route path="assets" element={<AssetsPage />} />
         {/* FB-05 (v0.2.0): тохиргооны каталог; хуучин хаягууд redirect */}
         <Route path="settings" element={<Navigate to="general" replace />} />
-        <Route path="settings/contract-catalog" element={<ContractCatalogPage />} />
-        <Route path="settings/exchange-rates" element={<ExchangeRatesPage />} />
+        <Route path="settings/contract-catalog" element={<Navigate to="/settings/contract-catalog" replace />} />
+        <Route path="settings/exchange-rates" element={<Navigate to="/settings/exchange-rates" replace />} />
         <Route path="settings/departments" element={<LegacyHrRedirect section="departments" />} />
         <Route path="settings/crews" element={<LegacyHrRedirect section="crews" />} />
         <Route path="settings/:section" element={<CampSettingsPage />} />

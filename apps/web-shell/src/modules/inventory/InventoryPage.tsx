@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMe } from '../../hooks/useMe'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Table, inputCls, td } from '../camp/components/ui'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Table, inputCls, td } from '../../core/ui'
 import { adjustInventoryItem, createInventoryItem, listInventory, type InventoryItem } from './api'
 import { applyDelta, formatQuantity, parseDelta, parseQuantity } from './lib/quantity'
 

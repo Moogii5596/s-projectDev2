@@ -2,7 +2,6 @@ import apiClient from './client'
 import type {
   MrHeader,
   CreateMrDto,
-  UpdateMrDto,
   SubmitMrDto,
   ApproveMrDto,
   RejectMrDto,
@@ -35,15 +34,6 @@ export async function getMRDetail(id: string): Promise<MrHeader> {
 export async function createMR(dto: CreateMrDto): Promise<MrHeader> {
   const res = await apiClient.post<MrHeader>(BASE, dto)
   return res.data
-}
-
-export async function updateMR(id: string, dto: UpdateMrDto): Promise<MrHeader> {
-  const res = await apiClient.put<MrHeader>(`${BASE}/${id}`, dto)
-  return res.data
-}
-
-export async function deleteMR(id: string): Promise<void> {
-  await apiClient.delete(`${BASE}/${id}`)
 }
 
 export async function submitMR(id: string, dto: SubmitMrDto = {}): Promise<MrHeader> {

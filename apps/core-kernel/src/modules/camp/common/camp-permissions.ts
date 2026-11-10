@@ -10,13 +10,11 @@ import {
   isPermission,
   permissionAvailableIn,
   type Permission,
-  type ReleaseScope,
 } from '../../core/permissions/permission-registry';
 
 export const CAMP_PERMISSIONS = PERMISSIONS;
 export type CampPermission = Permission;
 export const CAMP_PERMISSION_CODES: readonly CampPermission[] = PERMISSION_CODES;
 export const isCampPermission = isPermission;
-export type CampReleaseScope = ReleaseScope;
 export const CAMP_PERMISSION_AVAILABILITY = PERMISSION_AVAILABILITY;
 export const campPermissionAvailableIn = permissionAvailableIn;

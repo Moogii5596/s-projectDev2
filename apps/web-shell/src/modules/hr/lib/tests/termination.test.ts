@@ -6,7 +6,7 @@ import mn from '@s-project/i18n/web.mn.json'
 import en from '@s-project/i18n/web.en.json'
 import zh from '@s-project/i18n/web.zh.json'
 import { lifecycleActions, terminationEffects, terminationFormError, TERMINATION_REASONS } from '../termination'
-import { P } from '../../../camp/lib/permissions'
+import { P } from '../../../../core/permissions'
 
 const TODAY = '2026-10-17'
 

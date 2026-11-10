@@ -74,6 +74,23 @@ export class SessionRevokeService {
       .sort((a, b) => (b.lastActiveAt ?? '').localeCompare(a.lastActiveAt ?? ''));
   }
 
+  /** Refresh хийсэн ч хэвээр байдаг GoTrue session-ийн анхны үүсгэсэн хугацаагаар дээд насыг шалгана. */
+  async isWithinMaxAge(authId: string, sessionId: string, maxAgeMinutes: number): Promise<boolean> {
+    if (!UUID_RE.test(authId) || !UUID_RE.test(sessionId)) return false;
+    let rows: { created_at: Date }[];
+    try {
+      rows = await this.system.$queryRaw<{ created_at: Date }[]>`
+        SELECT created_at FROM auth.sessions
+        WHERE id = ${sessionId}::uuid AND user_id = ${authId}::uuid
+        LIMIT 1`;
+    } catch (error) {
+      this.logger.error(`session нас шалгах DB алдаа — authId=${authId}: ${(error as Error).message}`);
+      throw new AppError(HttpStatus.SERVICE_UNAVAILABLE, 'auth.service_unavailable');
+    }
+    const createdAt = rows[0]?.created_at;
+    return createdAt instanceof Date && Date.now() - createdAt.getTime() <= maxAgeMinutes * 60_000;
+  }
+
   /** Нэг төхөөрөмжийг гаргана. Одоогийн төхөөрөмж → 400; олдохгүй / өөр хүний → 404. DB алдаа → 503. */
   async revokeOne(authId: string, sessionId: string, currentSessionId: string | null): Promise<void> {
     if (!UUID_RE.test(authId) || !UUID_RE.test(sessionId)) throw new AppError(HttpStatus.NOT_FOUND, 'auth.session_not_found');

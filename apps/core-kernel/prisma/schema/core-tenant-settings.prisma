@@ -1,0 +1,21 @@
+// Tenant-ийн байгууллагын профайл ба хамгаалалтын бодлого
+model CoreTenantSettings {
+  tenantId              String   @id @map("tenant_id") @db.Uuid
+  organizationName      String   @map("organization_name")
+  logoPath              String?  @map("logo_path")
+  timeZone              String   @default("Asia/Ulaanbaatar") @map("time_zone")
+  defaultLanguage       String   @default("mn") @map("default_language")
+  activeLanguages       String[] @default(["mn", "en", "zh"]) @map("active_languages")
+  baseCurrency          String   @default("MNT") @map("base_currency")
+  dateFormat            String   @default("YYYY-MM-DD") @map("date_format")
+  passwordMinLength     Int      @default(12) @map("password_min_length")
+  loginFailureLimit     Int      @default(10) @map("login_failure_limit")
+  loginLockoutMinutes   Int      @default(15) @map("login_lockout_minutes")
+  sessionDurationMinutes Int     @default(0) @map("session_duration_minutes")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("core_tenant_settings")
+}

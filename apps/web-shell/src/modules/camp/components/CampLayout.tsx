@@ -3,12 +3,12 @@ import { NavLink, Outlet, useLocation, useNavigate, useParams, Link } from 'reac
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
 import { accessibleSites } from '../../../lib/access'
 import { useAuth } from '../../../hooks/useAuth'
 import { setLastCamp } from '../lib/last-camp'
-import { P } from '../lib/permissions'
-import { Badge, ErrorBox, Loading, inputSmCls } from './ui'
+import { P } from '../../../core/permissions'
+import { Badge, ErrorBox, Loading, inputSmCls } from '../../../core/ui'
 import PageSuspense from '../../../components/PageSuspense'
 
 /**
@@ -16,7 +16,7 @@ import PageSuspense from '../../../components/PageSuspense'
  * FB-05 (v0.2.0): Байр/Хэлтэс/Ростер нь "Тохиргоо" каталог руу шилжсэн (settings/:section).
  * v0.2.2 H2: зөвхөн кемпийнх (өрөө, хоол, засвар, хөрөнгө, тохиргоо); ажилтан/ирц/ээлж → «Хүний нөөц».
  */
-export const CAMP_SECTIONS = ['rooms', 'meals', 'meal-orders', 'contracts', 'maintenance', 'assets', 'settings'] as const
+const CAMP_SECTIONS = ['rooms', 'meals', 'meal-orders', 'contracts', 'maintenance', 'assets', 'settings'] as const
 export const CAMP_DEFAULT_SECTION = 'rooms'
 
 export default function CampLayout() {
@@ -28,8 +28,8 @@ export default function CampLayout() {
   const camp = useQuery({ queryKey: campKeys.camp(campId), queryFn: () => campApi.camp(campId), enabled: !!campId })
   const camps = useQuery({ queryKey: campKeys.camps, queryFn: () => campApi.camps(false) })
   // v0.2.3 Блок 3 (PIL-19): сонгогчид зөвхөн хандах эрхтэй кемп
-  const perms = useCampPermissions()
-  const campPerms = useCampPermissions(campId)
+  const perms = useAppPermissions()
+  const campPerms = useAppPermissions(campId)
   const campList = accessibleSites(perms.data, camps.data ?? [])
 
   // FB-11: сүүлд орсон кемп (амжилттай ачаалсны дараа)

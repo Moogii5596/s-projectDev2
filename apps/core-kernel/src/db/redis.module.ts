@@ -1,4 +1,4 @@
-import { Module, Global, Provider } from '@nestjs/common';
+import { Module, Global, Provider, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
@@ -7,6 +7,7 @@ export const REDIS_CLIENT = Symbol('REDIS_CLIENT');
 const redisProvider: Provider = {
   provide: REDIS_CLIENT,
   useFactory: (configService: ConfigService) => {
+    const logger = new Logger('Redis');
     const redisUrl = configService.get<string>('REDIS_URL', 'redis://localhost:6379');
     const client = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
@@ -14,8 +15,8 @@ const redisProvider: Provider = {
       lazyConnect: false,
     });
 
-    client.on('connect', () => console.log('✅ Redis connected'));
-    client.on('error', (err) => console.error('❌ Redis error:', err.message));
+    client.on('connect', () => logger.log('✅ Redis connected'));
+    client.on('error', (err) => logger.error(`❌ Redis error: ${err.message}`));
 
     return client;
   },

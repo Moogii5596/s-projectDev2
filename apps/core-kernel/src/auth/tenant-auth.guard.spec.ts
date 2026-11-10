@@ -4,6 +4,8 @@ import { TenantAuthGuard, isAuthServiceError } from './tenant-auth.guard';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { TenantCacheService } from './tenant-cache.service';
+import { SessionRevokeService } from './session-revoke.service';
+import { TenantSecurityPolicyService } from './tenant-security-policy.service';
 
 // Supabase mock
 vi.mock('@supabase/supabase-js', () => ({
@@ -33,6 +35,8 @@ describe('TenantAuthGuard', () => {
   let tenantCacheService: TenantCacheService;
   let mockReflector: Reflector;
   let mockSupabaseGetUser: ReturnType<typeof vi.fn>;
+  let securityPolicy: TenantSecurityPolicyService;
+  let sessions: SessionRevokeService;
 
   beforeEach(() => {
     configService = {
@@ -63,7 +67,9 @@ describe('TenantAuthGuard', () => {
       getAllAndOverride: vi.fn().mockReturnValue(false),
     } as unknown as Reflector;
 
-    guard = new TenantAuthGuard(configService, tenantCacheService, mockReflector);
+    securityPolicy = { get: vi.fn().mockResolvedValue({ sessionDurationMinutes: 0 }) } as unknown as TenantSecurityPolicyService;
+    sessions = { isWithinMaxAge: vi.fn().mockResolvedValue(true) } as unknown as SessionRevokeService;
+    guard = new TenantAuthGuard(configService, tenantCacheService, mockReflector, securityPolicy, sessions);
   });
 
   describe('Authorization header', () => {
@@ -148,7 +154,7 @@ describe('TenantAuthGuard', () => {
           return map[key] ?? null;
         }),
       } as unknown as ConfigService;
-      dedicatedGuard = new TenantAuthGuard(dedicatedConfig, tenantCacheService, mockReflector);
+      dedicatedGuard = new TenantAuthGuard(dedicatedConfig, tenantCacheService, mockReflector, securityPolicy, sessions);
 
       mockSupabaseGetUser.mockResolvedValue({
         data: { user: { id: 'user-123', email: 'test@example.com' } },
@@ -199,7 +205,7 @@ describe('TenantAuthGuard', () => {
       const saved = process.env['DEDICATED_TENANT_SLUG'];
       delete process.env['DEDICATED_TENANT_SLUG'];
       try {
-        expect(() => new TenantAuthGuard(badConfig, tenantCacheService, mockReflector)).toThrow(
+        expect(() => new TenantAuthGuard(badConfig, tenantCacheService, mockReflector, securityPolicy, sessions)).toThrow(
           /DEDICATED_TENANT_SLUG/,
         );
       } finally {
@@ -236,6 +242,21 @@ describe('TenantAuthGuard', () => {
       await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
       expect(tenantCacheService.mustChangePassword).not.toHaveBeenCalled();
     });
+  });
+
+  it('тохируулсан session-ийн дээд насыг GoTrue session_id-аар шалгана', async () => {
+    const sessionId = '323e4567-e89b-42d3-a456-426614174002';
+    const payload = Buffer.from(JSON.stringify({ session_id: sessionId })).toString('base64url');
+    mockSupabaseGetUser.mockResolvedValueOnce({ data: { user: { id: 'user-123', email: 'test@example.com' } }, error: null });
+    (tenantCacheService.getTenantId as ReturnType<typeof vi.fn>).mockResolvedValueOnce('tenant-uuid-456');
+    securityPolicy.get = vi.fn().mockResolvedValue({ sessionDurationMinutes: 60 });
+    sessions.isWithinMaxAge = vi.fn().mockResolvedValue(false);
+
+    await expect(guard.canActivate(createMockContext({
+      authorization: `Bearer a.${payload}.c`,
+      host: 'localhost:3000',
+    }))).rejects.toMatchObject({ status: 401, code: 'auth.session_expired' });
+    expect(sessions.isWithinMaxAge).toHaveBeenCalledWith('user-123', sessionId, 60);
   });
 
   describe('Tenant membership (SEC-001)', () => {
@@ -278,7 +299,7 @@ describe('TenantAuthGuard', () => {
           ({ DEPLOYMENT_MODE: 'dedicated', DEDICATED_TENANT_SLUG: 'acme' } as Record<string, string>)[key] ?? null,
         ),
       } as unknown as ConfigService;
-      const g = new TenantAuthGuard(dedicatedConfig, tenantCacheService, mockReflector);
+      const g = new TenantAuthGuard(dedicatedConfig, tenantCacheService, mockReflector, securityPolicy, sessions);
       (tenantCacheService.getTenantId as ReturnType<typeof vi.fn>).mockResolvedValueOnce('acme-id');
       (tenantCacheService.isMember as ReturnType<typeof vi.fn>).mockResolvedValueOnce(false);
       const ctx = createMockContext({ authorization: 'Bearer valid-token', host: 'erp.acme.mn' });

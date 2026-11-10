@@ -12,11 +12,12 @@
     start                 Redis + Supabase + backend + Caddy асаана (нэг удаа)
     run                   start + харуул (watchdog): унасан backend/Caddy-г дахин асаана. Task Scheduler үүнийг ажиллуулна
     stop [-All]           Caddy + backend зогсооно. -All: Supabase, Redis ч (өгөгдөл ХАДГАЛАГДАНА)
-    status                Процесс, health, контейнер, Tailscale Funnel
+    status                Процесс, health, published port, Firewall, Funnel, DB + storage хэмжээ
     onboard --slug= ...   Байгууллага + эзэмшигч (pnpm pilot:onboard)
     user --email= ...     Хэрэглэгч нэмэх/засах (pnpm pilot:user)
     backup                Шифрлэсэн нөөц (7-Zip AES-256) → PILOT_BACKUP_DIR (+ хуулбар PILOT_BACKUP_COPY_DIR), хуучныг устгана
     restore <файл.7z>     Нөөцөөс сэргээх (ОДООГИЙН ӨГӨГДӨЛ УСТНА — баталгаажуулалт асууна)
+    rotate-db-password    postgres / supabase_admin нууц үг солих (.env шинэчилнэ; staging-ээс эхэлнэ)
     upgrade -Tag <tag>    Шинэ хувилбар: нөөц → зогсоох → git fetch/checkout <tag> → init → build → start → health
                           (бохир git tree бол эхлэхгүй; алдаа гарвал буцаах заавар хэвлэнэ)
     auth-test <имэйл>     (зөвхөн -Profile staging) Нэвтрэлтийн түгжээ (PIL-07): 6 буруу нууц үг → 400×5, 429; дараа нь түгжээг тайлна
@@ -63,12 +64,13 @@ if ($Root) { $Root = (Resolve-Path $Root).Path } else { $Root = $DefaultRoot }
 $Profiles = @{
   pilot   = @{
     Dir = (Join-Path (Join-Path $Root 'deploy') 'pilot'); EnvFile = '.env'; ProjectId = 's-project-pilot'; RedisContainer = 's-project-pilot-redis'
-    ApiPort = 55321; DbPort = 55322; RedisPort = 56379; Port = '3100'; HttpPort = '8088'; BackupPrefix = ''; Tasks = $true
+    ApiPort = 55321; DbPort = 55322; StudioPort = 55323; RedisPort = 56379; Port = '3100'; HttpPort = '8088'; BackupPrefix = ''; Tasks = $true
+    NetworkId = 's-project-pilot-loopback'
   }
   staging = @{
     Dir = (Join-Path (Split-Path -Parent $ScriptDir) 'staging'); EnvFile = '.env.staging'; ProjectId = 's-project-staging'
-    RedisContainer = 's-project-staging-redis'; ApiPort = 56521; DbPort = 56522; RedisPort = 56579; Port = '3200'; HttpPort = '8089'
-    BackupPrefix = 'staging-'; Tasks = $false
+    RedisContainer = 's-project-staging-redis'; ApiPort = 56521; DbPort = 56522; StudioPort = 56523; RedisPort = 56579; Port = '3200'; HttpPort = '8089'
+    BackupPrefix = 'staging-'; Tasks = $false; NetworkId = 's-project-staging-loopback'
   }
 }
 $Prof = $Profiles[$Instance]
@@ -99,6 +101,21 @@ function Write-Log([string] $file, [string] $m) {
   Add-Content -Path (Join-Path $LogDir $file) -Value $line -Encoding UTF8
 }
 
+function Format-NativeCommandError([string] $exe, [string[]] $arguments, [int] $code) {
+  $safe = @()
+  $redactNext = $false
+  foreach ($argument in $arguments) {
+    if ($redactNext) { $safe += '***'; $redactNext = $false; continue }
+    if ($argument -match '(?i)^PGPASSWORD=') { $safe += 'PGPASSWORD=***' }
+    elseif ([System.IO.Path]::GetFileNameWithoutExtension($exe) -ieq '7z' -and $argument -match '^-p.+') { $safe += '-p***' }
+    elseif ($argument -match "(?i)^--?(password|pass|secret|token)$") { $safe += $argument; $redactNext = $true }
+    elseif ($argument -match "(?i)^--?(password|pass|secret|token)=.*$") { $safe += ($argument -replace '=.*$', '=***') }
+    elseif ($argument -match '(?i)\bALTER\s+ROLE\b.*\bPASSWORD\b') { $safe += '<SQL redacted>' }
+    else { $safe += $argument }
+  }
+  return "$exe $($safe -join ' ') → exit $code"
+}
+
 # ── Native команд (5.1: stderr + ErrorActionPreference=Stop → алдаа шиддэг тул түр Continue) ──
 function Invoke-Native {
   param([string] $Exe, [string[]] $Arguments, [switch] $AllowFail, [switch] $Quiet, [switch] $Capture)
@@ -121,7 +138,7 @@ function Invoke-Native {
     $ErrorActionPreference = $prev
   }
   if ($code -ne 0 -and -not $AllowFail) {
-    Stop-Pilot2 "$Exe $($Arguments -join ' ') → exit $code"
+    Stop-Pilot2 (Format-NativeCommandError $Exe $Arguments $code)
   }
   return [pscustomobject]@{ Code = $code; Out = $out }
 }
@@ -188,6 +205,73 @@ function Get-UrlPassword([string] $url) {
   return ''
 }
 
+function Set-DotEnvValue([string] $content, [string] $key, [string] $value) {
+  $pattern = "(?m)^[ \t]*$([regex]::Escape($key))=.*$"
+  if ([regex]::IsMatch($content, $pattern)) {
+    return [regex]::Replace($content, $pattern, "$key=$value")
+  }
+  return "$($content.TrimEnd("`r", "`n"))`r`n$key=$value`r`n"
+}
+
+function Save-DotEnvValue([string] $path, [string] $key, [string] $value) {
+  $content = [System.IO.File]::ReadAllText($path)
+  $updated = Set-DotEnvValue $content $key $value
+  $temp = "$path.$PID.tmp"
+  try {
+    $encoding = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($temp, $updated, $encoding)
+    Move-Item -LiteralPath $temp -Destination $path -Force
+  } finally {
+    if (Test-Path -LiteralPath $temp) { Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue }
+  }
+}
+
+function ConvertFrom-SecureInput([securestring] $value) {
+  $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($value)
+  try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
+  finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+}
+
+function Invoke-DbPasswordRotation {
+  $cfg = Import-PilotEnv
+  $envFile = Join-Path $Root $Prof.EnvFile
+  $oldPassword = Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD' 'postgres'
+  if ($Instance -eq 'pilot') {
+    if (-not $Yes) { Stop-Pilot2 'Пилотын нууц үг солиход staging-г эхэлж шалгасны дараа -Yes өгнө' }
+    $confirmation = Read-Host "Баталгаажуулахын тулд $($cfg['DEDICATED_TENANT_SLUG']) гэж бич"
+    if ($confirmation -cne $cfg['DEDICATED_TENANT_SLUG']) { Stop-Pilot2 'Пилотын нууц үг солих цуцлагдлаа' }
+  }
+  $first = Read-Host 'Шинэ DB administrator нууц үг (32+ латин үсэг/тоо)' -AsSecureString
+  $second = Read-Host 'Шинэ DB administrator нууц үгийг давтан оруул' -AsSecureString
+  $newPassword = ConvertFrom-SecureInput $first
+  $confirmPassword = ConvertFrom-SecureInput $second
+  if ($newPassword -notmatch '^[A-Za-z0-9]{32,}$') { Stop-Pilot2 'DB administrator нууц үг зөвхөн латин үсэг/тоо, 32+ тэмдэгт байна' }
+  if ($newPassword -cne $confirmPassword) { Stop-Pilot2 'Нууц үг таарсангүй' }
+  if ($newPassword -ceq $oldPassword) { Stop-Pilot2 'Шинэ нууц үг одоогийн нууц үгтэй ижил байна' }
+
+  $null = Invoke-DbSql 'SELECT current_user' -Capture -User 'postgres' -Password $oldPassword
+  $sql = "BEGIN; ALTER ROLE postgres WITH PASSWORD '$newPassword'; ALTER ROLE supabase_admin WITH PASSWORD '$newPassword'; COMMIT;"
+  Invoke-DbSql $sql -User 'postgres' -Password $oldPassword | Out-Null
+  try {
+    foreach ($role in 'postgres', 'supabase_admin') {
+      $result = Invoke-DbSql 'SELECT current_user' -Capture -User $role -Password $newPassword
+      if ((@($result.Out) -join '').Trim() -ne $role) { Stop-Pilot2 "DB administrator нууц үгийн шалгалт амжилтгүй ($role)" }
+    }
+    Save-DotEnvValue $envFile 'PILOT_DB_ADMIN_PASSWORD' $newPassword
+  } catch {
+    $saveError = $_.Exception.Message
+    try {
+      $rollback = "BEGIN; ALTER ROLE postgres WITH PASSWORD '$oldPassword'; ALTER ROLE supabase_admin WITH PASSWORD '$oldPassword'; COMMIT;"
+      Invoke-DbSql $rollback -User 'postgres' -Password $newPassword | Out-Null
+    } catch {
+      Stop-Pilot2 "DB password шинэчлэгдсэн боловч .env бичих болон DB rollback хоёулаа амжилтгүй. Нууцыг гараар сэргээнэ. .env алдаа: $saveError; rollback: $($_.Exception.Message)"
+    }
+    Stop-Pilot2 ".env бичиж чадсангүй; DB нууц үгийг хуучнаар буцаав: $saveError"
+  }
+  $env:PILOT_DB_ADMIN_PASSWORD = $newPassword
+  Write-Ok 'postgres / supabase_admin нууц үг солигдож .env шинэчлэгдэв; нууцыг нууц үгийн менежерт хадгал'
+}
+
 # Алдааны жагсаалт буцаана (хоосон = OK). Анхааруулгыг шууд хэвлэнэ.
 function Test-PilotEnv([hashtable] $cfg, [switch] $NeedBackup) {
   $errors = New-Object System.Collections.Generic.List[string]
@@ -207,6 +291,13 @@ function Test-PilotEnv([hashtable] $cfg, [switch] $NeedBackup) {
   if ($sec -eq $DemoJwtSecret) { $errors.Add('SUPABASE_AUTH_JWT_SECRET = Supabase-ийн НИЙТЭД ИЛ demo нууц — солино') }
   if ((Get-Cfg $cfg 'JWT_SECRET').Length -lt 32) { $errors.Add('JWT_SECRET 32+ тэмдэгт байх ёстой') }
   if ((Get-Cfg $cfg 'JWT_SECRET') -match 'CHANGE') { $errors.Add('JWT_SECRET жишээ утга хэвээр') }
+  $dbAdminPassword = Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD'
+  if (-not $dbAdminPassword) { Write-Warn2 'PILOT_DB_ADMIN_PASSWORD тохируулаагүй — нөөцлөсний дараа pilot.ps1 rotate-db-password ажиллуулна' }
+  elseif ($dbAdminPassword -notmatch '^[A-Za-z0-9]{32,}$') { $errors.Add('PILOT_DB_ADMIN_PASSWORD зөвхөн латин үсэг/тоо, 32+ тэмдэгт байна') }
+  $storageDbWarnGb = Get-Cfg $cfg 'PILOT_STORAGE_DB_WARN_GB' '10'
+  if ($storageDbWarnGb -notmatch '^\d+(?:\.\d+)?$' -or [double]$storageDbWarnGb -le 0) {
+    $errors.Add('PILOT_STORAGE_DB_WARN_GB эерэг тоо байна')
+  }
   foreach ($k in @('PILOT_HEALTHCHECK_URL', 'PILOT_HEALTHCHECK_BACKUP_URL')) {
     $u = Get-Cfg $cfg $k
     if ($u -and $u -notmatch '^https://[^\s/]+/\S*$') { $errors.Add("$k нь https://... URL байх ёстой") }
@@ -320,31 +411,85 @@ function Start-PilotRedis {
 
 # PIL-07: config.toml-ийн өөрчлөлт (жнь [auth.hook.*]) ажиллаж буй Supabase-д үйлчлэхгүй — `supabase start` үед л уншина.
 # Асаасан үеийн config.toml-ийн SHA256-г run\supabase-config.sha256-д хадгалж, init үед зөрвөл дахин асаана.
-function Get-SupabaseConfigHash {
-  return (Get-FileHash -LiteralPath (Join-Path (Join-Path $PilotDir 'supabase') 'config.toml') -Algorithm SHA256).Hash
+function Get-SupabaseConfigFingerprint {
+  $configHash = (Get-FileHash -LiteralPath (Join-Path (Join-Path $PilotDir 'supabase') 'config.toml') -Algorithm SHA256).Hash
+  return "$configHash|$($Prof.NetworkId)"
 }
 function Get-SupabaseConfigStampFile { return Join-Path $RunDir 'supabase-config.sha256' }
 function Save-SupabaseConfigStamp {
   New-Item -ItemType Directory -Force -Path $RunDir | Out-Null
-  Set-Content -Path (Get-SupabaseConfigStampFile) -Value (Get-SupabaseConfigHash) -Encoding ASCII
+  Set-Content -Path (Get-SupabaseConfigStampFile) -Value (Get-SupabaseConfigFingerprint) -Encoding ASCII
 }
 function Test-SupabaseConfigChanged {
   $f = Get-SupabaseConfigStampFile
   $prev = if (Test-Path $f) { (Get-Content -Path $f -Raw).Trim() } else { '' }
-  return ($prev -ne (Get-SupabaseConfigHash))
+  return ($prev -ne (Get-SupabaseConfigFingerprint))
 }
 
-function Start-PilotSupabase([hashtable] $cfg) {
+function Get-SupabaseNetworkHostBinding {
+  if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { return $null }
+  $r = Invoke-Native 'docker' @('network', 'inspect', '--format', '{{ index .Options "com.docker.network.bridge.host_binding_ipv4" }}', $Prof.NetworkId) -Capture -AllowFail
+  if ($r.Code -ne 0) { return $null }
+  return (@($r.Out) -join '').Trim()
+}
+
+function Show-SupabasePortBindings {
+  $r = Invoke-Native 'docker' @('ps', '--format', '{{.Ports}}') -Capture -AllowFail
+  if ($r.Code -ne 0) {
+    Write-Warn2 'Docker port binding шалгаж чадсангүй'
+    return
+  }
+  $bindings = @($r.Out) -join "`n"
+  foreach ($port in @(
+    @('Supabase API', $Prof.ApiPort),
+    @('PostgreSQL', $Prof.DbPort),
+    @('Supabase Studio', $Prof.StudioPort)
+  )) {
+    $label = $port[0]
+    $number = [int]$port[1]
+    $pattern = "(?<address>(?:\d{1,3}\.){3}\d{1,3}|\[::\]|::):$number->"
+    $match = [regex]::Match($bindings, $pattern)
+    if ($match.Success) {
+      if ($match.Groups['address'].Value -eq '127.0.0.1') { Write-Ok "$label port $number → 127.0.0.1" }
+      else { Write-Warn2 "$label port $number гадна интерфэйстэй холбогдсон ($($match.Groups['address'].Value))" }
+    } elseif ($bindings -match "(?<!\d)$number->") {
+      Write-Warn2 "$label port $number host address тодорхойгүй"
+    } elseif ($label -eq 'Supabase Studio') {
+      Write-Host "  Studio port $number нийтлэгдээгүй (унтраалттай үед хэвийн)"
+    } else {
+      Write-Warn2 "$label port $number нийтлэгдээгүй (контейнер зогссон эсвэл port mapping алга)"
+    }
+  }
+}
+
+function Ensure-SupabaseLoopbackNetwork {
+  $binding = Get-SupabaseNetworkHostBinding
+  if ($null -eq $binding) {
+    Invoke-Native 'docker' @('network', 'create', '--driver', 'bridge', '--opt', 'com.docker.network.bridge.host_binding_ipv4=127.0.0.1', $Prof.NetworkId) -Quiet | Out-Null
+    $binding = Get-SupabaseNetworkHostBinding
+  }
+  if ($binding -ne '127.0.0.1') {
+    Stop-Pilot2 "Docker network '$($Prof.NetworkId)' loopback-д холбогдоогүй (host binding='$binding'); холбогдсон контейнергүйг шалгаад сүлжээг гараар дахин үүсгэнэ"
+  }
+}
+
+function Start-PilotSupabase([hashtable] $cfg, [switch] $AllowPendingConfigChange) {
   # env() → SUPABASE_AUTH_JWT_SECRET. Байхгүй бол CLI demo нууцаар асдаг тул заавал шалгана
   if ((Get-Cfg $cfg 'SUPABASE_AUTH_JWT_SECRET').Length -lt 32) { Stop-Pilot2 'SUPABASE_AUTH_JWT_SECRET алга' }
+  if ((Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD') -notmatch '^[A-Za-z0-9]{32,}$') {
+    Stop-Pilot2 'PILOT_DB_ADMIN_PASSWORD тохируулаагүй/буруу — staging → pilot дарааллаар rotate-db-password ажиллуулна'
+  }
+  Ensure-SupabaseLoopbackNetwork
   $env:SUPABASE_AUTH_JWT_SECRET = $cfg['SUPABASE_AUTH_JWT_SECRET']
   $keys = Get-SupabaseKeys
   if ($null -eq $keys) {
     Write-Step 'Supabase (пилот) асааж байна'
-    Invoke-Supabase -Arguments @('start') | Out-Null
+    Invoke-Supabase -Arguments @('start', '--network-id', $Prof.NetworkId) | Out-Null
     $keys = Get-SupabaseKeys
     if ($null -eq $keys) { Stop-Pilot2 'supabase status — түлхүүр уншиж чадсангүй' }
     Save-SupabaseConfigStamp
+  } elseif ((Test-SupabaseConfigChanged) -and -not $AllowPendingConfigChange) {
+    Stop-Pilot2 'Supabase config/network өөрчлөгдсөн — өгөгдлийг хадгалсан init-ээр шинэчилнэ'
   }
   Assert-KeysSecure $keys $cfg['SUPABASE_AUTH_JWT_SECRET']
   Set-KeysEnv $keys
@@ -365,10 +510,15 @@ function Sync-Migrations {
 }
 
 # Container доторх psql (supabase_admin = Supabase-ийн superuser; lessons TEST-007)
-function Invoke-DbSql([string] $sql, [switch] $Capture, [string] $User = 'supabase_admin', [string] $Password = 'postgres') {
+function Invoke-DbSql([string] $sql, [switch] $Capture, [string] $User = 'supabase_admin', [string] $Password = '') {
+  if (-not $Password) {
+    $Password = if ($env:PILOT_DB_ADMIN_PASSWORD) { $env:PILOT_DB_ADMIN_PASSWORD } else { 'postgres' }
+  }
   $a = @('exec', '-e', "PGPASSWORD=$Password", $DbContainer, 'psql', '-h', '127.0.0.1', '-U', $User, '-d', 'postgres',
     '-v', 'ON_ERROR_STOP=1', '-At', '-c', $sql)
-  return Invoke-Native -Exe 'docker' -Arguments $a -Capture:$Capture
+  $result = Invoke-Native -Exe 'docker' -Arguments $a -Capture:$Capture -AllowFail
+  if ($result.Code -ne 0) { Stop-Pilot2 "PostgreSQL command амжилтгүй (exit $($result.Code))" }
+  return $result
 }
 
 function Set-AppUserPassword([hashtable] $cfg) {
@@ -561,6 +711,10 @@ function Get-StorageDir([hashtable] $cfg) {
   return (Join-Path $Root 'storage')
 }
 
+function Get-DbAdminPassword([hashtable] $cfg) {
+  return (Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD' 'postgres')
+}
+
 # Junction-ийг (target-г БИШ) устгана — Remove-Item -Recurse PS 5.1 дээр junction-ийн дотрох файлыг устгадаг тул
 function Remove-StorageLink([string] $link) {
   if (Test-Path -LiteralPath $link) { [System.IO.Directory]::Delete($link) }
@@ -579,7 +733,7 @@ function Invoke-Backup {
   New-Item -ItemType Directory -Force -Path $tmp | Out-Null
   try {
     Write-Step "Нөөцлөлт ($slug, $stamp)"
-    $pgEnv = @('exec', '-e', 'PGPASSWORD=postgres', $DbContainer)
+    $pgEnv = @('exec', '-e', "PGPASSWORD=$(Get-DbAdminPassword $cfg)", $DbContainer)
     $pgConn = @('-h', '127.0.0.1', '-U', 'supabase_admin', '-d', 'postgres')
     # Зөвхөн ӨГӨГДӨЛ: schema нь кодын migration-оос (ижил хувилбар) — сэргээхэд migration жагсаалтыг тулгана
     Invoke-Native 'docker' ($pgEnv + @('pg_dump') + $pgConn + @('-Fc', '--data-only', '--schema=public', '-f', '/tmp/pilot-public.dump')) | Out-Null
@@ -681,7 +835,7 @@ function Invoke-Restore([string] $file) {
     Stop-PilotProcess 'backend' 'node'
     Wait-Docker
     Start-PilotRedis
-    Start-PilotSupabase $cfg | Out-Null
+    Start-PilotSupabase $cfg -AllowPendingConfigChange | Out-Null
     Invoke-Supabase -Arguments @('db', 'reset', '--local', '--no-seed', '--yes') | Out-Null
 
     Write-Step 'Өгөгдөл сэргээх'
@@ -690,7 +844,7 @@ function Invoke-Restore([string] $file) {
     # migration-ийн seed (0003 tenant-ууд, кемпийн анхдагч роль г.м.) + auth.users-ийг цэвэрлээд нөөцийнхийг хийнэ
     $truncate = "DO `$`$ BEGIN EXECUTE (SELECT 'TRUNCATE TABLE ' || string_agg(format('%I.%I', schemaname, tablename), ', ') || ' RESTART IDENTITY CASCADE' FROM pg_tables WHERE schemaname = 'public'); TRUNCATE auth.users CASCADE; END `$`$"
     Invoke-DbSql $truncate | Out-Null
-    $pgEnv = @('exec', '-e', 'PGPASSWORD=postgres', $DbContainer)
+    $pgEnv = @('exec', '-e', "PGPASSWORD=$(Get-DbAdminPassword $cfg)", $DbContainer)
     $pgConn = @('-h', '127.0.0.1', '-U', 'supabase_admin', '-d', 'postgres')
     foreach ($d in 'auth', 'public') {
       Invoke-Native 'docker' ($pgEnv + @('pg_restore') + $pgConn + @('--data-only', '--disable-triggers', '--single-transaction', '--exit-on-error', "/tmp/pilot-$d.dump")) | Out-Null
@@ -861,6 +1015,27 @@ function Assert-Windows([switch] $Admin) {
 $FirewallRule = 'S-Project pilot - block inbound dev/pilot ports'
 $BlockedPorts = @('3000', '3100', '3200', '5173', '5174', '6379', '8088', '8089', '54320-54329', '55320-55329', '56379', '56520-56529', '56579')
 
+function Test-PilotFirewall {
+  if (-not $IsWin -or -not (Get-Command Get-NetFirewallRule -ErrorAction SilentlyContinue) -or
+    -not (Get-Command Get-NetFirewallPortFilter -ErrorAction SilentlyContinue)) { return $false }
+  $rules = @(Get-NetFirewallRule -DisplayName $FirewallRule -ErrorAction SilentlyContinue)
+  foreach ($rule in $rules) {
+    if ([string]$rule.Enabled -ne 'True' -or [string]$rule.Direction -ne 'Inbound' -or [string]$rule.Action -ne 'Block') { continue }
+    $filters = @(Get-NetFirewallPortFilter -AssociatedNetFirewallRule $rule -ErrorAction SilentlyContinue)
+    foreach ($filter in $filters) {
+      if ([string]$filter.Protocol -ne 'TCP') { continue }
+      $ports = @($filter.LocalPort | ForEach-Object { [string]$_ })
+      if ($ports -contains 'Any') { return $true }
+      $complete = $true
+      foreach ($port in $BlockedPorts) {
+        if ($ports -notcontains [string]$port) { $complete = $false; break }
+      }
+      if ($complete) { return $true }
+    }
+  }
+  return $false
+}
+
 function Assert-PilotProfile([string] $what) {
   if (-not $Prof.Tasks) { Stop-Pilot2 "$what зөвхөн pilot профайлд (одоо: $Instance)" }
 }
@@ -976,6 +1151,8 @@ function Invoke-Watchdog {
   # PIL-04: эрүүл үед PILOT_HEALTHCHECK_INTERVAL_SEC (анхдагч 300) тутам ping; асуудал гарвал шууд /fail (дахин давтахдаа мөн интервалаар)
   $pingEvery = [int] (Get-Cfg $cfg 'PILOT_HEALTHCHECK_INTERVAL_SEC' '300')
   $lastPing = [datetime]::MinValue
+  $lastDiskCheck = [datetime]::MinValue
+  $storageDbOverLimit = $false
   $lastOk = $null
   while ($true) {
     Start-Sleep -Seconds 30
@@ -1001,6 +1178,15 @@ function Invoke-Watchdog {
         $problem = (@($problem, 'caddy down → restart') | Where-Object { $_ }) -join '; '
         Start-Caddy $cfg
       }
+      if (((Get-Date) - $lastDiskCheck).TotalSeconds -ge $pingEvery) {
+        $storageDbOverLimit = Show-StorageStatus $cfg
+        $lastDiskCheck = Get-Date
+      }
+      if ($storageDbOverLimit -eq $true) {
+        $problem = (@($problem, 'PostgreSQL + storage хэмжээ босго давсан') | Where-Object { $_ }) -join '; '
+      } elseif ($null -eq $storageDbOverLimit) {
+        $problem = (@($problem, 'PostgreSQL + storage хэмжээ шалгаж чадсангүй') | Where-Object { $_ }) -join '; '
+      }
     } catch {
       Write-Log 'pilot.log' "watchdog error: $($_.Exception.Message)"
       $problem = "watchdog error: $($_.Exception.Message)"
@@ -1016,32 +1202,80 @@ function Invoke-Watchdog {
 function Show-StorageStatus([hashtable] $cfg) {
   $dir = Get-StorageDir $cfg
   $probe = $dir
+  $storageBytes = 0L
+  $storageSizeKnown = $true
   if (Test-Path -LiteralPath $dir -PathType Container) {
-    $files = @(Get-ChildItem -LiteralPath $dir -Recurse -File -ErrorAction SilentlyContinue)
-    $bytes = ($files | Measure-Object -Property Length -Sum).Sum
-    if (-not $bytes) { $bytes = 0 }
-    Write-Ok ("storage: {0} MB, {1} файл ({2})" -f [math]::Round($bytes / 1MB, 1), $files.Count, $dir)
+    try {
+      $files = @(Get-ChildItem -LiteralPath $dir -Recurse -File -ErrorAction Stop)
+      $bytes = ($files | Measure-Object -Property Length -Sum).Sum
+      if (-not $bytes) { $bytes = 0 }
+      $storageBytes = [int64]$bytes
+      Write-Ok ("storage: {0} MB, {1} файл ({2})" -f [math]::Round($bytes / 1MB, 1), $files.Count, $dir)
+    } catch {
+      $storageSizeKnown = $false
+      Write-Warn2 "storage хэмжээ шалгаж чадсангүй: $($_.Exception.Message)"
+      Write-Log 'pilot.log' "WARN storage size check failed: $($_.Exception.Message)"
+    }
   } else {
     Write-Host "  storage хавтас алга ($dir)"
     $probe = Split-Path -Parent $dir
+  }
+  $dbBytes = $null
+  try {
+    $dbSize = Invoke-DbSql "SELECT pg_database_size('postgres')" -Capture
+    $dbBytes = [int64]((@($dbSize.Out) -join '').Trim())
+    if ($storageSizeKnown) {
+      $totalGb = ($storageBytes + $dbBytes) / 1GB
+      $thresholdGb = [double](Get-Cfg $cfg 'PILOT_STORAGE_DB_WARN_GB' '10')
+      $usage = "PostgreSQL + storage: {0} GB (анхааруулах босго {1} GB)" -f [math]::Round($totalGb, 2), $thresholdGb
+      if ($totalGb -gt $thresholdGb) {
+        Write-Warn2 "$usage — өсөлтийг шалгаж, нөөц/дискний багтаамжийг нэмнэ"
+        Write-Log 'pilot.log' "WARN storage_db_gb=$([math]::Round($totalGb, 2)) threshold_gb=$thresholdGb"
+      } else {
+        Write-Ok $usage
+      }
+    } else {
+      Write-Warn2 'PostgreSQL + storage нийлбэр хэмжээг тооцож чадсангүй'
+    }
+  } catch {
+    Write-Warn2 "PostgreSQL + storage хэмжээ шалгаж чадсангүй: $($_.Exception.Message)"
+    Write-Log 'pilot.log' "WARN PostgreSQL + storage size check failed: $($_.Exception.Message)"
   }
   # Хавтас байхгүй бол хамгийн ойрын байгаа эцэг хавтасны дискийг шалгана
   while ($probe -and -not (Test-Path -LiteralPath $probe)) { $probe = Split-Path -Parent $probe }
   $root = if ($probe) { [System.IO.Path]::GetPathRoot((Resolve-Path -LiteralPath $probe).Path) } else { $null }
   if ($root -and $root -match '^[A-Za-z]:\\') {
-    $disk = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$($root.Substring(0, 2))'" -ErrorAction SilentlyContinue
-    if ($disk -and $disk.Size -gt 0) {
-      $freeGb = [math]::Round($disk.FreeSpace / 1GB, 1)
-      $pct = [math]::Round(100 * $disk.FreeSpace / $disk.Size, 1)
-      $msg = "диск $($root.Substring(0, 2)) сул зай: $freeGb GB ($pct%)"
-      if ($disk.FreeSpace -lt 10GB -or $pct -lt 10) { Write-Warn2 "$msg — дутаж байна (< 10 GB эсвэл < 10%)" } else { Write-Ok $msg }
+    try {
+      $disk = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$($root.Substring(0, 2))'" -ErrorAction Stop
+      if ($disk -and $disk.Size -gt 0) {
+        $freeGb = [math]::Round($disk.FreeSpace / 1GB, 1)
+        $pct = [math]::Round(100 * $disk.FreeSpace / $disk.Size, 1)
+        $msg = "диск $($root.Substring(0, 2)) сул зай: $freeGb GB ($pct%)"
+        if ($disk.FreeSpace -lt 10GB -or $pct -lt 10) { Write-Warn2 "$msg — дутаж байна (< 10 GB эсвэл < 10%)" } else { Write-Ok $msg }
+      } else {
+        Write-Warn2 "дискний багтаамж шалгаж чадсангүй ($root)"
+        Write-Log 'pilot.log' "WARN disk capacity unavailable ($root)"
+      }
+    } catch {
+      Write-Warn2 "дискний сул зай шалгаж чадсангүй ($root): $($_.Exception.Message)"
+      Write-Log 'pilot.log' "WARN disk space check failed ($root): $($_.Exception.Message)"
     }
   }
+  if ($null -eq $dbBytes -or -not $storageSizeKnown) { return $null }
+  return (($storageBytes + $dbBytes) / 1GB) -gt [double](Get-Cfg $cfg 'PILOT_STORAGE_DB_WARN_GB' '10')
 }
 
 function Show-Status {
   $cfg = Import-PilotEnv
   Write-Ok "профайл: $Instance ($ProjectId) · код: $Root"
+  $networkBinding = Get-SupabaseNetworkHostBinding
+  if ($networkBinding -eq '127.0.0.1') { Write-Ok "Supabase Docker network: 127.0.0.1 ($($Prof.NetworkId))" }
+  else { Write-Warn2 "Supabase Docker network loopback биш/алга ($($Prof.NetworkId), host binding='$networkBinding') — pilot.ps1 init шалгана" }
+  Show-SupabasePortBindings
+  if ($IsWin) {
+    if (Test-PilotFirewall) { Write-Ok 'Windows Firewall: inbound блоклох дүрэм идэвхтэй' }
+    else { Write-Warn2 "Windows Firewall дүрэм алга/идэвхгүй — pilot.ps1 firewall (Админ PowerShell)" }
+  }
   $port = Get-Cfg $cfg 'PORT' $Prof.Port
   $http = Get-Cfg $cfg 'PILOT_HTTP_PORT' $Prof.HttpPort
   foreach ($n in @(@('backend', 'node'), @('caddy', 'caddy'))) {
@@ -1054,8 +1288,12 @@ function Show-Status {
   Invoke-Native 'docker' @('ps', '--filter', "name=$ProjectId", '--format', '{{.Names}}  {{.Status}}') -AllowFail | Out-Null
   if (Get-Command tailscale -ErrorAction SilentlyContinue) {
     Write-Step 'Tailscale Funnel'
-    Invoke-Native 'tailscale' @('funnel', 'status') -AllowFail | Out-Null
-  }
+    $funnel = Invoke-Native 'tailscale' @('funnel', 'status') -Capture -AllowFail
+    $funnelText = (@($funnel.Out) -join "`n")
+    if ($funnel.Code -ne 0) { Write-Warn2 'Tailscale Funnel төлөвийг шалгаж чадсангүй' }
+    elseif ($funnelText -match '(?i)\bFunnel on\b') { Write-Warn2 'Tailscale Funnel асаалттай — `tailscale funnel reset` ажиллуулна' }
+    else { Write-Ok 'Tailscale Funnel унтраалттай' }
+  } else { Write-Warn2 'Tailscale CLI олдсонгүй — Funnel унтраалттайг баталж чадсангүй' }
   # v0.2.2 D-14 (ADR-005): Cloudflare Tunnel — cloudflared Windows service (05_Cloudflare_Tunnel.md)
   $cf = if (Get-Command Get-Service -ErrorAction SilentlyContinue) { Get-Service -Name 'cloudflared' -ErrorAction SilentlyContinue } else { $null }
   if ($cf) {
@@ -1063,7 +1301,7 @@ function Show-Status {
   }
   $pub = Get-Cfg $cfg 'PUBLIC_APP_URL'
   if ($pub) { Write-Ok "нийтийн хаяг (PUBLIC_APP_URL): $pub" }
-  Show-StorageStatus $cfg
+  $storageDbOverLimit = Show-StorageStatus $cfg
   $bdir = Get-Cfg $cfg 'PILOT_BACKUP_DIR'
   if ($bdir -and (Test-Path $bdir)) {
     $last = Get-ChildItem -Path $bdir -Filter '*.7z' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
@@ -1075,7 +1313,10 @@ function Show-Status {
     if ($lastCopy) { Write-Ok "сүүлийн хуулбар: $($lastCopy.Name) ($($lastCopy.LastWriteTime))" } else { Write-Warn2 "хуулбар алга ($cdir)" }
   }
   if (Get-Cfg $cfg 'PILOT_HEALTHCHECK_URL') {
-    if ($healthy) { $sent = Send-HealthPing $cfg 'main' -Message 'status OK' } else { $sent = Send-HealthPing $cfg 'main' -Fail -Message 'status: backend health алга' }
+    if (-not $healthy) { $sent = Send-HealthPing $cfg 'main' -Fail -Message 'status: backend health алга' }
+    elseif ($storageDbOverLimit -eq $true) { $sent = Send-HealthPing $cfg 'main' -Fail -Message 'status: PostgreSQL + storage хэмжээ босго давсан' }
+    elseif ($null -eq $storageDbOverLimit) { $sent = Send-HealthPing $cfg 'main' -Fail -Message 'status: PostgreSQL + storage хэмжээ шалгаж чадсангүй' }
+    else { $sent = Send-HealthPing $cfg 'main' -Message 'status OK' }
     if ($sent) { Write-Ok 'healthcheck ping илгээв' } else { Write-Warn2 'healthcheck ping амжилтгүй (logs\pilot.log)' }
   }
 }
@@ -1124,7 +1365,7 @@ function Invoke-Init {
   Sync-Migrations
   Wait-Docker
   Start-PilotRedis
-  Start-PilotSupabase $cfg | Out-Null
+  Start-PilotSupabase $cfg -AllowPendingConfigChange | Out-Null
   Write-Step 'Migration (шинэ байвал)'
   Invoke-Supabase -Arguments @('migration', 'up', '--local') | Out-Null
   # Migration-ы ДАРАА (hook-ийн функц бэлэн болсны дараа) шинэ config.toml-оор дахин асаана. Өгөгдөл хадгалагдана (--no-backup БИШ).
@@ -1219,6 +1460,7 @@ try {
     'upgrade' { $t = $Tag; if (-not $t -and $Rest) { $t = $Rest[0] }; Invoke-Upgrade $t }
     'auth-test' { $e = ''; if ($Rest) { $e = $Rest[0] }; Invoke-AuthTest $e }
     'unlock' { $e = ''; if ($Rest) { $e = $Rest[0] }; Invoke-Unlock $e }
+    'rotate-db-password' { Invoke-DbPasswordRotation }
     'firewall' { Set-PilotFirewall }
     'install-tasks' { Install-PilotTasks }
     'uninstall-tasks' { Uninstall-PilotTasks }

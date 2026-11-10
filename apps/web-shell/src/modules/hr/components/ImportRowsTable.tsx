@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { hrApi } from '../api/hr-api'
-import type { Crew, Department, ImportPreview, ImportRow, ImportRowEdit, MealType, Organization } from '../../camp/api/types'
-import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
-import { campApi } from '../../camp/api/camp-api'
-import { P } from '../../camp/lib/permissions'
-import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { DIRECTION_LABEL, KIND_LABEL, MEAL_LABEL, SHIFT_LABEL } from '../../camp/lib/labels'
-import { Button, Empty, ErrorBox, Table, inputSmCls, td } from '../../camp/components/ui'
+import type { Crew, Department, ImportPreview, ImportRow, ImportRowEdit, MealType, Organization } from '../api/camp-bridge'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { campApi } from '../api/camp-bridge'
+import { P } from '../../../core/permissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { DIRECTION_LABEL, KIND_LABEL, MEAL_LABEL, SHIFT_LABEL, localizedCatalogName } from '../../../core/labels'
+import { Button, Empty, ErrorBox, Table, inputSmCls, td } from '../../../core/ui'
 import {
   type NewEmployeeDraft,
   type RowDraft,
@@ -39,7 +39,7 @@ export default function ImportRowsTable({ campId, preview, onUpdated }: { campId
   const [filter, setFilter] = useState<RowFilter>(() => defaultFilter(preview))
   const [editing, setEditing] = useState(false)
   const [askDelete, setAskDelete] = useState(false)
-  const save = useCampMutation((rows: ImportRowEdit[]) => hrApi.updateImportRows(campId, preview.import.id, rows), [campKeys.imports(campId)], (res) => {
+  const save = useAppMutation((rows: ImportRowEdit[]) => hrApi.updateImportRows(campId, preview.import.id, rows), [campKeys.imports(campId)], (res) => {
     onUpdated(res)
     setEditing(false)
     setAskDelete(false)
@@ -183,7 +183,7 @@ function EditErrorRows({
   const edits = buildEdits(rows, drafts)
   const incomplete = incompleteNew(drafts)
   // R9: шинэ ажилтан бүртгэх — `camp.employee.manage` эрхтэйд л
-  const canCreate = useCampPermissions(campId).can(P.EMPLOYEE_MANAGE)
+  const canCreate = useAppPermissions(campId).can(P.EMPLOYEE_MANAGE)
   const orgs = useQuery({ queryKey: [...campKeys.organizations, 'active'], queryFn: () => campApi.organizations({ activeOnly: true }), enabled: canCreate })
   const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => hrApi.departments(campId), enabled: canCreate })
   const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => hrApi.crews(campId), enabled: canCreate })
@@ -344,7 +344,7 @@ function NewEmployeeFields({
   onChange: (v: NewEmployeeDraft) => void
   onApplyAll: () => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const place = rowPlace(row)
   return (
     <div className="space-y-1 text-xs">
@@ -363,7 +363,7 @@ function NewEmployeeFields({
         <option value="">{t('camp.att.choose_dept', { file: row.source?.department || '—' })}</option>
         {depts.map((d) => (
           <option key={d.id} value={d.id}>
-            {d.code} · {d.name}
+            {d.code} · {localizedCatalogName(d, i18n.resolvedLanguage ?? i18n.language)}
           </option>
         ))}
       </select>

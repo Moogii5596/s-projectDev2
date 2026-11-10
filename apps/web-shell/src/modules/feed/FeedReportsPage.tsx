@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Badge, Button, Empty, ErrorBox, Loading, PageHeader } from '../camp/components/ui'
-import { useCampMutation } from '../camp/hooks/useCampMutation'
+import { Badge, Button, Empty, ErrorBox, Loading, PageHeader } from '../../core/ui'
+import { useAppMutation } from '../../core/useAppMutation'
 import { feedApi, feedKeys, type FeedReportStatus } from './api'
 import { TimeAgo } from './components/PostCard'
 
@@ -13,7 +13,7 @@ export default function FeedReportsPage() {
   const { t } = useTranslation()
   const [status, setStatus] = useState<FeedReportStatus>('OPEN')
   const q = useQuery({ queryKey: feedKeys.reports(status), queryFn: () => feedApi.reports(status) })
-  const resolve = useCampMutation(
+  const resolve = useAppMutation(
     (v: { id: string; action: 'DISMISS' | 'REMOVE' }) => feedApi.resolveReport(v.id, v.action),
     [feedKeys.all],
   )

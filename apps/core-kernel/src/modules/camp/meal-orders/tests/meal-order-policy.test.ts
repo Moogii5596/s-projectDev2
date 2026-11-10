@@ -17,6 +17,10 @@ const S = (o: Partial<MealOrderSettings> = {}): MealOrderSettings => ({ ...D, cu
 const clock = (date: string, hhmm: string) => ({ date, hhmm });
 
 describe('cutoff', () => {
+  it('хоол батлагдсаны дараах өөрчлөлт анхдагчаар хоёр талын баталгаатай', () => {
+    expect(D.editAfterAccept).toBe('TWO_SIDED');
+  });
+
   it('cutoff өдөр = orderDate − leadDays', () => {
     expect(cutoffDeadline('2026-11-10', S({ leadDays: 1 }))).toEqual({ date: '2026-11-09', time: '15:00' });
     expect(cutoffDeadline('2026-11-10', S({ leadDays: 0 }))).toEqual({ date: '2026-11-10', time: '15:00' });
@@ -90,6 +94,7 @@ describe('allowedActions', () => {
     expect(act('ACCEPTED', { editAfterAccept: 'ALLOW' }, { canOrder: true })).toEqual(['edit']);
     expect(act('ACCEPTED', { editAfterAccept: 'TWO_SIDED' }, { canOrder: true })).toEqual(['requestChange']);
     expect(act('ACCEPTED', { editAfterAccept: 'TWO_SIDED' }, { canAccept: true })).toEqual([]);
+    expect(act('ACCEPTED', {}, { canOrder: true })).toEqual(['requestChange']);
   });
   it('CHANGE_REQUESTED: захиалагч цуцална, хүлээн авагч шийднэ', () => {
     expect(act('CHANGE_REQUESTED', {}, { canOrder: true, isOrderer: true })).toEqual(['withdrawChange']);

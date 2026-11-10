@@ -19,6 +19,7 @@ const post = (id: string, extra: Partial<FeedPostDto> = {}): FeedPostDto => ({
   editedAt: null,
   hidden: false,
   createdAt: '2026-11-07T00:00:00.000Z',
+  links: [],
   ...extra,
 })
 

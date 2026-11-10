@@ -13,6 +13,7 @@ import { FeedReportReason, PrismaClient, UserRole } from '@prisma/client';
 import { CampAccessService } from '../src/modules/camp/common/camp-access.service';
 import { FeedService } from '../src/modules/feed/feed.service';
 import { FeedReportsService } from '../src/modules/feed/feed-reports.service';
+import { FeedLinksService } from '../src/modules/feed/feed-links.service';
 import { ImageProcessorService } from '../src/storage/image-processor.service';
 import { LocalDiskStorage } from '../src/storage/local-disk.storage';
 import { MediaService } from '../src/storage/media.service';
@@ -29,7 +30,7 @@ describe('v0.2.3 Блок 5 — Feed v0 (integration)', () => {
   // Эрхийн кэшгүй (тест бүр шинэ эрх)
   const cache = { buildKey: () => 'k', get: async () => null, set: async () => undefined, del: async () => undefined };
   const access = new CampAccessService(cache as never);
-  const feed = new FeedService(rls as never, access, media, signer);
+  const feed = new FeedService(rls as never, access, media, signer, new FeedLinksService());
   const reports = new FeedReportsService(rls as never, feed, media);
 
   const sfx = randomUUID().slice(0, 8);

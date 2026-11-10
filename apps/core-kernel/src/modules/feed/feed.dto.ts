@@ -1,3 +1,4 @@
+import type { FeedLinkDto } from './feed-links.service';
 import { IsEnum, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { FeedReportReason, FeedReportStatus } from '@prisma/client';
@@ -71,7 +72,7 @@ export interface FeedAuthorDto {
 }
 
 /** Зураг — storage/media.service `MediaImageDto` (санал хүсэлттэй нийтлэг) */
-export type FeedImageDto = MediaImageDto;
+type FeedImageDto = MediaImageDto;
 
 export interface FeedPostDto {
   id: string;
@@ -89,6 +90,8 @@ export interface FeedPostDto {
   /** report-оор нуугдсан (зөвхөн зохиогч / модератор харна) */
   hidden: boolean;
   createdAt: string;
+  /** v0.2.4 FEED-04: холбогдсон ажил (засвар, санал хүсэлт …) — төлөв; объектын эрхтэй бол линк */
+  links: FeedLinkDto[];
 }
 
 export interface FeedListDto {
@@ -121,7 +124,7 @@ export interface FeedLikeDto {
   likeCount: number;
 }
 
-export interface FeedRevisionDto {
+interface FeedRevisionDto {
   body: string;
   /** энэ хувилбар хүчинтэй байсан хугацааны төгсгөл (солигдсон мөч) */
   replacedAt: string;

@@ -19,7 +19,7 @@ const clean = (v: CellValue | undefined) => String(v ?? '').trim().replace(/\s+/
 type Changes = Record<string, { from: CellValue; to: CellValue }>;
 
 // ── Байрны төрөл (байгууллагын каталог) ──────────────────────
-export const BUILDING_TYPES_SPEC: TableSpec = {
+const BUILDING_TYPES_SPEC: TableSpec = {
   type: 'building-types',
   title: 'table.building_types',
   keyColumn: 'name',
@@ -75,7 +75,7 @@ export const buildingTypesHandler: DataImportHandler = {
 };
 
 // ── Байр (кемп бүрт) ─────────────────────────────────────────
-export const BUILDINGS_SPEC: TableSpec = {
+const BUILDINGS_SPEC: TableSpec = {
   type: 'buildings',
   title: 'table.buildings',
   keyColumn: 'code',
@@ -168,7 +168,7 @@ export const buildingsHandler: DataImportHandler = {
   async exportRows(tx, ctx) {
     const rows = await tx.campBuilding.findMany({
       where: { tenantId: ctx.tenantId, campId: ctx.campId },
-      select: { code: true, name: true, isActive: true, type: { select: { name: true } } },
+      select: { code: true, name: true, isActive: true, type: { select: { name: true, nameI18n: true } } },
       orderBy: { code: 'asc' },
     });
     return rows.map((b) => ({ code: b.code, name: b.name, type: b.type?.name ?? null, active: b.isActive }));
@@ -176,7 +176,7 @@ export const buildingsHandler: DataImportHandler = {
 };
 
 // ── Өрөө (байрны код + өрөөний дугаар) ───────────────────────
-export const ROOMS_IMPORT_SPEC: TableSpec = {
+const ROOMS_IMPORT_SPEC: TableSpec = {
   ...ROOMS_SPEC,
   columns: ROOMS_SPEC.columns.map((c) => ({
     ...c,

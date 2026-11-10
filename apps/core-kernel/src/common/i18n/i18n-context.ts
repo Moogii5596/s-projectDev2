@@ -7,7 +7,7 @@ import { AsyncLocalStorage } from 'async_hooks';
  */
 export const LANGS = ['mn', 'en', 'zh'] as const;
 export type Lang = (typeof LANGS)[number];
-export const DEFAULT_LANG: Lang = 'mn';
+const DEFAULT_LANG: Lang = 'mn';
 
 export interface I18nContext {
   lang: Lang;

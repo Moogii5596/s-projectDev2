@@ -20,10 +20,11 @@ import {
   WriteOffAssetDto,
 } from './camp-assets.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
+import { mergeCatalogNameI18n } from '../common/catalog-name-i18n';
 
 const P = CAMP_PERMISSIONS;
 
-const CATEGORY_SELECT = { id: true, name: true, isActive: true, createdAt: true, updatedAt: true } as const;
+const CATEGORY_SELECT = { id: true, name: true, nameI18n: true, isActive: true, createdAt: true, updatedAt: true } as const;
 const ASSET_SELECT = {
   id: true,
   campId: true,
@@ -39,7 +40,7 @@ const ASSET_SELECT = {
   note: true,
   createdAt: true,
   updatedAt: true,
-  category: { select: { name: true } },
+  category: { select: { name: true, nameI18n: true } },
   room: { select: { roomNo: true, building: { select: { code: true } } } },
   building: { select: { code: true, name: true } },
 } as const;
@@ -47,7 +48,7 @@ const ASSET_SELECT = {
 type AssetRow = Prisma.CampAssetGetPayload<{ select: typeof ASSET_SELECT }>;
 
 /** Prisma Date/Decimal → API хэлбэр (огноо 'YYYY-MM-DD', мөнгө '123.45') */
-export const assetView = (a: AssetRow) => ({
+const assetView = (a: AssetRow) => ({
   ...a,
   acquiredDate: a.acquiredDate ? a.acquiredDate.toISOString().slice(0, 10) : null,
   acquiredCost: a.acquiredCost ? a.acquiredCost.toFixed(2) : null,
@@ -93,7 +94,10 @@ export class CampAssetsService {
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireInAnyCamp(tx, tenantId, authId, P.ASSET_MANAGE);
         await this.assertCategoryNameFree(tx, tenantId, dto.name);
-        return tx.campAssetCategory.create({ data: { tenantId, name: dto.name }, select: CATEGORY_SELECT });
+        return tx.campAssetCategory.create({
+          data: { tenantId, name: dto.name, nameI18n: mergeCatalogNameI18n(dto.name, undefined, dto.nameI18n) },
+          select: CATEGORY_SELECT,
+        });
       }),
     );
   }
@@ -102,12 +106,18 @@ export class CampAssetsService {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireInAnyCamp(tx, tenantId, authId, P.ASSET_MANAGE);
-        const c = await tx.campAssetCategory.findFirst({ where: { id, tenantId }, select: { id: true } });
+        const c = await tx.campAssetCategory.findFirst({ where: { id, tenantId }, select: { id: true, name: true, nameI18n: true } });
         if (!c) throw notFound('camp.err.assets.2');
         if (dto.name !== undefined) await this.assertCategoryNameFree(tx, tenantId, dto.name, id);
         return tx.campAssetCategory.update({
           where: { id },
-          data: { ...(dto.name !== undefined ? { name: dto.name } : {}), ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}) },
+          data: {
+            ...(dto.name !== undefined ? { name: dto.name } : {}),
+            ...((dto.name !== undefined || dto.nameI18n !== undefined)
+              ? { nameI18n: mergeCatalogNameI18n(dto.name ?? c.name, c.nameI18n, dto.nameI18n) }
+              : {}),
+            ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+          },
           select: CATEGORY_SELECT,
         });
       }),

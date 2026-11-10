@@ -22,6 +22,7 @@ export const APP_BEHAVIOR_ENV_KEYS = [
   'PRISMA_LOG_LEVELS', // Phase 3.6.6
   'SYSTEM_DATABASE_URL', // Phase 4.8.4
   'OUTBOX_POLLER_CRON', // Phase 5
+  'NOTIFICATION_MAIL_CRON', // v0.2.4 NTF-01
   'ESCALATION_CRON', // v0.1.6
 ] as const;
 

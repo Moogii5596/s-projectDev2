@@ -4,7 +4,7 @@ import { createTransport, Transporter } from 'nodemailer';
 import type { MailContent } from './auth-mail';
 
 /** Тест: transport орлуулах */
-export const MAIL_TRANSPORT = 'MAIL_TRANSPORT';
+const MAIL_TRANSPORT = 'MAIL_TRANSPORT';
 
 /**
  * v0.2.2 Блок 3 (D-04) — системийн имэйл (SMTP). `.env`: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM.

@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { campApi } from '../../camp/api/camp-api'
+import { campApi } from '../api/camp-bridge'
 import { hrApi } from '../api/hr-api'
-import type { AdjustmentReason, CalendarCell, ShiftType } from '../../camp/api/types'
-import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
-import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { P } from '../../camp/lib/permissions'
-import { REASON_LABEL, SHIFT_LABEL, weekdayShort } from '../../camp/lib/labels'
-import { addDays, isoWeekday, todayUb } from '../../camp/lib/dates'
-import { CELL_TEXT, CELL_TITLE, type CellKind, cellKind, rangeProblem } from '../../camp/lib/calendar'
-import EmployeePicker, { type PickedEmployee } from '../../camp/components/EmployeePicker'
-import { Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../camp/components/ui'
+import type { AdjustmentReason, CalendarCell, ShiftType } from '../api/camp-bridge'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { REASON_LABEL, SHIFT_LABEL, weekdayShort } from '../../../core/labels'
+import { addDays, isoWeekday, todayUb } from '../../../core/dates'
+import { CELL_TEXT, CELL_TITLE, type CellKind, cellKind, rangeProblem } from '../api/camp-bridge'
+import EmployeePicker, { type PickedEmployee } from '../components/EmployeePicker'
+import { Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../../core/ui'
 import { useTranslation } from 'react-i18next'
 
 const CELL_CLS: Record<CellKind, string> = {
@@ -28,7 +28,7 @@ const PRESENCE_MARK = { ARRIVAL: '▲', DEPARTURE: '▼', FULL_DAY: '' } as cons
 export default function ShiftsPage() {
   const { t } = useTranslation()
   const { campId = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const canAdjust = perms.can(P.SHIFT_ADJUST)
   const settings = useQuery({ queryKey: campKeys.settings(campId), queryFn: () => campApi.settings(campId) })
   const depts = useQuery({ queryKey: campKeys.departments(campId), queryFn: () => hrApi.departments(campId) })
@@ -203,7 +203,7 @@ function AdjustmentsCard({ campId, canEdit, from, to }: { campId: string; canEdi
     queryFn: () => hrApi.shiftAdjustments(campId, { from, to }),
     enabled: valid,
   })
-  const del = useCampMutation((id: string) => hrApi.deleteShiftAdjustment(campId, id), [campKeys.adjustments(campId), campKeys.calendar(campId), campKeys.presence(campId)])
+  const del = useAppMutation((id: string) => hrApi.deleteShiftAdjustment(campId, id), [campKeys.adjustments(campId), campKeys.calendar(campId), campKeys.presence(campId)])
   return (
     <Card title={t('camp.shifts.adjustments_title', { from, to })}>
       {list.isLoading && <Loading />}
@@ -250,7 +250,7 @@ function AdjustmentModal({ campId, defaultFrom, onClose }: { campId: string; def
   const [reasonType, setReasonType] = useState<AdjustmentReason>('SHIFT_CHANGE')
   const [reason, setReason] = useState('')
   const problem = rangeProblem(startDate, endDate, 366)
-  const m = useCampMutation(
+  const m = useAppMutation(
     () =>
       hrApi.createShiftAdjustments(campId, {
         employeeIds: emps.map((e) => e.id),

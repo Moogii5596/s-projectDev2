@@ -11,6 +11,7 @@ import { RedisModule } from '../db/redis.module';
 import { AppCacheModule } from '../cache/cache.module';
 import { AuthModule } from '../auth/auth.module';
 import { TenantAuthGuard } from '../auth/tenant-auth.guard';
+import { TenantModuleGuard } from '../auth/tenant-module.guard';
 import { TenantRateLimitGuard } from '../auth/tenant-rate-limit.guard';
 import { TenantContextInterceptor } from '../auth/tenant-context.interceptor';
 import { MaterialRequisitionModule } from '../modules/material-requisition/material-requisition.module';
@@ -80,6 +81,7 @@ import { I18nInterceptor }     from '../common/i18n/i18n.interceptor';
     EnvConfig,
     // RULE-07: useExisting (биш useClass) — module аль хэдийн instantiate хийсэн
     { provide: APP_GUARD,       useExisting: TenantAuthGuard },
+    { provide: APP_GUARD,       useClass: TenantModuleGuard },
     { provide: APP_GUARD,       useClass: TenantRateLimitGuard },
     { provide: APP_INTERCEPTOR, useExisting: TenantContextInterceptor },
     { provide: APP_INTERCEPTOR, useExisting: DrainingInterceptor },  // Sprint 1 RULE-07

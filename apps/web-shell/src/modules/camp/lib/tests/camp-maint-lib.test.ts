@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { formatMoney } from '../money'
+import { formatMoney } from '../../../../core/money'
 import { availableActions, canEditDetails, canEditParts, type MaintenanceActor } from '../maintenance'
-import { canInAnyCamp } from '../permissions'
+import { canInAnyCamp } from '../../../../core/permissions'
 
 const actor = (p: Partial<MaintenanceActor> = {}): MaintenanceActor => ({ canParts: false, canClose: false, canCreate: false, isReporter: false, ...p })
 

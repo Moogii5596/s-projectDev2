@@ -11,7 +11,7 @@
  * TenantAuthGuard хоёулаа parseDeploymentConfig()-г ашиглана.
  */
 
-export type DeploymentMode = 'shared' | 'dedicated';
+type DeploymentMode = 'shared' | 'dedicated';
 
 export interface DeploymentConfig {
   mode: DeploymentMode;

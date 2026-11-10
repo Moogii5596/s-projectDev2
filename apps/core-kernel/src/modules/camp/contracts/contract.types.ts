@@ -17,7 +17,7 @@ export type QuantityRule = (typeof QUANTITY_RULES)[number];
 export const CONTRACT_MEAL_TYPES = ['BREAKFAST', 'LUNCH', 'DINNER', 'NIGHT'] as const;
 export type ContractMealType = (typeof CONTRACT_MEAL_TYPES)[number];
 
-export const AMENDMENT_TYPES = ['EXTENSION', 'PRICE_CHANGE', 'TERMS', 'TERMINATION', 'OTHER'] as const;
+const AMENDMENT_TYPES = ['EXTENSION', 'PRICE_CHANGE', 'TERMS', 'TERMINATION', 'OTHER'] as const;
 export type AmendmentType = (typeof AMENDMENT_TYPES)[number];
 /** POST /amendments-аар шууд бүртгэх төрөл (PRICE_CHANGE — үнэ нэмэхэд, TERMINATION — цуцлахад автоматаар) */
 export const MANUAL_AMENDMENT_TYPES = ['EXTENSION', 'TERMS', 'OTHER'] as const;

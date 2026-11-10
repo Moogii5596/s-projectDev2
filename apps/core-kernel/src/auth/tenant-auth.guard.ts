@@ -16,6 +16,9 @@ import { resolveTenantSlug } from './tenant-slug';
 import { ALLOW_PASSWORD_CHANGE_REQUIRED_KEY } from '../common/decorators/allow-password-change-required.decorator';
 import { forbidden } from '../common/i18n/app-error';
 import { DeploymentConfig, parseDeploymentConfig } from '../config/deployment-mode';
+import { AppError } from '../common/i18n/app-error';
+import { SessionRevokeService } from './session-revoke.service';
+import { TenantSecurityPolicyService } from './tenant-security-policy.service';
 
 /**
  * PERF-003: Supabase Auth өөрөө ажиллахгүй байгаа (сүлжээ, timeout, 5xx) эсэх.
@@ -41,6 +44,8 @@ export class TenantAuthGuard implements CanActivate {
     private readonly configService: ConfigService,
     private readonly tenantCacheService: TenantCacheService,
     private readonly reflector: Reflector,
+    private readonly securityPolicy: TenantSecurityPolicyService,
+    private readonly sessions: SessionRevokeService,
   ) {
     // ADR-001: буруу тохиргоо → startup дээр алдаа (EnvConfig-тэй ижил функц)
     this.deployment = parseDeploymentConfig({
@@ -98,6 +103,15 @@ export class TenantAuthGuard implements CanActivate {
       this.logger.warn(`Membership байхгүй: authId=${user.id} tenant=${tenantSlug}`);
       // №3 (Блок 6б): код `auth.not_member` — frontend локал session-ийг устгаад /login (идэвхгүй болгосон / ажлаас гарсан)
       throw forbidden('auth.not_member');
+    }
+
+    const securityPolicy = await this.securityPolicy.get(tenantId);
+    if (securityPolicy.sessionDurationMinutes > 0) {
+      const sessionId = SessionRevokeService.sessionIdFromJwt(token);
+      const withinLimit = sessionId
+        ? await this.sessions.isWithinMaxAge(user.id, sessionId, securityPolicy.sessionDurationMinutes)
+        : false;
+      if (!withinLimit) throw new AppError(401, 'auth.session_expired');
     }
 
     // v0.2.2 D-06: эхний нэвтрэлт / админ шинэчилсэн нууц үг → солих хүртэл зөвхөн зөвшөөрсөн route
@@ -170,7 +184,11 @@ export class TenantAuthGuard implements CanActivate {
   }
 
   private extractTenantSlug(host: string): string | null {
-    return resolveTenantSlug(this.deployment, host);
+    return resolveTenantSlug(
+      this.deployment,
+      host,
+      this.configService.get<string>('DEV_TENANT_SLUG') ?? 'test-tenant',
+    );
   }
 
 }

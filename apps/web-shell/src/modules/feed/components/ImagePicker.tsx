@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '../../camp/components/ui'
+import { Button } from '../../../core/ui'
 
-export const MAX_PICKER_IMAGES = 6
-export const MAX_IMAGE_MB = 15
-export const MAX_IMAGE_BYTES = MAX_IMAGE_MB * 1024 * 1024
+const MAX_PICKER_IMAGES = 6
+const MAX_IMAGE_MB = 15
+const MAX_IMAGE_BYTES = MAX_IMAGE_MB * 1024 * 1024
 
 interface Props {
   value: File[]

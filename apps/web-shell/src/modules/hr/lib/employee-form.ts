@@ -1,4 +1,4 @@
-import type { OrgType } from '../../camp/api/types'
+import type { OrgType } from '../api/camp-bridge'
 
 /**
  * v0.2.3 Блок R8 (PIL-25) — ажилтан нэмэх маягт: «Код автоматаар олгох (HR ID-гүй)» (цэвэр).

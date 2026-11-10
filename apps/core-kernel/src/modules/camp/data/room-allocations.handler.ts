@@ -16,7 +16,7 @@ import { fromDbDate, toDbDate } from '../common/camp-tx';
  *  - Багтаамж: зөвхөн одоогийн (дуусаагүй) мөрүүдэд, гараар хуваарилахтай ижил дүрмээр (ростерын шөнө, 28 шөнө).
  *    Түүх (дууссан) = болсон баримт → багтаамжаар шалгахгүй.
  */
-export const ROOM_ALLOCATIONS_SPEC: TableSpec = {
+const ROOM_ALLOCATIONS_SPEC: TableSpec = {
   type: 'room-allocations',
   title: 'table.room_allocations',
   columns: [

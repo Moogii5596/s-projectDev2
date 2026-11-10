@@ -2,6 +2,19 @@ import { HttpException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
+const TRIGGER_MESSAGE_CODES: Record<string, string> = {
+  CAMP_CONTRACT_HISTORY: 'camp.err.trigger.contract_history',
+  CAMP_COST_IMMUTABLE: 'camp.err.trigger.cost_immutable',
+  CAMP_HAUL_CONTRACT: 'camp.err.trigger.haul_contract',
+  CAMP_HAUL_LOCKED: 'camp.err.trigger.haul_locked',
+  CAMP_MAINTENANCE_LOCKED: 'camp.err.trigger.maintenance_locked',
+  CAMP_MEAL_CONTRACT: 'camp.err.trigger.meal_contract',
+  CAMP_MEAL_LOCKED: 'camp.err.trigger.meal_locked',
+  CAMP_STAY_INVALID: 'camp.err.trigger.stay_invalid',
+  CAMP_SITE_LINK: 'core.site.camp_link_missing',
+  CAMP_SYSTEM_ROLE: 'camp.err.trigger.system_role',
+};
+
 /**
  * DB-ийн алдааг HTTP алдаа руу (Шат 2.1). App түвшний шалгалт үндсэн, энэ нь НӨӨЦ хамгаалалт:
  * зэрэгцээ хүсэлт (race) эсвэл app алгассан нөхцөлд DB constraint/trigger барина.
@@ -23,7 +36,11 @@ export function toCampHttpError(err: unknown): unknown {
   // → эхлээд `\"` → `"` болгож хэвийн болгоно; SQLSTATE-ээр (23P01 / 23514) нөөц таних [PRISMA-003]
   const message = (err instanceof Error ? err.message : String(err)).replace(/\\"/g, '"');
   const trigger = /(CAMP_[A-Z_]+): ([^\n"]+)/.exec(message);
-  if (trigger) return conflict('camp.err.errors.4', { code: trigger[1], detail: trigger[2].trim() });
+  if (trigger) {
+    const messageCode = TRIGGER_MESSAGE_CODES[trigger[1]];
+    if (messageCode) return conflict(messageCode);
+    return conflict('camp.err.errors.4', { code: trigger[1], detail: trigger[2].trim() });
+  }
   const sqlstate = /code: "([0-9A-Z]{5})"/.exec(message)?.[1];
   const exclusion = /exclusion constraint "([a-z0-9_]+)"/.exec(message);
   if (exclusion || sqlstate === '23P01') {

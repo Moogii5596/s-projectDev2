@@ -1,16 +1,23 @@
-import { IsBoolean, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CampAssetCondition } from '@prisma/client';
 import { ISO_DATE, toBool, trim, trimOrNull } from '../common/camp-dto.util';
+import { CatalogNameI18nDto } from '../common/common.dto';
 
 export class CreateAssetCategoryDto {
   @Transform(trim) @IsString() @IsNotEmpty({ message: 'name шаардлагатай' }) @MaxLength(100)
   name!: string;
+
+  @IsOptional() @IsObject() @ValidateNested() @Type(() => CatalogNameI18nDto)
+  nameI18n?: CatalogNameI18nDto;
 }
 
 export class UpdateAssetCategoryDto {
   @IsOptional() @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(100)
   name?: string;
+
+  @IsOptional() @IsObject() @ValidateNested() @Type(() => CatalogNameI18nDto)
+  nameI18n?: CatalogNameI18nDto;
 
   @IsOptional() @IsBoolean()
   isActive?: boolean;
@@ -112,4 +119,3 @@ export class QueryAssetsDto {
   @IsOptional() @IsEnum(CampAssetCondition) condition?: CampAssetCondition;
   @IsOptional() @Transform(trim) @IsString() @MaxLength(100) q?: string;
 }
-

@@ -1,7 +1,7 @@
 import type { FeedbackItemDto, FeedbackKind, FeedbackStatus } from './api'
 
 /** v0.2.3 Блок F — санал хүсэлтийн цэвэр туслах функц (vitest) */
-export const MAX_FEEDBACK_ATTACHMENTS = 3
+const MAX_FEEDBACK_ATTACHMENTS = 3
 export const MAX_FEEDBACK_ATTACHMENT_BYTES = 15 * 1024 * 1024
 
 export function remainingAttachmentSlots(attachmentCount: number): number {

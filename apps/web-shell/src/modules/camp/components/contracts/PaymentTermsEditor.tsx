@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { PaymentTerm, PaymentTermRule } from '../../api/contract-types'
 import { paymentTermsPercentTotal } from '../../lib/contract'
-import { Button, Field, inputCls } from '../ui'
+import { Button, Field, inputCls } from '../../../../core/ui'
 
 const RULES: PaymentTermRule[] = ['AFTER_INVOICE_WORKDAYS', 'AFTER_INVOICE_DAYS', 'AFTER_MONTHS']
 

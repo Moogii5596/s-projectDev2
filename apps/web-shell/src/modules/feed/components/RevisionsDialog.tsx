@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { INTL_LOCALE, currentLang } from '../../../i18n'
-import { Badge, Button, Empty, Modal } from '../../camp/components/ui'
+import { Badge, Button, Empty, Modal } from '../../../core/ui'
 import type { FeedRevisionListDto } from '../types'
 
 interface Props {

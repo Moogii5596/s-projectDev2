@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SIGN_IN_LIMITS, SignInService, clientIpOf } from './sign-in.service';
+import { DEFAULT_TENANT_SECURITY_POLICY } from './tenant-security-policy.service';
 
 const session = { access_token: 'at', refresh_token: 'rt', expires_in: 3600, expires_at: 99, token_type: 'bearer' };
 
@@ -18,6 +19,7 @@ function setup(opts: { tenantId?: string | null; rows?: Record<string, unknown[]
   });
   const system = { $queryRaw: queryRaw, $executeRaw: vi.fn().mockResolvedValue(1) };
   const tenantCache = { getTenantId: vi.fn().mockResolvedValue(opts.tenantId === undefined ? 't1' : opts.tenantId), invalidateMember: vi.fn() };
+  const securityPolicy = { get: vi.fn().mockResolvedValue(DEFAULT_TENANT_SECURITY_POLICY) };
   const counters = new Map<string, number>();
   const redis = {
     get: vi.fn(async (k: string) => (counters.has(k) ? String(counters.get(k)) : null)),
@@ -27,8 +29,8 @@ function setup(opts: { tenantId?: string | null; rows?: Record<string, unknown[]
   };
   const config = { get: (k: string) => ({ DEPLOYMENT_MODE: 'dedicated', DEDICATED_TENANT_SLUG: 'sino' } as Record<string, string>)[k] };
   const sessions = { dropQuietly: vi.fn().mockResolvedValue(undefined), revokeAll: vi.fn().mockResolvedValue(undefined) };
-  const svc = new SignInService(config as never, system as never, tenantCache as never, redis as never, () => gotrue as never, sessions as never);
-  return { svc, signInWithPassword, updateUserById, queryRaw, system, tenantCache, redis, sessions };
+  const svc = new SignInService(config as never, system as never, tenantCache as never, securityPolicy as never, redis as never, () => gotrue as never, sessions as never);
+  return { svc, signInWithPassword, updateUserById, queryRaw, system, tenantCache, securityPolicy, redis, sessions };
 }
 
 const userRow = (over: Record<string, unknown> = {}) => ({ auth_id: 'auth-1', email: 'bat@sino.mn', must_change_password: false, ...over });
@@ -118,6 +120,18 @@ describe('SignInService (v0.2.2 D-10)', () => {
       await expect(s.svc.signIn(undefined, '5.5.5.5', 'other', 'x')).rejects.toMatchObject({ status: 429 });
     });
 
+    it('tenant-ийн оролдлогын босго ба түгжээний хугацааг хэрэглэнэ', async () => {
+      s.securityPolicy.get.mockResolvedValue({
+        ...DEFAULT_TENANT_SECURITY_POLICY,
+        loginFailureLimit: 3,
+        loginLockoutMinutes: 2,
+      });
+      s.signInWithPassword.mockResolvedValue({ data: {}, error: { status: 400, message: 'x' } });
+      for (let i = 0; i < 3; i++) await expect(s.svc.signIn(undefined, undefined, '99112233', 'bad')).rejects.toMatchObject({ status: 401 });
+      expect(s.redis.pexpire).toHaveBeenCalledWith(expect.stringContaining('signin:fail:id:'), 120_000);
+      await expect(s.svc.signIn(undefined, undefined, '99112233', 'bad')).rejects.toMatchObject({ status: 429 });
+    });
+
     it('амжилттай нэвтрэлт тоологдохгүй: нэг WiFi-аас 100 хүн, нэг хүн 30 удаа → 429 гарахгүй; амжилт тоолуурыг тэглэнэ', async () => {
       s.signInWithPassword.mockResolvedValue({ data: { session, user: { id: 'auth-1' } }, error: null });
       for (let i = 0; i < 100; i++) await expect(s.svc.signIn(undefined, '5.5.5.5', '99112233', 'pw')).resolves.toBeTruthy();
@@ -180,6 +194,13 @@ describe('SignInService (v0.2.2 D-10)', () => {
       await expect(s.svc.changePassword('t1', 'auth-1', 'bad', 'new-password-123', 'tok')).rejects.toMatchObject({ status: 429 });
       expect(fetchMock).not.toHaveBeenCalled();
       expect(s.updateUserById).not.toHaveBeenCalled();
+    });
+
+    it('tenant-ийн нууц үгийн доод уртыг GoTrue-оос өмнө шалгана', async () => {
+      s.securityPolicy.get.mockResolvedValue({ ...DEFAULT_TENANT_SECURITY_POLICY, passwordMinLength: 16 });
+      await expect(s.svc.changePassword('t1', 'auth-1', 'old-password', 'new-password-12', 'tok'))
+        .rejects.toMatchObject({ status: 400, code: 'auth.password_min_length' });
+      expect(s.signInWithPassword).not.toHaveBeenCalled();
     });
 
     it('бодлого (422) → 400 weak; шалгалтын session устгагдана; DB бичихгүй. GoTrue унасан → 503', async () => {

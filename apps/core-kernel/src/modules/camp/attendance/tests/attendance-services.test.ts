@@ -496,9 +496,9 @@ describe('CampPresenceService (Шат 3.5) — DB → тооцоо', () => {
     const r = await svc.presence('t1', 'a1', 'c1', '2026-10-08');
     expect(s.tx.hrEmployee.findMany.mock.calls[0][0].where.stays.some).toEqual({ startDate: { lte: d('2026-10-08') }, OR: [{ endDate: null }, { endDate: { gte: d('2026-10-07') } }] });
     expect(r.lines).toEqual([
-      { mealType: 'BREAKFAST', mealLocationId: 'loc-camp', count: 1, mealLocationName: 'Кемп гал тогоо' },
-      { mealType: 'LUNCH', mealLocationId: 'loc-mine', count: 1, mealLocationName: 'Уулын хэсэг' },
-      { mealType: 'DINNER', mealLocationId: 'loc-camp', count: 1, mealLocationName: 'Кемп гал тогоо' },
+      { mealType: 'BREAKFAST', mealLocationId: 'loc-camp', count: 1, mealLocationName: 'Кемп гал тогоо', mealLocationNameI18n: {} },
+      { mealType: 'LUNCH', mealLocationId: 'loc-mine', count: 1, mealLocationName: 'Уулын хэсэг', mealLocationNameI18n: {} },
+      { mealType: 'DINNER', mealLocationId: 'loc-camp', count: 1, mealLocationName: 'Кемп гал тогоо', mealLocationNameI18n: {} },
     ]);
   });
 });

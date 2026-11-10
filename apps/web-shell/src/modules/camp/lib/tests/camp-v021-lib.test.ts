@@ -4,6 +4,7 @@ import type { AssetMovement, PositionSetting, Stay } from '../../api/types'
 import { decodeLocation, movementFrom, movementTo, roomLabel } from '../asset-location'
 import { inherited } from '../effective'
 import { filterStays } from '../stays'
+import { localizedCatalogName } from '../../../../core/labels'
 
 beforeAll(async () => {
   await i18n.changeLanguage('mn')
@@ -59,5 +60,16 @@ describe('v0.2.1 inherited (Q1): албан тушаал(кемп) ?? кемпи
     expect(inherited('p2', ps, def)).toEqual({ locationName: 'Кемп', mealsIncluded: true, from: 'DEFAULT' })
     expect(inherited(null, ps, def)).toEqual({ locationName: 'Кемп', mealsIncluded: true, from: 'DEFAULT' })
     expect(inherited('p1', undefined, undefined)).toEqual({ locationName: null, mealsIncluded: true, from: 'DEFAULT' })
+  })
+})
+
+describe('localized catalog names', () => {
+  const entry = { name: 'Хэлтэс', nameI18n: { en: 'Department', zh: '部门' } }
+
+  it('uses the requested language and falls back to the default name', () => {
+    expect(localizedCatalogName(entry, 'en-US')).toBe('Department')
+    expect(localizedCatalogName(entry, 'zh-CN')).toBe('部门')
+    expect(localizedCatalogName(entry, 'mn')).toBe('Хэлтэс')
+    expect(localizedCatalogName({ name: 'Хэлтэс' }, 'en')).toBe('Хэлтэс')
   })
 })

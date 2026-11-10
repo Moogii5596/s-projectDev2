@@ -119,10 +119,17 @@ describe('CampRbacService (Шат 2.2)', () => {
     expect(s.cache.invalidateTenant).not.toHaveBeenCalled();
   });
 
-  it('ADR-007 B2-6: хуучин код (alias) → шинэ кодоор хадгална, давхардлыг нэгтгэнэ; устгасан camp.roles.manage → 400', async () => {
+  it('ADR-007: хуучин alias-уудыг няцааж, шинэ кодыг хадгална', async () => {
     asManager();
     s.tx.coreRole.findFirst.mockResolvedValue(role({ isSystem: true, systemCode: 'CAMP_MANAGER' }));
-    await svc.setRolePermissions('t1', 'a1', 'r1', { permissionCodes: ['camp.shift.adjust', P.SHIFT_ADJUST, 'camp.movement.import'] });
+    await expect(svc.setRolePermissions('t1', 'a1', 'r1', {
+      permissionCodes: ['camp.shift.adjust', P.SHIFT_ADJUST, 'camp.movement.import'],
+    })).rejects.toThrow(/camp.shift.adjust, camp.movement.import/);
+    expect(s.tx.coreRolePermission.deleteMany).not.toHaveBeenCalled();
+
+    await svc.setRolePermissions('t1', 'a1', 'r1', {
+      permissionCodes: [P.SHIFT_ADJUST, 'hr.attendance.import'],
+    });
     expect(s.tx.coreRolePermission.createMany).toHaveBeenCalledWith({
       data: [
         { tenantId: 't1', roleId: 'r1', permissionCode: 'hr.shift.adjust' },
@@ -207,11 +214,16 @@ describe('CampRbacService (Шат 2.2)', () => {
     expect(c2.permissions).toEqual([P.REPORT_VIEW]);
     setActor(s.tx, { role: UserRole.OWNER });
     s.cache.get.mockResolvedValue(null);
-    // ADR-007 B2-6: 17 код + 4 хуучин alias (Блок 3-аас өмнөх frontend)
+    // Tenant admin receives canonical permissions only.
     const all = (await svc.myPermissions('t1', 'a1')).permissions;
-    expect(all).toHaveLength(22); // + feed.content.moderate (v0.2.3 Блок 5)
-    expect(all).toEqual(expect.arrayContaining(['hr.employee.manage', 'camp.employee.manage', 'hr.shift.adjust', 'camp.shift.adjust']));
+    expect(all).toHaveLength(18);
+    expect(all).toEqual(expect.arrayContaining(['hr.employee.manage', 'hr.shift.adjust']));
+    expect(all).not.toContain('camp.employee.manage');
+    expect(all).not.toContain('camp.shift.adjust');
     expect(all).not.toContain('camp.roles.manage');
+    // v0.2.4: Debug, MR эрх tenant admin-д автоматаар биш
+    expect(all).not.toContain('core.debug.view');
+    expect(all).not.toContain('mr.request.approve');
     expect((await svc.myPermissions('t1', 'a1')).modules).toEqual(['camp', 'feed', 'hr']);
   });
 
@@ -326,12 +338,13 @@ describe('CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүл
     expect(s.tx.coreUserPermission.create).toHaveBeenCalledWith(expect.objectContaining({
       data: { tenantId: 't1', userId: 'u1', permissionCode: P.REPORT_VIEW, campId: null, source: 'DIRECT', createdBy: 'cu-actor' },
     }));
-    // ADR-007 B2-6: хуучин код → шинэ кодоор олгоно
+    // ADR-007: aliases are rejected; callers must use canonical codes.
     s.tx.coreUserPermission.create.mockResolvedValueOnce({ id: 'p2', userId: 'u1', permissionCode: P.EMPLOYEE_MANAGE, campId: null, source: 'DIRECT', createdAt: new Date() });
-    await svc.grantDirectPermission('t1', 'a1', 'u1', { permissionCode: 'camp.employee.manage' });
+    await svc.grantDirectPermission('t1', 'a1', 'u1', { permissionCode: P.EMPLOYEE_MANAGE });
     expect(s.tx.coreUserPermission.create).toHaveBeenLastCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ permissionCode: 'hr.employee.manage' }),
+      data: expect.objectContaining({ permissionCode: P.EMPLOYEE_MANAGE }),
     }));
+    await expect(svc.grantDirectPermission('t1', 'a1', 'u1', { permissionCode: 'camp.employee.manage' })).rejects.toThrow(BadRequestException);
     await expect(svc.grantDirectPermission('t1', 'a1', 'u1', { permissionCode: 'camp.roles.manage' })).rejects.toThrow(BadRequestException);
   });
 

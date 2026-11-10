@@ -2,16 +2,16 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { MEAL_LABEL, localizedCatalogName } from '../../../core/labels'
 import { campApi, type MealOrderApiAction } from '../api/camp-api'
 import type { MealOrderAction } from '../api/meal-order-types'
 import type { MealType } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { addDays, todayUb } from '../lib/dates'
-import { MEAL_LABEL } from '../lib/labels'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { addDays, todayUb } from '../../../core/dates'
 import { gridToLines, gridTotal, linesToGrid, MEAL_TYPES, sameGrid, STATUS_TONE, type Grid } from '../lib/meal-order'
 import MealGrid from '../components/MealGrid'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Table, inputCls, td } from '../components/ui'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Table, inputCls, td } from '../../../core/ui'
 
 type ReasonKind = 'reject' | 'request-change' | 'reject-change'
 
@@ -20,10 +20,10 @@ type ReasonKind = 'reject' | 'request-change' | 'reject-change'
  * урсгалын дүрэм (cutoff, хүлээн авах, хүлээн авсны дараах засвар) кемпийн тохиргооноос.
  */
 export default function MealOrdersPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { campId = '' } = useParams()
   const [date, setDate] = useState(() => addDays(todayUb(), 1))
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const locations = useQuery({ queryKey: campKeys.mealLocations(campId), queryFn: () => campApi.mealLocations(campId) })
   const order = useQuery({ queryKey: campKeys.mealOrder(campId, date), queryFn: () => campApi.mealOrder(campId, date), enabled: !!campId })
   const activeLocations = useMemo(() => (locations.data ?? []).filter((l) => l.isActive || order.data?.lines.some((x) => x.mealLocationId === l.id)), [locations.data, order.data])
@@ -46,8 +46,8 @@ export default function MealOrdersPage() {
   const inv = [campKeys.mealOrderAll(campId)]
   const afterSave = () => { setReason(null); setReasonText('') }
 
-  const save = useCampMutation(() => campApi.saveMealOrder(campId, date, { lines: gridToLines(grid) }), inv)
-  const act = useCampMutation(
+  const save = useAppMutation(() => campApi.saveMealOrder(campId, date, { lines: gridToLines(grid) }), inv)
+  const act = useAppMutation(
     async (v: { action: MealOrderApiAction; body?: unknown }) => {
       // илгээхээс өмнө хадгалагдаагүй өөрчлөлтийг хадгална (submit хадгалсан мөрөөр ажиллана)
       if (v.action === 'submit' && dirty && can('edit')) await campApi.saveMealOrder(campId, date, { lines: gridToLines(grid) })
@@ -56,13 +56,13 @@ export default function MealOrdersPage() {
     inv,
     afterSave,
   )
-  const del = useCampMutation(() => campApi.deleteMealOrder(campId, date), inv)
-  const addExtra = useCampMutation(
+  const del = useAppMutation(() => campApi.deleteMealOrder(campId, date), inv)
+  const addExtra = useAppMutation(
     () => campApi.addMealExtra(campId, date, { mealType: extra.mealType, mealLocationId: extra.mealLocationId, guestCount: Number(extra.guestCount), note: extra.note.trim() }),
     inv,
     () => setExtra((p) => ({ ...p, guestCount: '', note: '' })),
   )
-  const delExtra = useCampMutation((id: string) => campApi.removeMealExtra(campId, date, id), inv)
+  const delExtra = useAppMutation((id: string) => campApi.removeMealExtra(campId, date, id), inv)
   const busy = save.isPending || act.isPending || del.isPending || addExtra.isPending || delExtra.isPending
 
   const submitReason = () => {
@@ -116,15 +116,18 @@ export default function MealOrdersPage() {
           <Card title={t('camp.mo.extras')}>
             {o.extras.length > 0 && (
               <Table head={[t('camp.mo.location'), t('camp.mo.meal'), t('camp.mo.guests'), t('camp.mo.extra_note'), '']}>
-                {o.extras.map((e) => (
-                  <tr key={e.id}>
-                    <td className={td}>{locations.data.find((l) => l.id === e.mealLocationId)?.name ?? '—'}</td>
-                    <td className={td}>{MEAL_LABEL[e.mealType]}</td>
-                    <td className={`${td} text-right`}>{e.guestCount}</td>
-                    <td className={td}>{e.note}</td>
-                    <td className={td}>{can('edit') && <Button variant="ghost" onClick={() => delExtra.mutate(e.id)} disabled={busy}>{t('camp.mo.delete')}</Button>}</td>
-                  </tr>
-                ))}
+                {o.extras.map((e) => {
+                  const location = locations.data.find((l) => l.id === e.mealLocationId)
+                  return (
+                    <tr key={e.id}>
+                      <td className={td}>{location ? localizedCatalogName(location, i18n.resolvedLanguage ?? i18n.language) : '—'}</td>
+                      <td className={td}>{MEAL_LABEL[e.mealType]}</td>
+                      <td className={`${td} text-right`}>{e.guestCount}</td>
+                      <td className={td}>{e.note}</td>
+                      <td className={td}>{can('edit') && <Button variant="ghost" onClick={() => delExtra.mutate(e.id)} disabled={busy}>{t('camp.mo.delete')}</Button>}</td>
+                    </tr>
+                  )
+                })}
               </Table>
             )}
             {can('edit') && (
@@ -136,7 +139,7 @@ export default function MealOrdersPage() {
                 <Field label={t('camp.mo.location')}>{(id) => (
                   <select id={id} className={inputCls} value={extra.mealLocationId} onChange={(e) => setExtra((p) => ({ ...p, mealLocationId: e.target.value }))}>
                     <option value="">{t('camp.common.not_selected')}</option>
-                    {activeLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    {activeLocations.map((l) => <option key={l.id} value={l.id}>{localizedCatalogName(l, i18n.resolvedLanguage ?? i18n.language)}</option>)}
                   </select>
                 )}</Field>
                 <Field label={t('camp.mo.meal')}>{(id) => (

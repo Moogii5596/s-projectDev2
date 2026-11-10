@@ -1,0 +1,61 @@
+// v0.2.4 Блок 8 (FILE-01, M-7) — файлын ерөнхий сервис (20261107016_core_attachments.sql). FK → core_users — зөвхөн SQL-д.
+
+model CoreAttachment {
+  id          String    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  entityType  String    @map("entity_type")
+  entityId    String    @map("entity_id") @db.Uuid
+  fileName    String    @map("file_name")
+  mimeType    String    @map("mime_type")
+  sizeBytes   Int       @map("size_bytes")
+  sha256      String
+  storageKey  String    @unique(map: "uq_core_attachments_storage_key") @map("storage_key")
+  encryption  String    @default("AES-256-GCM")
+  keyId       String    @map("key_id")
+  docType     String?   @map("doc_type")
+  version     Int       @default(1)
+  docDate     DateTime? @map("doc_date") @db.Date
+  supersededAt DateTime? @map("superseded_at") @db.Timestamptz
+  uploadedBy  String    @map("uploaded_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+  deletedBy   String?   @map("deleted_by") @db.Uuid
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  access CoreAttachmentAccess[]
+
+  @@unique([tenantId, id], map: "uq_core_attachments_tenant_id")
+  @@map("core_attachments")
+}
+
+model CoreAttachmentNamePattern {
+  id         String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  entityType String   @map("entity_type")
+  pattern    String
+  updatedBy  String   @map("updated_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, entityType], map: "uq_core_attachment_name_patterns_tenant_entity")
+  @@map("core_attachment_name_patterns")
+}
+
+model CoreAttachmentAccess {
+  id           String   @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  attachmentId String   @map("attachment_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  action       String
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  attachment CoreAttachment @relation(fields: [tenantId, attachmentId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_core_attachment_access_attachment")
+
+  @@index([tenantId, attachmentId, createdAt(sort: Desc)], map: "idx_core_attachment_access_attachment")
+  @@map("core_attachment_access")
+}

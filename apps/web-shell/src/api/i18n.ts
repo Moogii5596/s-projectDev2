@@ -17,13 +17,13 @@ export async function saveLocale(locale: Lang): Promise<void> {
   await apiClient.patch('/api/v1/i18n/me/locale', { locale })
 }
 
-export interface I18nChange {
+interface I18nChange {
   key: string
   lang: Lang
   from: string
   to: string | null
 }
-export interface I18nRowError {
+interface I18nRowError {
   row: number
   key: string
   lang?: Lang
@@ -60,6 +60,17 @@ export interface I18nOverrideRow {
   default: string | null
   updatedAt: string
 }
+export interface I18nCatalogRow {
+  key: string
+  section: 'web' | 'server' | 'term'
+  defaults: Record<Lang, string>
+  texts: Record<Lang, string>
+}
+export async function listCatalog(): Promise<I18nCatalogRow[]> {
+  const { data } = await apiClient.get<I18nCatalogRow[]>('/api/v1/i18n/admin/catalog')
+  return data
+}
+
 export async function listOverrides(): Promise<I18nOverrideRow[]> {
   const { data } = await apiClient.get<I18nOverrideRow[]>('/api/v1/i18n/admin/overrides')
   return data

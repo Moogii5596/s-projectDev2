@@ -5,12 +5,12 @@ import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
 import { contractApi, type ContractInput } from '../api/contract-api'
 import type { ContractStatus } from '../api/contract-types'
-import { Button, Badge, Card, Empty, ErrorBox, Loading, Modal, NoAccess, PageHeader, Table, td } from '../components/ui'
+import { Button, Badge, Card, Empty, ErrorBox, Loading, Modal, NoAccess, PageHeader, Table, td } from '../../../core/ui'
 import ContractForm from '../components/contracts/ContractForm'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
 import { contractStatusTone } from '../lib/contract'
-import { todayUb } from '../lib/dates'
+import { todayUb } from '../../../core/dates'
 
 const STATUSES: ContractStatus[] = ['DRAFT', 'ACTIVE', 'TERMINATED']
 const contractListKey = (campId: string) => ['camp', campId, 'contracts'] as const
@@ -18,7 +18,7 @@ const contractListKey = (campId: string) => ['camp', campId, 'contracts'] as con
 export default function ContractsPage() {
   const { t } = useTranslation()
   const { campId = '' } = useParams()
-  const permissions = useCampPermissions(campId)
+  const permissions = useAppPermissions(campId)
   const [status, setStatus] = useState<ContractStatus | ''>('')
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState<ContractInput>(() => ({
@@ -47,7 +47,7 @@ export default function ContractsPage() {
     queryFn: () => campApi.organizations({ activeOnly: true }),
     enabled: !!creating && canManage,
   })
-  const create = useCampMutation(
+  const create = useAppMutation(
     () => contractApi.create(campId, {
       ...form,
       contractNo: form.contractNo.trim(),
@@ -68,8 +68,8 @@ export default function ContractsPage() {
         actions={<Button onClick={() => setCreating(true)}>{t('camp.ct.new_contract')}</Button>}
       />
       <nav className="flex flex-wrap gap-4 text-sm">
-        <Link className="text-blue-700 hover:underline" to={`/camp/${campId}/settings/contract-catalog`}>{t('camp.ct.catalog_title')}</Link>
-        <Link className="text-blue-700 hover:underline" to={`/camp/${campId}/settings/exchange-rates`}>{t('camp.ct.exchange_rates_title')}</Link>
+        <Link className="text-blue-700 hover:underline" to="/settings/contract-catalog">{t('camp.ct.catalog_title')}</Link>
+        <Link className="text-blue-700 hover:underline" to="/settings/exchange-rates">{t('camp.ct.exchange_rates_title')}</Link>
       </nav>
       <Card>
         <div className="mb-3 max-w-xs">

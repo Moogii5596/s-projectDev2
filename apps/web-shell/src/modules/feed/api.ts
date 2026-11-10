@@ -67,7 +67,7 @@ export const feedKeys = {
 }
 
 /** Зурагтай бол multipart (`body` + `images`), эс бөгөөс JSON */
-export function postPayload(body: string, images: readonly File[]): FormData | { body: string } {
+function postPayload(body: string, images: readonly File[]): FormData | { body: string } {
   if (images.length === 0) return { body }
   const fd = new FormData()
   fd.append('body', body)

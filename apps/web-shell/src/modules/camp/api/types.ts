@@ -2,11 +2,12 @@
  * Camp API төрлүүд — backend-ийн хариуны хэлбэр (apps/core-kernel/src/modules/camp/*).
  * Огноо 'YYYY-MM-DD', мөнгө/НӨАТ string ('10.00'), timestamp ISO string.
  */
-export type ReleaseScope = 'v1' | 'v2'
+type ReleaseScope = 'v1' | 'v2'
 export type OrgType = 'MAIN' | 'SUBCONTRACTOR' | 'CONTRACTOR'
-export type OrgServiceType = 'CATERING' | 'WASTE_TRANSPORT' | 'SEWAGE_TRANSPORT' | 'WASTE_DISPOSAL' | 'SEWAGE_DISPOSAL' | 'OTHER'
+export type OrgServiceType = string
 export type RoomStatus = 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'
 export type ShiftType = 'DAY' | 'NIGHT'
+export type CatalogNameI18n = Partial<Record<'mn' | 'en' | 'zh', string>>
 
 export interface Camp {
   id: string
@@ -30,6 +31,15 @@ export interface Organization {
   isActive: boolean
   createdAt: string
   updatedAt: string
+}
+
+export interface OrganizationServiceType {
+  code: OrgServiceType
+  nameMn: string
+  nameEn: string | null
+  nameZh: string | null
+  isActive: boolean
+  sortOrder: number
 }
 
 export interface CampSettings {
@@ -57,6 +67,7 @@ export interface CampSettings {
 export interface MealLocation {
   id: string
   name: string
+  nameI18n?: CatalogNameI18n
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -71,7 +82,7 @@ export interface Building {
   updatedAt: string
   /** v0.2.1 (C-12): байрны төрөл (байгууллагын каталог) */
   typeId?: string | null
-  type?: { name: string } | null
+  type?: { name: string; nameI18n?: CatalogNameI18n } | null
   /** FB-07 (v0.2.0): нийт өрөө, идэвхтэй өрөө, идэвхтэй өрөөний нийт багтаамж */
   _count?: { rooms: number }
   activeRooms?: number
@@ -101,6 +112,7 @@ export interface Department {
   id: string
   code: string
   name: string
+  nameI18n?: CatalogNameI18n
   /** v0.2.1 (Д-4): хэлтэст хоолны байршил байхгүй — ажилтан / албан тушаал дээр */
   isActive: boolean
   createdAt: string
@@ -131,16 +143,6 @@ export interface PermissionDef {
   availableIn: ReleaseScope
 }
 
-export interface MyPermissions {
-  userId: string
-  isTenantAdmin: boolean
-  campId: string | null
-  permissions: string[]
-  byCamp: Record<string, string[]>
-  /** v0.2.3 Блок 3 (PIL-19): аль модульд (`hr`, `camp`) аль нэг ажлын байранд эрхтэй — дээд цэс нуух */
-  modules: string[]
-}
-
 export interface CampUser {
   id: string
   email: string
@@ -159,7 +161,7 @@ export interface CampUser {
 }
 
 /** v0.2.2 Блок 3–4: урилга */
-export type InviteStatus = 'PENDING' | 'USED' | 'EXPIRED' | 'REVOKED'
+type InviteStatus = 'PENDING' | 'USED' | 'EXPIRED' | 'REVOKED'
 export type InviteChannel = 'LINK' | 'EMAIL'
 export interface InviteResult {
   inviteId: string
@@ -182,8 +184,8 @@ export interface CreateEmployeeUserResult {
 }
 
 /** GET /camp/users/:userId/permissions (Блок 1) */
-export type PermissionSource = 'TEMPLATE' | 'DIRECT'
-export interface UserPermissionRow {
+type PermissionSource = 'TEMPLATE' | 'DIRECT'
+interface UserPermissionRow {
   id: string
   permissionCode: string
   campId: string | null
@@ -246,8 +248,8 @@ export type Direction = 'ARRIVAL' | 'DEPARTURE'
 export type MovementKind = 'ROSTER' | 'OFF_ROSTER'
 export type ImportStatus = 'PREVIEW' | 'CONFIRMED' | 'CANCELLED'
 export type AdjustmentReason = 'EARLY_ARRIVAL' | 'SHIFT_CHANGE' | 'OTHER'
-export type ShiftSource = 'ADJUSTMENT' | 'PATTERN' | 'UNIFORM_PATTERN' | 'UNKNOWN'
-export type DayPresence = 'ARRIVAL' | 'DEPARTURE' | 'FULL_DAY'
+type ShiftSource = 'ADJUSTMENT' | 'PATTERN' | 'UNIFORM_PATTERN' | 'UNKNOWN'
+type DayPresence = 'ARRIVAL' | 'DEPARTURE' | 'FULL_DAY'
 
 export interface Employee {
   id: string
@@ -273,13 +275,13 @@ export interface Employee {
   createdAt: string
   updatedAt: string
   organization: { name: string }
-  department: { code: string; name: string }
+  department: { code: string; name: string; nameI18n?: CatalogNameI18n }
   crew: { code: string } | null
   /** v0.2.1 (Q1, Д-2): каталогийн албан тушаал; ажилтны өөрийн утга (null = албан тушаалаас / анхдагч) */
   positionId?: string | null
   mealLocationId?: string | null
   mealsIncluded?: boolean | null
-  positionRef?: { name: string } | null
+  positionRef?: { name: string; nameI18n?: CatalogNameI18n } | null
   /** v0.2.2 Блок 4: холбогдсон нэвтрэх эрх (core_users.id) */
   userId?: string | null
   /** v0.2.2 Блок 5: ажлаас гарсан (TERMINATED) — огноо (ISO), шалтгаан */
@@ -318,9 +320,9 @@ export interface EmployeeProfile {
   updatedAt: string
   userId: string | null
   organization: { name: string }
-  department: { code: string; name: string }
+  department: { code: string; name: string; nameI18n?: CatalogNameI18n }
   crew: { code: string } | null
-  positionRef: { name: string } | null
+  positionRef: { name: string; nameI18n?: CatalogNameI18n } | null
   user: { id: string; isActive: boolean; phone: string | null; username: string | null; hasEmail: boolean } | null
   rehiredFrom: { id: string; employeeCode: string; terminatedAt: string | null } | null
   rehiredAs: { id: string; employeeCode: string; status: EmployeeStatus } | null
@@ -371,9 +373,10 @@ export interface RehireResult {
 }
 
 export type ValueSource = 'EMPLOYEE' | 'POSITION' | 'DEFAULT'
-export interface EmployeeEffective {
+interface EmployeeEffective {
   mealLocationId: string | null
   mealLocationName: string | null
+  mealLocationNameI18n?: CatalogNameI18n | null
   mealLocationSource: ValueSource
   mealsIncluded: boolean
   mealsIncludedSource: ValueSource
@@ -383,6 +386,7 @@ export interface EmployeeEffective {
 export interface CatalogItem {
   id: string
   name: string
+  nameI18n?: CatalogNameI18n
   /** албан тушаал: ажлын байрны индекс (v0.2.3 Блок D, импортоор) */
   code?: string | null
   isActive: boolean
@@ -399,10 +403,12 @@ export type CatalogKind = 'positions' | 'building-types'
 export interface PositionSetting {
   positionId: string
   name: string
+  nameI18n?: CatalogNameI18n
   isActive: boolean
   activeEmployees: number
   mealLocationId: string | null
   mealLocationName: string | null
+  mealLocationNameI18n?: CatalogNameI18n | null
   mealsIncluded: boolean | null
   shiftPattern: ShiftSegment[]
 }
@@ -416,8 +422,9 @@ export interface Stay {
   dayType: 'ARRIVAL' | 'DEPARTURE' | 'FULL_DAY'
   shiftGroup: StayShiftGroup
   positionName: string | null
+  positionNameI18n?: CatalogNameI18n | null
   mealsIncluded: boolean
-  employee: { id: string; employeeCode: string; fullName: string; department: { code: string; name: string }; crew: { code: string } | null }
+  employee: { id: string; employeeCode: string; fullName: string; department: { code: string; name: string; nameI18n?: CatalogNameI18n }; crew: { code: string } | null }
 }
 
 export interface Page<T> {
@@ -429,13 +436,13 @@ export interface Page<T> {
 /** v0.2.3 Блок R — PREVIEW-ийн эх загвар */
 export type ImportFormat = 'TEMPLATE' | 'SHIFTCHANGE' | 'MANUAL'
 export type SkippedSheetReason = 'LEGACY_ADJUSTMENT' | 'LEAVE' | 'UNKNOWN_KIND' | 'NO_DATE' | 'NO_HEADER'
-export interface SkippedSheet {
+interface SkippedSheet {
   sheet: string
   reason: SkippedSheetReason
 }
 
 /** HR ShiftChange эх мөр (хуудас, мөр, файлын нэр / ID) */
-export interface ShiftChangeSource {
+interface ShiftChangeSource {
   sheet: string
   row: number
   idRaw: string
@@ -473,7 +480,7 @@ export interface ImportRow {
 }
 
 /** R4.2 — ростероор ирэх / явах ёстой боловч ShiftChange файлд алга */
-export interface RosterGap {
+interface RosterGap {
   date: string
   direction: Direction
   total: number
@@ -580,7 +587,7 @@ export interface RoomAllocation {
   employee: { id: string; employeeCode: string; fullName: string; crew: { code: string } | null }
 }
 
-export interface BoardOccupant {
+interface BoardOccupant {
   id: string
   employeeCode: string
   fullName: string
@@ -621,8 +628,8 @@ export interface Presence {
   presentCount: number
   /** v0.2.1 (C-04): кемпэд байгаа ч хоол авдаггүй (presentCount-д орсон) */
   noMealCount?: number
-  byPosition?: { positionName: string | null; mealType: MealType; mealLocationId: string | null; count: number }[]
-  lines: { mealType: MealType; mealLocationId: string | null; mealLocationName: string | null; count: number }[]
+  byPosition?: { positionName: string | null; positionNameI18n?: CatalogNameI18n | null; mealType: MealType; mealLocationId: string | null; count: number }[]
+  lines: { mealType: MealType; mealLocationId: string | null; mealLocationName: string | null; mealLocationNameI18n?: CatalogNameI18n | null; count: number }[]
   breakdown: { departmentCode: string; group: string; mealType: MealType; mealLocationId: string | null; count: number }[]
   personDays: string
   warnings: {
@@ -641,6 +648,7 @@ export type MaintenanceAction = 'start' | 'complete' | 'reopen' | 'close' | 'can
 export interface AssetCategory {
   id: string
   name: string
+  nameI18n?: CatalogNameI18n
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -664,7 +672,7 @@ export interface Asset {
   note: string | null
   createdAt: string
   updatedAt: string
-  category: { name: string }
+  category: { name: string; nameI18n?: CatalogNameI18n }
   room: { roomNo: string; building: { code: string } } | null
   building?: { code: string; name: string } | null
   /** зөвхөн дэлгэрэнгүйд */
@@ -700,7 +708,7 @@ export interface MaintenancePart {
   updatedAt: string
 }
 
-export interface VatAmounts {
+interface VatAmounts {
   net: string
   vat: string
   gross: string
@@ -755,14 +763,14 @@ export type DataImportType =
   | 'rooms'
   | 'room-allocations'
 export type ExportType = DataImportType
-export type DataRowOp = 'create' | 'update' | 'unchanged' | 'error'
-export interface DataRowError {
+type DataRowOp = 'create' | 'update' | 'unchanged' | 'error'
+interface DataRowError {
   column?: string
   columnLabel: string | null
   code: string
   message: string
 }
-export interface DataImportRow {
+interface DataImportRow {
   row: number
   op: DataRowOp
   opLabel: string
@@ -773,7 +781,7 @@ export interface DataImportRow {
   warnings?: DataRowError[]
 }
 /** v0.2.3 Блок D (S9): ажилтны «Мэдээлэл дутуу» (буруу эх утга) */
-export interface DataIssue {
+interface DataIssue {
   field: 'email' | 'phone' | 'extraPhones' | 'terminatedAt'
   code: string
   value: string

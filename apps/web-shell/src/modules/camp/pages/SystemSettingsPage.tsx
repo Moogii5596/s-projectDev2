@@ -4,10 +4,10 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
 import type { Camp } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
-import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Table, inputCls, td } from '../components/ui'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, PageHeader, Table, inputCls, td } from '../../../core/ui'
 import { CreateCampModal } from './CampHomePage'
 import AssetCategoriesPage from './AssetCategoriesPage'
 import CatalogPage from './CatalogPage'
@@ -19,7 +19,7 @@ import CatalogPage from './CatalogPage'
  */
 const SECTIONS = ['camps', 'building-types', 'asset-categories'] as const
 /** v0.2.3 Блок 3: системийн түвшинд шилжсэн хэсгүүд */
-const MOVED_TO_SETTINGS: readonly string[] = ['organizations', 'roles', 'user-roles', 'translations']
+const MOVED_TO_SETTINGS: readonly string[] = ['organizations', 'roles', 'user-roles', 'translations', 'building-types', 'asset-categories']
 
 export default function SystemSettingsPage() {
   const { t } = useTranslation()
@@ -62,7 +62,7 @@ export default function SystemSettingsPage() {
 
 function CampsSection() {
   const { t } = useTranslation()
-  const perms = useCampPermissions()
+  const perms = useAppPermissions()
   const camps = useQuery({ queryKey: campKeys.camps, queryFn: () => campApi.camps(false) })
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Camp | null>(null)
@@ -111,7 +111,7 @@ function EditCampModal({ camp, onClose }: { camp: Camp; onClose: () => void }) {
   const [name, setName] = useState(camp.name)
   const [location, setLocation] = useState(camp.location ?? '')
   const [isActive, setIsActive] = useState(camp.isActive)
-  const m = useCampMutation(() => campApi.updateCamp(camp.id, { name: name.trim(), location: location.trim() || null, isActive }), [campKeys.camps], onClose)
+  const m = useAppMutation(() => campApi.updateCamp(camp.id, { name: name.trim(), location: location.trim() || null, isActive }), [campKeys.camps], onClose)
   return (
     <Modal
       title={`${camp.code} · ${camp.name}`}

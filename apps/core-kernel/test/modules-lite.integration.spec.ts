@@ -22,6 +22,7 @@ import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { configureApp } from '../src/common/http/configure-app';
 import { ADMIN_DB_URL } from './helpers/db-urls';
+import { activateTestModules } from './helpers/activate-test-modules';
 
 const STAMP = Date.now();
 const SLUG = `lite-it-${STAMP}`;
@@ -49,6 +50,7 @@ beforeAll(async () => {
   await prismaAdmin.$connect();
   await prismaRls.$connect();
   tenantId = (await prismaAdmin.tenant.create({ data: { name: 'Lite IT', slug: SLUG, tier: TierType.TIER1 } })).id;
+  await activateTestModules(prismaAdmin, [tenantId], ['inventory', 'vendors', 'reports']);
 
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(ConfigService)

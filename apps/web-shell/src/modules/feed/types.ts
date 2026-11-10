@@ -1,5 +1,5 @@
 /** Backend (core-kernel feed) DTO-той ТАМ АДИЛ нэр, хэлбэр (R20). */
-export interface FeedImageVariantDto {
+interface FeedImageVariantDto {
   w: number
   h: number
   url: string
@@ -15,7 +15,7 @@ export interface FeedImageDto {
   variants: FeedImageVariantDto[]
 }
 
-export interface FeedAuthorDto {
+interface FeedAuthorDto {
   id: string
   name: string
 }
@@ -35,6 +35,17 @@ export interface FeedPostDto {
   editedAt: string | null
   hidden: boolean
   createdAt: string
+  /** v0.2.4 FEED-04: холбогдсон ажил — төлөв; объектын эрхтэй бол линк (backend `FeedLinkDto`) */
+  links: FeedLinkDto[]
+}
+
+export interface FeedLinkDto {
+  objectType: string
+  labelKey: string
+  statusKey: string
+  closed: boolean
+  ref: string | null
+  link: string | null
 }
 
 export interface FeedCommentDto {

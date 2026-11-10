@@ -9,7 +9,7 @@ import { MEDIA_URL_SIGNER, MediaUrlSigner } from '../../../storage/media-url';
 import { canEditFeedback, isFeedbackAdmin } from './feedback-rules';
 
 export const FEEDBACK_MAX_IMAGES = 3;
-export const FEEDBACK_MEDIA_BASE = '/api/v1/core/feedback/attachments';
+const FEEDBACK_MEDIA_BASE = '/api/v1/core/feedback/attachments';
 
 /**
  * v0.2.3 Блок 5 (5.7) — санал хүсэлтийн дэлгэцийн зураг (≤3). Блок F-ийн үлдэгдэл: Feed-ийн StorageService-ээр.

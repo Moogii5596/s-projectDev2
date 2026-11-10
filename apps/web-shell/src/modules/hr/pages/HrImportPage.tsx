@@ -3,12 +3,12 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { hrApi } from '../api/hr-api'
-import type { DataImportEnum, DataImportType } from '../../camp/api/types'
-import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
-import { P } from '../../camp/lib/permissions'
-import { IMPORT_STATUS_LABEL } from '../../camp/lib/labels'
-import ImportDialog, { ExportButton } from '../../camp/components/ImportDialog'
-import { Badge, Button, Card, Empty, ErrorBox, Loading, Table, td } from '../../camp/components/ui'
+import type { DataImportEnum, DataImportType } from '../api/camp-bridge'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { P } from '../../../core/permissions'
+import { IMPORT_STATUS_LABEL } from '../../../core/labels'
+import ImportDialog, { ExportButton } from '../../../core/ImportDialog'
+import { Badge, Button, Card, Empty, ErrorBox, Loading, Table, td } from '../../../core/ui'
 import {
   BUILDING_IMPORT_COLUMNS,
   BUILDING_TYPE_IMPORT_COLUMNS,
@@ -19,7 +19,7 @@ import {
   ROOM_ALLOCATION_IMPORT_COLUMNS,
   ROOM_IMPORT_COLUMNS,
 } from '../lib/import-columns'
-import type { GridColumn } from '../../camp/components/ImportDialog'
+import type { GridColumn } from '../../../core/ImportDialog'
 import type { QueryKey } from '@tanstack/react-query'
 
 const STATUS_TONE = { PREVIEW: 'yellow', CONFIRMED: 'green', CANCELLED: 'gray' } as const
@@ -43,7 +43,7 @@ interface Kind {
 export default function HrImportPage() {
   const { t } = useTranslation()
   const { campId = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const canEmployees = perms.can(P.EMPLOYEE_MANAGE)
   const canMaster = perms.can(P.MASTER_MANAGE)
   const canMovements = perms.can(P.MOVEMENT_IMPORT)
@@ -85,7 +85,7 @@ export default function HrImportPage() {
                       {t(`hr.import.kind.${k.type}`)}
                     </span>
                     <div className="flex gap-2">
-                      <ExportButton campId={campId} type={k.type} />
+                      <ExportButton exportFile={() => hrApi.exportFile(campId, k.type)} />
                       {k.can && (
                         <Button size="sm" variant="secondary" onClick={() => setImporting(k.type)}>
                           {t('camp.import.import')}
@@ -161,11 +161,15 @@ export default function HrImportPage() {
 
       {active && (
         <ImportDialog
-          campId={campId}
-          type={active.type}
           title={t(`hr.import.kind.${active.type}`)}
           columns={active.columns}
           invalidate={[campKeys.dataImports(campId), ...active.invalidate]}
+          templateFileName={`${active.type}-template.xlsx`}
+          downloadTemplate={() => hrApi.dataTemplate(campId, active.type)}
+          uploadFile={(file) => hrApi.dataUploadXlsx(campId, active.type, file)}
+          uploadRows={(rows) => hrApi.dataUploadRows(campId, active.type, rows)}
+          confirmImport={(id, skipErrors) => hrApi.dataConfirm(campId, active.type, id, skipErrors)}
+          cancelImport={(id) => hrApi.dataCancel(campId, active.type, id)}
           onClose={() => {
             setImporting(null)
             void data.refetch()

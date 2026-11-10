@@ -26,8 +26,8 @@ import type {
   MaintenanceRequest,
   MaintenanceStatus,
   PartSource,
-  MyPermissions,
   Organization,
+  OrganizationServiceType,
   OrgServiceType,
   OrgType,
   Page,
@@ -64,7 +64,6 @@ const del = async <T>(url: string): Promise<T> => (await apiClient.delete<T>(url
 
 // ── Эрх ──────────────────────────────────────────────────────
 export const campApi = {
-  myPermissions: (campId?: string) => get<MyPermissions>(`${RBAC}/me/permissions`, campId ? { campId } : undefined),
   permissions: () => get<PermissionDef[]>(`${RBAC}/permissions`),
   users: () => get<CampUser[]>(`${RBAC}/users`),
   roles: () => get<Role[]>(`${RBAC}/roles`),
@@ -101,13 +100,16 @@ export const campApi = {
 
   // ── Байгууллага (tenant түвшин, Core) ────────────────────────────
   organizations: (q: { activeOnly?: boolean; serviceType?: OrgServiceType } = {}) => get<Organization[]>(CORE_ORGS, q),
+  organizationServiceTypes: () => get<OrganizationServiceType[]>(`${CORE_ORGS}/service-types`),
   createOrganization: (body: OrganizationInput) => post<Organization>(CORE_ORGS, body),
   updateOrganization: (id: string, body: Partial<OrganizationInput> & { isActive?: boolean }) => patch<Organization>(`${CORE_ORGS}/${id}`, body),
 
   // ── v0.2.1: байгууллагын каталог (албан тушаал, байрны төрөл) ──
   catalog: (kind: CatalogKind, activeOnly = false) => get<CatalogItem[]>(CATALOG_BASE[kind], { activeOnly }),
-  createCatalogItem: (kind: CatalogKind, name: string) => post<CatalogItem>(CATALOG_BASE[kind], { name }),
-  updateCatalogItem: (kind: CatalogKind, id: string, body: { name?: string; isActive?: boolean }) => patch<CatalogItem>(`${CATALOG_BASE[kind]}/${id}`, body),
+  createCatalogItem: (kind: CatalogKind, body: { name: string; nameI18n?: { en?: string; zh?: string } }) =>
+    post<CatalogItem>(CATALOG_BASE[kind], body),
+  updateCatalogItem: (kind: CatalogKind, id: string, body: { name?: string; nameI18n?: { en?: string; zh?: string }; isActive?: boolean }) =>
+    patch<CatalogItem>(`${CATALOG_BASE[kind]}/${id}`, body),
   positionSettings: (campId: string) => get<PositionSetting[]>(campUrl(campId, '/position-settings')),
   savePositionSetting: (
     campId: string,
@@ -134,8 +136,9 @@ export const campApi = {
     post<MealOrderView>(campUrl(campId, `/meal-orders/${date}/${action}`), body),
   mealTemplate: (campId: string) => get<{ lines: MealOrderLineView[] }>(campUrl(campId, '/meal-order-template')),
   saveMealTemplate: (campId: string, lines: MealOrderLineView[]) => put<{ lines: MealOrderLineView[] }>(campUrl(campId, '/meal-order-template'), { lines }),
-  createMealLocation: (campId: string, name: string) => post<MealLocation>(campUrl(campId, '/meal-locations'), { name }),
-  updateMealLocation: (campId: string, id: string, body: { name?: string; isActive?: boolean }) =>
+  createMealLocation: (campId: string, body: { name: string; nameI18n?: { en?: string; zh?: string } }) =>
+    post<MealLocation>(campUrl(campId, '/meal-locations'), body),
+  updateMealLocation: (campId: string, id: string, body: { name?: string; nameI18n?: { en?: string; zh?: string }; isActive?: boolean }) =>
     patch<MealLocation>(campUrl(campId, `/meal-locations/${id}`), body),
 
   // ── Байр, өрөө ─────────────────────────────────────────────
@@ -165,8 +168,9 @@ export const campApi = {
 
   // ── Хөрөнгө ────────────────────────────────────────────────
   assetCategories: (activeOnly = false) => get<AssetCategory[]>(`${V1}/asset-categories`, { activeOnly }),
-  createAssetCategory: (name: string) => post<AssetCategory>(`${V1}/asset-categories`, { name }),
-  updateAssetCategory: (id: string, body: { name?: string; isActive?: boolean }) => patch<AssetCategory>(`${V1}/asset-categories/${id}`, body),
+  createAssetCategory: (body: { name: string; nameI18n?: { en?: string; zh?: string } }) => post<AssetCategory>(`${V1}/asset-categories`, body),
+  updateAssetCategory: (id: string, body: { name?: string; nameI18n?: { en?: string; zh?: string }; isActive?: boolean }) =>
+    patch<AssetCategory>(`${V1}/asset-categories/${id}`, body),
   assets: (campId: string, q: AssetQuery) => get<Page<Asset>>(campUrl(campId, '/assets'), q),
   asset: (campId: string, id: string) => get<Asset>(campUrl(campId, `/assets/${id}`)),
   createAsset: (campId: string, body: AssetInput & { roomId?: string | null; buildingId?: string | null }) => post<Asset>(campUrl(campId, '/assets'), body),
@@ -182,6 +186,12 @@ export const campApi = {
     campId: string,
     body: { roomId?: string; assetId?: string; title: string; description?: string | null; priority?: MaintenancePriority; blocksRoom?: boolean },
   ) => post<MaintenanceMutationResult>(campUrl(campId, '/maintenance'), body),
+  /** v0.2.4 FEED-03: Feed-ийн постоос засварын хүсэлт */
+  createMaintenanceFromPost: (
+    campId: string,
+    postId: string,
+    body: { roomId?: string; assetId?: string; title: string; description?: string | null; priority?: MaintenancePriority },
+  ) => post<MaintenanceMutationResult>(campUrl(campId, `/maintenance/from-post/${postId}`), body),
   updateMaintenance: (campId: string, id: string, body: { title?: string; description?: string | null; priority?: MaintenancePriority }) =>
     patch<MaintenanceDetail>(campUrl(campId, `/maintenance/${id}`), body),
   /** start | complete | reopen | close | cancel (cancel → reason заавал) */

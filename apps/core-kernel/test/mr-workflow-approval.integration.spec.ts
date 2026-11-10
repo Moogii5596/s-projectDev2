@@ -25,6 +25,7 @@ import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { configureApp } from '../src/common/http/configure-app';
 import { ADMIN_DB_URL } from './helpers/db-urls';
+import { activateTestModules } from './helpers/activate-test-modules';
 
 const STAMP = Date.now();
 const SLUG = `wf-${STAMP}`;
@@ -71,6 +72,7 @@ beforeAll(async () => {
   prismaAdmin = new PrismaClient({ datasources: { db: { url: ADMIN_DB_URL } } });
   await prismaAdmin.$connect();
   tenantId = (await prismaAdmin.tenant.create({ data: { name: 'WF', slug: SLUG, tier: TierType.TIER1 } })).id;
+  await activateTestModules(prismaAdmin, [tenantId], ['mr', 'workflow', 'budget']);
   await prismaAdmin.workflowDefinition.create({
     data: { tenantId, name: 'wf-amount', stepsConfig: RULES, slaHours: 24, isActive: true },
   });

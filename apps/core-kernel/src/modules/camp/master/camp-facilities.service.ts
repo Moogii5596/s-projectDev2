@@ -15,7 +15,7 @@ import { QueryActiveOnlyDto } from '../common/common.dto';
 const P = CAMP_PERMISSIONS;
 /** Өрөөг кемпийн мастер эсвэл өрөөний эрхтэй хүн удирдана (ERD v4 §2.2: катеринг админ room.manage-тэй) */
 const ROOM_WRITE = [P.ROOM_MANAGE, P.MASTER_MANAGE];
-const BUILDING_SELECT = { id: true, code: true, name: true, isActive: true, typeId: true, type: { select: { name: true } }, createdAt: true, updatedAt: true } as const;
+const BUILDING_SELECT = { id: true, code: true, name: true, isActive: true, typeId: true, type: { select: { name: true, nameI18n: true } }, createdAt: true, updatedAt: true } as const;
 const ROOM_SELECT = {
   id: true,
   buildingId: true,

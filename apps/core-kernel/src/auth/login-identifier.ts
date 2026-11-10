@@ -25,7 +25,7 @@ export function maskPhone(phone: string): string {
   return phone.length < 4 ? '****' : `${phone.slice(0, 2)}${'*'.repeat(phone.length - 4)}${phone.slice(-2)}`;
 }
 
-export const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{1,63}$/;
+const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{1,63}$/;
 
 /**
  * Нэвтрэх талбарын утгыг таних. `@` → имэйл; Монгол утас болж чадвал → утас; бусад → username (жижиг үсэг).

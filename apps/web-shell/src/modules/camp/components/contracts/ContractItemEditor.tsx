@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { ContractItemInput } from '../../api/contract-api'
 import type { ContractItemView, ContractMealType, ContractCatalogView, QuantityRule } from '../../api/contract-types'
 import { contractCatalogName } from '../../lib/contract'
-import { Button, ErrorBox, Field, Modal, inputCls } from '../ui'
+import { Button, ErrorBox, Field, Modal, inputCls } from '../../../../core/ui'
 
 const MEAL_TYPES: ContractMealType[] = ['BREAKFAST', 'LUNCH', 'DINNER', 'NIGHT']
 const RULES: QuantityRule[] = ['TOTAL_DIV_N', 'MEAL_TYPE']

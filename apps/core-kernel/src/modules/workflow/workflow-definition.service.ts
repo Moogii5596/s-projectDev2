@@ -5,7 +5,7 @@ import { CacheService } from '../../cache/cache.service';
 import { requireRole } from '../../common/helpers/require-role.helper';
 
 /** Phase 4.9.1 [SEC-003]: definition үүсгэх/засах — OWNER/ADMIN (жагсаалтыг гишүүн бүр харна) */
-export const WORKFLOW_ADMIN_ROLES: UserRole[] = [UserRole.OWNER, UserRole.ADMIN];
+const WORKFLOW_ADMIN_ROLES: UserRole[] = [UserRole.OWNER, UserRole.ADMIN];
 
 export interface WorkflowDefinitionInput {
   name: string;

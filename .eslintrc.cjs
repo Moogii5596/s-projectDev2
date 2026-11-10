@@ -20,4 +20,18 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'warn',
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
   },
+  overrides: [
+    {
+      files: ['apps/web-shell/src/**/*.{ts,tsx}'],
+      rules: {
+        'no-cross-module-imports': 'error',
+      },
+    },
+    {
+      files: ['apps/web-shell/src/core/**/*.{ts,tsx}'],
+      rules: {
+        'no-restricted-imports': ['error', { patterns: ['**/modules/**'] }],
+      },
+    },
+  ],
 };

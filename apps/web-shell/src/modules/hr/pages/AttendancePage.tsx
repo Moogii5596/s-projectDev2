@@ -3,23 +3,23 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
-import { campApi } from '../../camp/api/camp-api'
+import { campApi } from '../api/camp-bridge'
 import { hrApi, type MovementQuery } from '../api/hr-api'
-import type { Direction, ImportPreview, ImportRowError, MealType, ShiftType, StayShiftGroup } from '../../camp/api/types'
-import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
-import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { P } from '../../camp/lib/permissions'
-import { DIRECTION_LABEL, IMPORT_STATUS_LABEL, KIND_LABEL, MEAL_LABEL, MEAL_ORDER, SHIFT_LABEL, STAY_GROUPS, STAY_GROUP_LABEL } from '../../camp/lib/labels'
-import { filterStays, type StayFilter } from '../../camp/lib/stays'
-import { addDays, todayUb } from '../../camp/lib/dates'
-import { rangeProblem } from '../../camp/lib/calendar'
-import { type MealMode, mealsPayload } from '../../camp/lib/meals'
-import { downloadBlob } from '../../camp/lib/download'
+import type { Direction, ImportPreview, ImportRowError, MealType, ShiftType, StayShiftGroup } from '../api/camp-bridge'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { DIRECTION_LABEL, IMPORT_STATUS_LABEL, KIND_LABEL, MEAL_LABEL, MEAL_ORDER, SHIFT_LABEL, STAY_GROUPS, STAY_GROUP_LABEL, localizedCatalogName } from '../../../core/labels'
+import { filterStays, type StayFilter } from '../api/camp-bridge'
+import { addDays, todayUb } from '../../../core/dates'
+import { rangeProblem } from '../api/camp-bridge'
+import { type MealMode, mealsPayload } from '../api/camp-bridge'
+import { downloadBlob } from '../../../core/download'
 import i18n from '../../../i18n'
-import EmployeePicker, { type PickedEmployee } from '../../camp/components/EmployeePicker'
+import EmployeePicker, { type PickedEmployee } from '../components/EmployeePicker'
 import ImportPreviewHeader from '../components/ImportPreviewHeader'
 import ImportRowsTable from '../components/ImportRowsTable'
-import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../camp/components/ui'
+import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, inputSmCls, td } from '../../../core/ui'
 
 const MAX_UPLOAD = 2 * 1024 * 1024
 const meals = (m: MealType[] | null) => (m === null ? '—' : m.length === 0 ? i18n.t('camp.att.no_meal') : m.map((x) => MEAL_LABEL[x]).join(', '))
@@ -30,7 +30,7 @@ const meals = (m: MealType[] | null) => (m === null ? '—' : m.length === 0 ? i
  */
 export default function AttendancePage() {
   const { campId = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const canImport = perms.can(P.MOVEMENT_IMPORT)
   // xlsx болон "олон хүний ирц" ижил PREVIEW → CONFIRM урсгалтай
   const [preview, setPreview] = useState<ImportPreview | null>(null)
@@ -110,7 +110,9 @@ function DayListCard({ campId }: { campId: string }) {
               <td className={`${td} font-mono`}>{s.employee.employeeCode}</td>
               <td className={td}>{s.employee.fullName}</td>
               <td className={td}>{s.employee.department.code}</td>
-              <td className={`${td} text-gray-600`}>{s.positionName ?? '—'}</td>
+              <td className={`${td} text-gray-600`}>
+                {s.positionName ? localizedCatalogName({ name: s.positionName, nameI18n: s.positionNameI18n }, i18n.resolvedLanguage ?? i18n.language) : '—'}
+              </td>
               <td className={td}>{s.employee.crew?.code ?? '—'}</td>
               <td className={td}>
                 <Badge tone={GROUP_TONE[s.shiftGroup]}>{STAY_GROUP_LABEL[s.shiftGroup]}</Badge>
@@ -135,17 +137,17 @@ function ImportCard({ campId, preview, setPreview }: { campId: string; preview: 
   const [done, setDone] = useState<string | null>(null)
   const history = useQuery({ queryKey: campKeys.imports(campId), queryFn: () => hrApi.imports(campId) })
 
-  const upload = useCampMutation((file: File) => hrApi.uploadImport(campId, file), [campKeys.imports(campId)], (res) => {
+  const upload = useAppMutation((file: File) => hrApi.uploadImport(campId, file), [campKeys.imports(campId)], (res) => {
     setPreview(res)
     setConfirmErrors(null)
     setDone(null)
   })
-  const confirm = useCampMutation((id: string) => hrApi.confirmImport(campId, id), [...campKeys.operational(campId)], (r) => {
+  const confirm = useAppMutation((id: string) => hrApi.confirmImport(campId, id), [...campKeys.operational(campId)], (r) => {
     setPreview(null)
     setDone(t('camp.att.confirmed', { movements: r.movements, newStays: r.newStays, closedStays: r.closedStays, adjustments: r.adjustments }))
   })
   // Зөвхөн цуцалсан импортын preview-г хаана: цуцлалт дуусахаас өмнө шинэ файл оруулсан бол түүнийг арилгахгүй (TEST-026)
-  const cancel = useCampMutation((id: string) => hrApi.cancelImport(campId, id), [campKeys.imports(campId)], (_r, id) =>
+  const cancel = useAppMutation((id: string) => hrApi.cancelImport(campId, id), [campKeys.imports(campId)], (_r, id) =>
     setPreview((p) => (p?.import.id === id ? null : p)),
   )
 
@@ -282,7 +284,7 @@ function ImportCard({ campId, preview, setPreview }: { campId: string; preview: 
 type MovementFilter = Pick<MovementQuery, 'departmentId' | 'crewId' | 'position' | 'q'>
 
 function MovementsCard({ campId, canEdit, onPreview }: { campId: string; canEdit: boolean; onPreview: (p: ImportPreview) => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const today = todayUb()
   const [from, setFrom] = useState(addDays(today, -7))
   const [to, setTo] = useState(addDays(today, 7))
@@ -305,7 +307,7 @@ function MovementsCard({ campId, canEdit, onPreview }: { campId: string; canEdit
     queryFn: () => hrApi.movements(campId, q),
     enabled: !problem,
   })
-  const del = useCampMutation((id: string) => hrApi.deleteMovement(campId, id), [...campKeys.operational(campId)])
+  const del = useAppMutation((id: string) => hrApi.deleteMovement(campId, id), [...campKeys.operational(campId)])
   const setF = (k: keyof MovementFilter, v: string) => setFilter((f) => ({ ...f, [k]: v || undefined }))
 
   return (
@@ -331,7 +333,7 @@ function MovementsCard({ campId, canEdit, onPreview }: { campId: string; canEdit
           <option value="">{t('camp.filter.all_departments')}</option>
           {depts.data?.map((d) => (
             <option key={d.id} value={d.id}>
-              {d.code} · {d.name}
+              {d.code} · {localizedCatalogName(d, i18n.resolvedLanguage ?? i18n.language)}
             </option>
           ))}
         </select>
@@ -492,7 +494,7 @@ function MovementModal({ campId, onClose }: { campId: string; onClose: () => voi
   const [picked, setPicked] = useState<MealType[]>([])
   const [shift, setShift] = useState<ShiftType | ''>('')
   const payload = mealsPayload(mode, picked)
-  const m = useCampMutation(
+  const m = useAppMutation(
     () =>
       hrApi.createMovement(campId, {
         employeeId: emp[0].id,
@@ -533,7 +535,7 @@ function MovementModal({ campId, onClose }: { campId: string; onClose: () => voi
  * ирцийн импортын урсгал (PREVIEW → баталгаажуулах). Нэг удаад ≤ 500.
  */
 function BulkMovementModal({ campId, onClose, onPreview }: { campId: string; onClose: () => void; onPreview: (p: ImportPreview) => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [date, setDate] = useState(todayUb())
   const [direction, setDirection] = useState<Direction>('ARRIVAL')
   const [mode, setMode] = useState<MealMode>('DEFAULT')
@@ -558,7 +560,7 @@ function BulkMovementModal({ campId, onClose, onPreview }: { campId: string; onC
   })
   const shown = useMemo(() => emps.data?.data ?? [], [emps.data])
   const payload = mealsPayload(mode, picked)
-  const m = useCampMutation(
+  const m = useAppMutation(
     () =>
       hrApi.manualMovements(campId, {
         date,
@@ -607,7 +609,7 @@ function BulkMovementModal({ campId, onClose, onPreview }: { campId: string; onC
           <option value="">{t('camp.filter.all_departments')}</option>
           {depts.data?.filter((d) => d.isActive).map((d) => (
             <option key={d.id} value={d.id}>
-              {d.code} · {d.name}
+              {d.code} · {localizedCatalogName(d, i18n.resolvedLanguage ?? i18n.language)}
             </option>
           ))}
         </select>

@@ -1,6 +1,6 @@
-import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, ValidateIf } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { CampOrgServiceType, CampOrgType } from '@prisma/client';
+import { CampOrgType } from '@prisma/client';
 import { toBool, trim, trimOrNull } from '../../camp/common/camp-dto.util';
 
 // ── Байгууллага ──────────────────────────────────────────────
@@ -14,9 +14,9 @@ export class CreateOrganizationDto {
   @IsEnum(CampOrgType, { message: 'orgType: MAIN | SUBCONTRACTOR | CONTRACTOR' })
   orgType!: CampOrgType;
 
-  /** Үйлчилгээний төрөл (олон): CATERING, WASTE_TRANSPORT, SEWAGE_TRANSPORT, WASTE_DISPOSAL, SEWAGE_DISPOSAL, OTHER */
-  @IsOptional() @IsArray() @ArrayUnique() @ArrayMaxSize(6) @IsEnum(CampOrgServiceType, { each: true, message: 'serviceTypes буруу утга' })
-  serviceTypes?: CampOrgServiceType[];
+  /** Үйлчилгээний төрөл нь tenant-ийн үйлчилгээний каталогийн код байна. */
+  @IsOptional() @IsArray() @ArrayUnique() @ArrayMaxSize(100) @IsString({ each: true }) @Matches(/^[A-Z][A-Z0-9_]{0,39}$/, { each: true })
+  serviceTypes?: string[];
 
   @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(200)
   contactName?: string | null;
@@ -38,8 +38,8 @@ export class UpdateOrganizationDto {
   @IsOptional() @IsEnum(CampOrgType)
   orgType?: CampOrgType;
 
-  @IsOptional() @IsArray() @ArrayUnique() @ArrayMaxSize(6) @IsEnum(CampOrgServiceType, { each: true, message: 'serviceTypes буруу утга' })
-  serviceTypes?: CampOrgServiceType[];
+  @IsOptional() @IsArray() @ArrayUnique() @ArrayMaxSize(100) @IsString({ each: true }) @Matches(/^[A-Z][A-Z0-9_]{0,39}$/, { each: true })
+  serviceTypes?: string[];
 
   @IsOptional() @Transform(trimOrNull) @IsString() @MaxLength(200)
   contactName?: string | null;
@@ -56,7 +56,7 @@ export class UpdateOrganizationDto {
 
 export class QueryOrganizationsDto {
   @IsOptional() @Transform(toBool) @IsBoolean() activeOnly?: boolean;
-  /** Тухайн үйлчилгээг үзүүлдэг байгууллагууд (жнь SEWAGE_DISPOSAL) */
-  @IsOptional() @IsEnum(CampOrgServiceType) serviceType?: CampOrgServiceType;
+  /** Тухайн үйлчилгээг үзүүлдэг байгууллагуудын каталогийн код */
+  @IsOptional() @IsString() @Matches(/^[A-Z][A-Z0-9_]{0,39}$/) serviceType?: string;
   @IsOptional() @IsEnum(CampOrgType) orgType?: CampOrgType;
 }

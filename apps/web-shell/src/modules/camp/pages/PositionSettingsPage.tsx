@@ -4,11 +4,12 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { campApi } from '../api/camp-api'
 import type { PositionSetting } from '../api/types'
-import { campKeys, useCampPermissions } from '../hooks/useCampPermissions'
-import { useCampMutation } from '../hooks/useCampMutation'
-import { P } from '../lib/permissions'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { localizedCatalogName } from '../../../core/labels'
 import { PatternStrip, ShiftPatternModal } from '../components/ShiftPattern'
-import { Button, Card, Empty, ErrorBox, Loading, Table, inputSmCls, td } from '../components/ui'
+import { Button, Card, Empty, ErrorBox, Loading, Table, inputSmCls, td } from '../../../core/ui'
 
 /** <select>-ийн утга ↔ boolean | null ('' = анхдагч) */
 const toTri = (v: string): boolean | null => (v === '' ? null : v === 'yes')
@@ -20,20 +21,21 @@ const fromTri = (v: boolean | null) => (v === null ? '' : v ? 'yes' : 'no')
  * Албан тушаалын жагсаалт = байгууллагын каталог (Системийн тохиргоо › Албан тушаал).
  */
 export default function PositionSettingsPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { campId = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const canEdit = perms.can(P.MASTER_MANAGE)
   const rows = useQuery({ queryKey: campKeys.positionSettings(campId), queryFn: () => campApi.positionSettings(campId) })
   const settings = useQuery({ queryKey: campKeys.settings(campId), queryFn: () => campApi.settings(campId) })
   const locations = useQuery({ queryKey: campKeys.mealLocations(campId), queryFn: () => campApi.mealLocations(campId) })
   const [pattern, setPattern] = useState<PositionSetting | null>(null)
-  const save = useCampMutation(
+  const save = useAppMutation(
     (v: { positionId: string; body: { mealLocationId?: string | null; mealsIncluded?: boolean | null } }) => campApi.savePositionSetting(campId, v.positionId, v.body),
     [campKeys.positionSettings(campId), campKeys.employees(campId), campKeys.presence(campId), campKeys.stays(campId)],
   )
   const onDays = settings.data?.rosterOnDays ?? 14
-  const defaultLoc = locations.data?.find((l) => l.id === settings.data?.defaultMealLocationId)?.name ?? t('camp.presence.no_location')
+  const defaultLocation = locations.data?.find((l) => l.id === settings.data?.defaultMealLocationId)
+  const defaultLoc = defaultLocation ? localizedCatalogName(defaultLocation, i18n.resolvedLanguage ?? i18n.language) : t('camp.presence.no_location')
 
   return (
     <div className="space-y-4">
@@ -54,13 +56,13 @@ export default function PositionSettingsPage() {
             {rows.data.map((r) => (
               <tr key={r.positionId} className={r.isActive ? '' : 'opacity-60'}>
                 <td className={td}>
-                  {r.name}
+                  {localizedCatalogName(r, i18n.resolvedLanguage ?? i18n.language)}
                   {!r.isActive && <span className="ml-2 text-xs text-gray-500">({t('camp.common.inactive')})</span>}
                 </td>
                 <td className={td}>{r.activeEmployees}</td>
                 <td className={td}>
                   <select
-                    aria-label={t('camp.pos.location_of', { name: r.name })}
+                    aria-label={t('camp.pos.location_of', { name: localizedCatalogName(r, i18n.resolvedLanguage ?? i18n.language) })}
                     className={`${inputSmCls} w-auto`}
                     value={r.mealLocationId ?? ''}
                     disabled={!canEdit || save.isPending}
@@ -71,14 +73,14 @@ export default function PositionSettingsPage() {
                       .filter((l) => l.isActive || l.id === r.mealLocationId)
                       .map((l) => (
                         <option key={l.id} value={l.id}>
-                          {l.name}
+                          {localizedCatalogName(l, i18n.resolvedLanguage ?? i18n.language)}
                         </option>
                       ))}
                   </select>
                 </td>
                 <td className={td}>
                   <select
-                    aria-label={t('camp.pos.meals_of', { name: r.name })}
+                    aria-label={t('camp.pos.meals_of', { name: localizedCatalogName(r, i18n.resolvedLanguage ?? i18n.language) })}
                     className={`${inputSmCls} w-auto`}
                     value={fromTri(r.mealsIncluded)}
                     disabled={!canEdit || save.isPending}
@@ -109,7 +111,7 @@ export default function PositionSettingsPage() {
       </Card>
       {pattern && (
         <ShiftPatternModal
-          title={t('camp.pos.pattern_title', { name: pattern.name })}
+          title={t('camp.pos.pattern_title', { name: localizedCatalogName(pattern, i18n.resolvedLanguage ?? i18n.language) })}
           note={t('camp.pos.pattern_note')}
           initial={pattern.shiftPattern}
           onDays={onDays}

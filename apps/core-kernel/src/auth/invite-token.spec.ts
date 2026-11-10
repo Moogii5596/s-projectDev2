@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TOKEN_RE, generateToken, hashToken, internalEmail, inviteState, isInternalEmail, loginHint } from './invite-token';
 import { renderAuthMail, mailLang } from './auth-mail';
+import { i18nStorage } from '../common/i18n/i18n-context';
 
 describe('invite-token (v0.2.2 Блок 3)', () => {
   it('generateToken: 43 тэмдэгт base64url, hash = sha256 hex, давтагдашгүй', () => {
@@ -49,5 +50,15 @@ describe('auth-mail (D-04)', () => {
     expect(r.text).not.toContain('Your login');
     expect(mailLang('zh')).toBe('zh');
     expect(mailLang('fr')).toBe('mn');
+  });
+
+  it('байгууллагын орчуулгын засвар имэйлд хэрэглэгчийн хэлээр тусна', () => {
+    const mail = i18nStorage.run(
+      { lang: 'mn', overrides: new Map([['en:auth.mail.invite.subject', 'Welcome to Example'], ['en:auth.mail.invite.body', 'Open this link within {hours} hours, {name}.']]) },
+      () => renderAuthMail('invite', 'en', { name: '<Admin>', url: 'https://example.test/invite/token', login: null, hours: 24 }),
+    );
+    expect(mail.subject).toBe('Welcome to Example');
+    expect(mail.text).toContain('Open this link within 24 hours, <Admin>.');
+    expect(mail.html).toContain('&lt;Admin&gt;');
   });
 });

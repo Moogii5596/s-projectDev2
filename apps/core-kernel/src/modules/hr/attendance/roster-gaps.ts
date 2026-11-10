@@ -30,7 +30,7 @@ export interface RosterGap {
 }
 type Range = { startDate: string; endDate: string | null };
 
-export const ROSTER_GAP_LIMIT = 200;
+const ROSTER_GAP_LIMIT = 200;
 
 export function findRosterGaps(
   rows: ParsedRow[],

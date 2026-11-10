@@ -107,6 +107,10 @@ ALTER TABLE "camp_movement_imports" ALTER COLUMN "created_at" SET DEFAULT CURREN
 ALTER TABLE "camp_movement_imports" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_movements" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_movements" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "camp_organization_service_types" ADD CONSTRAINT "fk_camp_org_service_types_org" FOREIGN KEY ("tenant_id", "organization_id") REFERENCES "camp_organizations"("tenant_id", "id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "camp_organization_service_types" ADD CONSTRAINT "fk_camp_org_service_types_type" FOREIGN KEY ("tenant_id", "service_type_id") REFERENCES "camp_service_types"("tenant_id", "id") ON DELETE NO ACTION ON UPDATE CASCADE
+ALTER TABLE "camp_organization_service_types" DROP CONSTRAINT "fk_camp_org_service_types_org"
+ALTER TABLE "camp_organization_service_types" DROP CONSTRAINT "fk_camp_org_service_types_type"
 ALTER TABLE "camp_organizations" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_organizations" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camp_pii_access_log" ALTER COLUMN "viewed_at" SET DEFAULT CURRENT_TIMESTAMP
@@ -135,6 +139,13 @@ ALTER TABLE "camp_stays" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camp_stays" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "camps" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "camps" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_attachment_access" DROP CONSTRAINT "fk_core_attachment_access_user"
+ALTER TABLE "core_attachment_name_patterns" DROP CONSTRAINT "fk_core_attachment_name_patterns_updated_by"
+ALTER TABLE "core_attachments" DROP CONSTRAINT "fk_core_attachments_uploaded_by"
+ALTER TABLE "core_calendar_holidays" ALTER COLUMN "day" SET DATA TYPE INTEGER
+ALTER TABLE "core_calendar_holidays" ALTER COLUMN "month" SET DATA TYPE INTEGER
+ALTER TABLE "core_calendar_holidays" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_calendar_holidays" DROP CONSTRAINT "core_calendar_holidays_tenant_id_fkey"
 ALTER TABLE "core_exchange_rates" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "core_exchange_rates" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_feedback" ADD CONSTRAINT "fk_core_feedback_replied_by" FOREIGN KEY ("tenant_id", "replied_by") REFERENCES "core_users"("tenant_id", "id") ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -148,7 +159,9 @@ ALTER TABLE "core_feedback_attachments" DROP CONSTRAINT "core_feedback_attachmen
 ALTER TABLE "core_feedback_votes" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "core_feedback_votes" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_feedback_votes" DROP CONSTRAINT "core_feedback_votes_tenant_id_fkey"
-ALTER TABLE "core_permission_aliases" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
+ALTER TABLE "core_holiday_calendars" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_notification_prefs" DROP CONSTRAINT "fk_core_notification_prefs_user"
+ALTER TABLE "core_notifications" DROP CONSTRAINT "fk_core_notifications_user"
 ALTER TABLE "core_permissions" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "core_position_role_templates" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "core_position_role_templates" ALTER COLUMN "updated_at" DROP DEFAULT
@@ -157,6 +170,13 @@ ALTER TABLE "core_role_permissions" ALTER COLUMN "created_at" SET DEFAULT CURREN
 ALTER TABLE "core_role_permissions" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_roles" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "core_roles" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_scheduled_jobs" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_sequences" ADD CONSTRAINT "core_sequences_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE
+ALTER TABLE "core_sequences" ALTER COLUMN "digits" SET DATA TYPE INTEGER
+ALTER TABLE "core_sequences" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_sequences" DROP CONSTRAINT "core_sequences_tenant_id_fkey"
+ALTER TABLE "core_sites" ALTER COLUMN "updated_at" DROP DEFAULT
+ALTER TABLE "core_tenant_settings" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_units" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "core_units" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "core_user_invites" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
@@ -184,6 +204,7 @@ ALTER TABLE "feed_comments" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMEST
 ALTER TABLE "feed_comments" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "feed_comments" DROP CONSTRAINT "feed_comments_tenant_id_fkey"
 ALTER TABLE "feed_comments" DROP CONSTRAINT "fk_feed_comments_deleted_by"
+ALTER TABLE "feed_links" DROP CONSTRAINT "fk_feed_links_created_by"
 ALTER TABLE "feed_post_media" ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP
 ALTER TABLE "feed_post_media" ALTER COLUMN "updated_at" DROP DEFAULT
 ALTER TABLE "feed_post_media" DROP CONSTRAINT "feed_post_media_tenant_id_fkey"
@@ -302,6 +323,7 @@ ALTER TABLE "workflow_step_logs" DROP CONSTRAINT "workflow_step_logs_instance_id
 ALTER TABLE "workflow_step_logs" DROP CONSTRAINT "workflow_step_logs_tenant_id_fkey"
 CREATE INDEX "outbox_events_status_next_retry_at_idx" ON "outbox_events"("status", "next_retry_at")
 CREATE INDEX "workflow_sla_logs_tenant_id_due_at_status_idx" ON "workflow_sla_logs"("tenant_id", "due_at", "status")
+CREATE UNIQUE INDEX "uq_core_calendar_holidays_tenant_id" ON "core_calendar_holidays"("tenant_id", "id")
 DROP INDEX "idx_approval_logs_mr"
 DROP INDEX "idx_core_user_roles_source_position"
 DROP INDEX "idx_core_users_auth_id"
@@ -314,10 +336,3 @@ DROP INDEX "idx_outbox_events_tenant"
 DROP INDEX "uq_camp_contract_items_service"
 DROP INDEX "uq_core_user_permissions"
 DROP INDEX "uq_core_user_roles"
-DROP TABLE "legacy_camp_permissions"
-DROP TABLE "legacy_camp_position_role_templates"
-DROP TABLE "legacy_camp_role_permissions"
-DROP TABLE "legacy_camp_roles"
-DROP TABLE "legacy_camp_user_permissions"
-DROP TABLE "legacy_camp_user_roles"
-DROP TYPE "CampRoleCode"

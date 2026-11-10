@@ -6,9 +6,9 @@
 import type { MrWorkflow } from '../types/mr.types'
 
 /** Алхмын role-оос гадна ямар ч алхмыг батлах эрхтэй (backend APPROVAL_OVERRIDE_ROLES) */
-export const APPROVAL_OVERRIDE_ROLES: readonly string[] = ['OWNER', 'ADMIN']
+const APPROVAL_OVERRIDE_ROLES: readonly string[] = ['OWNER', 'ADMIN']
 
-export const ROLE_LABEL: Record<string, string> = {
+const ROLE_LABEL: Record<string, string> = {
   OWNER: 'Эзэмшигч',
   ADMIN: 'Админ',
   APPROVER: 'Батлагч',

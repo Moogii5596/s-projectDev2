@@ -7,7 +7,7 @@
  */
 export type NoteType = 'new' | 'improved' | 'fixed' | 'changed'
 
-export interface ReleaseNoteItem {
+interface ReleaseNoteItem {
   type: NoteType
   mn: string
   zh: string

@@ -1,22 +1,22 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { campApi } from '../../camp/api/camp-api'
+import { campApi } from '../api/camp-bridge'
 import { hrApi } from '../api/hr-api'
-import type { Crew } from '../../camp/api/types'
-import { campKeys, useCampPermissions } from '../../camp/hooks/useCampPermissions'
-import { useCampMutation } from '../../camp/hooks/useCampMutation'
-import { P } from '../../camp/lib/permissions'
-import { weekdayName } from '../../camp/lib/labels'
-import { isoWeekday } from '../../camp/lib/dates'
-import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, td } from '../../camp/components/ui'
+import type { Crew } from '../api/camp-bridge'
+import { campKeys, useAppPermissions } from '../../../core/useAppPermissions'
+import { useAppMutation } from '../../../core/useAppMutation'
+import { P } from '../../../core/permissions'
+import { weekdayName } from '../../../core/labels'
+import { isoWeekday } from '../../../core/dates'
+import { ActiveBadge, Button, Card, Empty, ErrorBox, Field, Loading, Modal, Table, inputCls, td } from '../../../core/ui'
 import { useTranslation } from 'react-i18next'
 
 /** Тохиргоо › Ростер (FB-06: "Баг" → "Ростер"). Ирэх өдөр нь кемпийн солигдох гарагтай таарна */
 export default function CrewsPage() {
   const { t } = useTranslation()
   const { campId = '' } = useParams()
-  const perms = useCampPermissions(campId)
+  const perms = useAppPermissions(campId)
   const crews = useQuery({ queryKey: campKeys.crews(campId), queryFn: () => hrApi.crews(campId) })
   const settings = useQuery({ queryKey: campKeys.settings(campId), queryFn: () => campApi.settings(campId) })
   const [modal, setModal] = useState<Crew | 'new' | null>(null)
@@ -77,7 +77,7 @@ function CrewModal({ campId, crew, changeover, onClose }: { campId: string; crew
   const [anchor, setAnchor] = useState(crew?.rosterAnchorDate ?? '')
   const [isActive, setIsActive] = useState(crew?.isActive ?? true)
   const wrongDay = anchor !== '' && isoWeekday(anchor) !== changeover
-  const m = useCampMutation(
+  const m = useAppMutation(
     () =>
       crew
         ? hrApi.updateCrew(campId, crew.id, { name: name.trim() || null, rosterAnchorDate: anchor, isActive })

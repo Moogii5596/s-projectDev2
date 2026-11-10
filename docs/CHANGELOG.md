@@ -15,10 +15,17 @@ tags: [release]
 
 ---
 
+## [Unreleased] — v0.2.4
+
+### ARC-05 — ADR-007 шилжилтийн үлдэгдэл цэвэрлэгээ
+- **Хассан:** permission API alias болон хуучин `/api/v1/camp` RBAC зам; хуучин код одоо хүчинтэй permission биш.
+- **Хассан (DB, migration `20261107006`):** `core_permission_aliases`, `legacy_camp_*` зургаан хуулбар, ашиглагдахаа больсон `CampRoleCode` enum.
+- **Өөрчлөгдсөн:** `camp:snapshot` хуучин snapshot-ийг тулгахад зориулсан хувилбар хоорондын mapping-ийг зөвхөн snapshot хэрэгсэл дотроо хадгална.
+
 ## [v0.2.3] — 2026-11-07 — Release бэлтгэл
 
 > Staging snapshot A = B болон pilot шинэчлэлт хүлээгдэж байна.
-> ⚠️ Эрхийн `camp.employee.*`, `camp.movement.import`, `camp.shift.adjust` кодууд `hr.*` руу шилжсэн (хуучин alias v0.2.4 хүртэл); хуучин `/api/v1/camp/...` HR замууд устсан. Гэрээний үйлчилгээ/нэгжийн enum нь tenant-ийн каталогоор солигдсон.
+> Эрхийн `camp.employee.*`, `camp.movement.import`, `camp.shift.adjust` кодууд `hr.*` руу шилжсэн (хуучин alias нь v0.2.4 хүртэл байсан); хуучин `/api/v1/camp/...` HR замууд устсан. Гэрээний үйлчилгээ/нэгжийн enum нь tenant-ийн каталогоор солигдсон.
 
 ### v0.2.3 Блок 6б — гэрээ, үнэ, ханш
 - **Нэмэгдсэн:** үйлчилгээ ба нэгжийн tenant каталог, гэрээний ноорог/идэвхжүүлэлт/цуцлалт, хүчинтэй огноотой үнэ, сунгалт ба өөрчлөлтийн түүх, сарын гар ханш болон үнийн тооцоо. Эрх `camp.contract.manage`; ханшгүй сарын тооцоо алдаатай.
@@ -36,7 +43,7 @@ tags: [release]
 - **Тест:** unit (`session-revoke`, `sign-in`, `auth.controller`), web-shell `devices`; integration `camp-v023-auth` (төхөөрөмж жагсаах / гаргах / өөр хүний 404, нууц үг солиход одоогийн session үлдэх).
 
 ### v0.2.3 Блок 4 — цэвэрлэгээ ба нэвтрэлт (QA-11, QA-12, PIL-15, PIL-16, [[09_v0.2.3_tech_plan]])
-- **Хассан (API):** хуучин `/api/v1/camp/...` HR/Core controller-ууд (`hr-legacy.controller.ts`) — frontend `/hr`, `/core/rbac` замууд руу шилжсэн; хуучин зам → 404. RBAC legacy (`/camp` RBAC) — `Deprecation`-тай, v0.2.4-т устгана.
+- **Хассан (API):** хуучин `/api/v1/camp/...` HR/Core controller-ууд (`hr-legacy.controller.ts`) — frontend `/hr`, `/core/rbac` замууд руу шилжсэн; HR-ийн хуучин зам → 404. RBAC legacy (`/camp` RBAC) v0.2.4 хүртэл `Deprecation`-тай ажилласан.
 - **Өөрчлөгдсөн:** урилга хүлээн авахад бүх session цуцлагдана (`SessionRevokeService`). Migration `20261106006`: `core_users.last_sign_in_at` — амжилттай нэвтрэлт бүрт бичигдэнэ, `auth.users`-аас нөхнө.
 - **Нэмэгдсэн:** HR «Хэрэглэгч» жагсаалтад «Сүүлийн нэвтрэлт» багана (mn/en/zh; «Хэзээ ч нэвтрээгүй»).
 - **Тест:** e2e `helpers/api.ts` (нэг газар — 8 spec шилжсэн), integration `camp-v023-auth` (last sign-in), `camp-master` R7 spec `/hr` зам руу.
@@ -49,9 +56,9 @@ tags: [release]
 
 ### v0.2.3 Блок 2 — роль, эрх системийн түвшинд (ADR-007, PIL-13, [[ADR-007_System_Roles_Permissions]])
 - **Өөрчлөгдсөн (DB, migration `20261106005`):** `camp_permissions / roles / role_permissions / user_roles / user_permissions / position_role_templates` → `core_*` (байранд нь нэрлэсэн — ID, эрх хэвээр); олголтын `camp_id` → `site_id` + `scope_type` (TENANT / SITE); `core_roles.system_code` → TEXT; `core_permissions` += `module`, `available_in`. Migration дотор legacy ↔ core эрхийн олонлогийг тулгана.
-- **Өөрчлөгдсөн (эрхийн код):** `camp.employee.manage` → `hr.employee.manage`, `camp.employee.terminate` → `hr.employee.terminate`, `camp.movement.import` → `hr.attendance.import`, `camp.shift.adjust` → `hr.shift.adjust`. Хуучин код v0.2.3-т alias-аар уншигдана (`core_permission_aliases`; API оролт хөрвөнө, `me/permissions` хоёуланг буцаана) — ⚠️ v0.2.4-т устгана.
+- **Өөрчлөгдсөн (эрхийн код):** `camp.employee.manage` → `hr.employee.manage`, `camp.employee.terminate` → `hr.employee.terminate`, `camp.movement.import` → `hr.attendance.import`, `camp.shift.adjust` → `hr.shift.adjust`. Хуучин код v0.2.3-т alias-аар уншигдаж байсан; v0.2.4 ARC-05 цэвэрлэгээгээр устсан.
 - **Хассан:** `camp.roles.manage` (юу ч зөвшөөрдөггүй байсан — SEC-009). Хэрэглэгчийн бодит эрх өөрчлөгдөхгүй.
-- **Нэмэгдсэн (дотоод):** хөлдөөсөн `legacy_camp_*` хуулбар (зөвхөн унших, v0.2.4-т устгана); `camp:snapshot` core schema-г таньж, хуучин ↔ шинэ кодыг тулгана.
+- **Нэмэгдсэн (дотоод):** `legacy_camp_*` хөлдөөсөн хуулбар (v0.2.4-т устгасан); `camp:snapshot` core schema-г таньж, хуучин ↔ шинэ кодыг тулгана.
 
 ### v0.2.3 Блок 1 / 1б — хамаарал, Prisma schema ([[09_v0.2.3_tech_plan]])
 - **Өөрчлөгдсөн:** NestJS 10.4 → 11.2.7, Fastify 4.28 → 5.12.7, `@fastify/multipart` 9.4, nodemailer 6.10 → 10.1.7 (аюулгүй байдлын засвар, DEP-01/02). Хэрэглэгчид харагдах өөрчлөлтгүй.

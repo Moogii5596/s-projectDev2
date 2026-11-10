@@ -2,7 +2,7 @@
  * v0.2.3 Блок R4.4–R4.6 — PREVIEW хүснэгт: шүүлт, засварын payload
  */
 import { describe, expect, it } from 'vitest'
-import type { ImportPreview, ImportRow } from '../../../camp/api/types'
+import type { ImportPreview, ImportRow } from '../../api/camp-bridge'
 import { buildEdits, defaultFilter, deleteErrorRowsEdits, fileName, filterCounts, filterRows, pickerQuery, rowPlace } from '../import-rows'
 
 const src = { sheet: '2026.11.04 A ирэх', row: 7, idRaw: 'NEW', idType: 'NEW' as const, lastName: 'Бат', firstName: 'Дорж', crew: 'A', extendDays: null }
