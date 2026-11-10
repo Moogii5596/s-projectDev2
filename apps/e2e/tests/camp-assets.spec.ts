@@ -60,11 +60,11 @@ test.describe.serial('Кемп — хөрөнгө ба засвар', () => {
   });
 
   test('хөрөнгийн ангилал нэмэх (давхар нэр → алдаа)', async ({ page }) => {
-    await page.goto('/camp/admin/asset-categories');
-    await page.getByLabel('Шинэ ангиллын нэр').fill(CATEGORY);
+    await page.goto('/settings/asset-categories');
+    await page.getByLabel('Нэр — Монгол').fill(CATEGORY);
     await page.getByRole('button', { name: 'Нэмэх' }).click();
     await expect(page.getByRole('cell', { name: CATEGORY, exact: true })).toBeVisible();
-    await page.getByLabel('Шинэ ангиллын нэр').fill(CATEGORY.toLowerCase());
+    await page.getByLabel('Нэр — Монгол').fill(CATEGORY.toLowerCase());
     await page.getByRole('button', { name: 'Нэмэх' }).click();
     await expect(page.getByRole('alert')).toContainText('аль хэдийн');
   });

@@ -15,7 +15,10 @@ export async function api<T = { id: string }>(page: Page, method: string, path: 
       const token = key ? (JSON.parse(localStorage.getItem(key) as string) as { access_token: string }).access_token : '';
       const res = await fetch(p, {
         method: m,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: {
+          ...(b === undefined ? {} : { 'Content-Type': 'application/json' }),
+          Authorization: `Bearer ${token}`,
+        },
         body: b === undefined ? undefined : JSON.stringify(b),
       });
       const text = await res.text();

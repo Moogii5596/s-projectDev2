@@ -1,16 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+import { normalizeName } from '../../../../common/name-normalization';
 import { CAMP_PERMISSIONS } from '../../../camp/common/camp-permissions';
 import { expectTenantTx, setActor, setup } from '../../../camp/common/tests/camp-test-utils';
-import { HrPositionsService, normName, resolvePositionByName } from '../hr-positions.service';
+import { HrPositionsService, resolvePositionByName } from '../hr-positions.service';
 
 const P = CAMP_PERMISSIONS;
 
-describe('v0.2.1 каталог — normName / resolvePositionByName', () => {
-  it('normName: зай, том/жижиг үсэг үл хамаарна (DB-ийн lower(btrim) индекстэй нийцнэ)', () => {
-    expect(normName('  Ахлах   Жолооч ')).toBe(normName('ахлах жолооч'));
-    expect(normName('Жолооч')).not.toBe(normName('Жолоочийн туслах'));
+describe('v0.2.1 каталог — нэрийн нормчлол / resolvePositionByName', () => {
+  it('зай, том/жижиг үсэг үл хамаарна', () => {
+    expect(normalizeName('  Ахлах   Жолооч ')).toBe(normalizeName('ахлах жолооч'));
+    expect(normalizeName('Жолооч')).not.toBe(normalizeName('Жолоочийн туслах'));
   });
 
   it('resolvePositionByName: байгааг олно, байхгүй бол үүсгэнэ, идэвхгүйг (одоогийнх биш) → 400', async () => {

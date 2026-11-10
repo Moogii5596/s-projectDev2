@@ -11,36 +11,16 @@ import {
   ParsedTableRow,
   parseTableRows,
   parseTableXlsx,
-  type CellValue,
-  type TableSpec,
 } from '../../../common/xlsx/table-spec';
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CampAuditService } from '../../camp/common/camp-audit.service';
 import { getCampOr404 } from '../../camp/common/camp-lookup';
 import { inTenantTx, Tx } from '../../camp/common/camp-tx';
 import { withCampErrors } from '../../camp/common/camp-errors';
-import { departmentsHandler } from './departments.handler';
-import { employeesHandler } from './employees.handler';
-import { formerEmployeesHandler } from './former-employees.handler';
-import { positionsHandler } from './positions.handler';
-import { DataImportHandler, ImportCtx, PlannedRow } from './import-types';
-import { DataTransferRegistry } from '../../core/import-export/data-transfer.registry';
+import type { DataImportHandler, PlannedRow } from './data-transfer.types';
+import { DataTransferRegistry } from './data-transfer.registry';
 
-/**
- * URL-ийн төрөл → handler. HR-ийн өөрийнх энд; бусад модуль `registerHandler`-ээр нэмнэ
- * (v0.2.3 Блок D: Кемп — building-types, buildings, rooms, room-allocations, `CampHrBridge`).
- */
-const BUILT_IN: Record<string, DataImportHandler> = {
-  employees: employeesHandler,
-  'former-employees': formerEmployeesHandler,
-  departments: departmentsHandler,
-  positions: positionsHandler,
-};
-/** Экспортын нэмэлт төрөл (HR-ийн импортын handler-гүй) — бусад модуль бүртгэнэ (жишээ нь Кемпийн `rooms`, v0.2.2 H1) */
-export interface ExtraExport {
-  spec: TableSpec;
-  rows(tx: Tx, ctx: ImportCtx): Promise<Record<string, CellValue>[]>;
-}
+/** Core owns the shared preview/confirm/export flow; business modules register typed handlers. */
 const CONFIRM_TX = { timeout: 120_000, maxWait: 10_000 };
 const IMPORT_SELECT = {
   id: true, type: true, source: true, fileName: true, status: true, totalRows: true, createRows: true, updateRows: true,
@@ -73,29 +53,19 @@ function viewRows(h: DataImportHandler, plan: PlannedRow[]) {
 const storable = (rows: ParsedTableRow[]) => rows.map(({ row, values, errors, issues }) => ({ row, values, errors, ...(issues ? { issues } : {}) })) as unknown as Prisma.InputJsonValue;
 
 /**
- * v0.2.0 §0.5 — Мастер өгөгдлийн импорт (ажилтан FB-08, хэлтэс FB-02) ба экспорт (+ өрөө §2.4).
+ * Shared master-data import/export flow; the existing HR-facing API and import history remain compatible.
  * Урсгал: preview (задлах → DB-тэй шалгах → PREVIEW хадгалах) → confirm (түгжээ → ДАХИН шалгах → бичих → түүх IMPORT)
  *   - skipErrors=false (анхдагч): алдаатай мөр байвал юу ч бичихгүй (409, мөрийн алдаатай)
  *   - skipErrors=true: зөв мөрүүдийг л бичнэ ("Алдаатай мөрийг алгасаж бусдыг оруулах")
  */
 @Injectable()
-export class HrDataImportService {
+export class DataTransferService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
     private readonly access: CampAccessService,
     private readonly audit: CampAuditService,
     private readonly transfers: DataTransferRegistry,
-  ) {
-    for (const [type, handler] of Object.entries(BUILT_IN)) {
-      this.registerHandler(type, handler, 'hr');
-      this.registerExport(type, { spec: handler.spec, rows: handler.exportRows }, 'hr');
-    }
-  }
-
-  /** Импортын нэмэлт төрөл бүртгэх (Кемп: өрөөний тохиргоо, байрлуулалт) — `CampHrBridge.onModuleInit` */
-  registerHandler(type: string, handler: DataImportHandler, module: string): void {
-    this.transfers.registerImport({ module, type, specType: handler.spec.type, handler });
-  }
+  ) {}
 
   /** Бүртгэлтэй импортын төрлүүд (URL) */
   types(): string[] {
@@ -103,21 +73,16 @@ export class HrDataImportService {
   }
 
   private handlerFor(type: string): DataImportHandler {
-    const h = this.transfers.getImport<DataImportHandler>(type);
+    const h = this.transfers.getImport(type);
     if (!h) throw badRequest('import.unknown_type', { type });
     return h;
   }
 
   private handlerOf(type: CampDataImportType): DataImportHandler {
-    const h = this.types().map((key) => this.transfers.getImport<DataImportHandler>(key))
+    const h = this.types().map((key) => this.transfers.getImport(key))
       .find((handler) => handler?.type === type);
     if (!h) throw badRequest('import.unknown_type', { type });
     return h;
-  }
-
-  /** Нэмэлт экспорт бүртгэх (Кемп: `rooms`) — `CampHrBridge.onModuleInit` */
-  registerExport(type: string, exporter: ExtraExport, module: string): void {
-    this.transfers.registerExport({ module, type, specType: exporter.spec.type, handler: exporter });
   }
 
   template(type: string): Promise<Buffer> {
@@ -226,16 +191,14 @@ export class HrDataImportService {
 
   /** Экспорт = импортын формат (хэрэглэгчийн хэлээр) */
   async export(tenantId: string, authId: string, campId: string, type: string): Promise<{ buffer: Buffer; fileName: string }> {
-    const extra = this.transfers.getExport<ExtraExport>(type);
-    if (!extra && !this.transfers.getImport<DataImportHandler>(type)) throw badRequest('import.unknown_type', { type });
+    const handler = this.transfers.getExport(type);
+    if (!handler) throw badRequest('import.unknown_type', { type });
     const lang = currentLang();
     const { spec, rows, campCode } = await inTenantTx(this.prisma, tenantId, async (tx) => {
       await this.access.requireAccess(tx, tenantId, authId, campId);
       const camp = await getCampOr404(tx, tenantId, campId);
       const ctx = { tenantId, campId };
-      if (extra) return { spec: extra.spec, rows: await extra.rows(tx, ctx), campCode: camp.code };
-      const h = this.handlerFor(type);
-      return { spec: h.spec, rows: await h.exportRows(tx, ctx), campCode: camp.code };
+      return { spec: handler.spec, rows: await handler.exportRows(tx, ctx), campCode: camp.code };
     });
     const date = new Date().toISOString().slice(0, 10);
     return { buffer: await buildExport(spec, rows, lang), fileName: `${campCode}-${type}-${date}.xlsx` };

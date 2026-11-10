@@ -4,7 +4,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { badRequest, payloadTooLarge } from '../../../common/i18n/app-error';
 import { TABLE_MAX_ROWS } from '../../../common/xlsx/table-spec';
 import { reqUser } from '../../camp/common/camp-request';
-import { HrDataImportService, ImportInput } from './hr-data-import.service';
+import { DataTransferService, type ImportInput } from '../../core/import-export/data-transfer.service';
 
 const uuid = () => new ParseUUIDPipe();
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -34,12 +34,12 @@ async function readXlsx(req: FastifyRequest): Promise<{ fileName: string; buffer
 
 /**
  * v0.2.0 §0.5 — HR импорт/экспорт: /api/v1/hr/sites/:campId/data-imports/:type · /export/:type (v0.2.2 H1; өмнө нь /camp/camps/:campId/...).
- * Экспортын нэмэлт төрөл (жишээ нь Кемпийн `rooms`) — `HrDataImportService.registerExport`.
+ * Import/export handlers-ийг тухайн бизнес модуль цөмийн DataTransferRegistry-д бүртгэнэ.
  * POST data-imports/:type: multipart "file" (xlsx) ЭСВЭЛ JSON { rows: [...] } (хүснэгтээр оруулах).
  */
 @Controller('hr/sites/:campId')
 export class HrDataController {
-  constructor(private readonly data: HrDataImportService) {}
+  constructor(private readonly data: DataTransferService) {}
 
   @Get('data-imports/:type/template')
   async template(@Param('campId', uuid()) _campId: string, @Param('type') type: string, @Res({ passthrough: true }) reply: FastifyReply) {

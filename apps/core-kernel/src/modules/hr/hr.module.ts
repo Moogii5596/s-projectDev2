@@ -14,7 +14,7 @@ import { HrAttendanceHooks } from './attendance/stay-store';
 import { HrEmployeeHooks } from './employees/employee-hooks';
 import { HrEmployeeLifecycleService } from './employees/hr-employee-lifecycle.service';
 import { HrDataController } from './import/hr-data.controller';
-import { HrDataImportService } from './import/hr-data-import.service';
+import { HrDataTransferRegistration } from './import/hr-data-transfer.registration';
 import { CoreModule } from '../core/core.module';
 
 const SERVICES = [
@@ -27,7 +27,7 @@ const SERVICES = [
   HrAttendanceHooks,
   HrEmployeeHooks,
   HrEmployeeLifecycleService,
-  HrDataImportService,
+  HrDataTransferRegistration,
 ];
 
 /**

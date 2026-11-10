@@ -97,7 +97,7 @@ test.describe.serial('v0.2.3 R4 — HR ShiftChange импорт', () => {
     await expect(page.getByText('Алгассан хуудас: 1')).toBeVisible();
     // Болд Сүх, Сараа Ням — ростероор ирэх ёстой боловч файлд алга (импортыг зогсоохгүй)
     await expect(page.getByText(/файлд алга: ирэх 2, явах 0/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Батлах' })).toBeDisabled();
+    await expect(page.getByRole('main').getByRole('button', { name: 'Батлах' })).toBeDisabled();
     await expect(page.getByRole('cell', { name: `${SHEET} · 4` })).toBeVisible();
 
     await page.getByRole('button', { name: 'Алдаатай мөрийг засах' }).click();
@@ -112,7 +112,7 @@ test.describe.serial('v0.2.3 R4 — HR ShiftChange импорт', () => {
     await expect(page.getByText(/файлд алга: ирэх 1, явах 0/)).toBeVisible(); // Сараа одоо жагсаалтад
     await page.getByRole('radio', { name: /Бүгд/ }).click();
     await expect(page.getByText(`Файлд: —`)).toBeVisible(); // гараар сольсон мөр
-    await page.getByRole('button', { name: 'Батлах' }).click();
+    await page.getByRole('main').getByRole('button', { name: 'Батлах', exact: true }).click();
     await expect(page.getByText(/Баталгаажлаа: 2 бүртгэл/)).toBeVisible();
   });
 
@@ -125,7 +125,7 @@ test.describe.serial('v0.2.3 R4 — HR ShiftChange импорт', () => {
     await page.getByRole('alertdialog').getByRole('button', { name: 'Тийм, устгах' }).click();
     await expect(page.getByText('Устгасан 2')).toBeVisible();
     await expect(page.getByText('Алдаагүй')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Батлах' })).toBeEnabled();
+    await expect(page.getByRole('main').getByRole('button', { name: 'Батлах', exact: true })).toBeEnabled();
 
     await page.getByRole('radio', { name: /Бүгд/ }).click();
     await page.getByRole('button', { name: 'Сэргээх' }).first().click();
@@ -173,7 +173,7 @@ test.describe.serial('v0.2.3 R4 — HR ShiftChange импорт', () => {
     await edit.getByLabel(`${place} мөр: байгууллага`, { exact: true }).selectOption({ label: `Уурхай SC ${STAMP}` });
     await edit.getByRole('button', { name: 'Хадгалах (1)' }).click();
     await expect(page.getByText('Алдаагүй')).toBeVisible();
-    await page.getByRole('button', { name: 'Батлах' }).click();
+    await page.getByRole('main').getByRole('button', { name: 'Батлах', exact: true }).click();
     await expect(page.getByText(/Баталгаажлаа: 1 бүртгэл/)).toBeVisible();
 
     await page.goto(`/hr/${campId}`);

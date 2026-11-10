@@ -19,7 +19,7 @@ import { applyRowEdits, planWithDeleted } from './import-edits';
 import { loadRosterGaps, RosterGap } from './roster-gaps';
 import { HrEmployeesService } from '../employees/hr-employees.service';
 import { HR_ID_PENDING } from '../employees/data-issues';
-import { normName } from '../positions/hr-positions.service';
+import { normalizeName } from '../../../common/name-normalization';
 import type { Tx } from '../../camp/common/camp-tx';
 
 const P = CAMP_PERMISSIONS;
@@ -205,7 +205,7 @@ export class HrAttendanceService {
       if (!r.source) throw badRequest('camp.err.attendance.14', { row: e.row });
       const src = r.source;
       const ne = e.newEmployee as NonNullable<typeof e.newEmployee>;
-      const pos = src.position ? positions.find((p) => normName(p.name) === normName(src.position as string)) : undefined;
+      const pos = src.position ? positions.find((p) => normalizeName(p.name) === normalizeName(src.position as string)) : undefined;
       const emp = await this.employees.createInTx(
         tx, tenantId, campId, actorUserId,
         {

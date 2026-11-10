@@ -7,12 +7,10 @@ import { withCampErrors } from '../../camp/common/camp-errors';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../../camp/common/common.dto';
 import { mergeCatalogNameI18n } from '../../camp/common/catalog-name-i18n';
+import { normalizeName } from '../../../common/name-normalization';
 
 const P = CAMP_PERMISSIONS;
 const ITEM = { id: true, name: true, nameI18n: true, code: true, isActive: true, createdAt: true, updatedAt: true } as const;
-
-/** Нэрийг харьцуулах хэлбэр: илүү зай, том/жижиг үсэг үл хамаарна (DB-ийн uq_*_name индекстэй ижил) */
-export const normName = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
 
 /**
  * HR — албан тушаалын каталог (байгууллагын түвшин; v0.2.1 C-01, Q2 → v0.2.2 H1-д HR руу).
@@ -28,7 +26,7 @@ export class HrPositionsService {
 
   private async assertUniqueName(tx: Tx, tenantId: string, name: string, exceptId?: string) {
     const all = await tx.hrPosition.findMany({ where: { tenantId }, select: { id: true, name: true } });
-    const dup = all.find((r) => normName(r.name) === normName(name) && r.id !== exceptId);
+    const dup = all.find((r) => normalizeName(r.name) === normalizeName(name) && r.id !== exceptId);
     if (dup) throw conflict('camp.err.catalog.position_exists', { name: dup.name });
   }
 
@@ -86,7 +84,7 @@ export class HrPositionsService {
 export async function resolvePositionByName(tx: Tx, tenantId: string, name: string, currentId?: string | null): Promise<{ id: string; name: string; created: boolean }> {
   const clean = name.trim().replace(/\s+/g, ' ').slice(0, 100);
   const all = await tx.hrPosition.findMany({ where: { tenantId }, select: { id: true, name: true, isActive: true } });
-  const hit = all.find((p) => normName(p.name) === normName(clean));
+  const hit = all.find((p) => normalizeName(p.name) === normalizeName(clean));
   if (hit) {
     if (!hit.isActive && hit.id !== currentId) throw badRequest('camp.err.catalog.position_inactive', { name: hit.name });
     return { id: hit.id, name: hit.name, created: false };

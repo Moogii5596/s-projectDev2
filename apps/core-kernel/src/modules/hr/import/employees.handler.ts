@@ -3,7 +3,8 @@ import { CellValue, TableSpec } from '../../../common/xlsx/table-spec';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
 import { Tx } from '../../camp/common/camp-tx';
 import { EMPLOYEE_AUDIT_FIELDS } from '../employees/hr-employees.service';
-import { normName, resolvePositionByName } from '../positions/hr-positions.service';
+import { normalizeName } from '../../../common/name-normalization';
+import { resolvePositionByName } from '../positions/hr-positions.service';
 import { applyIssues, issueFromRow, readIssues, sameIssues, toJson, type IssueUpdate } from '../employees/data-issues';
 import { EXTRA_PHONES_MAX, normalizeExtraPhones, PHONE_RE, phonesOut, replaceExtraPhones, resolveNames, splitPhones, type EmployeeNames } from '../employees/employee-names';
 import { ApplyCtx, DataImportHandler, has, ImportCtx, PlannedRow, upper } from './import-types';
@@ -91,7 +92,7 @@ async function loadRefs(tx: Tx, ctx: ImportCtx, codes: string[]) {
     orgsByName: orgs.reduce((m, o) => m.set(o.name.toUpperCase(), [...(m.get(o.name.toUpperCase()) ?? []), o]), new Map<string, typeof orgs>()),
     orgById: new Map(orgs.map((o) => [o.id, o])),
     campCode: new Map(camps.map((c) => [c.id, c.code])),
-    positions: new Map(positions.map((p) => [normName(p.name), p])),
+    positions: new Map(positions.map((p) => [normalizeName(p.name), p])),
     locs: new Map(locs.map((l) => [l.name.trim().toUpperCase(), l])),
     locById: new Map(locs.map((l) => [l.id, l.name])),
   };
@@ -147,7 +148,7 @@ export const employeesHandler: DataImportHandler = {
       if (has(r, 'position')) {
         if (!v.position) resolved.position = null;
         else {
-          const p = refs.positions.get(normName(String(v.position)));
+          const p = refs.positions.get(normalizeName(String(v.position)));
           if (p && !p.isActive && p.id !== cur?.positionId) errors.push({ column: 'position', code: 'row.ref_inactive', params: { value: String(v.position) } });
           else resolved.position = p?.name ?? String(v.position).trim().replace(/\s+/g, ' ');
         }
@@ -214,7 +215,7 @@ export const employeesHandler: DataImportHandler = {
       if (resolved.extraPhones && resolved.extraPhones.join(', ') !== phonesOut(cur.extraPhones).join(', ')) {
         cmp('extraPhones', phonesOut(cur.extraPhones).join(', ') || null, resolved.extraPhones.join(', ') || null);
       }
-      if (resolved.position !== undefined && normName(cur.position ?? '') !== normName(resolved.position ?? '')) cmp('position', cur.position, resolved.position);
+      if (resolved.position !== undefined && normalizeName(cur.position ?? '') !== normalizeName(resolved.position ?? '')) cmp('position', cur.position, resolved.position);
       if (resolved.mealLocationId !== undefined && resolved.mealLocationId !== cur.mealLocationId) {
         cmp('mealLocation', cur.mealLocationId ? (refs.locById.get(cur.mealLocationId) ?? null) : null, resolved.mealLocationId ? (refs.locById.get(resolved.mealLocationId) ?? null) : null);
       }

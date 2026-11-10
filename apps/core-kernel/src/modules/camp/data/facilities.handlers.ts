@@ -1,7 +1,8 @@
 import { CampDataImportType, CampRoomStatus } from '@prisma/client';
 import { CellValue, TableSpec } from '../../../common/xlsx/table-spec';
-import { ApplyCtx, DataImportHandler, has, PlannedRow, upper } from '../../hr/import/import-types';
-import { normName } from '../../hr/positions/hr-positions.service';
+import { normalizeName } from '../../../common/name-normalization';
+import type { ApplyCtx, DataImportHandler, PlannedRow } from '../../core/import-export/data-transfer.types';
+import { has, upper } from '../../core/import-export/data-transfer.types';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { todayUb } from '../common/camp-date';
 import { toDbDate } from '../common/camp-tx';
@@ -39,11 +40,11 @@ export const buildingTypesHandler: DataImportHandler = {
       tx.campBuildingType.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true, isActive: true } }),
       tx.campBuilding.groupBy({ by: ['typeId'], where: { tenantId: ctx.tenantId, isActive: true, typeId: { not: null } }, _count: { _all: true } }),
     ]);
-    const byName = new Map(types.map((t) => [normName(t.name), t]));
+    const byName = new Map(types.map((t) => [normalizeName(t.name), t]));
     const n = new Map(used.map((u) => [u.typeId, u._count._all]));
     return rows.map((r): PlannedRow => {
       const errors = [...r.errors];
-      const cur = typeof r.values.name === 'string' ? byName.get(normName(r.values.name)) : undefined;
+      const cur = typeof r.values.name === 'string' ? byName.get(normalizeName(r.values.name)) : undefined;
       if (cur && r.values.active === false && cur.isActive && (n.get(cur.id) ?? 0) > 0) errors.push({ column: 'active', code: 'row.type_has_buildings', params: { n: n.get(cur.id) ?? 0 } });
       if (errors.length) return { ...r, errors, op: 'error' };
       if (!cur) return { ...r, errors, op: 'create' };
@@ -102,7 +103,7 @@ export const buildingsHandler: DataImportHandler = {
       tx.campRoom.groupBy({ by: ['buildingId'], where: { tenantId: ctx.tenantId, campId: ctx.campId, status: { not: CampRoomStatus.INACTIVE } }, _count: { _all: true } }),
     ]);
     const byCode = new Map(buildings.map((b) => [b.code.toUpperCase(), b]));
-    const typeByName = new Map(types.map((t) => [normName(t.name), t]));
+    const typeByName = new Map(types.map((t) => [normalizeName(t.name), t]));
     const typeName = new Map(types.map((t) => [t.id, t.name]));
     const activeRooms = new Map(rooms.map((x) => [x.buildingId, x._count._all]));
     return rows.map((r): PlannedRow & { [B_RES]?: BuildingResolved } => {
@@ -113,7 +114,7 @@ export const buildingsHandler: DataImportHandler = {
       if (has(r, 'type')) {
         if (!v.type) res.typeId = null;
         else {
-          const t = typeByName.get(normName(String(v.type)));
+          const t = typeByName.get(normalizeName(String(v.type)));
           if (!t) errors.push({ column: 'type', code: 'row.ref_not_found', params: { value: String(v.type) } });
           else if (!t.isActive && t.id !== cur?.typeId) errors.push({ column: 'type', code: 'row.ref_inactive', params: { value: String(v.type) } });
           else res.typeId = t.id;

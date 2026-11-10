@@ -1,7 +1,7 @@
 import { CampDataImportType } from '@prisma/client';
 import { CellValue, TableSpec } from '../../../common/xlsx/table-spec';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
-import { normName } from '../positions/hr-positions.service';
+import { normalizeName } from '../../../common/name-normalization';
 import { DataImportHandler, has, PlannedRow } from './import-types';
 
 /**
@@ -33,13 +33,13 @@ export const positionsHandler: DataImportHandler = {
       tx.hrPosition.findMany({ where: { tenantId: ctx.tenantId }, select: SELECT }),
       tx.hrEmployee.groupBy({ by: ['positionId'], where: { tenantId: ctx.tenantId, status: 'ACTIVE', positionId: { not: null } }, _count: { _all: true } }),
     ]);
-    const byName = new Map(all.map((p) => [normName(p.name), p]));
+    const byName = new Map(all.map((p) => [normalizeName(p.name), p]));
     const active = new Map(activeCounts.map((c) => [c.positionId, c._count._all]));
 
     return rows.map((r): PlannedRow => {
       const v = r.values;
       const errors = [...r.errors];
-      const cur = typeof v.name === 'string' ? byName.get(normName(v.name)) : undefined;
+      const cur = typeof v.name === 'string' ? byName.get(normalizeName(v.name)) : undefined;
       if (cur && v.active === false && cur.isActive && (active.get(cur.id) ?? 0) > 0) {
         errors.push({ column: 'active', code: 'row.position_has_active', params: { n: active.get(cur.id) ?? 0 } });
       }

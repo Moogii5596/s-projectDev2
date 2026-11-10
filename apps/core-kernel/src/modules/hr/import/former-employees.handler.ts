@@ -5,7 +5,7 @@ import { Tx } from '../../camp/common/camp-tx';
 import { todayUb } from '../../camp/common/camp-date';
 import { EMPLOYEE_AUDIT_FIELDS } from '../employees/hr-employees.service';
 import { EXTRA_PHONES_MAX, normalizeExtraPhones, PHONE_RE, replaceExtraPhones, resolveNames, splitPhones, type EmployeeNames } from '../employees/employee-names';
-import { normName } from '../positions/hr-positions.service';
+import { normalizeName } from '../../../common/name-normalization';
 import { applyIssues, issueFromRow, readIssues, toJson, type IssueUpdate } from '../employees/data-issues';
 import { ApplyCtx, DataImportHandler, has, ImportCtx, PlannedRow, upper } from './import-types';
 
@@ -83,7 +83,7 @@ async function loadRefs(tx: Tx, ctx: ImportCtx, codes: string[]) {
     crews: new Map(crews.map((c) => [c.code.toUpperCase(), c.id])),
     orgsByReg: new Map(orgs.filter((o) => o.regNumber).map((o) => [o.regNumber!.toUpperCase(), o.id])),
     orgsByName: orgs.reduce((m, o) => m.set(o.name.toUpperCase(), [...(m.get(o.name.toUpperCase()) ?? []), o.id]), new Map<string, string[]>()),
-    positions: new Map(positions.map((p) => [normName(p.name), p])),
+    positions: new Map(positions.map((p) => [normalizeName(p.name), p])),
   };
 }
 
@@ -194,7 +194,7 @@ export const formerEmployeesHandler: DataImportHandler = {
           [RESOLVED]: { organizationId: organizationId!, departmentId: departmentId!, crewId, position: null, names: names!, extraPhones: [], issues: { terminatedAt: null } },
         };
       }
-      const position = v.position ? (refs.positions.get(normName(String(v.position)))?.name ?? String(v.position).trim().replace(/\s+/g, ' ')) : null;
+      const position = v.position ? (refs.positions.get(normalizeName(String(v.position)))?.name ?? String(v.position).trim().replace(/\s+/g, ' ')) : null;
       return {
         ...r, errors, op: 'create',
         [RESOLVED]: { organizationId: organizationId!, departmentId: departmentId!, crewId, position, names: names!, extraPhones: normalizeExtraPhones(extra, issues.phone ? null : (v.phone as string | null)), issues },
@@ -206,7 +206,7 @@ export const formerEmployeesHandler: DataImportHandler = {
     let created = 0;
     let updated = 0;
     const audits: Parameters<ApplyCtx['audit']['recordMany']>[1] = [];
-    const positions = new Map((await tx.hrPosition.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true } })).map((p) => [normName(p.name), p]));
+    const positions = new Map((await tx.hrPosition.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true } })).map((p) => [normalizeName(p.name), p]));
     const codes: string[] = [];
     for (const row of rows as WithResolved[]) {
       const res = row[RESOLVED];
@@ -229,10 +229,10 @@ export const formerEmployeesHandler: DataImportHandler = {
       }
       if (row.op !== 'create') continue;
       // Түүхийн албан тушаал: идэвхгүй ч болно; байхгүй бол каталогт нэмнэ
-      let pos = res.position ? positions.get(normName(res.position)) : undefined;
+      let pos = res.position ? positions.get(normalizeName(res.position)) : undefined;
       if (res.position && !pos) {
         pos = await tx.hrPosition.create({ data: { tenantId: ctx.tenantId, name: res.position.slice(0, 100) }, select: { id: true, name: true } });
-        positions.set(normName(pos.name), pos);
+        positions.set(normalizeName(pos.name), pos);
       }
       const e = await tx.hrEmployee.create({
         data: {

@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { HrAttendanceHooks } from '../hr/attendance/stay-store';
 import { HrEmployeeHooks } from '../hr/employees/employee-hooks';
-import { HrDataImportService } from '../hr/import/hr-data-import.service';
+import { DataTransferRegistry } from '../core/import-export/data-transfer.registry';
 import { CampStayStore } from './attendance/camp-stays.service';
 import { CampEmployeeSite } from './attendance/camp-employee-site';
 import { buildingsHandler, buildingTypesHandler, roomsHandler } from './data/facilities.handlers';
@@ -17,7 +17,7 @@ import { roomAllocationsHandler } from './data/room-allocations.handler';
 export class CampHrBridge implements OnModuleInit {
   constructor(
     private readonly hooks: HrAttendanceHooks,
-    private readonly data: HrDataImportService,
+    private readonly transfers: DataTransferRegistry,
     private readonly stayStore: CampStayStore,
     private readonly employeeHooks: HrEmployeeHooks,
     private readonly employeeSite: CampEmployeeSite,
@@ -26,25 +26,8 @@ export class CampHrBridge implements OnModuleInit {
   onModuleInit(): void {
     this.hooks.registerStayStore(this.stayStore);
     this.employeeHooks.registerSitePort(this.employeeSite);
-    this.data.registerHandler('building-types', buildingTypesHandler, 'camp');
-    this.data.registerExport('building-types', {
-      spec: buildingTypesHandler.spec,
-      rows: buildingTypesHandler.exportRows,
-    }, 'camp');
-    this.data.registerHandler('buildings', buildingsHandler, 'camp');
-    this.data.registerExport('buildings', {
-      spec: buildingsHandler.spec,
-      rows: buildingsHandler.exportRows,
-    }, 'camp');
-    this.data.registerHandler('rooms', roomsHandler, 'camp');
-    this.data.registerExport('rooms', {
-      spec: roomsHandler.spec,
-      rows: roomsHandler.exportRows,
-    }, 'camp');
-    this.data.registerHandler('room-allocations', roomAllocationsHandler, 'camp');
-    this.data.registerExport('room-allocations', {
-      spec: roomAllocationsHandler.spec,
-      rows: roomAllocationsHandler.exportRows,
-    }, 'camp');
+    for (const handler of [buildingTypesHandler, buildingsHandler, roomsHandler, roomAllocationsHandler]) {
+      this.transfers.registerHandler('camp', handler);
+    }
   }
 }

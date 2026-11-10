@@ -35,6 +35,7 @@ import { DebugController } from './debug/debug.controller';
 import { DebugService } from './debug/debug.service';
 import { DebugAccessGuard } from './debug/debug-access.guard';
 import { DataTransferRegistry } from './import-export/data-transfer.registry';
+import { DataTransferService } from './import-export/data-transfer.service';
 import { SequenceService } from './sequences/sequence.service';
 import { ScheduledJobRegistry } from './scheduler/scheduled-job.registry';
 
@@ -75,9 +76,10 @@ import { ScheduledJobRegistry } from './scheduler/scheduled-job.registry';
     DebugService,
     DebugAccessGuard,
     DataTransferRegistry,
+    DataTransferService,
     SequenceService,
     ScheduledJobRegistry,
   ],
-  exports: [CoreOrganizationsService, CoreTenantModulesService, NotificationService, NotificationTypeRegistry, ApprovalEngineService, ApprovalEntityRegistry, AttachmentsService, AttachmentTypeRegistry, DataTransferRegistry, SequenceService, ScheduledJobRegistry],
+  exports: [CoreOrganizationsService, CoreTenantModulesService, NotificationService, NotificationTypeRegistry, ApprovalEngineService, ApprovalEntityRegistry, AttachmentsService, AttachmentTypeRegistry, DataTransferRegistry, DataTransferService, SequenceService, ScheduledJobRegistry],
 })
 export class CoreModule {}

@@ -1,6 +1,7 @@
 import { CampDataImportType, CampEmployeeStatus, CampRoomStatus } from '@prisma/client';
 import { CellValue, TableSpec } from '../../../common/xlsx/table-spec';
-import { ApplyCtx, DataImportHandler, PlannedRow, upper } from '../../hr/import/import-types';
+import type { ApplyCtx, DataImportHandler, PlannedRow } from '../../core/import-export/data-transfer.types';
+import { upper } from '../../core/import-export/data-transfer.types';
 import { CAPACITY_WINDOW_NIGHTS, firstOverCapacityNight, type OccupantPlan } from '../attendance/camp-rooms.service';
 import { getRosterSettings } from '../common/camp-lookup';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
