@@ -25,7 +25,13 @@ test.describe('v0.2.3 — Feed v0', () => {
     await page.getByRole('button', { name: 'Юу болж байна?' }).click();
     await page.getByPlaceholder('Юу болж байна?').fill(BODY);
     await page.locator('input[type="file"]').setInputFiles({ name: 'red.png', mimeType: 'image/png', buffer: PNG });
+    const mediaResponsePromise = page.waitForResponse((response) =>
+      response.url().includes('/api/v1/core/feed/media/'),
+    );
     await page.getByRole('button', { name: 'Нийтлэх' }).click();
+    const mediaResponse = await mediaResponsePromise;
+    const mediaError = mediaResponse.status() === 200 ? '' : await mediaResponse.text();
+    expect(mediaResponse.status(), `Feed media response ${mediaResponse.status()} (${mediaResponse.url()}): ${mediaError}`).toBe(200);
     const post = page.getByTestId('feed-post').filter({ hasText: BODY });
     await expect(post).toBeVisible();
     const img = post.locator('img').first();

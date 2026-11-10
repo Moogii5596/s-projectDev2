@@ -9,8 +9,16 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PrismaClient, TierType, UserRole } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
+import Redis from 'ioredis';
 import { assertLocalUrl, parseDotenv } from './test-user';
-import { FixtureAuth, FixtureDb, FixtureFile, setupFixture, teardownFixture } from './e2e-fixture';
+import {
+  DEBUG_TEST_MODULE_IDS,
+  FixtureAuth,
+  FixtureDb,
+  FixtureFile,
+  setupFixture,
+  teardownFixture,
+} from './e2e-fixture';
 
 function loadEnv(): void {
   // src/scripts → apps/core-kernel → apps → repo root
@@ -41,6 +49,14 @@ async function main(): Promise<void> {
   const admin = createClient(supabaseUrl, serviceKey, opts).auth.admin;
   const anon = createClient(supabaseUrl, anonKey, opts).auth;
   const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
+  const invalidateModuleCache = async (tenantIds: string[]) => {
+    const redis = new Redis(process.env.REDIS_URL?.trim() || 'redis://127.0.0.1:6379');
+    try {
+      await redis.del(...tenantIds.map((tenantId) => `tenant:modules:${tenantId}`));
+    } finally {
+      redis.disconnect();
+    }
+  };
 
   const auth: FixtureAuth = {
     async createUser(email, password) {
@@ -72,6 +88,70 @@ async function main(): Promise<void> {
     },
     async createCoreUser(u) {
       return (await prisma.coreUser.create({ data: { ...u, role: UserRole[u.role] } })).id;
+    },
+    async activateDebugModules({ tenantIds, devTenantId, users }) {
+      const previous = await prisma.installedModule.findMany({
+        where: { tenantId: devTenantId, moduleId: { in: [...DEBUG_TEST_MODULE_IDS] } },
+        select: { moduleId: true, status: true },
+      });
+      const previousById = new Map(previous.map((module) => [module.moduleId, module.status]));
+      await prisma.$transaction(async (tx) => {
+        await Promise.all(tenantIds.flatMap((tenantId) => DEBUG_TEST_MODULE_IDS.map((moduleId) =>
+          tx.installedModule.upsert({
+            where: { tenantId_moduleId: { tenantId, moduleId } },
+            create: {
+              tenantId,
+              moduleId,
+              version: 'test',
+              status: 'ACTIVE',
+              manifestSnapshot: { moduleId },
+            },
+            update: { status: 'ACTIVE' },
+          }),
+        )));
+        for (const user of users) {
+          const existing = await tx.coreUserPermission.findFirst({
+            where: {
+              tenantId: user.tenantId,
+              userId: user.userId,
+              permissionCode: 'core.debug.view',
+              campId: null,
+            },
+            select: { id: true },
+          });
+          if (!existing) {
+            await tx.coreUserPermission.create({
+              data: {
+                tenantId: user.tenantId,
+                userId: user.userId,
+                permissionCode: 'core.debug.view',
+                source: 'DIRECT',
+                createdBy: user.userId,
+              },
+            });
+          }
+        }
+      });
+      await invalidateModuleCache(tenantIds);
+      return DEBUG_TEST_MODULE_IDS.map((moduleId) => ({
+        moduleId,
+        status: previousById.get(moduleId) ?? null,
+      }));
+    },
+    async restoreDebugModules(tenantId, states) {
+      await prisma.$transaction(async (tx) => {
+        for (const state of states) {
+          if (state.status === null) {
+            await tx.installedModule.deleteMany({ where: { tenantId, moduleId: state.moduleId } });
+          } else {
+            await tx.installedModule.updateMany({
+              where: { tenantId, moduleId: state.moduleId },
+              data: { status: state.status },
+            });
+          }
+        }
+      });
+      await invalidateModuleCache([tenantId]);
     },
     async deleteTenant(tenantId) {
       await prisma.tenant.deleteMany({ where: { id: tenantId } });

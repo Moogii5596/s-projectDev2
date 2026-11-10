@@ -20,24 +20,24 @@ test.describe('Multi-level Approval Workflow', () => {
     await req.goto(`/requisitions/${id}`);
     await expect(req.getByText('Алхам 1/2')).toBeVisible();
     await expect(req.getByText('Таны үүсгэсэн MR — батлагчийг хүлээж байна')).toBeVisible();
-    await expect(req.getByRole('button', { name: /батлах/i })).toHaveCount(0);
+    await expect(req.getByRole('main').getByRole('button', { name: /батлах/i })).toHaveCount(0);
 
     const a1 = await pageAs(browser, 'devAppr1');
     await a1.goto(`/requisitions/${id}`);
-    await a1.getByRole('button', { name: /батлах/i }).click();
+    await a1.getByRole('main').getByRole('button', { name: /батлах/i }).click();
     await expect(a1.getByText('Алхам 2/2')).toBeVisible({ timeout: 5_000 });
     await expect(a1.getByTestId('mr-step-0')).toHaveAttribute('data-state', 'done');
     await expect(a1.getByText(/Та энэ MR-г баталсан/)).toBeVisible();
-    await expect(a1.getByRole('button', { name: /батлах/i })).toHaveCount(0);
+    await expect(a1.getByRole('main').getByRole('button', { name: /батлах/i })).toHaveCount(0);
 
     const a2 = await pageAs(browser, 'devAppr2');
     await a2.goto(`/requisitions/${id}`);
-    await a2.getByRole('button', { name: /батлах/i }).click();
+    await a2.getByRole('main').getByRole('button', { name: /батлах/i }).click();
     await expect(a2.getByText('Батлагдсан', { exact: true })).toBeVisible({ timeout: 5_000 });
     await expect(a2.getByTestId('mr-step-1')).toHaveAttribute('data-state', 'done');
     // Approve хийсний дараа дахин approve/reject хийж болохгүй
-    await expect(a2.getByRole('button', { name: /батлах/i })).toHaveCount(0);
-    await expect(a2.getByRole('button', { name: /reject|татгалзах/i })).toHaveCount(0);
+    await expect(a2.getByRole('main').getByRole('button', { name: /батлах/i })).toHaveCount(0);
+    await expect(a2.getByRole('main').getByRole('button', { name: /reject|татгалзах/i })).toHaveCount(0);
   });
 
   test('Workflow Engine health check (API)', async ({ request }) => {

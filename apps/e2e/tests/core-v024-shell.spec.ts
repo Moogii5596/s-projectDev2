@@ -47,7 +47,7 @@ test.describe('v0.2.4 — апп-ын хүрээ, мэдэгдэл, Feed хол�
     await expect(page).toHaveURL(/\/notifications$/);
   });
 
-  test('«Миний батлах» нээгдэнэ; DEBUG_MENU_ENABLED=false үед Debug цэс алга', async ({ page }) => {
+  test('«Миний батлах» нээгдэнэ; core.debug.view эрхгүй үед Debug цэс алга', async ({ page }) => {
     await loginAsUser(page, 'devUserAdmin');
     await page.goto('/approvals');
     await expect(page.getByRole('button', { name: 'Миний батлах' })).toBeVisible();

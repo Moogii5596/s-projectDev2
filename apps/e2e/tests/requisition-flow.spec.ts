@@ -36,8 +36,8 @@ async function createAndSubmit(page: Page, title: string): Promise<string> {
 }
 
 test.describe('Material Requisition бүрэн урсгал', () => {
-  test('идэвхгүй Debug-only MR модульд ердийн хэрэглэгч нэвтрэхгүй', async ({ page }) => {
-    await loginAsUser(page, 'devReq');
+  test('core.debug.view эрхгүй хэрэглэгч Debug-only MR модульд нэвтрэхгүй', async ({ page }) => {
+    await loginAsUser(page, 'devUserAdmin');
     await page.goto('/debug/modules/mr');
     await expect(page.getByText('Танд энэ хэсэгт хандах эрх алга')).toBeVisible();
     await expect(page.getByRole('button', { name: /шинэ.*MR|new|үүсгэх|create/i })).toHaveCount(0);

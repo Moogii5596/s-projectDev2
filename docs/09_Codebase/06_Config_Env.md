@@ -2,7 +2,7 @@
 title: "Тохиргоо, env, script"
 type: "Guide"
 status: "Active"
-last_updated: 2026-11-07
+last_updated: 2026-11-10
 tags: [codebase, config, generated]
 ---
 
@@ -78,6 +78,9 @@ tags: [codebase, config, generated]
 | `SMTP_USER` |  |  |
 | `SMTP_PASS` | `***` |  |
 | `SMTP_FROM` |  | Илгээгч (хоосон бол SMTP_USER), жнь: S Project <noreply@gobiverse.website> |
+| `FILE_ENCRYPTION_KEY` | `***` | v0.2.4 FILE-01 (M-7): хавсралтын AES-256-GCM түлхүүр — base64, 32 байт (openssl rand -base64 32). ЗААВАЛ: хоосон бол JWT_SECRET-ээс гарна → JWT солиход бүх хавсралт уншигдахгүй. Солихгүй; нөөцөөс ТУСАД нь нууц үгийн менежерт хадгална (ADR-002). |
+| `MEDIA_URL_SECRET` | `***` | Зургийн гарын үсэгтэй URL-ийн нууц (заавал биш) — хоосон бол JWT_SECRET-ээс. Солиход өмнөх зургийн URL хүчингүй |
+| `DEBUG_MENU_ENABLED` | `false` | v0.2.4 Debug цэс (DBG-01) — pilot/staging-д анхдагчаар унтраалттай |
 
 ## `apps/web-shell/.env.example`
 

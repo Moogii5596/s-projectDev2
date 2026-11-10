@@ -13,9 +13,12 @@ export class TenantModuleGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<TenantRequest>();
-    const path = request.url.split('?')[0].replace(/^\/api\/v1(?=\/|$)/, '');
+    const requestUrl = new URL(request.url, 'http://localhost');
+    const path = requestUrl.pathname.replace(/^\/api\/v1(?=\/|$)/, '');
     const moduleId = moduleForApiPath(path) as TenantModuleId | undefined;
-    const tenantId = request.user?.tenantId;
+    const signedFeedMedia =
+      request.method === 'GET' && /^\/core\/feed\/media\/[^/]+\/\d+$/.test(path);
+    const tenantId = request.user?.tenantId ?? (signedFeedMedia ? requestUrl.searchParams.get('t') ?? undefined : undefined);
     if (!moduleId) return true;
     const module = TENANT_MODULES.find((item) => item.id === moduleId);
     if (!tenantId || (module?.debugOnly && !request.user?.id) || !(await this.modules.isActive(tenantId, moduleId))) {

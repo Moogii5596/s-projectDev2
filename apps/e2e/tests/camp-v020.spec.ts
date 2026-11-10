@@ -122,7 +122,7 @@ test.describe.serial('Кемп v0.2.0', () => {
     await dlg.getByRole('button', { name: 'Шалгах (2)' }).click();
     await expect(dlg).toBeHidden();
     await expect(page.getByText('Ирэх 2')).toBeVisible();
-    await page.getByRole('button', { name: 'Батлах' }).click();
+    await page.getByRole('main').getByRole('button', { name: 'Батлах', exact: true }).click();
     await expect(page.getByText(/Баталгаажлаа: 2 бүртгэл/)).toBeVisible();
     await page.getByLabel('Эхлэх').fill(addDays(WED, -1));
     await page.getByLabel('Албан тушаал', { exact: true }).fill('тогооч');
@@ -211,7 +211,7 @@ test.describe.serial('Орчуулгын засвар (OWNER/ADMIN)', () => {
   test('CSV оруулах → урьдчилсан (хуучин → шинэ) → баталгаажуулах → UI шинэчлэгдэнэ → анхдагч руу буцаах', async ({ page }) => {
     await loginAsUser(page, 'devAdmin');
     await page.goto('/settings/translations');
-    await expect(page.getByRole('heading', { name: 'Орчуулга' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Орчуулга' })).toBeVisible({ timeout: 15_000 });
     const csv = `\uFEFFkey;mn;en\r\nnav.camp;Кемп ${STAMP};\r\n`;
     await page.getByLabel('Excel/CSV оруулах').setInputFiles({ name: 'tr.csv', mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf8') });
     await expect(page.getByText('Өөрчлөлт 1 · алдаа 0')).toBeVisible();

@@ -59,7 +59,7 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
     await dlg.getByLabel('Код').fill('Кемп');
     await dlg.getByLabel('Нэр').fill(CAMP_NAME);
     await dlg.getByRole('button', { name: 'Хадгалах' }).click();
-    await expect(dlg.getByRole('alert')).toContainText('латин');
+    await expect(dlg.getByRole('alert')).toContainText('code талбар буруу байна');
     await dlg.getByLabel('Код').fill(CODE);
     await dlg.getByRole('button', { name: 'Хадгалах' }).click();
     await expect(dlg).toBeHidden();
@@ -69,10 +69,11 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
   test('тохиргоо: хоол идэх байршил + анхдагч байршил хадгалах', async ({ page }) => {
     await openCamp(page);
     await openSetting(page, 'Хоол идэх байршил');
-    await page.getByLabel('Шинэ байршлын нэр').fill('Кемпийн гал тогоо');
+    const locationName = page.getByRole('textbox').first();
+    await locationName.fill('Кемпийн гал тогоо');
     await page.getByRole('button', { name: 'Нэмэх' }).click();
     await expect(page.getByRole('cell', { name: 'Кемпийн гал тогоо' })).toBeVisible();
-    await page.getByLabel('Шинэ байршлын нэр').fill('Уулын хэсэг');
+    await locationName.fill('Уулын хэсэг');
     await page.getByRole('button', { name: 'Нэмэх' }).click();
     await expect(page.getByRole('cell', { name: 'Уулын хэсэг' })).toBeVisible();
 
@@ -80,7 +81,7 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
     await page.getByLabel('Анхдагч хоол идэх байршил').selectOption({ label: 'Кемпийн гал тогоо' });
     await page.getByLabel('Амрах хоног').fill('1');
     await page.getByRole('button', { name: 'Тохиргоо хадгалах' }).click();
-    await expect(page.getByText(/rosterOffDays ≥ 2/)).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText('rosterOffDays: rosterOffDays хамгийн бага утгаас бага байна');
     await page.getByLabel('Амрах хоног').fill('14');
     await page.getByRole('button', { name: 'Тохиргоо хадгалах' }).click();
     await expect(page.getByText('Хадгалагдлаа')).toBeVisible();
@@ -110,7 +111,7 @@ test.describe.serial('Кемп — тохиргоо, мастер өгөгдөл
     await page.getByRole('button', { name: '+ Хэлтэс' }).click();
     const dlg = page.getByRole('dialog');
     await dlg.getByLabel('Код').fill('MINE');
-    await dlg.getByLabel('Нэр').fill('Уулын хэсэг');
+    await dlg.getByLabel('Нэр — Монгол').fill('Уулын хэсэг');
     // v0.2.1 (Q1, Д-4): хэлтэст хоолны байршил байхгүй — ажилтан / албан тушаал дээр
     await expect(dlg.getByLabel('Хоол идэх байршил')).toHaveCount(0);
     await dlg.getByRole('button', { name: 'Хадгалах' }).click();

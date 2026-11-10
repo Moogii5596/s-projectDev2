@@ -48,10 +48,11 @@ test.describe.serial('Кемп v0.2.1', () => {
 
   test('Хүний нөөц › Албан тушаал: нэмэх; давхардсан нэр (зай/үсэг) → алдаа', async ({ page }) => {
     await page.goto(`/hr/${campId}/positions`);
-    await page.getByLabel('Шинэ албан тушаал').fill(POS);
+    const nameMn = page.locator('form').getByRole('textbox').first();
+    await nameMn.fill(POS);
     await page.getByRole('button', { name: 'Нэмэх', exact: true }).click();
     await expect(page.getByRole('cell', { name: POS, exact: true })).toBeVisible();
-    await page.getByLabel('Шинэ албан тушаал').fill(`  ${POS.toLowerCase()} `);
+    await nameMn.fill(`  ${POS.toLowerCase()} `);
     await page.getByRole('button', { name: 'Нэмэх', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText(POS);
     const list = await api<{ id: string; name: string }[]>(page, 'GET', '/hr/positions');
@@ -115,7 +116,7 @@ test.describe.serial('Кемп v0.2.1', () => {
 
   test('C-12: байрны төрөл (каталог) → байранд оноох; хөрөнгө байранд → өрөөний самбар / засварын хүсэлт', async ({ page }) => {
     await page.goto('/camp/system/building-types');
-    await page.getByLabel('Шинэ байрны төрөл').fill(BTYPE);
+    await page.locator('form').getByRole('textbox').first().fill(BTYPE);
     await page.getByRole('button', { name: 'Нэмэх', exact: true }).click();
     await expect(page.getByRole('cell', { name: BTYPE, exact: true })).toBeVisible();
 

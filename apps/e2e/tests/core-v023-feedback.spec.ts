@@ -57,8 +57,8 @@ test.describe('v0.2.3 — санал хүсэлт, шинэчлэлийн түү
     const nav = page.locator('nav');
     await expect(nav.getByText('Шинэ', { exact: true })).toBeVisible();
     await nav.getByRole('button', { name: /Шинэчлэлийн түүх/ }).click();
-    await expect(page.getByRole('heading', { name: 'Шинэчлэлийн түүх' })).toBeVisible();
-    await expect(page.getByText('Одоогийн')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Шинэчлэлийн түүх', exact: true })).toBeVisible();
+    await expect(page.getByText('Одоогийн', { exact: true })).toBeVisible();
     await expect(nav.getByText('Шинэ', { exact: true })).toHaveCount(0);
   });
 });

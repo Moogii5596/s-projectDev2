@@ -39,7 +39,7 @@ export function fixture(): Fixture {
 }
 
 /** Backend шууд (UI-гүй API тест) */
-const API_URL = process.env['E2E_API_URL'] ?? 'http://localhost:3000';
+const API_URL = process.env['E2E_API_URL'] ?? 'http://127.0.0.1:3000';
 
 /**
  * Хэрэглэгчийн token + tenant-ийн Host header. DEV tenant → Host-гүй (localhost → DEV_TENANT_SLUG).

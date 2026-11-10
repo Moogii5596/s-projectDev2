@@ -2,7 +2,16 @@
  * Phase 6.1.1 — E2E fixture логик (портоор, DB/Auth-гүй)
  */
 import { describe, expect, it, vi } from 'vitest';
-import { FIXTURE_USERS, FixtureAuth, FixtureDb, SIMPLE_STEPS, setupFixture, teardownFixture, tenantHost } from './e2e-fixture';
+import {
+  DEBUG_TEST_MODULE_IDS,
+  FIXTURE_USERS,
+  FixtureAuth,
+  FixtureDb,
+  SIMPLE_STEPS,
+  setupFixture,
+  teardownFixture,
+  tenantHost,
+} from './e2e-fixture';
 
 function fakes(opts: { failCreateUserAt?: number; devTenant?: string | null } = {}) {
   let n = 0;
@@ -21,6 +30,9 @@ function fakes(opts: { failCreateUserAt?: number; devTenant?: string | null } = 
     createTenant: vi.fn(async (_name: string, slug: string) => `id-${slug}`),
     createDefinition: vi.fn(async (_t: string, _n: string, _s: unknown): Promise<void> => undefined),
     createCoreUser: vi.fn(async (_u: Parameters<FixtureDb['createCoreUser']>[0]) => `core-${(n += 1)}`),
+    activateDebugModules: vi.fn(async (_input: Parameters<FixtureDb['activateDebugModules']>[0]) =>
+      DEBUG_TEST_MODULE_IDS.map((moduleId) => ({ moduleId, status: null }))),
+    restoreDebugModules: vi.fn(async (_tenantId: string, _states: Parameters<FixtureDb['restoreDebugModules']>[1]) => undefined),
     deleteTenant: vi.fn(async (_id: string): Promise<void> => undefined),
     cleanupDevTenant: vi.fn(async (_t: string, _ids: string[], _p: string): Promise<void> => undefined),
   } satisfies FixtureDb;
@@ -44,6 +56,13 @@ describe('setupFixture', () => {
     expect(Object.keys(f.users)).toEqual(Object.keys(FIXTURE_USERS));
     expect(f.users.wfAppr2).toMatchObject({ role: 'APPROVER', tenant: 'wf', email: 'e2e-wfappr2-42@example.com', password: 'pw' });
     expect(f.users.devAdmin.token).toBe('tok-e2e-devadmin-42@example.com');
+    expect(f.debugModuleStates).toEqual(DEBUG_TEST_MODULE_IDS.map((moduleId) => ({ moduleId, status: null })));
+    expect(db.activateDebugModules).toHaveBeenCalledTimes(1);
+    const [moduleSetup] = db.activateDebugModules.mock.calls[0]!;
+    expect(moduleSetup.tenantIds).toEqual(['dev-id', 'id-e2e-a-42', 'id-e2e-b-42', 'id-e2e-wf-42']);
+    expect(moduleSetup.users).toHaveLength(13);
+    expect(moduleSetup.users).not.toContainEqual(expect.objectContaining({ userId: 'core-14' }));
+    expect(moduleSetup.users).not.toContainEqual(expect.objectContaining({ userId: 'core-15' }));
     const tenantOf = (key: string) => db.createCoreUser.mock.calls.find((c) => c[0].email === `e2e-${key.toLowerCase()}-42@example.com`)![0].tenantId;
     expect(tenantOf('devReq')).toBe('dev-id');
     expect(tenantOf('bAdmin')).toBe('id-e2e-b-42');
@@ -74,6 +93,7 @@ describe('teardownFixture', () => {
     const errors = await teardownFixture({ auth, db }, f);
     expect(errors).toEqual(['tenant a: locked']);
     expect(db.deleteTenant).toHaveBeenCalledTimes(3);
+    expect(db.restoreDebugModules).toHaveBeenCalledWith('dev-id', f.debugModuleStates);
     const devIds = Object.values(f.users).filter((u) => u.tenant === 'dev').map((u) => u.coreId);
     expect(devIds).toHaveLength(6);
     expect(db.cleanupDevTenant).toHaveBeenCalledWith('dev-id', devIds, 'E2E-9');

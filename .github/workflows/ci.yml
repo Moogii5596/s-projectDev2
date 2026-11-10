@@ -103,6 +103,8 @@ jobs:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
     needs: test       # Unit/Integration дууссаны дараа
+    env:
+      DEBUG_MENU_ENABLED: 'true'
 
     services:
       redis:

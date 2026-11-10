@@ -36,6 +36,12 @@ type FixtureUserKey = keyof typeof FIXTURE_USERS;
 
 /** a, b-д MR илгээх боломжтой байх энгийн definition (wf-д тест өөрөө API-аар үүсгэнэ) */
 export const SIMPLE_STEPS = [{ order: 1, role: 'APPROVER', quorum: 1 }];
+export const DEBUG_TEST_MODULE_IDS = ['mr', 'workflow', 'budget', 'inventory', 'vendors', 'reports'] as const;
+
+export interface FixtureModuleState {
+  moduleId: (typeof DEBUG_TEST_MODULE_IDS)[number];
+  status: string | null;
+}
 
 interface FixtureTenant {
   id: string;
@@ -60,6 +66,8 @@ export interface FixtureFile {
   stamp: number;
   /** Тестийн үүсгэсэн бараа/нийлүүлэгчийн нэрний угтвар — teardown DEV tenant-аас устгана */
   prefix: string;
+  /** DEV tenant-ийн E2E-д түр асаасан debug module-уудын өмнөх төлөв */
+  debugModuleStates: FixtureModuleState[];
   devTenant: { id: string; slug: string };
   tenants: Record<FixtureTenantKey, FixtureTenant>;
   users: Record<FixtureUserKey, FixtureUser>;
@@ -76,6 +84,12 @@ export interface FixtureDb {
   createTenant(name: string, slug: string): Promise<string>;
   createDefinition(tenantId: string, name: string, steps: unknown): Promise<void>;
   createCoreUser(u: { tenantId: string; authId: string; email: string; fullName: string; role: FixtureRole }): Promise<string>;
+  activateDebugModules(input: {
+    tenantIds: string[];
+    devTenantId: string;
+    users: Array<{ tenantId: string; userId: string }>;
+  }): Promise<FixtureModuleState[]>;
+  restoreDebugModules(tenantId: string, states: FixtureModuleState[]): Promise<void>;
   deleteTenant(tenantId: string): Promise<void>;
   /** DEV tenant: e2e хэрэглэгчдийн MR (+workflow), батлалтын бичлэг, `prefix`-тэй бараа/нийлүүлэгч, core_users */
   cleanupDevTenant(tenantId: string, coreIds: string[], prefix: string): Promise<void>;
@@ -102,6 +116,7 @@ export async function setupFixture(
     version: 1,
     stamp,
     prefix: `E2E-${stamp}`,
+    debugModuleStates: [],
     devTenant: { id: devId, slug: opts.devSlug },
     tenants: {} as FixtureFile['tenants'],
     users: {} as FixtureFile['users'],
@@ -127,6 +142,17 @@ export async function setupFixture(
     for (const u of Object.values(partial.users)) {
       u.token = await deps.auth.signIn(u.email, u.password);
     }
+    const debugUsers = Object.entries(partial.users)
+      .filter(([key]) => key !== 'devUserAdmin' && key !== 'devLangAdmin')
+      .map(([, u]) => ({
+        tenantId: u.tenant === 'dev' ? devId : partial.tenants[u.tenant].id,
+        userId: u.coreId,
+      }));
+    partial.debugModuleStates = await deps.db.activateDebugModules({
+      tenantIds: [devId, ...Object.values(partial.tenants).map((tenant) => tenant.id)],
+      devTenantId: devId,
+      users: debugUsers,
+    });
     return partial;
   } catch (err) {
     const errors = await teardownFixture(deps, partial, createdAuth);
@@ -138,7 +164,7 @@ export async function setupFixture(
 /** Алдаа гарсан ч бусдыг үргэлжлүүлнэ; алдааны жагсаалт буцаана */
 export async function teardownFixture(
   deps: { auth: FixtureAuth; db: FixtureDb },
-  file: Pick<FixtureFile, 'prefix' | 'devTenant' | 'tenants' | 'users'>,
+  file: Pick<FixtureFile, 'prefix' | 'debugModuleStates' | 'devTenant' | 'tenants' | 'users'>,
   extraAuthIds: string[] = [],
 ): Promise<string[]> {
   const errors: string[] = [];
@@ -152,6 +178,9 @@ export async function teardownFixture(
 
   for (const [key, t] of Object.entries(file.tenants ?? {})) {
     if (t?.id) await attempt(`tenant ${key}`, () => deps.db.deleteTenant(t.id));
+  }
+  if (file.devTenant?.id && file.debugModuleStates?.length) {
+    await attempt('DEV debug modules', () => deps.db.restoreDebugModules(file.devTenant.id, file.debugModuleStates));
   }
   const users = Object.values(file.users ?? {}) as FixtureUser[];
   const devCoreIds = users.filter((u) => u.tenant === 'dev' && u.coreId).map((u) => u.coreId);

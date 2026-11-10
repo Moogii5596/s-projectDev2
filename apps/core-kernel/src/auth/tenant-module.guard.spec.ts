@@ -42,6 +42,24 @@ describe('TenantModuleGuard (SYS-02)', () => {
     expect(modules.canViewDebugModules).toHaveBeenCalledWith('tenant-id', 'auth-id');
   });
 
+  it('signed Feed media endpoint-д query tenant ашиглах боловч модулийн идэвхийг шалгана', async () => {
+    const modules = { isActive: vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false), canViewDebugModules: vi.fn() };
+    const guard = new TenantModuleGuard(modules as never);
+    const context = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          method: 'GET',
+          url: '/api/v1/core/feed/media/media-id/480?t=tenant-id&e=123&s=signature',
+        }),
+      }),
+    } as ExecutionContext;
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(NotFoundException);
+    expect(modules.isActive).toHaveBeenNthCalledWith(1, 'tenant-id', 'feed');
+    expect(modules.isActive).toHaveBeenNthCalledWith(2, 'tenant-id', 'feed');
+  });
+
   it('module-д хамаарахгүй замыг өөрчлөхгүй нэвтрүүлнэ', async () => {
     const modules = { isActive: vi.fn() };
     const guard = new TenantModuleGuard(modules as never);

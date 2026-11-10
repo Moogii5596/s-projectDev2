@@ -90,7 +90,7 @@ test.describe.serial('Кемп — өдөр тутмын ажиллагаа', ()
       buffer: await xlsx([[ec(1), WED, 'ARRIVAL'], [ec(2), WED, 'ARRIVAL'], [ec(3), TODAY, 'ARRIVAL']]),
     });
     await expect(page.getByText('Алдаатай 1')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Батлах' })).toBeDisabled();
+    await expect(page.getByRole('main').getByRole('button', { name: 'Батлах', exact: true })).toBeDisabled();
     await expect(page.getByText(/хоол заавал|meals заавал/).first()).toBeVisible();
     await page.getByRole('button', { name: 'Цуцлах' }).first().click();
     await expect(page.getByText('Алдаатай 1')).toBeHidden(); // цуцлалт дууссаны дараа шинэ файл (уралдаан — TEST-026)
@@ -101,7 +101,7 @@ test.describe.serial('Кемп — өдөр тутмын ажиллагаа', ()
       buffer: await xlsx([[ec(1), WED, 'ARRIVAL'], [ec(2), WED, 'ARRIVAL'], [ec(3), TODAY, 'ARRIVAL', 'LUNCH,DINNER']]),
     });
     await expect(page.getByText('Алдаагүй')).toBeVisible();
-    await page.getByRole('button', { name: 'Батлах' }).click();
+    await page.getByRole('main').getByRole('button', { name: 'Батлах', exact: true }).click();
     await expect(page.getByText(/Баталгаажлаа: 3 бүртгэл/)).toBeVisible();
     await expect(page.getByRole('cell', { name: new RegExp(`${ec(1)} Бат`) })).toBeVisible();
   });

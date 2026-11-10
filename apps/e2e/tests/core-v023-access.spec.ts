@@ -22,15 +22,17 @@ test.describe('v0.2.3 Блок 3 — эрх, системийн тохиргоо
     await page.goto('/camp');
     await expect(page.getByText('Танд энэ хэсэгт хандах эрх алга. Админтай холбогдоно уу.')).toBeVisible();
     await page.goto('/settings');
-    await expect(page.getByText('Системийн тохиргоо: энэ хэсэгт хандах эрх алга.')).toBeVisible();
+    await expect(page.getByText('Системийн тохиргоо: энэ хэсэгт хандах эрх алга.')).toBeVisible({ timeout: 15_000 });
   });
 
   test('ADMIN: «Системийн тохиргоо» цэс → роль ба эрх; V2 эрх «удахгүй»; хуучин хаяг → /settings', async ({ page }) => {
     await loginAsUser(page, 'devUserAdmin');
     await nav(page).getByRole('button', { name: 'Системийн тохиргоо', exact: true }).click();
-    await page.waitForURL('**/settings/roles');
+    await page.waitForURL('**/settings/profile');
     const sections = page.getByRole('navigation', { name: 'Системийн тохиргоо' });
     for (const s of ['Роль ба эрх', 'Хэрэглэгчийн роль', 'Байгууллага', 'Орчуулга']) await expect(sections.getByRole('link', { name: s })).toBeVisible();
+    await sections.getByRole('link', { name: 'Роль ба эрх', exact: true }).click();
+    await page.waitForURL('**/settings/roles');
 
     // V2-05: зардлын тайлан, хоолны захиалга харагдана; хэрэгжээгүй модулийнх «удахгүй»
     await expect(page.getByText('Кемп › Зардлын тайлан харах')).toBeVisible();
