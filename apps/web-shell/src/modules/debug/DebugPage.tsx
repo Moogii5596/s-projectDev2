@@ -116,6 +116,36 @@ function HealthTab() {
           c={{ ok: h.storage.ok, error: h.storage.error }}
           extra={h.storage.ok && <span className="text-xs text-gray-500">{h.storage.files} · {formatBytes(h.storage.bytes ?? 0, locale)} · {t('debug.health.free')} {formatBytes(h.storage.diskFreeBytes ?? 0, locale)} / {formatBytes(h.storage.diskTotalBytes ?? 0, locale)}</span>}
         />
+        <Row
+          k={t('debug.health.storage_db')}
+          v={(
+            <span className="flex flex-wrap items-center gap-2 font-sans">
+              <span>
+                {h.storageDbWarning.combinedBytes === null
+                  ? t('debug.health.storage_db_unavailable')
+                  : t('debug.health.storage_db_total', {
+                      total: formatBytes(h.storageDbWarning.combinedBytes, locale),
+                      threshold: h.storageDbWarning.thresholdGb,
+                    })}
+              </span>
+              <Badge tone={
+                !h.storageDbWarning.configValid || h.storageDbWarning.overThreshold
+                  ? 'red'
+                  : h.storageDbWarning.overThreshold === null
+                    ? 'gray'
+                    : 'green'
+              }>
+                {!h.storageDbWarning.configValid
+                  ? t('debug.health.storage_threshold_invalid')
+                  : h.storageDbWarning.overThreshold === null
+                    ? t('debug.health.storage_db_unavailable')
+                    : h.storageDbWarning.overThreshold
+                      ? t('debug.health.storage_threshold_exceeded')
+                      : t('debug.health.storage_threshold_ok')}
+              </Badge>
+            </span>
+          )}
+        />
       </Card>
       <Card title={t('debug.health.queues')}>
         {h.queues.error ? <ErrorBox error={h.queues.error} /> : (
