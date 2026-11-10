@@ -21,6 +21,7 @@ import { CampAuditService } from '../../camp/common/camp-audit.service';
 import { CoreTenantModulesService } from '../modules/core-tenant-modules.service';
 import { PERMISSIONS } from '../permissions/permission-registry';
 import { ScheduledJobRegistry } from '../scheduler/scheduled-job.registry';
+import { evaluateDebugStorageWarning } from './debug-storage-warning';
 
 type Tx = Prisma.TransactionClient;
 
@@ -127,6 +128,11 @@ export class DebugService {
       gotrue: { ok: gotrue.ok, ms: gotrue.ms, error: gotrue.error ?? null },
       smtp: { configured: this.mailer.isEnabled() },
       storage: { ok: storage.ok, error: storage.error ?? null, ...(storage.value ?? {}) },
+      storageDbWarning: evaluateDebugStorageWarning(
+        db.ok ? db.value?.sizeBytes : undefined,
+        storage.ok ? storage.value?.bytes : undefined,
+        process.env['PILOT_STORAGE_DB_WARN_GB'],
+      ),
       queues,
       cron,
     };

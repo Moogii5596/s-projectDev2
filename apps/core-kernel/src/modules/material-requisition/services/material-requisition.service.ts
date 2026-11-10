@@ -25,6 +25,7 @@ import { ApprovalEngineService, LEGACY_ENTITY_TYPE } from '../../core/approvals/
 import { ApprovalEntityRegistry, type ApprovalDecisionContext } from '../../core/approvals/approval-entity.registry';
 import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { SequenceService } from '../../core/sequences/sequence.service';
+import { todayUb } from '../../camp/common/camp-date';
 
 const MR_DETAIL_INCLUDE = {
   items: { orderBy: { lineNumber: 'asc' } },
@@ -616,7 +617,7 @@ export class MaterialRequisitionService {
    * Кемпийн ZAS дугаартай ижил загвар (camp-maintenance.service.ts).
    */
   private async generateMrNumber(tx: TenantTx, tenantId: string): Promise<string> {
-    const year = new Date().getFullYear();
+    const year = Number(todayUb().slice(0, 4));
     return this.sequences.next(tx, {
       tenantId,
       module: 'mr',

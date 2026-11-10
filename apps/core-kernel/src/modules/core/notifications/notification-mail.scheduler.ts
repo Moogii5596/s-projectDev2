@@ -15,6 +15,7 @@ const BATCH = 20;
 const MAX_ATTEMPTS = 5;
 /** Барьсан мөрийг бусад instance дахин авахгүй байх хугацаа (илгээлт дуусахаас өмнө process унтарвал дахин оролдоно) */
 const CLAIM_MS = 5 * 60_000;
+export const NOTIFICATION_MAIL_CRON = '0 * * * * *';
 
 interface ClaimedRow {
   id: string;
@@ -47,10 +48,10 @@ export class NotificationMailScheduler {
     private readonly jobs: ScheduledJobRegistry,
     private readonly config?: ConfigService,
   ) {
-    this.jobs.register({ id: 'notification-mail', module: 'core', cron: '0 * * * * *' });
+    this.jobs.register({ id: 'notification-mail', module: 'core', cron: NOTIFICATION_MAIL_CRON });
   }
 
-  @Cron('0 * * * * *', { name: 'notification-mail' })
+  @Cron(NOTIFICATION_MAIL_CRON, { name: 'notification-mail' })
   async onTick(): Promise<void> {
     if (this.config?.get<string>('NOTIFICATION_MAIL_CRON')?.trim().toLowerCase() === 'off') return;
     await this.jobs.run('notification-mail', async () => {

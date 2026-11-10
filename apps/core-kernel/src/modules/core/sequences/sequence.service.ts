@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { badRequest, conflict } from '../../../common/i18n/app-error';
 import { TENANT_MODULES, type ModuleManifest } from '../modules/module-registry';
 
 type Tx = Prisma.TransactionClient;
+const SEQUENCE_MARKER = '\0';
 
 export interface SequenceInput {
   tenantId: string;
@@ -23,32 +25,42 @@ interface ModuleSequence {
   pattern: string;
 }
 
+export function resolveSequencePattern(
+  pattern: string,
+  year: number,
+  values: Readonly<Record<string, string | number>> = {},
+): { prefix: string; suffix: string; digits: number } {
+  const token = /\{(N+)\}/g;
+  const match = token.exec(pattern);
+  if (!match || token.exec(pattern)) throw badRequest('core.sequence.pattern_invalid', { pattern });
+  const digitsToken = match[1];
+  if (!digitsToken) throw badRequest('core.sequence.pattern_invalid', { pattern });
+  const format = pattern.replace(/\{(N+)\}|\{([A-Za-z][A-Za-z0-9]*)\}/g, (_token, width: string | undefined, name: string | undefined) => {
+    if (width) return SEQUENCE_MARKER;
+    if (name === 'YYYY') return String(year);
+    if (!name) throw badRequest('core.sequence.pattern_invalid', { pattern });
+    const value = values[name];
+    if (value === undefined) throw badRequest('core.sequence.value_missing', { name });
+    return String(value);
+  });
+  if (/\{[^}]+\}/.test(format)) throw badRequest('core.sequence.pattern_invalid', { pattern });
+  const marker = format.indexOf(SEQUENCE_MARKER);
+  if (marker < 0 || format.indexOf(SEQUENCE_MARKER, marker + 1) >= 0) {
+    throw badRequest('core.sequence.pattern_invalid', { pattern });
+  }
+  return {
+    prefix: format.slice(0, marker),
+    suffix: format.slice(marker + SEQUENCE_MARKER.length),
+    digits: digitsToken.length,
+  };
+}
+
 @Injectable()
 export class SequenceService {
   async next(tx: Tx, input: SequenceInput): Promise<string> {
     const definition = SEQUENCES.find((sequence) => sequence.module === input.module && sequence.key === input.key);
-    if (!definition) throw new Error(`Дугаарлалтын төрөл manifest-д бүртгэгдээгүй: ${input.module}.${input.key}`);
-
-    const token = /\{(N+)\}/g;
-    const match = token.exec(definition.pattern);
-    if (!match || token.exec(definition.pattern)) throw new Error(`Дугаарлалтын загвар буруу: ${input.key}`);
-    const digitsToken = match[1];
-    if (!digitsToken) throw new Error(`Дугаарлалтын загвар буруу: ${input.key}`);
-    const digits = digitsToken.length;
-    const format = definition.pattern.replace(/\{(N+)\}|\{([A-Za-z][A-Za-z0-9]*)\}/g, (_token, width: string | undefined, name: string | undefined) => {
-      if (width) return '{sequence}';
-      if (name === 'YYYY') return String(input.year);
-      if (!name) throw new Error(`Дугаарлалтын загвар буруу: ${input.key}`);
-      const value = input.values?.[name];
-      if (value === undefined) throw new Error(`Дугаарлалтын утга дутуу: ${name}`);
-      return String(value);
-    });
-    const sequenceMarker = format.indexOf('{sequence}');
-    if (sequenceMarker < 0 || format.indexOf('{sequence}', sequenceMarker + 1) >= 0) {
-      throw new Error(`Дугаарлалтын загварын sequence token буруу: ${input.key}`);
-    }
-    const prefix = format.slice(0, sequenceMarker);
-    const suffix = format.slice(sequenceMarker + '{sequence}'.length);
+    if (!definition) throw badRequest('core.sequence.type_unknown', { module: input.module, key: input.key });
+    const { prefix, suffix, digits } = resolveSequencePattern(definition.pattern, input.year, input.values);
     const rows = await tx.$queryRaw<{ current_value: number }[]>`
       INSERT INTO core_sequences (tenant_id, sequence_type, scope_key, prefix, sequence_year, digits, current_value)
       VALUES (
@@ -68,7 +80,8 @@ export class SequenceService {
       RETURNING current_value
     `;
     const value = rows[0]?.current_value;
-    if (!Number.isSafeInteger(value) || value < 1) throw new Error(`Дугаарлалтын өгөгдөл буруу: ${input.key}`);
+    if (value === undefined) throw conflict('core.sequence.digits_mismatch', { key: input.key, digits });
+    if (!Number.isSafeInteger(value) || value < 1) throw conflict('core.sequence.counter_invalid', { key: input.key });
     return `${prefix}${String(value).padStart(digits, '0')}${suffix}`;
   }
 }

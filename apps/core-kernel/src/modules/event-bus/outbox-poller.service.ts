@@ -11,6 +11,7 @@ import { ScheduledJobRegistry } from '../core/scheduler/scheduled-job.registry';
 
 const OUTBOX_MAX_RETRIES = 3;
 export const OUTBOX_BATCH = 50;
+export const OUTBOX_POLLER_CRON = '*/5 * * * * *';
 /** retry n (1-ээс) → 30с, 120с, 480с */
 export const outboxBackoffSeconds = (attempt: number): number => 30 * Math.pow(4, attempt - 1);
 
@@ -34,14 +35,14 @@ export class OutboxPollerService {
     private readonly jobs: ScheduledJobRegistry,
     private readonly config?: ConfigService,
   ) {
-    this.jobs.register({ id: 'outbox-poller', module: 'core', cron: '*/5 * * * * *' });
+    this.jobs.register({ id: 'outbox-poller', module: 'core', cron: OUTBOX_POLLER_CRON });
   }
 
   /**
    * 5 секунд бүр. `OUTBOX_POLLER_CRON=off` → cron алгасна (integration тест: зэрэгцээ ажиллах тест файлуудын
    * app-ууд бие биеийн outbox-ийг боловсруулахаас сэргийлнэ; тест `pollAndPublish()`-ийг шууд дуудна).
    */
-  @Cron('*/5 * * * * *', { name: 'outbox-poller' })
+  @Cron(OUTBOX_POLLER_CRON, { name: 'outbox-poller' })
   async onTick(): Promise<void> {
     if (this.config?.get<string>('OUTBOX_POLLER_CRON')?.trim().toLowerCase() === 'off') return;
     await this.jobs.run('outbox-poller', () => this.pollAndPublish());
@@ -54,9 +55,9 @@ export class OutboxPollerService {
       try {
         handled = await this.processNext();
       } catch (err) {
-        // DB алдаа (холболт г.м.) — энэ tick-ийг зогсооно, дараагийн tick дахин оролдоно
-        this.logger.error(`Outbox poll алдаа: ${(err as Error).message}`);
-        break;
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.error(`Outbox poll алдаа: ${message}`);
+        throw err;
       }
       if (!handled) break;
       processed += 1;

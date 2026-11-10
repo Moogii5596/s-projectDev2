@@ -135,8 +135,17 @@ export class ApprovalsService {
     const types = await this.visibleTypes(tenantId, authId);
     await inTenantTx(this.prisma, tenantId, async (tx) => {
       const me = await this.me(tx, tenantId, authId);
-      const row = await tx.workflowInstance.findFirst({ where: { id, tenantId }, select: { entityType: true } });
+      const row = await tx.workflowInstance.findFirst({
+        where: { id, tenantId },
+        include: { stepLogs: { select: { actorId: true, onBehalfOf: true } } },
+      });
       if (!row || !types.some((t) => t.entityType === row.entityType)) throw notFound('core.approvals.not_found');
+      const actor = (await this.engine.loadActor(tx, tenantId, me))!;
+      const canDecide = await this.engine.canDecide(tx, tenantId, me, row);
+      const involved = row.requesterId === me || row.stepLogs.some((log) => log.actorId === me || log.onBehalfOf === me);
+      if (!canDecide && !involved && actor.role !== 'OWNER' && actor.role !== 'ADMIN') {
+        throw notFound('core.approvals.not_found');
+      }
       await this.engine.decide(tx, tenantId, { instanceId: id, actorId: me, action: dto.action === 'APPROVE' ? 'APPROVED' : 'REJECTED', comment: dto.comment });
     });
     return this.detail(tenantId, authId, id);
@@ -179,7 +188,7 @@ export class ApprovalsService {
     });
     await inTenantTx(this.prisma, tenantId, async (tx) => {
       const actorId = await this.access.requireTenantAdmin(tx, tenantId, authId);
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`approval-def:${tenantId}:${dto.entityType}`}))`;
+      await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext(${`approval-def:${tenantId}:${dto.entityType}`}))`;
       const last = await tx.workflowDefinition.findFirst({ where: { tenantId, entityType: dto.entityType }, orderBy: { version: 'desc' }, select: { version: true } });
       await tx.workflowDefinition.updateMany({ where: { tenantId, entityType: dto.entityType, isActive: true }, data: { isActive: false } });
       const created = await tx.workflowDefinition.create({

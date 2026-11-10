@@ -9,6 +9,8 @@ import { NotificationService } from '../notifications/notification.service';
 import { ApprovalEntityRegistry } from './approval-entity.registry';
 import { ScheduledJobRegistry } from '../scheduler/scheduled-job.registry';
 
+export const APPROVAL_SLA_CRON = '*/15 * * * *';
+
 /**
  * v0.2.4 Блок 6 (WF-06, WF-01) — SLA хэтэрсэн алхмын escalation.
  *   - Алхмыг АЛГАСАХГҮЙ (WF-01-ийн засвар): SLA мөр ESCALATED, хариуцагч = tenant admin (OWNER/ADMIN — аль ч алхмыг батлах эрхтэй),
@@ -27,10 +29,10 @@ export class ApprovalSlaScheduler {
     private readonly jobs: ScheduledJobRegistry,
     private readonly config?: ConfigService,
   ) {
-    this.jobs.register({ id: 'approval-sla', module: 'core', cron: '*/15 * * * *' });
+    this.jobs.register({ id: 'approval-sla', module: 'core', cron: APPROVAL_SLA_CRON });
   }
 
-  @Cron('*/15 * * * *', { name: 'approval-sla' })
+  @Cron(APPROVAL_SLA_CRON, { name: 'approval-sla' })
   async onTick(): Promise<void> {
     if (this.config?.get<string>('ESCALATION_CRON')?.trim().toLowerCase() === 'off') return;
     await this.jobs.run('approval-sla', async () => {

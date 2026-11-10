@@ -29,6 +29,7 @@ describe('OutboxPollerService', () => {
   let mockPublisher: any;
   let mockDlqService: any;
   let mockTx: any;
+  let mockJobs: any;
   let queue: unknown[][];
 
   beforeEach(() => {
@@ -42,11 +43,12 @@ describe('OutboxPollerService', () => {
     };
     mockPublisher = { publish: vi.fn().mockResolvedValue(undefined) };
     mockDlqService = { createDlqRecord: vi.fn().mockResolvedValue(undefined) };
-    const config = { get: (key: string) => process.env[key] };
-    service = new OutboxPollerService(mockPrisma as never, mockPublisher as never, mockDlqService as never, {
+    mockJobs = {
       register: vi.fn(),
       run: vi.fn((_id: string, task: () => Promise<unknown>) => task()),
-    } as never, config as never);
+    };
+    const config = { get: (key: string) => process.env[key] };
+    service = new OutboxPollerService(mockPrisma as never, mockPublisher as never, mockDlqService as never, mockJobs as never, config as never);
   });
 
   it('сонголт нь transaction ДОТОР, FOR UPDATE SKIP LOCKED LIMIT 1 [EVT-001]', async () => {
@@ -104,9 +106,15 @@ describe('OutboxPollerService', () => {
     expect(mockDlqService.createDlqRecord).toHaveBeenCalledWith(event, 'max retries', mockTx);
   });
 
-  it('DB алдаа → tick зогсоно (throw хийхгүй)', async () => {
+  it('DB алдаа → tick зогсоод scheduler-д FAILED тэмдэглэхээр дахин шиднэ', async () => {
     mockPrisma.$transaction.mockRejectedValueOnce(new Error('connection lost'));
-    await expect(service.pollAndPublish()).resolves.toBe(0);
+    await expect(service.pollAndPublish()).rejects.toThrow('connection lost');
+  });
+
+  it('onTick: DB алдаа → registry-д FAILED хүргэнэ', async () => {
+    mockPrisma.$transaction.mockRejectedValueOnce(new Error('connection lost'));
+    await expect(service.onTick()).rejects.toThrow('connection lost');
+    expect(mockJobs.run).toHaveBeenCalledWith('outbox-poller', expect.any(Function));
   });
 
   it('onTick: OUTBOX_POLLER_CRON=off → алгасна; тохируулаагүй → poll хийнэ', async () => {
