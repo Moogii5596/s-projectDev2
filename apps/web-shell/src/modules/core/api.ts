@@ -218,6 +218,7 @@ export interface DebugHealth {
   gotrue: DebugHealthCheck
   smtp: { configured: boolean }
   storage: { ok: boolean; error: string | null; bytes?: number; files?: number; diskFreeBytes?: number; diskTotalBytes?: number }
+  storageDbWarning: { thresholdGb: number | null; combinedBytes: number | null; overThreshold: boolean | null; configValid: boolean }
   queues: { outbox?: Record<string, number>; notificationEmail?: Record<string, number>; error?: string }
   cron: Array<{
     name: string

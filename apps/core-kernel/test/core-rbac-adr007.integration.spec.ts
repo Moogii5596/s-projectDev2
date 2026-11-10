@@ -9,7 +9,11 @@ import { PrismaClient, UserRole } from '@prisma/client';
 import { CampAccessService } from '../src/modules/camp/common/camp-access.service';
 import { CampAuditService } from '../src/modules/camp/common/camp-audit.service';
 import { CampRbacService } from '../src/modules/camp/rbac/camp-rbac.service';
-import { PERMISSIONS as P, PERMISSION_CODES } from '../src/modules/core/permissions/permission-registry';
+import {
+  isAdminBypassExcluded,
+  PERMISSIONS as P,
+  PERMISSION_CODES,
+} from '../src/modules/core/permissions/permission-registry';
 import { buildSnapshot, comparePerms } from '../src/scripts/camp-snapshot';
 import { ADMIN_DB_URL, APP_USER_DB_URL } from './helpers/db-urls';
 
@@ -33,7 +37,7 @@ describe('v0.2.3 Блок 2 — ADR-007 core RBAC (integration)', () => {
   let tA: string;
   let tB: string;
   let c1: string;
-  const auth = { owner: randomUUID(), u1: randomUUID() };
+  const auth = { owner: randomUUID(), u1: randomUUID(), u2: randomUUID() };
   const user: Record<string, string> = {};
   const role: Record<string, string> = {};
 
@@ -54,6 +58,7 @@ describe('v0.2.3 Блок 2 — ADR-007 core RBAC (integration)', () => {
     c1 = (await admin.camp.create({ data: { tenantId: tA, code: 'C1', name: 'Camp 1' } })).id;
     user.owner = (await admin.coreUser.create({ data: { tenantId: tA, authId: auth.owner, email: `o-${sfx}@it.test`, role: UserRole.OWNER } })).id;
     user.u1 = (await admin.coreUser.create({ data: { tenantId: tA, authId: auth.u1, email: `u1-${sfx}@it.test`, role: UserRole.REQUESTER } })).id;
+    user.u2 = (await admin.coreUser.create({ data: { tenantId: tA, authId: auth.u2, email: `u2-${sfx}@it.test`, role: UserRole.REQUESTER } })).id;
     user.b1 = (await admin.coreUser.create({ data: { tenantId: tB, authId: randomUUID(), email: `b1-${sfx}@it.test`, role: UserRole.REQUESTER } })).id;
     for (const r of await admin.coreRole.findMany({ where: { tenantId: tA }, select: { id: true, systemCode: true } })) if (r.systemCode) role[r.systemCode] = r.id;
   });
@@ -81,16 +86,56 @@ describe('v0.2.3 Блок 2 — ADR-007 core RBAC (integration)', () => {
     expect(await admin.coreRolePermission.count({ where: { permissionCode: 'camp.roles.manage' } })).toBe(0);
   });
 
-  it('шинэ tenant → 4 системийн роль шинэ кодоор (core_seed_default_roles); Кемп админ 13 эрх, hr.* багтсан', async () => {
+  it('шинэ tenant → 4 системийн роль шинэ кодоор; Кемп админ 15 эрх, core.* ба hr.* багтсан', async () => {
     expect(Object.keys(role).sort()).toEqual(['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN', 'EMPLOYEE']);
     const perms = async (code: string) =>
       (await admin.coreRolePermission.findMany({ where: { tenantId: tA, roleId: role[code] }, select: { permissionCode: true } })).map((r) => r.permissionCode).sort();
     const campAdmin = await perms('CAMP_ADMIN');
-    expect(campAdmin).toHaveLength(13);
-    expect(campAdmin).toEqual(expect.arrayContaining([P.EMPLOYEE_MANAGE, P.EMPLOYEE_TERMINATE, P.MOVEMENT_IMPORT, P.SHIFT_ADJUST]));
+    expect(campAdmin).toHaveLength(15);
+    expect(campAdmin).toEqual(expect.arrayContaining([
+      P.EMPLOYEE_MANAGE, P.EMPLOYEE_TERMINATE, P.MOVEMENT_IMPORT, P.SHIFT_ADJUST,
+      P.ORGANIZATION_MANAGE, P.EXCHANGE_RATE_MANAGE,
+    ]));
     for (const code of ['CAMP_ADMIN', 'CAMP_MANAGER', 'CATERING_ADMIN', 'EMPLOYEE']) {
       for (const c of await perms(code)) expect(PERMISSION_CODES).toContain(c);
     }
+  });
+
+  it('core permission grants map 1:1 to their existing camp grants', async () => {
+    await svc.assignUserRole(tA, auth.owner, { userId: user.u2, roleId: role.CAMP_ADMIN });
+    const roleGrants = await admin.$queryRaw<{ missing: bigint }[]>`
+      SELECT count(*) AS missing
+      FROM core_role_permissions old
+      WHERE old.tenant_id = ${tA}::uuid
+        AND old.permission_code IN ('camp.master.manage', 'camp.contract.manage')
+        AND NOT EXISTS (
+          SELECT 1 FROM core_role_permissions mapped
+          WHERE mapped.tenant_id = old.tenant_id
+            AND mapped.role_id = old.role_id
+            AND mapped.permission_code = CASE old.permission_code
+              WHEN 'camp.master.manage' THEN 'core.organization.manage'
+              ELSE 'core.exchange_rate.manage'
+            END
+        )`;
+    const userGrants = await admin.$queryRaw<{ missing: bigint }[]>`
+      SELECT count(*) AS missing
+      FROM core_user_permissions old
+      WHERE old.tenant_id = ${tA}::uuid
+        AND old.permission_code IN ('camp.master.manage', 'camp.contract.manage')
+        AND NOT EXISTS (
+          SELECT 1 FROM core_user_permissions mapped
+          WHERE mapped.tenant_id = old.tenant_id
+            AND mapped.user_id = old.user_id
+            AND mapped.site_id IS NOT DISTINCT FROM old.site_id
+            AND mapped.source = old.source
+            AND mapped.user_role_id IS NOT DISTINCT FROM old.user_role_id
+            AND mapped.permission_code = CASE old.permission_code
+              WHEN 'camp.master.manage' THEN 'core.organization.manage'
+              ELSE 'core.exchange_rate.manage'
+            END
+        )`;
+    expect(Number(roleGrants[0]?.missing)).toBe(0);
+    expect(Number(userGrants[0]?.missing)).toBe(0);
   });
 
   it('олголт → scope_type (generated): кемптэй = SITE, кемпгүй = TENANT; загварын эрх site_id-тай хуулагдана', async () => {
@@ -111,7 +156,10 @@ describe('v0.2.3 Блок 2 — ADR-007 core RBAC (integration)', () => {
     expect(me.byCamp[c1]).toEqual(expect.arrayContaining([P.SHIFT_ADJUST]));
     const owner = await svc.myPermissions(tA, auth.owner);
     expect(owner.permissions).not.toContain('camp.roles.manage');
-    expect(owner.permissions).toHaveLength(PERMISSION_CODES.length);
+    expect(owner.permissions).toHaveLength(PERMISSION_CODES.filter((code) => !isAdminBypassExcluded(code)).length);
+    expect(owner.permissions).not.toContain(P.DEBUG_VIEW);
+    expect(owner.permissions).not.toContain(P.DEBUG_MANAGE);
+    expect(owner.permissions).not.toContain(P.MR_APPROVE);
   });
 
   it('API хуучин/устгасан permission кодоос татгалзана', async () => {

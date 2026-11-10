@@ -14,6 +14,7 @@
  *
  * Зөвхөн УНШИНА (READ ONLY transaction). Хуучин хувилбарын schema дээр ч ажиллана: v0.1.6-д байсан багана л уншина.
  */
+import { createHash } from 'node:crypto';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { addDays } from '../modules/camp/common/camp-date';
 import { loadPresence } from '../modules/camp/attendance/camp-presence.service';
@@ -21,7 +22,7 @@ import { computeRoomBoard } from '../modules/camp/attendance/camp-rooms.service'
 import type { Tx } from '../modules/camp/common/camp-tx';
 import { RETIRED_PERMISSIONS } from '../modules/core/permissions/permission-registry';
 
-const SNAPSHOT_FORMAT = 'camp-snapshot/1';
+const SNAPSHOT_FORMAT = 'camp-snapshot/2';
 
 interface CampSnapshotDay {
   present: number;
@@ -50,6 +51,10 @@ export interface CampSnapshot {
   camps: Record<string, CampSnapshotCamp>;
   /** v0.2.2 — tenant slug → эрх (хуучин хэрэгслээр авсан файлд алга) */
   perms?: Record<string, CampSnapshotPerms>;
+  /** tenant slug → module id → status; null = тухайн schema-д хүснэгт байхгүй */
+  modules?: Record<string, Record<string, string> | null>;
+  /** tenant slug → key|lang → SHA-256(text); override-ийн агуулгыг snapshot-д хадгалахгүй */
+  i18nOverrides?: Record<string, Record<string, string> | null>;
 }
 
 export interface CampSnapshotPerms {
@@ -82,6 +87,8 @@ const SNAPSHOT_PERMISSION_MIGRATIONS: Readonly<Record<string, string>> = {
   'camp.employee.terminate': 'hr.employee.terminate',
   'camp.movement.import': 'hr.attendance.import',
   'camp.shift.adjust': 'hr.shift.adjust',
+  'core.organization.manage': 'camp.master.manage',
+  'core.exchange_rate.manage': 'camp.contract.manage',
 };
 
 /**
@@ -191,13 +198,17 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
   const legacy = Number(cols[0]?.n ?? 0) === 0;
 
   const permTables = await prisma.$queryRaw<{ table_name: string }[]>`SELECT table_name::text AS table_name FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name IN ('camp_user_permissions', 'core_user_permissions')`;
+    WHERE table_schema = 'public' AND table_name IN (
+      'camp_user_permissions', 'core_user_permissions', 'installed_modules', 'i18n_overrides'
+    )`;
   const names = new Set(permTables.map((r) => r.table_name));
   // v0.2.3+ → core_* (ADR-007); v0.2.2 → camp_* + effective; v0.2.1 → camp_* (legacy л)
   const permSchema: PermSchema = names.has('core_user_permissions') ? 'core' : names.has('camp_user_permissions') ? 'camp' : 'camp-legacy';
 
   const camps: Record<string, CampSnapshotCamp> = {};
   const perms: Record<string, CampSnapshotPerms> = {};
+  const modules: NonNullable<CampSnapshot['modules']> = {};
+  const i18nOverrides: NonNullable<CampSnapshot['i18nOverrides']> = {};
   for (const t of tenants) {
     await prisma.$transaction(
       async (tx) => {
@@ -231,6 +242,31 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
           };
         }
         perms[t.slug] = await loadPerms(tx as Tx, t.id, permSchema);
+        modules[t.slug] = names.has('installed_modules')
+          ? Object.fromEntries(
+              (
+                await tx.$queryRaw<{ moduleId: string; status: string }[]>`
+                  SELECT module_id AS "moduleId", status
+                  FROM installed_modules
+                  WHERE tenant_id = ${t.id}::uuid
+                  ORDER BY module_id`
+              ).map((row) => [row.moduleId, row.status]),
+            )
+          : null;
+        i18nOverrides[t.slug] = names.has('i18n_overrides')
+          ? Object.fromEntries(
+              (
+                await tx.$queryRaw<{ key: string; lang: string; text: string }[]>`
+                  SELECT key, lang, text
+                  FROM i18n_overrides
+                  WHERE tenant_id = ${t.id}::uuid
+                  ORDER BY key, lang`
+              ).map((row) => [
+                `${row.key}|${row.lang}`,
+                createHash('sha256').update(row.text, 'utf8').digest('hex'),
+              ]),
+            )
+          : null;
       },
       { timeout: 120_000, maxWait: 10_000, isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
@@ -243,6 +279,8 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
     to,
     camps,
     perms,
+    modules,
+    i18nOverrides,
   };
 }
 
@@ -332,6 +370,57 @@ export function comparePerms(a: CampSnapshot, b: CampSnapshot, expect: PermsExpe
   return out;
 }
 
+function compareModules(a: CampSnapshot, b: CampSnapshot): string[] {
+  const out: string[] = [];
+  if (!a.modules || !b.modules) {
+    if (a.modules || b.modules) out.push('modules: нэг файлд алга — шинэ camp:snapshot хэрэгслээр A ба B-г хоёуланг авна уу');
+    return out;
+  }
+  for (const slug of [...new Set([...Object.keys(a.modules), ...Object.keys(b.modules)])].sort()) {
+    const before = a.modules[slug];
+    const after = b.modules[slug];
+    if (before === undefined || after === undefined) {
+      out.push(`modules.${slug}: ${before === undefined ? 'A' : 'B'}-д алга`);
+      continue;
+    }
+    if (before === null || after === null) {
+      if (before !== after) out.push(`modules.${slug}: нэг хувилбарт хүснэгт алга`);
+      continue;
+    }
+    for (const id of Object.keys(before).sort()) {
+      if (!(id in after)) out.push(`modules.${slug}.${id}: B-д алга`);
+      else if (before[id] !== after[id]) out.push(`modules.${slug}.${id}: ${before[id]} → ${after[id]}`);
+    }
+  }
+  return out;
+}
+
+function compareI18nOverrides(a: CampSnapshot, b: CampSnapshot): string[] {
+  const out: string[] = [];
+  if (!a.i18nOverrides || !b.i18nOverrides) {
+    if (a.i18nOverrides || b.i18nOverrides) out.push('i18nOverrides: нэг файлд алга — шинэ camp:snapshot хэрэгслээр A ба B-г хоёуланг авна уу');
+    return out;
+  }
+  for (const slug of [...new Set([...Object.keys(a.i18nOverrides), ...Object.keys(b.i18nOverrides)])].sort()) {
+    const before = a.i18nOverrides[slug];
+    const after = b.i18nOverrides[slug];
+    if (before === undefined || after === undefined) {
+      out.push(`i18nOverrides.${slug}: ${before === undefined ? 'A' : 'B'}-д алга`);
+      continue;
+    }
+    if (before === null || after === null) {
+      if (before !== after) out.push(`i18nOverrides.${slug}: нэг хувилбарт хүснэгт алга`);
+      continue;
+    }
+    for (const key of [...new Set([...Object.keys(before), ...Object.keys(after)])].sort()) {
+      if (!(key in before)) out.push(`i18nOverrides.${slug}.${key}: +`);
+      else if (!(key in after)) out.push(`i18nOverrides.${slug}.${key}: −`);
+      else if (before[key] !== after[key]) out.push(`i18nOverrides.${slug}.${key}: агуулга өөрчлөгдсөн`);
+    }
+  }
+  return out;
+}
+
 /** Хоёр утгын зөрүүг "зам: a → b" хэлбэрээр (meta-г алгасна) */
 export function compareSnapshots(a: CampSnapshot, b: CampSnapshot, expect: PermsExpectation = 'none'): string[] {
   const out: string[] = [];
@@ -344,10 +433,12 @@ export function compareSnapshots(a: CampSnapshot, b: CampSnapshot, expect: Perms
     }
     if (x !== y) out.push(`${path}: ${JSON.stringify(x) ?? '(алга)'} → ${JSON.stringify(y) ?? '(алга)'}`);
   };
-  const { meta: _ma, format: _fa, perms: _pa, ...ra } = a;
-  const { meta: _mb, format: _fb, perms: _pb, ...rb } = b;
+  const { meta: _ma, format: _fa, perms: _pa, modules: _mda, i18nOverrides: _ia, ...ra } = a;
+  const { meta: _mb, format: _fb, perms: _pb, modules: _mdb, i18nOverrides: _ib, ...rb } = b;
   walk('', ra, rb);
   out.push(...comparePerms(a, b, expect));
+  out.push(...compareModules(a, b));
+  out.push(...compareI18nOverrides(a, b));
   return out;
 }
 
@@ -366,5 +457,11 @@ export function summarize(s: CampSnapshot): string[] {
       new Set(enforcedPerms(p).map((k) => k.split('|')[0])).size
     } · Кемп админ олголт ${p.campAdmins.length}`,
   );
-  return [...camps, ...perms];
+  const modules = Object.entries(s.modules ?? {}).map(([slug, items]) =>
+    `${slug}: модуль ${items ? Object.entries(items).map(([id, status]) => `${id}=${status}`).join(', ') : 'schema байхгүй'}`,
+  );
+  const overrides = Object.entries(s.i18nOverrides ?? {}).map(([slug, items]) =>
+    `${slug}: орчуулгын override ${items ? Object.keys(items).length : 'schema байхгүй'} мөр`,
+  );
+  return [...camps, ...perms, ...modules, ...overrides];
 }

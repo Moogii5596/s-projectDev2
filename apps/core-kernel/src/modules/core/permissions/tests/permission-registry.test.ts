@@ -37,7 +37,15 @@ describe('permission-registry (ADR-007)', () => {
     expect(permissionAvailableIn('camp.meal.order')).toBe('v1');
     expect(permissionAvailableIn('camp.meal.accept')).toBe('v1');
     expect(permissionAvailableIn('camp.contract.manage')).toBe('v1');
+    expect(permissionAvailableIn(PERMISSIONS.ORGANIZATION_MANAGE)).toBe('v1');
+    expect(permissionAvailableIn(PERMISSIONS.EXCHANGE_RATE_MANAGE)).toBe('v1');
     expect(permissionAvailableIn('core.unknown.x')).toBe('v2');
+  });
+
+  it('core shared permission labels exist in all web catalogs', () => {
+    for (const code of [PERMISSIONS.ORGANIZATION_MANAGE, PERMISSIONS.EXCHANGE_RATE_MANAGE]) {
+      for (const catalog of [mn, en, zh]) expect(Object.keys(catalog)).toContain(`perm.${code}`);
+    }
   });
 
   it('permission catalog бүр module manifest-д яг нэг удаа зарлагдсан', () => {

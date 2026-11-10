@@ -18,6 +18,8 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ISO_DATE, toBool, trim, trimOrNull } from '../common/camp-dto.util';
+import { CURRENCY, RATE } from '../../core/exchange-rates/exchange-rates.dto';
+export { CURRENCY, RATE } from '../../core/exchange-rates/exchange-rates.dto';
 import {
   CONTRACT_MEAL_TYPES,
   MANUAL_AMENDMENT_TYPES,
@@ -34,10 +36,8 @@ import {
 } from './contract.types';
 
 /** v0.2.3 Блок 6б — гэрээ, каталог, ханш. Мөнгө/ханш/хуваагч — string (Decimal) */
-export const CURRENCY = /^[A-Z]{3}$/;
 const CATALOG_CODE = /^[A-Z][A-Z0-9_]{0,39}$/;
 const MONEY = /^\d{1,16}(\.\d{1,2})?$/;
-export const RATE = /^\d{1,12}(\.\d{1,6})?$/;
 const VAT_RATE = /^\d{1,2}(\.\d{1,2})?$/;
 const DIVISOR = /^\d{1,6}(\.\d{1,2})?$/;
 

@@ -134,16 +134,6 @@ export interface ContractView extends ContractListItem {
   amendments: ContractAmendmentView[];
 }
 
-export interface ExchangeRateView {
-  id: string;
-  rateDate: string;
-  baseCurrency: string;
-  quoteCurrency: string;
-  rate: string;
-  sourceNote: string | null;
-  createdAt: string;
-}
-
 /** GET …/contracts/:id/quote — (огноо, ажил, тоо) → дүн (гэрээний валют) + төлбөрийн валютаар */
 export interface PriceQuote {
   date: string;

@@ -6,6 +6,8 @@ export const P = {
   SETTINGS_MANAGE: 'camp.settings.manage',
   MASTER_MANAGE: 'camp.master.manage',
   CONTRACT_MANAGE: 'camp.contract.manage',
+  ORGANIZATION_MANAGE: 'core.organization.manage',
+  EXCHANGE_RATE_MANAGE: 'core.exchange_rate.manage',
   EMPLOYEE_MANAGE: 'hr.employee.manage',
   /** v0.2.2 Блок 5 — ажлаас гаргах, дахин ажилд авах (Кемп админ) */
   EMPLOYEE_TERMINATE: 'hr.employee.terminate',

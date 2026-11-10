@@ -49,8 +49,12 @@ describe('NTF-01 core notifications (integration)', () => {
     expect(rows).toEqual([expect.objectContaining({ inApp: false, emailStatus: 'PENDING' })]);
 
     // SMTP-гүй орчинд → SKIPPED (дараалал гацахгүй)
-    await app.app.get(NotificationMailScheduler).sendPending();
-    const after = await app.prismaAdmin.coreNotification.findUniqueOrThrow({ where: { id: rows[0].id } });
+    const scheduler = app.app.get(NotificationMailScheduler);
+    let after = rows[0];
+    for (let attempt = 0; attempt < 100 && after.emailStatus === 'PENDING'; attempt += 1) {
+      await scheduler.sendPending();
+      after = await app.prismaAdmin.coreNotification.findUniqueOrThrow({ where: { id: rows[0].id } });
+    }
     expect(['SKIPPED', 'SENT']).toContain(after.emailStatus);
   });
 

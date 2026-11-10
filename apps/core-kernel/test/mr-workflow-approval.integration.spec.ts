@@ -25,7 +25,7 @@ import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { configureApp } from '../src/common/http/configure-app';
 import { ADMIN_DB_URL } from './helpers/db-urls';
-import { activateTestModules } from './helpers/activate-test-modules';
+import { activateTestModules, grantTestDebugAccess } from './helpers/activate-test-modules';
 
 const STAMP = Date.now();
 const SLUG = `wf-${STAMP}`;
@@ -123,6 +123,7 @@ beforeAll(async () => {
     if (!s?.session) throw new Error(`signIn ${who}`);
     tokens[who] = s.session.access_token;
   }
+  await grantTestDebugAccess(prismaAdmin, [tenantId]);
 }, 90_000);
 
 afterAll(async () => {
@@ -159,7 +160,7 @@ describe('🔐 Эрх [SEC-004]', () => {
     expect((await reject('req', id)).status).toBe(403);
     const v = await approve('viewer', id);
     expect(v.status).toBe(403);
-    expect(v.body.message).toBe('Энэ алхамд APPROVER эрх шаардлагатай');
+    expect(v.body.code).toBe('core.approvals.step_permission');
     expect((await reject('viewer', id)).status).toBe(403);
     expect((await prismaAdmin.mrHeader.findUniqueOrThrow({ where: { id } })).status).toBe(MrStatus.PENDING_APPROVAL);
     expect(await prismaAdmin.approvalLog.count({ where: { mrId: id } })).toBe(0);
@@ -200,10 +201,10 @@ describe('🪜 2 алхам (≥ 1,000,000): APPROVER quorum 2 → ADMIN', () =>
       status: 'PENDING',
       currentStep: 0,
       totalSteps: 2,
-      steps: [{ order: 1, role: 'APPROVER', quorum: 2 }, { order: 2, role: 'ADMIN', quorum: 1 }],
+      steps: [{ order: 0, role: 'APPROVER', quorum: 2 }, { order: 1, role: 'ADMIN', quorum: 1 }],
     });
     const inst = await instanceOf(id);
-    expect(inst.slaLogs.map((l) => [l.stepOrder, l.status])).toEqual([[1, 'PENDING']]);
+    expect(inst.slaLogs.map((l) => [l.stepOrder, l.status])).toEqual([[0, 'PENDING']]);
     expect([coreIds.appr1, coreIds.appr2, coreIds.appr3]).toContain(inst.slaLogs[0].assignedToId);
   });
 
@@ -226,8 +227,8 @@ describe('🪜 2 алхам (≥ 1,000,000): APPROVER quorum 2 → ADMIN', () =>
     expect(r.body.workflow).toMatchObject({ currentStep: 1, status: 'PENDING' });
     const inst = await instanceOf(id);
     expect(inst.slaLogs.map((l) => [l.stepOrder, l.status, l.assignedToId])).toEqual([
-      [1, 'COMPLETED', expect.any(String)],
-      [2, 'PENDING', coreIds.admin],
+      [0, 'COMPLETED', expect.any(String)],
+      [1, 'PENDING', coreIds.admin],
     ]);
     expect((await commitment(id))!.status).toBe('COMMITTED');
   });
@@ -235,7 +236,7 @@ describe('🪜 2 алхам (≥ 1,000,000): APPROVER quorum 2 → ADMIN', () =>
   it('2-р алхам: APPROVER (appr3) → 403 "ADMIN эрх"; ADMIN → APPROVED, төсөв SPENT, MR_APPROVED 1 удаа', async () => {
     const w = await approve('appr3', id);
     expect(w.status).toBe(403);
-    expect(w.body.message).toBe('Энэ алхамд ADMIN эрх шаардлагатай');
+    expect(w.body.code).toBe('core.approvals.step_permission');
 
     const r = await approve('admin', id);
     expect(r.status).toBe(200);
@@ -282,14 +283,14 @@ describe('🪜 2 алхам (≥ 1,000,000): APPROVER quorum 2 → ADMIN', () =>
     expect(inst.currentStep).toBe(1);
     expect(inst.stepLogs.filter((l) => l.action === 'APPROVED')).toHaveLength(2);
     expect(inst.slaLogs.map((l) => [l.stepOrder, l.status])).toEqual([
-      [1, 'COMPLETED'],
-      [2, 'PENDING'],
+      [0, 'COMPLETED'],
+      [1, 'PENDING'],
     ]);
   });
 });
 
 describe('🗂 Хуучин MR (workflow instance-гүй)', () => {
-  it('1 алхам APPROVER: VIEWER → 403, APPROVER → APPROVED (workflow LEGACY)', async () => {
+  it('анхны шийдвэрээр legacy алхмыг цөмийн workflow engine-д шилжүүлнэ', async () => {
     const mr = await prismaAdmin.mrHeader.create({
       data: {
         tenantId,
@@ -304,7 +305,13 @@ describe('🗂 Хуучин MR (workflow instance-гүй)', () => {
     const r = await approve('appr3', mr.id);
     expect(r.status).toBe(200);
     expect(r.body.status).toBe('APPROVED');
-    expect(r.body.workflow).toMatchObject({ instanceId: null, status: 'LEGACY' });
+    expect(r.body.workflow).toMatchObject({
+      status: 'APPROVED',
+      currentStep: 1,
+      totalSteps: 1,
+      steps: [{ order: 0, role: 'APPROVER', quorum: 1 }],
+    });
+    expect(r.body.workflow.instanceId).toEqual(expect.any(String));
   });
 });
 

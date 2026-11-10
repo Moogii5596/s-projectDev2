@@ -24,7 +24,9 @@ export interface ModuleManifest {
 export const TENANT_MODULES = [
   {
     id: 'core', defaultActive: true, required: true, debugOnly: false, requires: [], apiPrefixes: [],
-    permissionCodes: ['core.debug.view', 'core.debug.manage'],
+    permissionCodes: [
+      'core.debug.view', 'core.debug.manage', 'core.organization.manage', 'core.exchange_rate.manage',
+    ],
     notificationTypes: ['core.approval.requested', 'core.approval.decided', 'core.approval.overdue', 'core.invite.accepted'],
     attachmentTypes: [{ entityType: 'TENANT_LOGO', pii: false }],
     feedObjectTypes: ['CORE_FEEDBACK'],

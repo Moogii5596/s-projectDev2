@@ -141,7 +141,7 @@ describe('🔑 Каталог ба анхдагч роль', () => {
     expect(legacy.status).toBe(404);
     const me = await api().get('/api/v1/core/rbac/me/permissions').set(as('admin'));
     expect(me.status).toBe(200);
-    expect(me.body.modules).toEqual(['camp', 'feed', 'hr']); // v0.2.3 feed; v0.2.4: core.debug.*/mr.* tenant admin-д автоматаар биш
+    expect(me.body.modules).toEqual(['camp', 'core', 'feed', 'hr']); // v0.2.4 core permissions are tenant-admin grants.
     // ажилтны картаас нэвтрэх эрх — /camp-д үлдсэн (Deprecation-гүй)
     const opt = await api().get('/api/v1/core/rbac/invites/options').set(as('admin'));
     expect(opt.status).toBe(200);

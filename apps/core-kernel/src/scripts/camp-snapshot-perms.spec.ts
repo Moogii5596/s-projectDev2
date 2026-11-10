@@ -1,8 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { CampSnapshot, comparePerms, compareSnapshots, expectedQ9Additions, normalizePermKeys } from './camp-snapshot';
 
-const snap = (perms: CampSnapshot['perms']): CampSnapshot => ({
-  format: 'camp-snapshot/1', meta: { generatedAt: '', db: '', appVersion: null }, today: '2026-10-12', from: '', to: '', camps: {}, perms,
+const snap = (
+  perms: CampSnapshot['perms'],
+  extras: Pick<CampSnapshot, 'modules' | 'i18nOverrides'> = {},
+): CampSnapshot => ({
+  format: 'camp-snapshot/2',
+  meta: { generatedAt: '', db: '', appVersion: null },
+  today: '2026-10-12',
+  from: '',
+  to: '',
+  camps: {},
+  perms,
+  ...extras,
 });
 const PARTS = 'camp.maintenance.parts';
 const CLOSE = 'camp.maintenance.close';
@@ -72,6 +82,70 @@ describe('camp-snapshot perms — ADR-007 (v0.2.3): хуучин код ↔ ши
     const changed = { ...after, legacy: after.legacy.filter((k) => k !== 'u2|hr.shift.adjust|C1') };
     expect(comparePerms(snap({ t: before }), snap({ t: changed }))).toEqual([
       'perms.t: legacy/effective зөрүү өөрчлөгдсөн (1 мөр) — шилжүүлэлт эсвэл загварыг шалгана',
+    ]);
+  });
+});
+
+describe('camp-snapshot perms — v0.2.4 shared Core permissions', () => {
+  it('core organization/exchange-rate grants preserve the previous effective permissions (A = B)', () => {
+    const before = ['u1|camp.master.manage|*', 'u1|camp.contract.manage|C1'];
+    const after = [
+      ...before,
+      'u1|core.organization.manage|*',
+      'u1|core.exchange_rate.manage|C1',
+    ];
+    expect(normalizePermKeys(after)).toEqual(normalizePermKeys(before));
+    expect(comparePerms(
+      snap({ t: { legacy: before, effective: before, campAdmins: [] } }),
+      snap({ t: { legacy: after, effective: after, campAdmins: [] } }),
+    )).toEqual([]);
+  });
+});
+
+describe('camp-snapshot v0.2.4 module and translation preservation', () => {
+  it('existing module states are preserved; migration-added module defaults do not count as data loss', () => {
+    const before = snap(undefined, {
+      modules: { sinohydro: { core: 'ACTIVE', camp: 'ACTIVE', reports: 'SUSPENDED' } },
+    });
+    const after = snap(undefined, {
+      modules: { sinohydro: { core: 'ACTIVE', camp: 'ACTIVE', reports: 'SUSPENDED', feed: 'ACTIVE' } },
+    });
+    expect(compareSnapshots(before, after)).toEqual([]);
+  });
+
+  it('detects changed or removed module states', () => {
+    const before = snap(undefined, {
+      modules: { sinohydro: { camp: 'ACTIVE', reports: 'SUSPENDED' } },
+    });
+    const after = snap(undefined, {
+      modules: { sinohydro: { camp: 'SUSPENDED' } },
+    });
+    expect(compareSnapshots(before, after)).toEqual([
+      'modules.sinohydro.camp: ACTIVE → SUSPENDED',
+      'modules.sinohydro.reports: B-д алга',
+    ]);
+  });
+
+  it('detects added, removed, and changed translation overrides without exposing their text', () => {
+    const before = snap(undefined, {
+      i18nOverrides: { sinohydro: { 'camp.title|mn': 'hash-old', 'camp.submit|en': 'hash-kept' } },
+    });
+    const after = snap(undefined, {
+      i18nOverrides: { sinohydro: { 'camp.title|mn': 'hash-new', 'camp.extra|zh': 'hash-added' } },
+    });
+    expect(compareSnapshots(before, after)).toEqual([
+      'i18nOverrides.sinohydro.camp.extra|zh: +',
+      'i18nOverrides.sinohydro.camp.submit|en: −',
+      'i18nOverrides.sinohydro.camp.title|mn: агуулга өөрчлөгдсөн',
+    ]);
+  });
+
+  it('requires both snapshots to capture module and translation state', () => {
+    const before = snap(undefined);
+    const after = snap(undefined, { modules: {}, i18nOverrides: {} });
+    expect(compareSnapshots(before, after)).toEqual([
+      'modules: нэг файлд алга — шинэ camp:snapshot хэрэгслээр A ба B-г хоёуланг авна уу',
+      'i18nOverrides: нэг файлд алга — шинэ camp:snapshot хэрэгслээр A ба B-г хоёуланг авна уу',
     ]);
   });
 });

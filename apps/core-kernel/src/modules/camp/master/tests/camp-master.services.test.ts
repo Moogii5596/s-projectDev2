@@ -144,10 +144,12 @@ describe('CoreOrganizationsService (Шат 2.4)', () => {
     });
   });
 
-  it('create: кемпийн master.manage хангалтгүй → 403; давхар регистр → 409', async () => {
+  it('create: camp.master.manage хангалтгүй → 403; core.organization.manage шалгана', async () => {
     setActor(s.tx, { roles: [{ campId: 'c1', perms: [P.MASTER_MANAGE] }] });
     await expect(svc.create('t1', 'a1', { name: 'X', orgType: CampOrgType.MAIN })).rejects.toThrow(ForbiddenException);
     setActor(s.tx, { roles: [{ campId: null, perms: [P.MASTER_MANAGE] }] });
+    await expect(svc.create('t1', 'a1', { name: 'X', orgType: CampOrgType.MAIN })).rejects.toThrow(ForbiddenException);
+    setActor(s.tx, { roles: [{ campId: null, perms: [P.ORGANIZATION_MANAGE] }] });
     s.tx.coreOrganization.findFirst.mockResolvedValueOnce({ name: 'Уурхай ХХК' });
     await expect(svc.create('t1', 'a1', { name: 'X', regNumber: '111', orgType: CampOrgType.MAIN })).rejects.toThrow(/Регистр 111 "Уурхай ХХК"/);
   });

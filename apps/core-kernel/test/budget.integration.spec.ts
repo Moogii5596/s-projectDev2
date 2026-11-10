@@ -27,7 +27,7 @@ import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { configureApp } from '../src/common/http/configure-app';
 import { ADMIN_DB_URL } from './helpers/db-urls';
-import { activateTestModules } from './helpers/activate-test-modules';
+import { activateTestModules, grantTestDebugAccess } from './helpers/activate-test-modules';
 
 const SLUG = `budget-it-${Date.now()}`;
 const HOST = `${SLUG}.example.com`;
@@ -127,6 +127,7 @@ beforeAll(async () => {
     if (!s?.session) throw new Error(`signIn ${who}`);
     tokens[who] = s.session.access_token;
   }
+  await grantTestDebugAccess(prismaAdmin, [tenantId]);
 }, 90_000);
 
 afterAll(async () => {

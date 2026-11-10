@@ -37,7 +37,7 @@ import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
 import { configureApp } from '../src/common/http/configure-app';
 import { ADMIN_DB_URL } from './helpers/db-urls';
-import { activateTestModules } from './helpers/activate-test-modules';
+import { activateTestModules, grantTestDebugAccess } from './helpers/activate-test-modules';
 
 // ── Redis mock — нийтлэг helper [TEST-003] (апп-ын бүх Redis командтай) ──
 const redisMock = createRedisMock();
@@ -166,6 +166,7 @@ beforeAll(async () => {
     },
   });
   testUserId = coreUser.id;
+  await grantTestDebugAccess(prismaAdmin, [testTenantId]);
 
   // 7. JWT авах
   const supabaseAnon = createClient(

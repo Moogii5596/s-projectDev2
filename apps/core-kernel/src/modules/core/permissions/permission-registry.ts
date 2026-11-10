@@ -3,7 +3,7 @@
  *
  * DB-ийн `core_permissions` (20261106005_core_rbac_adr007.sql)-тэй ЯГ ИЖИЛ байх ёстой —
  * integration тест (`test/camp-master.integration.spec.ts`) тулгана.
- * Код: `<модуль>.<объект>.<үйлдэл>` — `hr.*`, `camp.*`, (нөөц) `core.*` (B2-4: core.users/roles код үүсгэхгүй, SEC-009).
+ * Код: `<модуль>.<объект>.<үйлдэл>` — `hr.*`, `camp.*`, `core.*` (B2-4: core.users/roles код үүсгэхгүй, SEC-009).
  * Шинэ эрх: (1) migration-д `INSERT INTO core_permissions`, (2) энд нэмэх, (3) хэрэгтэй бол `core_seed_default_roles` → `pnpm docs:gen`.
  */
 export const PERMISSIONS = {
@@ -31,6 +31,8 @@ export const PERMISSIONS = {
   DEBUG_VIEW: 'core.debug.view',
   /** v0.2.4 D-1: Debug-ийн үйлдэлтэй хэрэгсэл (audit-тай). OWNER-д автоматаар. */
   DEBUG_MANAGE: 'core.debug.manage',
+  ORGANIZATION_MANAGE: 'core.organization.manage',
+  EXCHANGE_RATE_MANAGE: 'core.exchange_rate.manage',
   /** v0.2.4 WF-06: материалын хүсэлт (MR, Debug модуль) батлах — батлах урсгалын алхамд */
   MR_APPROVE: 'mr.request.approve',
 } as const;

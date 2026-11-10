@@ -13,7 +13,7 @@ const exchangeRatesKey = ['camp', 'exchange-rates'] as const
 export default function ExchangeRatesPage() {
   const { t } = useTranslation()
   const permissions = useAppPermissions()
-  const canManage = canInAnyCamp(permissions.data, P.CONTRACT_MANAGE)
+  const canManage = canInAnyCamp(permissions.data, P.EXCHANGE_RATE_MANAGE)
   const [filters, setFilters] = useState({ from: '', to: '', currency: '' })
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState<ExchangeRateInput>({ rateDate: todayUb(), baseCurrency: '', quoteCurrency: '', rate: '', sourceNote: '' })

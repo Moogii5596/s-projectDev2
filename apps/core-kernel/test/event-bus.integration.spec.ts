@@ -26,7 +26,7 @@ import { configureApp } from '../src/common/http/configure-app';
 import { OutboxPollerService } from '../src/modules/event-bus/outbox-poller.service';
 import { EventTypes } from '../src/modules/event-bus/interfaces/cloud-event.interface';
 import { ADMIN_DB_URL } from './helpers/db-urls';
-import { activateTestModules } from './helpers/activate-test-modules';
+import { activateTestModules, grantTestDebugAccess } from './helpers/activate-test-modules';
 
 const STAMP = Date.now();
 const SLUG = { ok: `evt-ok-${STAMP}`, fail: `evt-fail-${STAMP}` };
@@ -111,6 +111,7 @@ beforeAll(async () => {
     if (!s?.session) throw new Error(`signIn ${who}`);
     tokens[who] = s.session.access_token;
   }
+  await grantTestDebugAccess(prismaAdmin, [tenant.ok, tenant.fail]);
 }, 90_000);
 
 afterAll(async () => {

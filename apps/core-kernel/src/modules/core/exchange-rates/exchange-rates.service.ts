@@ -2,14 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../../camp/common/camp-access.service';
-import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
 import { fromDbDate, inTenantTx, toDbDate } from '../../camp/common/camp-tx';
 import { withCampErrors } from '../../camp/common/camp-errors';
 import { badRequest, notFound } from '../../../common/i18n/app-error';
-import type { ExchangeRateView } from '../../camp/contracts/contract.types';
-import type { QueryExchangeRatesDto, UpsertExchangeRateDto } from './exchange-rates.dto';
+import { PERMISSIONS } from '../permissions/permission-registry';
+import type { ExchangeRateView, QueryExchangeRatesDto, UpsertExchangeRateDto } from './exchange-rates.dto';
 
-const P = CAMP_PERMISSIONS;
 const SELECT = { id: true, rateDate: true, baseCurrency: true, quoteCurrency: true, rate: true, sourceNote: true, createdAt: true } as const;
 type Row = Prisma.CoreExchangeRateGetPayload<{ select: typeof SELECT }>;
 
@@ -24,7 +22,7 @@ const toView = (r: Row): ExchangeRateView => ({
 });
 
 /**
- * v0.2.3 Блок 6б (V2-07) — ханш, гараар (tenant түвшин). Эрх: аль нэг кемпэд `camp.contract.manage` (унших ч).
+ * v0.2.3 Блок 6б (V2-07) — ханш, гараар (tenant түвшин). Эрхийн кодыг Core permission registry-ээс авна.
  * Ижил (огноо, хос) → солино (upsert). Сар бүрийн бодлогод огноо = сарын 1 (UI санал болгоно; энд хязгаарлахгүй).
  */
 @Injectable()
@@ -37,7 +35,7 @@ export class ExchangeRatesService {
   async list(tenantId: string, authId: string, q: QueryExchangeRatesDto): Promise<ExchangeRateView[]> {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
-        await this.access.requireInAnyCamp(tx, tenantId, authId, P.CONTRACT_MANAGE);
+        await this.access.requireInAnyCamp(tx, tenantId, authId, PERMISSIONS.EXCHANGE_RATE_MANAGE);
         const rows = await tx.coreExchangeRate.findMany({
           where: {
             tenantId,
@@ -56,7 +54,7 @@ export class ExchangeRatesService {
   async upsert(tenantId: string, authId: string, dto: UpsertExchangeRateDto): Promise<ExchangeRateView> {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
-        const userId = await this.access.requireInAnyCamp(tx, tenantId, authId, P.CONTRACT_MANAGE);
+        const userId = await this.access.requireInAnyCamp(tx, tenantId, authId, PERMISSIONS.EXCHANGE_RATE_MANAGE);
         if (dto.baseCurrency === dto.quoteCurrency) throw badRequest('core.err.fx.1');
         const key = { tenantId, rateDate: toDbDate(dto.rateDate), baseCurrency: dto.baseCurrency, quoteCurrency: dto.quoteCurrency };
         const row = await tx.coreExchangeRate.upsert({
@@ -73,7 +71,7 @@ export class ExchangeRatesService {
   async remove(tenantId: string, authId: string, id: string): Promise<void> {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
-        await this.access.requireInAnyCamp(tx, tenantId, authId, P.CONTRACT_MANAGE);
+        await this.access.requireInAnyCamp(tx, tenantId, authId, PERMISSIONS.EXCHANGE_RATE_MANAGE);
         const { count } = await tx.coreExchangeRate.deleteMany({ where: { id, tenantId } });
         if (count === 0) throw notFound('core.err.fx.2');
       }),

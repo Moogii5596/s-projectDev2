@@ -19,6 +19,10 @@ const hrClerk: AccessSnapshot = { isTenantAdmin: false, permissions: [], byCamp:
 /** Бүх кемпийн мастер өгөгдөл */
 const master: AccessSnapshot = { isTenantAdmin: false, permissions: ['camp.master.manage'], byCamp: {}, modules: ['camp'] }
 const contractManager: AccessSnapshot = { isTenantAdmin: false, permissions: ['camp.contract.manage'], byCamp: {}, modules: ['camp'] }
+const coreOrganizationManager: AccessSnapshot = { isTenantAdmin: false, permissions: ['core.organization.manage'], byCamp: {}, modules: ['camp'] }
+const migratedContractManager: AccessSnapshot = {
+  isTenantAdmin: false, permissions: ['camp.contract.manage', 'core.exchange_rate.manage'], byCamp: {}, modules: ['camp'],
+}
 const nobody: AccessSnapshot = { isTenantAdmin: false, permissions: [], byCamp: {}, modules: [] }
 
 describe('access (PIL-19, ADR-007 B3-3)', () => {
@@ -49,8 +53,10 @@ describe('access (PIL-19, ADR-007 B3-3)', () => {
 
   it('Системийн тохиргоо: registry-ийн эрхээр хэсгүүд харагдана', () => {
     expect(visibleSettingsSections(admin)).toEqual(['profile', 'security', 'modules', 'calendars', 'approval-flows', 'sites', 'attachment-patterns', 'roles', 'user-roles', 'organizations', 'contract-catalog', 'exchange-rates', 'building-types', 'asset-categories', 'translations'])
-    expect(visibleSettingsSections(master)).toEqual(['organizations', 'building-types'])
-    expect(visibleSettingsSections(contractManager)).toEqual(['contract-catalog', 'exchange-rates'])
+    expect(visibleSettingsSections(master)).toEqual(['building-types'])
+    expect(visibleSettingsSections(coreOrganizationManager)).toEqual(['organizations'])
+    expect(visibleSettingsSections(contractManager)).toEqual(['contract-catalog'])
+    expect(visibleSettingsSections(migratedContractManager)).toEqual(['contract-catalog', 'exchange-rates'])
     expect(visibleSettingsSections(employee)).toEqual([])
     expect(canSeeSettingsSection(admin, 'nope')).toBe(false)
     expect(canManageCampSystem(master)).toBe(true)

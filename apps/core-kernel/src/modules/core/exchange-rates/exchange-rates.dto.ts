@@ -1,9 +1,26 @@
 import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { ISO_DATE, trimOrNull } from '../../camp/common/camp-dto.util';
-import { CURRENCY, RATE } from '../../camp/contracts/contracts.dto';
 
+export const CURRENCY = /^[A-Z]{3}$/;
+export const RATE = /^\d{1,12}(\.\d{1,6})?$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const trimOrNull = ({ value }: { value: unknown }) => {
+  if (value === null) return null;
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+};
 const upper = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim().toUpperCase() : value);
+
+export interface ExchangeRateView {
+  id: string;
+  rateDate: string;
+  baseCurrency: string;
+  quoteCurrency: string;
+  rate: string;
+  sourceNote: string | null;
+  createdAt: string;
+}
 
 /** v0.2.3 Блок 6б (V2-07) — 1 baseCurrency = rate quoteCurrency. Ижил (огноо, хос) → солино */
 export class UpsertExchangeRateDto {

@@ -4,6 +4,7 @@ import { PrismaTenantClientService } from '../src/db/prisma-tenant-client.servic
 import { inTenantTx } from '../src/db/tenant-tx';
 import { ApprovalEngineService } from '../src/modules/core/approvals/approval-engine.service';
 import { ApprovalEntityRegistry, type ApprovalDecisionContext } from '../src/modules/core/approvals/approval-entity.registry';
+import { getModuleManifest } from '../src/modules/core/modules/module-registry';
 
 /**
  * v0.2.4 — цөмийн нийтлэг үйлчилгээ (integration): батлах хөдөлгүүр (WF-06), хавсралт (FILE-01), Debug хаалт (D-1),
@@ -13,8 +14,12 @@ describe('v0.2.4 core services (integration)', () => {
   let app: CampIt;
   const finals: ApprovalDecisionContext[] = [];
   const PNG = Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000', 'hex');
+  const coreManifest = getModuleManifest('core');
+  const originalApprovalTypes = coreManifest?.approvalTypes;
 
   beforeAll(async () => {
+    if (!coreManifest) throw new Error('Core module manifest is missing');
+    coreManifest.approvalTypes = [...(originalApprovalTypes ?? []), 'IT_TEST'];
     app = await createCampIt('v024');
     app.app.get(ApprovalEntityRegistry).register({
       entityType: 'IT_TEST', module: 'core', labelKey: 'approval.entity.mr', approvePermissions: ['camp.settings.manage'],
@@ -24,6 +29,7 @@ describe('v0.2.4 core services (integration)', () => {
 
   afterAll(async () => {
     await app?.close();
+    if (coreManifest) coreManifest.approvalTypes = originalApprovalTypes;
   });
 
   it('WF-06: тохиргоо хувилбартай; хүсэгч/эрхгүй 403; admin батлахад onFinal + хүсэгчид мэдэгдэл', async () => {

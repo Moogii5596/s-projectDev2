@@ -216,15 +216,17 @@ describe('CampRbacService (Шат 2.2)', () => {
     s.cache.get.mockResolvedValue(null);
     // Tenant admin receives canonical permissions only.
     const all = (await svc.myPermissions('t1', 'a1')).permissions;
-    expect(all).toHaveLength(18);
-    expect(all).toEqual(expect.arrayContaining(['hr.employee.manage', 'hr.shift.adjust']));
+    expect(all).toHaveLength(20);
+    expect(all).toEqual(expect.arrayContaining([
+      'hr.employee.manage', 'hr.shift.adjust', P.ORGANIZATION_MANAGE, P.EXCHANGE_RATE_MANAGE,
+    ]));
     expect(all).not.toContain('camp.employee.manage');
     expect(all).not.toContain('camp.shift.adjust');
     expect(all).not.toContain('camp.roles.manage');
     // v0.2.4: Debug, MR эрх tenant admin-д автоматаар биш
     expect(all).not.toContain('core.debug.view');
     expect(all).not.toContain('mr.request.approve');
-    expect((await svc.myPermissions('t1', 'a1')).modules).toEqual(['camp', 'feed', 'hr']);
+    expect((await svc.myPermissions('t1', 'a1')).modules).toEqual(['camp', 'core', 'feed', 'hr']);
   });
 
   it('createRole BadRequest нь Forbidden-оос өмнө (validation) — эрхгүй ч үл мэдэгдэх код → 400', async () => {

@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next'
 
 const ORG_TYPES = Object.keys(ORG_TYPE_LABEL) as OrgType[]
 
-/** /camp/admin/organizations — tenant түвшин (бүх кемпэд үйлчилнэ). Бичих: бүх кемпийн master.manage */
+/** /camp/admin/organizations — tenant түвшин (бүх кемпэд үйлчилнэ). Бичих: core.organization.manage */
 export default function OrganizationsPage() {
   const { t, i18n } = useTranslation()
   const perms = useAppPermissions()
@@ -19,7 +19,7 @@ export default function OrganizationsPage() {
   const orgs = useQuery({ queryKey: [...campKeys.organizations, showInactive], queryFn: () => campApi.organizations({ activeOnly: !showInactive }) })
   const serviceTypes = useQuery({ queryKey: [...campKeys.organizations, 'service-types'], queryFn: campApi.organizationServiceTypes })
   const [editing, setEditing] = useState<Organization | 'new' | null>(null)
-  const canEdit = perms.can(P.MASTER_MANAGE)
+  const canEdit = perms.can(P.ORGANIZATION_MANAGE)
   const serviceLabel = (code: OrgServiceType) => organizationServiceLabel(serviceTypes.data ?? [], code, i18n.resolvedLanguage ?? i18n.language)
 
   return (

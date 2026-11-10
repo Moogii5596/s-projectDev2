@@ -8,15 +8,13 @@ import { withCampErrors } from '../common/camp-errors';
 import { assertMealLocation, getCampOr404, getRosterSettings } from '../common/camp-lookup';
 import { normalizeShiftPattern } from '../../hr/org/shift-pattern';
 import { conflict, notFound } from '../../../common/i18n/app-error';
-import { normName } from '../../hr/positions/hr-positions.service';
+import { normalizeName } from '../../../common/name-normalization';
 import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../common/common.dto';
 import { UpsertPositionSettingDto } from './camp-catalog.dto';
 import { mergeCatalogNameI18n } from '../common/catalog-name-i18n';
 
 const P = CAMP_PERMISSIONS;
 const ITEM = { id: true, name: true, nameI18n: true, isActive: true, createdAt: true, updatedAt: true } as const;
-
-
 /**
  * v0.2.1 — байгууллагын каталог: байрны төрөл (C-12, Q4). Албан тушаал → HR (`HrPositionsService`, v0.2.2 H1).
  * Унших: аль нэг кемпэд эрхтэй; бичих: бүх кемпийн `camp.master.manage` (байгууллагатай ижил).
@@ -32,7 +30,7 @@ export class CampCatalogService {
 
   private async assertUniqueName(tx: Tx, tenantId: string, name: string, exceptId?: string) {
     const all = await tx.campBuildingType.findMany({ where: { tenantId }, select: { id: true, name: true } });
-    const dup = all.find((r) => normName(r.name) === normName(name) && r.id !== exceptId);
+    const dup = all.find((r) => normalizeName(r.name) === normalizeName(name) && r.id !== exceptId);
     if (dup) throw conflict('camp.err.catalog.building_type_exists', { name: dup.name });
   }
 

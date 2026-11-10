@@ -11,9 +11,9 @@ import { i18nStorage } from '../../../../common/i18n/i18n-context';
 const P = CAMP_PERMISSIONS;
 
 describe('Camp permission каталог (Шат 2.1)', () => {
-  it('21 эрх (ADR-007: camp.roles.manage устсан, hr.* 4; v0.2.3 feed.content.moderate, v0.2.4 core.debug.view|manage, mr.request.approve), давхардалгүй, <модуль>.<x>.<y> хэлбэртэй (DB CHECK-тэй ижил regex)', () => {
-    expect(CAMP_PERMISSION_CODES).toHaveLength(21);
-    expect(new Set(CAMP_PERMISSION_CODES).size).toBe(21);
+  it('23 эрх (ADR-007, core shared permissions орсон), давхардалгүй, <модуль>.<x>.<y> хэлбэртэй (DB CHECK-тэй ижил regex)', () => {
+    expect(CAMP_PERMISSION_CODES).toHaveLength(23);
+    expect(new Set(CAMP_PERMISSION_CODES).size).toBe(23);
     for (const c of CAMP_PERMISSION_CODES) expect(c).toMatch(/^(camp|hr|core|feed|mr)\.[a-z_]+\.[a-z_]+$/);
     expect(CAMP_PERMISSION_CODES).not.toContain('camp.roles.manage');
   });

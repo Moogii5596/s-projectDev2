@@ -2,13 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../../camp/common/camp-access.service';
-import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
 import { inTenantTx, Tx } from '../../camp/common/camp-tx';
 import { withCampErrors } from '../../camp/common/camp-errors';
 import { CreateOrganizationDto, QueryOrganizationsDto, UpdateOrganizationDto } from './core-organizations.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
+import { PERMISSIONS } from '../permissions/permission-registry';
 
-const P = CAMP_PERMISSIONS;
 const ORG_SELECT = {
   id: true,
   name: true,
@@ -36,7 +35,7 @@ function present(row: OrganizationRow) {
 
 /**
  * Байгууллага (Шат 2.4) — tenant түвшин (олон кемпэд үйлчилнэ). Унших: аль нэг кемпэд эрхтэй;
- * бичих: бүх кемпийн `camp.master.manage`.
+ * бичих: `core.organization.manage`.
  */
 @Injectable()
 export class CoreOrganizationsService {
@@ -103,7 +102,7 @@ export class CoreOrganizationsService {
   async create(tenantId: string, authId: string, dto: CreateOrganizationDto) {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
-        await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
+        await this.access.require(tx, tenantId, authId, null, PERMISSIONS.ORGANIZATION_MANAGE);
         await this.assertRegUnique(tx, tenantId, dto.regNumber);
         const serviceTypes = await this.resolveServiceTypes(tx, tenantId, dto.serviceTypes ?? []);
         const organization = await tx.coreOrganization.create({
@@ -131,7 +130,7 @@ export class CoreOrganizationsService {
   async update(tenantId: string, authId: string, id: string, dto: UpdateOrganizationDto) {
     return withCampErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
-        await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
+        await this.access.require(tx, tenantId, authId, null, PERMISSIONS.ORGANIZATION_MANAGE);
         const org = await tx.coreOrganization.findFirst({ where: { id, tenantId }, select: { id: true, serviceTypes: { select: { serviceType: { select: { code: true } } } } } });
         if (!org) throw notFound('camp.err.employees.1');
         await this.assertRegUnique(tx, tenantId, dto.regNumber, id);

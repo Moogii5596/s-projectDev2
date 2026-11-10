@@ -164,12 +164,14 @@ describe('contract services', () => {
   });
 
   it('exchange rates reject same currency and delete missing rows explicitly', async () => {
+    setActor(s.tx, { roles: [{ campId: 'camp', perms: [P.EXCHANGE_RATE_MANAGE] }] });
     await expect(rates.upsert('tenant', 'auth', { rateDate: '2026-04-01', baseCurrency: 'CNY', quoteCurrency: 'CNY', rate: '1' }))
       .rejects.toMatchObject({ code: 'core.err.fx.1' });
     await expect(rates.remove('tenant', 'auth', 'missing')).rejects.toMatchObject({ code: 'core.err.fx.2' });
   });
 
   it('exchange rate upsert uses the tenant and date pair and returns decimal text', async () => {
+    setActor(s.tx, { roles: [{ campId: 'camp', perms: [P.EXCHANGE_RATE_MANAGE] }] });
     s.tx.coreExchangeRate.upsert.mockResolvedValue({
       id: 'rate', rateDate: date('2026-04-01'), baseCurrency: 'CNY', quoteCurrency: 'MNT',
       rate: decimal('500'), sourceNote: 'source', createdAt: date('2026-04-01'),
@@ -183,5 +185,9 @@ describe('contract services', () => {
         tenantId: 'tenant', rateDate: date('2026-04-01'), baseCurrency: 'CNY', quoteCurrency: 'MNT',
       } },
     }));
+  });
+
+  it('exchange rates do not accept the Camp contract permission as a substitute', async () => {
+    await expect(rates.list('tenant', 'auth', {})).rejects.toMatchObject({ code: 'camp.err.access.3' });
   });
 });

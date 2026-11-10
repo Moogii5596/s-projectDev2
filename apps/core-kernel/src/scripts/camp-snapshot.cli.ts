@@ -1,5 +1,5 @@
 /**
- * v0.2.0 §0.2 — `pnpm camp:snapshot` (runbook §13в: staging дадлага A = B).
+ * `pnpm camp:snapshot` — staging дадлага A = B: хоол/өрөө/тоо, эрх, module status, орчуулгын override-ийн hash.
  *
  *   pnpm camp:snapshot --env=<.env файл> --out=a.json [--today=YYYY-MM-DD] [--slug=sinohydro] [--past=35] [--future=7]
  *   pnpm camp:snapshot --env=<.env файл> --out=b.json --like=a.json   → A-тай ижил today / муж / slug
@@ -8,7 +8,7 @@
  *
  * --env өгөөгүй бол repo-ийн root .env. DB = SYSTEM_DATABASE_URL (эсвэл DATABASE_URL), зөвхөн localhost.
  * Зөвхөн уншина (READ ONLY transaction) — пилот / staging аль алинд нь аюулгүй.
- * A ба B-г ИЖИЛ today-гаар авна → B-д `--like=a.json`.
+ * A ба B-г ижил хувилбарын snapshot CLI-аар, ижил today-гаар авна → B-д `--like=a.json`.
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';

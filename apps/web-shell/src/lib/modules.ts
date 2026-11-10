@@ -95,9 +95,9 @@ export const MODULE_MANIFESTS = [
     id: 'camp', buildOrder: 1, debugOnly: false, requires: ['hr'], homePath: '/camp', i18nPrefixes: ['camp'], widgets: [],
     navigation: [{ key: 'camp', labelKey: 'nav.camp', path: '/camp', mobileModules: true, order: 2 }],
     settingsSections: [
-      { key: 'organizations', labelKey: 'settings.section.organizations', permission: 'camp.master.manage', order: 9 },
+      { key: 'organizations', labelKey: 'settings.section.organizations', permission: 'core.organization.manage', order: 9 },
       { key: 'contract-catalog', labelKey: 'camp.ct.catalog_title', permission: 'camp.contract.manage', order: 10 },
-      { key: 'exchange-rates', labelKey: 'camp.ct.exchange_rates_title', permission: 'camp.contract.manage', order: 11 },
+      { key: 'exchange-rates', labelKey: 'camp.ct.exchange_rates_title', permission: 'core.exchange_rate.manage', order: 11 },
       { key: 'building-types', labelKey: 'settings.section.building-types', permission: 'camp.master.manage', order: 12 },
       { key: 'asset-categories', labelKey: 'settings.section.asset-categories', permission: 'camp.asset.manage', order: 13 },
     ],
