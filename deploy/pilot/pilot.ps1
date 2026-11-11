@@ -454,7 +454,12 @@ function Wait-Docker([int] $timeoutSec = 300) {
 }
 
 function Start-PilotRedis {
-  Invoke-Native -Exe 'docker' -Arguments @('compose', '-f', $RedisCompose, '-p', $RedisContainer, 'up', '-d') | Out-Null
+  $r = Invoke-Native -Exe 'docker' -Arguments @('compose', '-f', $RedisCompose, '-p', $RedisContainer, 'up', '-d') -AllowFail
+  if ($r.Code -ne 0) {
+    # v0.2.4.2: контейнер устсан сүлжээ рүү заасан бол ("network … not found") дахин үүсгэнэ — өгөгдөл volume-д хадгалагдана
+    Write-Warn2 "Redis ($RedisContainer) асахгүй — контейнерийг дахин үүсгэж байна (volume хэвээр)"
+    Invoke-Native -Exe 'docker' -Arguments @('compose', '-f', $RedisCompose, '-p', $RedisContainer, 'up', '-d', '--force-recreate') | Out-Null
+  }
   Write-Ok "Redis ($RedisContainer, 127.0.0.1:$($Prof.RedisPort))"
 }
 
@@ -477,9 +482,15 @@ function Test-SupabaseConfigChanged {
 
 function Get-SupabaseNetworkHostBinding {
   if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { return $null }
-  $r = Invoke-Native 'docker' @('network', 'inspect', '--format', '{{ index .Options "com.docker.network.bridge.host_binding_ipv4" }}', $Prof.NetworkId) -Capture -AllowFail
+  # v0.2.4.2: PowerShell 5.1 нь native аргумент доторх давхар хашилтыг хасдаг ("index .Options \"...\"" template эвдэрнэ) → хашилтгүй json
+  $r = Invoke-Native 'docker' @('network', 'inspect', '--format', '{{json .Options}}', $Prof.NetworkId) -Capture -AllowFail
   if ($r.Code -ne 0) { return $null }
-  return (@($r.Out) -join '').Trim()
+  $json = (@($r.Out) -join '').Trim()
+  if (-not $json -or $json -eq 'null') { return '' }
+  try { $opts = $json | ConvertFrom-Json } catch { return '' }
+  $v = $opts.PSObject.Properties['com.docker.network.bridge.host_binding_ipv4']
+  if ($null -eq $v) { return '' }
+  return "$($v.Value)".Trim()
 }
 
 function Show-SupabasePortBindings {

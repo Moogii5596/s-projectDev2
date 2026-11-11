@@ -46,7 +46,7 @@ PILOT_HEALTHCHECK_BACKUP_URL=https://hc.example/bk
 "@
 $global:Log = [System.Collections.Generic.List[string]]::new()
 $global:SbRunning = $true; $global:Fail7z = $false; $global:HealthDown = $false
-$global:NetworkPresent = $false; $global:NetworkBinding = '127.0.0.1'; $global:NetworkContainers = @()
+$global:NetworkPresent = $false; $global:NetworkBinding = '127.0.0.1'; $global:NetworkContainers = @(); $global:RedisNetworkGone = $false
 $global:FunnelStatus = 'No serve config'; $global:FirewallEnabled = $true
 $global:FirewallPorts = @('3000', '3100', '3200', '5173', '5174', '6379', '8088', '8089', '54320-54329', '55320-55329', '56379', '56520-56529', '56579')
 $global:FailDbPassword = $false; $global:NewDbPassword = 'N' * 40
@@ -64,7 +64,12 @@ Set-Content "$R/apps/web-shell/dist/assets/app.js" 'x.y.z'
 function global:docker {
   $a = $args -join ' '; $global:Log.Add("docker $a")
   if ($a -match '^network inspect') {
-    if ($global:NetworkPresent) { $global:LASTEXITCODE = 0; return $global:NetworkBinding }
+    if ($global:NetworkPresent) {
+      $global:LASTEXITCODE = 0
+      if ($a -notmatch '\{\{json \.Options\}\}') { return 'template parsing error' }
+      if (-not $global:NetworkBinding) { return '{}' }
+      return ('{"com.docker.network.bridge.host_binding_ipv4":"' + $global:NetworkBinding + '"}')
+    }
     $global:LASTEXITCODE = 1; return
   }
   if ($a -match '^ps --format') { $global:LASTEXITCODE = 0; return $global:PortMappings }
@@ -73,6 +78,8 @@ function global:docker {
   }
   if ($a -match '^network rm') { $global:NetworkPresent = $false; $global:LASTEXITCODE = 0; return }
   if ($a -match '^ps -a -q --filter network=') { $global:LASTEXITCODE = 0; return $global:NetworkContainers }
+  if ($a -match '^compose .* up -d$' -and $global:RedisNetworkGone) { $global:LASTEXITCODE = 1; return 'network not found' }
+  if ($a -match '^compose .* up -d --force-recreate$') { $global:RedisNetworkGone = $false }
   if ($global:FailDbPassword -and $a -match 'ALTER ROLE') { $global:LASTEXITCODE = 2; return }
   if ($a -match 'pg_database_size') { $global:LASTEXITCODE = 0; return "$global:DatabaseSizeBytes" }
   if ($a -match 'psql' -and $a -match 'schema_migrations') { $global:LASTEXITCODE = 0; return @('20261012006') }
@@ -269,6 +276,12 @@ $global:NetworkBinding = ''; $global:NetworkContainers = @('abc123')
 Check 'контейнертэй сүлжээг устгахгүй, init зогсоно' (-not (Run @('init', '-Profile', 'staging')))
 Check 'контейнертэй үед network rm хийгээгүй' (-not ($global:Log -match 'docker network rm'))
 $global:NetworkBinding = '127.0.0.1'; $global:NetworkContainers = @()
+
+Write-Host '7в) Redis контейнер устсан сүлжээ рүү заасан → force-recreate (v0.2.4.2)'
+$global:RedisNetworkGone = $true
+Check 'Redis дахин үүсгээд init амжилттай' (Run @('init', '-Profile', 'staging'))
+Check 'force-recreate дуудсан' ($global:Log -match 'docker compose .* up -d --force-recreate')
+$global:RedisNetworkGone = $false
 
 Write-Host '8) restore: DB өгөгдөл ба Feed storage-ийг тусгаарласан root-д сэргээх'
 Check 'тусгаарласан staging fixture init' (Run @('init', '-Profile', 'staging'))
