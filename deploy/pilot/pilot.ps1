@@ -291,6 +291,13 @@ function Invoke-DbPasswordRotation {
   if ($newPassword -cne $confirmPassword) { Stop-Pilot2 'Нууц үг таарсангүй' }
   if ($newPassword -ceq $oldPassword) { Stop-Pilot2 'Шинэ нууц үг одоогийн нууц үгтэй ижил байна' }
 
+  # v0.2.4.2: staging зогссон бол DB-г асаана (асаалтын шалгалт нууцыг шаарддаг тул өмнө нь гацдаг байсан)
+  if ($null -eq (Get-SupabaseKeys)) {
+    if ($Instance -ne 'staging') { Stop-Pilot2 "DB ($DbContainer) ажиллахгүй — пилотын нууц үгийг пилот ажиллаж байх үед солино" }
+    Write-Step 'Staging Supabase асааж байна (DB нууц солихын тулд)'
+    Start-PilotSupabase $cfg -AllowPendingConfigChange -AllowDefaultDbPassword | Out-Null
+  }
+
   $null = Invoke-DbSql 'SELECT current_user' -Capture -User 'postgres' -Password $oldPassword
   $sql = "BEGIN; ALTER ROLE postgres WITH PASSWORD '$newPassword'; ALTER ROLE supabase_admin WITH PASSWORD '$newPassword'; COMMIT;"
   Invoke-DbSql $sql -User 'postgres' -Password $oldPassword | Out-Null
@@ -515,10 +522,12 @@ function Ensure-SupabaseLoopbackNetwork {
   }
 }
 
-function Start-PilotSupabase([hashtable] $cfg, [switch] $AllowPendingConfigChange) {
+function Start-PilotSupabase([hashtable] $cfg, [switch] $AllowPendingConfigChange, [switch] $AllowDefaultDbPassword) {
   # env() → SUPABASE_AUTH_JWT_SECRET. Байхгүй бол CLI demo нууцаар асдаг тул заавал шалгана
   if ((Get-Cfg $cfg 'SUPABASE_AUTH_JWT_SECRET').Length -lt 32) { Stop-Pilot2 'SUPABASE_AUTH_JWT_SECRET алга' }
-  if ((Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD') -notmatch '^[A-Za-z0-9]{32,}$') {
+  # v0.2.4.2: зөвхөн staging-ийн rotate-db-password — нууц хоосон (анхдагч postgres) үед DB-г солихын тулд асаана
+  $defaultDbAllowed = $AllowDefaultDbPassword -and $Instance -eq 'staging' -and -not (Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD')
+  if (-not $defaultDbAllowed -and (Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD') -notmatch '^[A-Za-z0-9]{32,}$') {
     Stop-Pilot2 'PILOT_DB_ADMIN_PASSWORD тохируулаагүй/буруу — staging → pilot дарааллаар rotate-db-password ажиллуулна'
   }
   Ensure-SupabaseLoopbackNetwork

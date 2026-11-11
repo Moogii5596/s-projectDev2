@@ -169,6 +169,7 @@ function Run([string[]] $a) {
   for ($i = 1; $i -lt $a.Count; $i++) {
     if ($a[$i] -eq '-Profile' -and ($i + 1) -lt $a.Count) { $invokeArgs.Instance = $a[++$i] }
     elseif ($a[$i] -eq '-Yes') { $invokeArgs.Yes = $true }
+    elseif ($a[$i] -eq '-Generate') { $invokeArgs.Generate = $true }
     else { $rest += $a[$i] }
   }
   if ($rest.Count -gt 0) { $invokeArgs.Rest = $rest }
@@ -278,6 +279,16 @@ Check 'DB солилт алдааг ил гаргав' (-not (Run @('rotate-db-p
 Check 'DB солилтын алдаанд .env хэвээр' ((Get-Content "$R/.env.staging" -Raw) -eq $oldStageEnv)
 Check 'DB солилтын алдаанд нууц log/out-д гараагүй' ((Get-Content "$T/out.txt" -Raw) -notmatch [regex]::Escape($global:NewDbPassword))
 $global:FailDbPassword = $false
+
+Write-Host '9б) staging зогссон + нууц хоосон: rotate -Generate DB-г асааж солино (v0.2.4.2)'
+$stageEnv = Get-Content "$R/.env.staging" -Raw
+($stageEnv -replace '(?m)^PILOT_DB_ADMIN_PASSWORD=.*$', 'PILOT_DB_ADMIN_PASSWORD=') | Set-Content "$R/.env.staging"
+$global:SbRunning = $false
+Check 'зогссон staging rotate амжилттай' (Run @('rotate-db-password', '-Profile', 'staging', '-Generate'))
+Check 'rotate Supabase асаав' (@($global:Log) -match 'supabase start')
+Check 'rotate анхдагч postgres-оор нэвтэрч солив' (@($global:Log) -match 'PGPASSWORD=postgres .*ALTER ROLE')
+Check 'зогссон staging .env шинэ нууцтай' ((Get-Content "$R/.env.staging" -Raw) -match '(?m)^PILOT_DB_ADMIN_PASSWORD=[A-Za-z0-9]{40}\s*$')
+$global:SbRunning = $true
 
 Write-Host '10) check: http:// URL → алдаа'
 ($global:EnvText -replace 'https://hc.example/main', 'http://hc.example/main') | Set-Content "$R/.env"
