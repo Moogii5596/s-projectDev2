@@ -25,6 +25,17 @@ window.addEventListener('vite:preloadError', (event) => {
   window.location.reload()
 })
 
+// v0.2.5 H3 (#18): Sentry — DSN тохируулсан орчинд л ачаална (PII-гүй, lib/sentry.ts)
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN as string | undefined
+if (sentryDsn) {
+  void import('./lib/sentry').then((m) =>
+    m.initSentry(sentryDsn, {
+      environment: import.meta.env.VITE_SENTRY_ENVIRONMENT as string | undefined,
+      release: (import.meta.env.VITE_APP_RELEASE as string | undefined) || undefined,
+    }),
+  )
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

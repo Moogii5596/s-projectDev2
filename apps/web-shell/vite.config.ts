@@ -10,8 +10,11 @@ export default defineConfig(({ mode }) => {
   const env = { ...loadEnv(mode, process.cwd(), 'VITE_'), ...process.env };
   const mfeEnabled = parseModules(env.VITE_MODULES).has('mfe');
   const mfeRequisitionsUrl = env.VITE_MFE_REQUISITIONS_URL || 'http://localhost:5174/assets/remoteEntry.js';
+  // v0.2.5 H3 (#18): Sentry release — Vercel build-ийн commit (VITE_APP_RELEASE өгөөгүй бол)
+  const release = env.VITE_APP_RELEASE || (env.VERCEL_GIT_COMMIT_SHA ? `s-project-web@${env.VERCEL_GIT_COMMIT_SHA.slice(0, 12)}` : '');
 
   return {
+    define: { 'import.meta.env.VITE_APP_RELEASE': JSON.stringify(release) },
     plugins: [
       react(),
       federation({

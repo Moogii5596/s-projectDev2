@@ -4,6 +4,7 @@ import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { badRequest } from '../i18n/app-error';
 import { t } from '../i18n/translate';
 import { registerMultipart } from './multipart';
+import { registerRequestContext } from '../observability/request-context';
 
 /**
  * App-ийн HTTP тохиргоо — main.ts болон БҮХ integration тест ЭНИЙГ дуудна [VALID-001]:
@@ -67,6 +68,7 @@ export function createValidationPipe(): ValidationPipe {
 export async function configureApp(app: NestFastifyApplication): Promise<void> {
   app.useGlobalPipes(createValidationPipe());
   app.setGlobalPrefix(GLOBAL_PREFIX);
+  registerRequestContext(app); // v0.2.5 H3: requestId (JSON лог, x-request-id)
   await registerMultipart(app);
 }
 
