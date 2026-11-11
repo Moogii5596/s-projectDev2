@@ -802,6 +802,16 @@ function Get-StorageDir([hashtable] $cfg) {
   return (Join-Path $Root 'storage')
 }
 
+# `supabase db reset`-ийн дараа postgres-ийн нууц анхдагч (postgres) болдог; supabase_admin хэвээр үлддэг
+function Restore-DbAdminPassword([hashtable] $cfg) {
+  $pw = Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD'
+  if (-not $pw) { return }
+  Invoke-DbSql "ALTER ROLE postgres WITH PASSWORD '$pw'" -User 'supabase_admin' -Password $pw | Out-Null
+  $r = Invoke-DbSql 'SELECT current_user' -User 'postgres' -Password $pw -Capture
+  if ((@($r.Out) -join '').Trim() -ne 'postgres') { Stop-Pilot2 'db reset-ийн дараа postgres нууцыг .env-тэй нийцүүлж чадсангүй' }
+  Write-Ok 'postgres нууц үг .env-тэй нийцүүлэв (db reset-ийн дараа)'
+}
+
 function Get-DbAdminPassword([hashtable] $cfg) {
   return (Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD' 'postgres')
 }
@@ -928,6 +938,8 @@ function Invoke-Restore([string] $file) {
     Start-PilotRedis
     Start-PilotSupabase $cfg -AllowPendingConfigChange | Out-Null
     Invoke-Supabase -Arguments @('db', 'reset', '--local', '--no-seed', '--yes') | Out-Null
+    # v0.2.4.3: db reset нь postgres role-ийн нууцыг анхдагч болгоно → SYSTEM_DATABASE_URL / DIRECT_URL-тэй нийцүүлнэ
+    Restore-DbAdminPassword $cfg
 
     Write-Step 'Өгөгдөл сэргээх'
     Invoke-Native 'docker' @('cp', (Join-Path $tmp 'public.dump'), "${DbContainer}:/tmp/pilot-public.dump") | Out-Null

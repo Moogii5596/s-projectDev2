@@ -289,6 +289,10 @@ Write-Host '8) restore: DB өгөгдөл ба Feed storage-ийг тусгаа�
 Check 'тусгаарласан staging fixture init' (Run @('init', '-Profile', 'staging'))
 $restoreArchive = Get-ChildItem "$T/bk" -Filter 'sinohydro-*.7z' | Select-Object -First 1
 Check 'restore команд' (Run @('restore', $restoreArchive.FullName, '-Profile', 'staging', '-Yes'))
+Check 'restore db reset-ийн дараа postgres нууцыг .env-ээр сэргээв' (
+  ($global:Log -match '-U supabase_admin .*ALTER ROLE postgres WITH PASSWORD') -and
+  ((Get-Content "$T/out.txt" -Raw) -notmatch [regex]::Escape('C' * 40))
+)
 Check 'restore storage archive-оос орсон' (
   (Test-Path "$R/storage/Feed/restored.jpg") -and -not (Test-Path "$R/storage/Feed/pilot.jpg") -and
   ((Get-Content "$T/out.txt" -Raw) -match 'storage сэргээв')
