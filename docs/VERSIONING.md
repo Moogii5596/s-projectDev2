@@ -85,7 +85,7 @@ git tag -l "v*" --sort=-v:refname
 | Үе | Tag | Хаана |
 |---|---|---|
 | Staging-д шалгах | `v0.2.5-rc.1`, `v0.2.5-rc.2` … | staging (автомат deploy `main`-аас) |
-| Production-д гаргах | `v0.2.5` | production (GitHub Environment `production`, PO батална) |
+| Production-д гаргах | `v0.2.5` | production (PO «Deploy production» workflow-г гараар ажиллуулна) |
 | Production-ийн яаралтай засвар | `v0.2.5.1`, `v0.2.5.2` … | `hotfix/<version>` → PR → staging smoke → PO → production → `main`-д буцааж merge |
 
 - v0.2.x-д PATCH талбарыг feature хувилбарт хэрэглэдэг тул яаралтай засварт **4 оронтой tag** — SemVer-ээс гадуурх **албан ёсны үл хамаарал** (v1.0.0-оос стандарт SemVer).

@@ -22,8 +22,8 @@ tags: [adr, hosting, pilot, deploy, backup, v0.2.5]
 | Орчин | DB + Auth | Backend (NestJS) | Frontend | Redis | Файл |
 |---|---|---|---|---|---|
 | **dev** | Локал Docker Supabase (хэвээр) | локал | локал | локал | локал диск |
-| **staging** | Supabase Cloud Free — төсөл 1 | Render Free — service 1 | Vercel preview (`staging` branch) | Upstash Free | R2 `s-project-staging` |
-| **pilot** | Supabase Cloud Free — төсөл 2 | Render Free — service 2 | Vercel production (`main`) | Upstash Free | R2 `s-project-pilot` |
+| **staging** | Supabase Cloud Free — төсөл `s-project-staging` | Render Free — `s-project-api-staging` (`main`-аас auto-deploy) | Vercel `s-project-staging` (`main`-аас auto) → `staging.gobiverse.website` | Upstash Free | R2 `s-project-staging` |
+| **production** | Supabase Cloud Free — төсөл `s-project-prod` | Render Free — `s-project-api-prod` (auto-deploy ✖, зөвхөн «Deploy production» workflow-ийн deploy hook) | Vercel `s-project-prod` (git auto ✖, зөвхөн workflow-оос `vercel deploy --prod`) → `sino.gobiverse.website` | Upstash Free | R2 `s-project-prod` |
 
 - **Region:** Supabase — Зүүн хойд Ази (Сөүл / Токио); Render — Сингапур.
 - **Домэйн:** `sino.gobiverse.website` → Vercel (Cloudflare DNS); API → Render; файл → R2 custom domain. Cloudflare Tunnel / Caddy пилотод хэрэглэхээ болино.
@@ -32,7 +32,7 @@ tags: [adr, hosting, pilot, deploy, backup, v0.2.5]
 - **Brute-force хамгаалалт:** Supabase-ийн `password_verification_attempt` hook зөвхөн Team/Enterprise төлөвлөгөөнд → **NestJS sign-in урсгалд бүртгэл тус бүрээр түгжинэ** (одоогийн дүрэм: 15 мин-д 5 буруу → 15 мин түгжээ), `auth_guard.password_failures` хүснэгтийг дахин ашиглана. Нэвтрэлт аль хэдийн `POST /api/v1/auth/login`-оор дамждаг.
 - **Нөөц:** GitHub Actions (өдөр бүр) → хоёр төслийн `pg_dump` (public + auth) + R2 хуулбар → **шифрлэж** (`age`) → `rclone` → хэрэглэгчийн Google Drive (`s-project-backups/`), 30 хоног хадгална; сард нэг удаа restore туршилт. Энэ ажил DB-д холбогддог тул Free төслийн 7 хоногийн идэвхгүй зогсолтоос хамгаална.
 - **Нууц:** Render / Vercel / GitHub Secrets-д; `.env`-д зөвхөн dev. Баримт, git, чатад утга орохгүй.
-- **Deploy урсгал:** schema = migration-аас автомат; `main` merge → staging автомат; tag → GitHub Environment `production` (PO батална) → нөөц → migration → deploy → health. Өгөгдөл зөвхөн production → staging; dev-ээс хэзээ ч үгүй ([[10_Agent_Team_Workflow]]).
+- **Deploy урсгал:** schema = migration-аас автомат; `main` merge → staging автомат; tag → PO **«Deploy production» workflow-г гараар ажиллуулна** (`workflow_dispatch`; GitHub Free + private repo-д branch protection, environment-ийн required reviewer байхгүй (2026-11-11 шалгав)) → нөөц → migration → deploy → health. Өгөгдөл зөвхөн production → staging; dev-ээс хэзээ ч үгүй ([[10_Agent_Team_Workflow]]).
 - **Хяналт:** Sentry (PII-гүй), JSON лог, гаднын uptime monitor `/health`.
 - **Нэр:** «pilot» орчныг цаашид **production** гэнэ (Sino Hydro = пилот хөтөлбөр).
 

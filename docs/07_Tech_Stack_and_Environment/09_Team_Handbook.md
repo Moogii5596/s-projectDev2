@@ -50,7 +50,7 @@ tags: [process, team, agents, glossary, ci-cd, release, quality, operations, han
 | Арга барил | Юу вэ | Яагаад хэрэгтэй |
 |---|---|---|
 | **Pull Request (PR) + code review** | Өөрчлөлт бүр PR-ээр, өөр гишүүн шалгаж байж merge | Зохиогч өөрийн алдааг хардаггүй — 7 хоногт 22 `fix` |
-| **Branch protection** | `main`-д шууд push хориглох, CI ногоон заавал | «Шалгаагүй код» физикийн хувьд орж чадахгүй |
+| **Branch protection** | `main`-д шууд push хориглох, CI ногоон заавал (Free private repo-д байхгүй → local hook + дүрэм; Pro-д жинхэнэ) | «Шалгаагүй код» физикийн хувьд орж чадахгүй |
 | **Trunk-based development** | `main` үргэлж deploy хийж болох; богино branch | Урт `feat/v0.2.4` ба 29 commit хоцорсон `main`-ийн асуудал |
 | **User story + acceptance criteria** | «Кемп менежер ... хийхийг хүсдэг, ингэснээр ...» + шалгуур | «Бүрэн хийх»-ийн хүрээ тодорхой болно |
 | **Definition of Ready / Done** | Эхлэх ба дуусах албан шалгуур | §6 |
