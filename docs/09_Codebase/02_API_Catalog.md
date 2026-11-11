@@ -10,7 +10,7 @@ tags: [codebase, api, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Нийт **292** endpoint, 42 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
+Нийт **294** endpoint, 42 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
 
 **Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). **OWNER·ADMIN** = зөвхөн системийн роль (`requireTenantAdmin` — хэрэглэгч / роль удирдах, SEC-009), `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].
 
@@ -33,7 +33,7 @@ tags: [codebase, api, generated]
 - [[#modules/core/approvals]] — 11
 - [[#modules/core/attachments]] — 8
 - [[#modules/core/calendars]] — 5
-- [[#modules/core/debug]] — 11
+- [[#modules/core/debug]] — 13
 - [[#modules/core/exchange-rates]] — 3
 - [[#modules/core/feedback]] — 12
 - [[#modules/core/modules]] — 3
@@ -311,12 +311,14 @@ tags: [codebase, api, generated]
 | GET | `/api/v1/core/debug/health` | `DebugController.health` → `DebugService.health` | — | `debug.controller.ts:36` |
 | GET | `/api/v1/core/debug/users` | `DebugController.users` → `DebugService.users` | — | `debug.controller.ts:41` |
 | GET | `/api/v1/core/debug/permissions/:userId` | `DebugController.permissions` → `DebugService.permissions` | `core.debug.view` | `debug.controller.ts:46` |
-| GET | `/api/v1/core/debug/logs` | `DebugController.logs` → `DebugService.logs` | — | `debug.controller.ts:51` |
-| GET | `/api/v1/core/debug/audit` | `DebugController.audit` → `DebugService.auditLog` | — | `debug.controller.ts:57` |
-| GET | `/api/v1/core/debug/i18n-missing` | `DebugController.i18nMissing` → `DebugService.i18nMissing` | — | `debug.controller.ts:62` |
-| GET | `/api/v1/core/debug/outbox` | `DebugController.outbox` → `DebugService.outbox` | — | `debug.controller.ts:67` |
-| POST | `/api/v1/core/debug/actions/cache-clear` | `DebugController.clearCaches` → `DebugService.clearCaches` | гишүүн | `debug.controller.ts:72` |
-| POST | `/api/v1/core/debug/actions/outbox/:id/retry` | `DebugController.retryOutbox` → `DebugService.retryOutbox` | гишүүн | `debug.controller.ts:78` |
+| GET | `/api/v1/core/debug/users/:userId/login-lock` | `DebugController.loginLock` → `DebugService.loginLock` | — | `debug.controller.ts:52` |
+| POST | `/api/v1/core/debug/actions/users/:userId/unlock` | `DebugController.unlockLogin` → `DebugService.unlockLogin` | гишүүн | `debug.controller.ts:57` |
+| GET | `/api/v1/core/debug/logs` | `DebugController.logs` → `DebugService.logs` | — | `debug.controller.ts:63` |
+| GET | `/api/v1/core/debug/audit` | `DebugController.audit` → `DebugService.auditLog` | — | `debug.controller.ts:69` |
+| GET | `/api/v1/core/debug/i18n-missing` | `DebugController.i18nMissing` → `DebugService.i18nMissing` | — | `debug.controller.ts:74` |
+| GET | `/api/v1/core/debug/outbox` | `DebugController.outbox` → `DebugService.outbox` | — | `debug.controller.ts:79` |
+| POST | `/api/v1/core/debug/actions/cache-clear` | `DebugController.clearCaches` → `DebugService.clearCaches` | гишүүн | `debug.controller.ts:84` |
+| POST | `/api/v1/core/debug/actions/outbox/:id/retry` | `DebugController.retryOutbox` → `DebugService.retryOutbox` | гишүүн | `debug.controller.ts:90` |
 
 ## modules/core/exchange-rates
 

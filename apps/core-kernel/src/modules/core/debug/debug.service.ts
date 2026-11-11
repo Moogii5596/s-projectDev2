@@ -22,6 +22,7 @@ import { CoreTenantModulesService } from '../modules/core-tenant-modules.service
 import { PERMISSIONS } from '../permissions/permission-registry';
 import { ScheduledJobRegistry } from '../scheduler/scheduled-job.registry';
 import { evaluateDebugStorageWarning } from './debug-storage-warning';
+import { LoginLockService, type LoginLockStatus } from '../../../auth/login-lock.service';
 
 type Tx = Prisma.TransactionClient;
 
@@ -64,6 +65,7 @@ export class DebugService {
     private readonly audit: CampAuditService,
     private readonly modules: CoreTenantModulesService,
     private readonly overrides: I18nOverridesService,
+    private readonly loginLocks: LoginLockService,
   ) {}
 
   async systemInfo(tenantId: string) {
@@ -268,6 +270,33 @@ export class DebugService {
       });
     });
     return { ok: true as const };
+  }
+
+
+  // ── v0.2.5 H1 (#16): нэвтрэлтийн түгжээ ────────────────
+  /** Сонгосон хэрэглэгчийн бүртгэлийн түгжээ (tenant шүүлттэй — өөр tenant-ийн хэрэглэгч → 404) */
+  async loginLock(tenantId: string, userId: string): Promise<LoginLockStatus> {
+    return this.loginLocks.status(await this.authIdOf(tenantId, userId));
+  }
+
+  /** Түгжээ тайлах (core.debug.manage + audit). Түгжээгүй ч тоолуурыг тэглэнэ (идемпотент) */
+  async unlockLogin(tenantId: string, authId: string, userId: string) {
+    const actorId = await this.requireManage(tenantId, authId);
+    const targetAuthId = await this.authIdOf(tenantId, userId);
+    const { wasLocked } = await this.loginLocks.unlock(targetAuthId);
+    await inTenantTx(this.prisma, tenantId, (tx) =>
+      this.audit.record(tx, {
+        tenantId, campId: null, entityType: 'debug_action', entityId: userId, action: CampAuditAction.UPDATE, actorUserId: actorId,
+        fields: ['action'], before: { action: null }, after: { action: 'login_unlock' }, summaryParams: { action: 'login_unlock' },
+      }),
+    );
+    return { ok: true as const, wasLocked };
+  }
+
+  private async authIdOf(tenantId: string, userId: string): Promise<string> {
+    const u = await inTenantTx(this.prisma, tenantId, (tx) => tx.coreUser.findFirst({ where: { tenantId, id: userId }, select: { authId: true } }));
+    if (!u) throw notFound('core.debug.user_not_found');
+    return u.authId;
   }
 
   async canManage(tenantId: string, authId: string): Promise<boolean> {

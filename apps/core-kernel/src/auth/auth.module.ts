@@ -10,6 +10,7 @@ import { MailerService } from './mailer.service';
 import { InviteService } from './invite.service';
 import { SessionRevokeService } from './session-revoke.service';
 import { TenantSecurityPolicyService } from './tenant-security-policy.service';
+import { LoginLockService } from './login-lock.service';
 
 @Global()
 @Module({
@@ -25,6 +26,7 @@ import { TenantSecurityPolicyService } from './tenant-security-policy.service';
     InviteService,
     SessionRevokeService,
     TenantSecurityPolicyService,
+    LoginLockService,
   ],
   exports: [
     TenantAuthGuard,
@@ -36,6 +38,7 @@ import { TenantSecurityPolicyService } from './tenant-security-policy.service';
     InviteService,
     SessionRevokeService,
     TenantSecurityPolicyService,
+    LoginLockService,
     MailerService,
   ],
 })

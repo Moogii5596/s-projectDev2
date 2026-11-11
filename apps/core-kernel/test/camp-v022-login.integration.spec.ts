@@ -26,7 +26,7 @@ describe('v0.2.2 Блок 2 — нэвтрэх нэр, ажилтан ↔ хэр
   const rbac = new CampRbacService(rls as never, access, audit);
   const login = new CampEmployeeLoginService(rls as never, access, audit, tenantCache as never);
   const securityPolicy = { get: async () => DEFAULT_TENANT_SECURITY_POLICY };
-  const signIn = new SignInService({ get: () => undefined } as never, admin as never, tenantCache as never, securityPolicy as never, {} as never);
+  const signIn = new SignInService({ get: () => undefined } as never, admin as never, tenantCache as never, securityPolicy as never, {} as never, {} as never);
 
   const sfx = randomUUID().slice(0, 8);
   const tenantIds: string[] = [];
