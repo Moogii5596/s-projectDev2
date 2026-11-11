@@ -61,7 +61,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 | `core-kernel/test/v024-core-services.integration.spec.ts` | 5 | v0.2.4 core services (integration) |
 
-## Unit — core-kernel — 121 файл, ~897 тест
+## Unit — core-kernel — 121 файл, ~899 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -77,7 +77,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/auth/login-lock.service.spec.ts` | 3 | LoginLockService (v0.2.5 H1 #16) |
 | `core-kernel/src/auth/pilot-auth-config.spec.ts` | 7 | пилотын GoTrue тохиргоо (deploy/pilot/supabase/config.toml) |
 | `core-kernel/src/auth/session-revoke.service.spec.ts` | 11 | SessionRevokeService (v0.2.3 Блок 4б, PIL-15) |
-| `core-kernel/src/auth/sign-in.service.spec.ts` | 24 | SignInService (v0.2.2 D-10) |
+| `core-kernel/src/auth/sign-in.service.spec.ts` | 26 | SignInService (v0.2.2 D-10) |
 | `core-kernel/src/auth/tenant-auth.guard.spec.ts` | 25 | TenantAuthGuard |
 | `core-kernel/src/auth/tenant-cache.service.spec.ts` | 19 | TenantCacheService · TenantCacheService.isMember() · Auth token cache (PERF-003) |
 | `core-kernel/src/auth/tenant-module.guard.spec.ts` | 5 | TenantModuleGuard (SYS-02) |

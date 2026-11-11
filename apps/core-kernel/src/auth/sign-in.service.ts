@@ -102,9 +102,12 @@ export class SignInService {
   }
 
   private static keys(tenantKey: string, identifier: string, clientIp: string | undefined) {
+    const h = SignInService.hash(identifier);
     return {
-      id: `signin:fail:id:${tenantKey}:${SignInService.hash(identifier)}`,
+      id: `signin:fail:id:${tenantKey}:${h}`,
       ip: clientIp ? `signin:fail:ip:${SignInService.hash(clientIp)}` : null,
+      ghostFail: `signin:ghost:fail:${tenantKey}:${h}`,
+      ghostLock: `signin:ghost:lock:${tenantKey}:${h}`,
     };
   }
 
@@ -170,6 +173,31 @@ export class SignInService {
     if (until) throw accountLocked(until);
   }
 
+  /**
+   * #29: байхгүй нэвтрэх нэрд бодит бүртгэлийн түгжээтэй ИЖИЛ дүрэм (`loginLock.rules`) Redis-д — 5 буруугийн дараа
+   * мөн `auth.account_locked` (429) буцаана → хариугаар бүртгэл байгаа эсэх ялгагдахгүй. Redis алдаа → fail-open.
+   */
+  private async assertGhostNotLocked(k: { ghostLock: string }): Promise<void> {
+    const raw = await this.safe(() => this.redis.get(k.ghostLock), null);
+    const until = raw ? new Date(Number(raw)) : null;
+    if (until && until.getTime() > Date.now()) throw accountLocked(until);
+  }
+
+  private async recordGhostFailure(k: { ghostFail: string; ghostLock: string }): Promise<void> {
+    const { maxFailures, windowMinutes, lockMinutes, gotrueHook } = this.loginLock.rules;
+    const until = await this.safe(async () => {
+      const n = await this.redis.incr(k.ghostFail);
+      if (n === 1) await this.redis.pexpire(k.ghostFail, windowMinutes * 60_000);
+      if (n < maxFailures) return null;
+      const at = new Date(Date.now() + lockMinutes * 60_000);
+      await this.redis.set(k.ghostLock, String(at.getTime()), 'PX', lockMinutes * 60_000);
+      await this.redis.del(k.ghostFail);
+      return at;
+    }, null);
+    // Hook горимд бодит бүртгэл түгжигдсэн оролдлого дээрээ 401 буцаадаг (дараагийнхад 429) — ижил байлгана
+    if (until && !gotrueHook) throw accountLocked(until);
+  }
+
   /** Идэвхтэй хэрэглэгчийг нэвтрэх нэрээр (RLS-ийг тойрох системийн холболт — tenant шүүлт ЗААВАЛ) */
   async findLoginUser(tenantId: string, id: LoginIdentifier): Promise<LoginUser | null> {
     type Row = { auth_id: string; email: string; must_change_password: boolean };
@@ -212,6 +240,7 @@ export class SignInService {
 
     const user = tenantId && parsed ? await this.findLoginUser(tenantId, parsed) : null;
     if (user) await this.assertAccountNotLocked(user.authId);
+    else await this.assertGhostNotLocked(lk);
     // Байхгүй хэрэглэгч: хуурамч хаяг (RFC 2606 .invalid — хэзээ ч бүртгэгдэхгүй) → GoTrue ижил 400 → 401
     const email = user?.email ?? `nouser-${SignInService.hash(`${slug}:${key}`)}@login.invalid`;
 
@@ -229,6 +258,7 @@ export class SignInService {
       if (user && parsed?.kind === 'phone') this.logger.log(`sign-in татгалзсан: утас ${maskPhone(parsed.value)}`);
       await this.recordFailure(lk, identifierLimit);
       if (user) await this.recordAccountFailure(user.authId);
+      else await this.recordGhostFailure(lk);
       throw invalid();
     }
     // Хамгаалалт: session нь бидний олсон хэрэглэгчийнх биш бол (байх ёсгүй) — токен өгөхгүй
