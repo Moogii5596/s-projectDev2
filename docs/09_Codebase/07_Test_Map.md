@@ -60,7 +60,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 | `core-kernel/test/v024-core-services.integration.spec.ts` | 5 | v0.2.4 core services (integration) |
 
-## Unit — core-kernel — 118 файл, ~881 тест
+## Unit — core-kernel — 119 файл, ~885 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -146,6 +146,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/event-bus/outbox-poller.service.spec.ts` | 11 | OutboxPollerService |
 | `core-kernel/src/modules/feed/tests/feed-links.service.test.ts` | 3 | FeedLinksService (FEED-04) |
 | `core-kernel/src/modules/feed/tests/feed-rules.test.ts` | 6 | feed-rules — харагдах, засах, устгах, report · feed-rules — cursor, хуудас |
+| `core-kernel/src/modules/health/health.controller.spec.ts` | 4 | resolveGitCommit · HealthController |
 | `core-kernel/src/modules/hr/attendance/tests/import-edits.test.ts` | 6 | applyRowEdits (R4.1) · planWithDeleted (R4.1) |
 | `core-kernel/src/modules/hr/attendance/tests/import.test.ts` | 15 | import-parser · import-planner |
 | `core-kernel/src/modules/hr/attendance/tests/roster-gaps.test.ts` | 3 | findRosterGaps (R4.2) |
