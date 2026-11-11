@@ -299,8 +299,9 @@ function Invoke-DbPasswordRotation {
   }
 
   $null = Invoke-DbSql 'SELECT current_user' -Capture -User 'postgres' -Password $oldPassword
+  # v0.2.4.2: Supabase-д postgres superuser биш ("Only superusers can alter privileged roles") → supabase_admin-аар солино
   $sql = "BEGIN; ALTER ROLE postgres WITH PASSWORD '$newPassword'; ALTER ROLE supabase_admin WITH PASSWORD '$newPassword'; COMMIT;"
-  Invoke-DbSql $sql -User 'postgres' -Password $oldPassword | Out-Null
+  Invoke-DbSql $sql -User 'supabase_admin' -Password $oldPassword | Out-Null
   try {
     foreach ($role in 'postgres', 'supabase_admin') {
       $result = Invoke-DbSql 'SELECT current_user' -Capture -User $role -Password $newPassword
@@ -311,7 +312,7 @@ function Invoke-DbPasswordRotation {
     $saveError = $_.Exception.Message
     try {
       $rollback = "BEGIN; ALTER ROLE postgres WITH PASSWORD '$oldPassword'; ALTER ROLE supabase_admin WITH PASSWORD '$oldPassword'; COMMIT;"
-      Invoke-DbSql $rollback -User 'postgres' -Password $newPassword | Out-Null
+      Invoke-DbSql $rollback -User 'supabase_admin' -Password $newPassword | Out-Null
     } catch {
       Stop-Pilot2 "DB password шинэчлэгдсэн боловч .env бичих болон DB rollback хоёулаа амжилтгүй. Нууцыг гараар сэргээнэ. .env алдаа: $saveError; rollback: $($_.Exception.Message)"
     }

@@ -81,6 +81,8 @@ function global:docker {
   if ($a -match '^compose .* up -d$' -and $global:RedisNetworkGone) { $global:LASTEXITCODE = 1; return 'network not found' }
   if ($a -match '^compose .* up -d --force-recreate$') { $global:RedisNetworkGone = $false }
   if ($global:FailDbPassword -and $a -match 'ALTER ROLE') { $global:LASTEXITCODE = 2; return }
+  # Supabase: postgres superuser биш — privileged role-ийг зөвхөн supabase_admin солино
+  if ($a -match 'ALTER ROLE' -and $a -match '\-U postgres') { $global:LASTEXITCODE = 1; return 'ERROR:  permission denied to alter role' }
   if ($a -match 'pg_database_size') { $global:LASTEXITCODE = 0; return "$global:DatabaseSizeBytes" }
   if ($a -match 'psql' -and $a -match 'schema_migrations') { $global:LASTEXITCODE = 0; return @('20261012006') }
   if ($a -match 'psql' -and $a -match 'count\(\*\)') { $global:LASTEXITCODE = 0; return '1 2 2' }
@@ -310,7 +312,7 @@ $stageEnv = Get-Content "$R/.env.staging" -Raw
 $global:SbRunning = $false
 Check 'зогссон staging rotate амжилттай' (Run @('rotate-db-password', '-Profile', 'staging', '-Generate'))
 Check 'rotate Supabase асаав' (@($global:Log) -match 'supabase start')
-Check 'rotate анхдагч postgres-оор нэвтэрч солив' (@($global:Log) -match 'PGPASSWORD=postgres .*ALTER ROLE')
+Check 'rotate анхдагч нууцаар supabase_admin-аар солив' (@($global:Log) -match 'PGPASSWORD=postgres .*-U supabase_admin .*ALTER ROLE')
 Check 'зогссон staging .env шинэ нууцтай' ((Get-Content "$R/.env.staging" -Raw) -match '(?m)^PILOT_DB_ADMIN_PASSWORD=[A-Za-z0-9]{40}\s*$')
 $global:SbRunning = $true
 
