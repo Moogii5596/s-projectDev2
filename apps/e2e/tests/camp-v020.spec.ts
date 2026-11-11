@@ -225,12 +225,18 @@ test.describe.serial('Орчуулгын засвар (OWNER/ADMIN)', () => {
     await page.getByLabel('Excel/CSV оруулах').setInputFiles({ name: 'tr.csv', mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf8') });
     await expect(page.getByText('Өөрчлөлт 1 · алдаа 0')).toBeVisible();
     await expect(page.getByRole('row', { name: new RegExp(`nav\\.camp.*Кемп.*Кемп ${STAMP}`) })).toBeVisible();
+    // #30: хадгалах хүсэлт дуусахаас өмнө reload хийвэл (CI-д удаан) өөрчлөлт алдагдана → хариуг хүлээнэ
+    const applied = page.waitForResponse((r) => r.url().includes('/api/v1/i18n/admin/apply') && r.request().method() === 'POST');
     await page.getByRole('button', { name: 'Баталгаажуулах (1)' }).click();
+    expect((await applied).ok()).toBe(true);
     await page.reload();
-    await expect(page.getByRole('button', { name: `Кемп ${STAMP}` })).toBeVisible();
-    await expect(page.getByRole('row', { name: /IMPORT|nav\.camp/ }).first()).toBeVisible();
+    // reload-ын дараа байгууллагын орчуулга тусдаа хүсэлтээр ирнэ (dev сервер CI-д удаан) — бусад тесттэй ижил 15с
+    await expect(page.getByRole('button', { name: `Кемп ${STAMP}` })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('row', { name: /IMPORT|nav\.camp/ }).first()).toBeVisible({ timeout: 15_000 });
+    const reverted = page.waitForResponse((r) => r.url().includes('/api/v1/i18n/admin/apply') && r.request().method() === 'POST');
     await page.getByRole('row', { name: new RegExp(`nav\\.camp.*Кемп ${STAMP}`) }).getByRole('button', { name: 'Анхдагч руу буцаах' }).click();
+    expect((await reverted).ok()).toBe(true);
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Кемп', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Кемп', exact: true })).toBeVisible({ timeout: 15_000 });
   });
 });
