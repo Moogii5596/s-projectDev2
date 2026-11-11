@@ -1492,6 +1492,11 @@ function Invoke-Build {
   $keys = Get-SupabaseKeys
   if ($null -eq $keys) { Stop-Pilot2 'Supabase ажиллахгүй (pilot.ps1 init эсвэл start)' }
   Assert-KeysSecure $keys $cfg['SUPABASE_AUTH_JWT_SECRET']
+  # v0.2.4.3: ажиллаж буй backend Prisma query engine DLL-ийг түгжинэ (EPERM rename) → эхлээд зогсооно; дараа нь pilot.ps1 start
+  Write-Step 'Backend зогсоох (build-ийн өмнө)'
+  Stop-Watchdog
+  Stop-PilotProcess 'caddy' 'caddy'
+  Stop-PilotProcess 'backend' 'node'
   Push-Location $Root
   try {
     Install-NodeDeps
@@ -1507,7 +1512,7 @@ function Invoke-Build {
     Invoke-Native 'pnpm' @('--filter', '@s-project/web-shell', 'build') | Out-Null
   } finally { Pop-Location }
   Assert-Built $keys
-  Write-Ok 'build дууслаа → pilot.ps1 stop; pilot.ps1 start (эсвэл Task дахин асаах)'
+  Write-Ok 'build дууслаа (backend зогссон) → pilot.ps1 start (эсвэл Task дахин асаах)'
 }
 
 function Invoke-AdminCli([string] $sub) {

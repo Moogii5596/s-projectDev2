@@ -165,6 +165,11 @@ function global:Start-Process {
   $global:MockProcesses["$($process.Id)"] = $process
   return $process
 }
+function global:Stop-Process {
+  # Жинхэнэ процессыг ХЭЗЭЭ Ч зогсоохгүй (mock PID 4000x нь бодит процесс байж болно)
+  param([int] $Id, [switch] $Force)
+  $global:Log.Add("Stop-Process $Id"); $global:MockProcesses.Remove("$Id")
+}
 function global:Get-Process {
   param([int] $Id, [string] $ErrorAction)
   if ($global:MockProcesses.ContainsKey("$Id")) { return $global:MockProcesses["$Id"] }
@@ -297,6 +302,12 @@ Check 'restore storage archive-оос орсон' (
   (Test-Path "$R/storage/Feed/restored.jpg") -and -not (Test-Path "$R/storage/Feed/pilot.jpg") -and
   ((Get-Content "$T/out.txt" -Raw) -match 'storage сэргээв')
 )
+
+Write-Host '8б) build: ажиллаж буй backend-ийг эхлээд зогсооно — Prisma DLL түгжээ (v0.2.4.3)'
+Check 'staging start' (Run @('start', '-Profile', 'staging'))
+$backendPid = (Get-ChildItem -Path "$R/deploy/staging" -Recurse -Filter 'backend.pid' | Select-Object -First 1 | Get-Content -Raw).Trim()
+Check 'build амжилттай' (Run @('build', '-Profile', 'staging'))
+Check 'build backend-ийг зогсоов' (($global:Log -match "Stop-Process $backendPid") -and ((Get-Content "$T/out.txt" -Raw) -match 'backend зогсов'))
 
 Write-Host '9) DB administrator нууц үг staging-д солих'
 Check 'staging DB нууц солигдов' (Run @('rotate-db-password', '-Profile', 'staging'))
