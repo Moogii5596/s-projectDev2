@@ -30,7 +30,6 @@ DIRECT_URL=postgresql://postgres:postgres@127.0.0.1:55322/postgres
 SUPABASE_AUTH_JWT_SECRET=$('s' * 40)
 JWT_SECRET=$('j' * 40)
 REDIS_URL=redis://127.0.0.1:56379
-PILOT_DB_ADMIN_PASSWORD=$('C' * 40)
 SUPABASE_URL=http://127.0.0.1:55321
 PILOT_HTTP_PORT=8088
 ESCALATION_CRON=off
@@ -304,10 +303,6 @@ Check 'тусгаарласан staging fixture init' (Run @('init', '-Profile',
 $restoreArchive = Get-ChildItem "$T/bk" -Filter 'sinohydro-*.7z' | Select-Object -First 1
 Check 'restore команд' (Run @('restore', $restoreArchive.FullName, '-Profile', 'staging', '-Yes'))
 Check 'restore db reset loopback сүлжээнд (--network-id, v0.2.4.4)' ($global:Log -match 'supabase db reset .*--network-id s-project-staging-loopback')
-Check 'restore db reset-ийн дараа postgres нууцыг .env-ээр сэргээв' (
-  ($global:Log -match '-U supabase_admin .*ALTER ROLE postgres WITH PASSWORD') -and
-  ((Get-Content "$T/out.txt" -Raw) -notmatch [regex]::Escape('C' * 40))
-)
 Check 'restore storage archive-оос орсон' (
   (Test-Path "$R/storage/Feed/restored.jpg") -and -not (Test-Path "$R/storage/Feed/pilot.jpg") -and
   ((Get-Content "$T/out.txt" -Raw) -match 'storage сэргээв')
@@ -319,32 +314,16 @@ $backendPid = (Get-ChildItem -Path "$R/deploy/staging" -Recurse -Filter 'backend
 Check 'build амжилттай' (Run @('build', '-Profile', 'staging'))
 Check 'build backend-ийг зогсоов' (($global:Log -match "Stop-Process $backendPid") -and ((Get-Content "$T/out.txt" -Raw) -match 'backend зогсов'))
 
-Write-Host '9) DB administrator нууц үг staging-д солих'
-Check 'staging DB нууц солигдов' (Run @('rotate-db-password', '-Profile', 'staging'))
-Check 'staging .env шинэчлэгдэв' ((Get-Content "$R/.env.staging" -Raw) -match "PILOT_DB_ADMIN_PASSWORD=$global:NewDbPassword")
-Check 'staging DIRECT_URL / SYSTEM_DATABASE_URL шинэ нууцтай' (
-  ((Get-Content "$R/.env.staging" -Raw) -match "(?m)^DIRECT_URL=postgresql://postgres:$global:NewDbPassword@127\.0\.0\.1:56522/") -and
-  ((Get-Content "$R/.env.staging" -Raw) -match "(?m)^SYSTEM_DATABASE_URL=postgresql://postgres:$global:NewDbPassword@127\.0\.0\.1:56522/") -and
-  ((Get-Content "$R/.env.staging" -Raw) -match "(?m)^DATABASE_URL=postgresql://app_user:A{26}@")
-)
-Check 'нууц command log/out-д гараагүй' ((Get-Content "$T/out.txt" -Raw) -notmatch [regex]::Escape($global:NewDbPassword))
-Check 'staging нөөц шинэ DB нууц ашиглав' ((Run @('backup', '-Profile', 'staging')) -and ($global:Log -match "PGPASSWORD=$global:NewDbPassword") -and ($global:Log -notmatch 'PGPASSWORD=postgres'))
-$oldStageEnv = Get-Content "$R/.env.staging" -Raw
-$global:NewDbPassword = 'Z' * 40; $global:FailDbPassword = $true
-Check 'DB солилт алдааг ил гаргав' (-not (Run @('rotate-db-password', '-Profile', 'staging')))
-Check 'DB солилтын алдаанд .env хэвээр' ((Get-Content "$R/.env.staging" -Raw) -eq $oldStageEnv)
-Check 'DB солилтын алдаанд нууц log/out-д гараагүй' ((Get-Content "$T/out.txt" -Raw) -notmatch [regex]::Escape($global:NewDbPassword))
-$global:FailDbPassword = $false
-
-Write-Host '9б) staging зогссон + нууц хоосон: rotate -Generate DB-г асааж солино (v0.2.4.2)'
-$stageEnv = Get-Content "$R/.env.staging" -Raw
-($stageEnv -replace '(?m)^PILOT_DB_ADMIN_PASSWORD=.*$', 'PILOT_DB_ADMIN_PASSWORD=') | Set-Content "$R/.env.staging"
+Write-Host '9) DB admin нууц: Supabase CLI local stack анхдагч нууцтай л асна (ADR-002, 2026-11-11)'
+Check 'rotate-db-password хасагдсан' ((-not (Run @('rotate-db-password', '-Profile', 'staging'))) -and ((Get-Content "$T/out.txt" -Raw) -match 'rotate-db-password хасагдсан'))
+$stageEnvOk = Get-Content "$R/.env.staging" -Raw
+($stageEnvOk.TrimEnd() + "`nPILOT_DB_ADMIN_PASSWORD=$('X' * 40)`n") | Set-Content "$R/.env.staging"
 $global:SbRunning = $false
-Check 'зогссон staging rotate амжилттай' (Run @('rotate-db-password', '-Profile', 'staging', '-Generate'))
-Check 'rotate Supabase асаав' (@($global:Log) -match 'supabase start')
-Check 'rotate анхдагч нууцаар supabase_admin-аар солив' (@($global:Log) -match 'PGPASSWORD=postgres .*-U supabase_admin .*ALTER ROLE')
-Check 'зогссон staging .env шинэ нууцтай' ((Get-Content "$R/.env.staging" -Raw) -match '(?m)^PILOT_DB_ADMIN_PASSWORD=[A-Za-z0-9]{40}\s*$')
+Check 'анхдагч бус PILOT_DB_ADMIN_PASSWORD → start татгалзав' ((-not (Run @('start', '-Profile', 'staging'))) -and ((Get-Content "$T/out.txt" -Raw) -match 'PILOT_DB_ADMIN_PASSWORD-ийг (\.env-ээс )?хасна'))
+Check 'татгалзахдаа supabase start дуудаагүй' (-not ($global:Log -match 'supabase start'))
+$stageEnvOk | Set-Content "$R/.env.staging"
 $global:SbRunning = $true
+Check 'анхдагч нууцтай staging start' (Run @('start', '-Profile', 'staging'))
 
 Write-Host '10) check: http:// URL → алдаа'
 ($global:EnvText -replace 'https://hc.example/main', 'http://hc.example/main') | Set-Content "$R/.env"

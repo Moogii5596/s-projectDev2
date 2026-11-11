@@ -17,7 +17,7 @@
     user --email= ...     Хэрэглэгч нэмэх/засах (pnpm pilot:user)
     backup                Шифрлэсэн нөөц (7-Zip AES-256) → PILOT_BACKUP_DIR (+ хуулбар PILOT_BACKUP_COPY_DIR), хуучныг устгана
     restore <файл.7z>     Нөөцөөс сэргээх (ОДООГИЙН ӨГӨГДӨЛ УСТНА — баталгаажуулалт асууна)
-    rotate-db-password    postgres / supabase_admin нууц үг солих (.env шинэчилнэ; staging-ээс эхэлнэ)
+    rotate-db-password    (хасагдсан — Supabase CLI local stack дэмждэггүй; ADR-002, 2026-11-11)
                           -Generate (зөвхөн staging): нууцыг автоматаар үүсгэнэ, prompt-гүй, хэвлэхгүй
     upgrade -Tag <tag>    Шинэ хувилбар: нөөц → зогсоох → git fetch/checkout <tag> → init → build → start → health
                           (бохир git tree бол эхлэхгүй; алдаа гарвал буцаах заавар хэвлэнэ)
@@ -202,12 +202,6 @@ function Import-PilotEnv {
   return $cfg
 }
 
-# postgres хэрэглэгчийн URL-ийн нууцыг солино (бусад хэрэглэгч, жнь app_user — хэвээр)
-function Set-PostgresUrlPassword([string] $url, [string] $password) {
-  if ($url -match '^(postgres(?:ql)?://postgres:)[^@]*(@.*)$') { return "$($Matches[1])$password$($Matches[2])" }
-  return $url
-}
-
 function Get-UrlPassword([string] $url) {
   if ($url -match '^postgres(?:ql)?://([^:/@]+):([^@]*)@') { return $Matches[2] }
   return ''
@@ -262,81 +256,29 @@ function New-RandomAlnum([int] $length) {
   } finally { $rng.Dispose() }
 }
 
-# v0.2.4.1 upgrade preflight: шинэ хувилбарын init нь PILOT_DB_ADMIN_PASSWORD (32+)-гүйгээр Supabase асаахгүй.
-# Pilot-ийг зогсоохоос ӨМНӨ шалгана — эс бөгөөс upgrade дундаа зогсож систем унтарсан хэвээр үлдэнэ.
-function Assert-DbAdminPasswordReady([hashtable] $cfg) {
+# ADR-002 (2026-11-11 шинэчлэл): Supabase CLI local stack нь `supabase start` үед DB-д ҮРГЭЛЖ анхдагч postgres/postgres-оор
+# холбогддог (SUPABASE_DB_PASSWORD ч нөлөөлөхгүй) → admin нууц солиход дараагийн асаалт унана (staging-д батлагдсан).
+# Пилот PC-д анхдагч хэвээр; DB-г loopback + Windows Firewall + app_user RLS хамгаална. Хатуу нууц — cloud хостинг (ADR-011).
+function Assert-DefaultDbAdminPassword([hashtable] $cfg) {
   $pw = Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD'
-  $hint = if ($Instance -eq 'staging') { 'pilot.ps1 rotate-db-password -Profile staging -Root <staging> -Generate' } else { 'pilot.ps1 rotate-db-password -Profile pilot -Yes' }
-  if ($pw -notmatch '^[A-Za-z0-9]{32,}$') {
-    Stop-Pilot2 "PILOT_DB_ADMIN_PASSWORD (32+ үсэг/тоо) тохируулаагүй — эхлээд: $hint. Upgrade эхлээгүй, систем ажилласан хэвээр."
+  if ($pw -and $pw -ne 'postgres') {
+    Stop-Pilot2 'PILOT_DB_ADMIN_PASSWORD-ийг .env-ээс хасна: Supabase CLI local stack DB-д анхдагч нууцаар л холбогддог, солиход Supabase дахин асахгүй (ADR-002, 2026-11-11). Аль хэдийн солисон бол: нөөцөөс restore'
   }
-  $a = @('exec', '-e', "PGPASSWORD=$pw", $DbContainer, 'psql', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'postgres', '-At', '-c', 'SELECT current_user')
+}
+
+# Upgrade preflight: DB ажиллаж, анхдагч admin нууцаар нэвтэрч байгааг pilot-ийг зогсоохоос ӨМНӨ шалгана
+function Assert-DbAdminPasswordReady([hashtable] $cfg) {
+  Assert-DefaultDbAdminPassword $cfg
+  $a = @('exec', '-e', 'PGPASSWORD=postgres', $DbContainer, 'psql', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'postgres', '-At', '-c', 'SELECT current_user')
   $r = Invoke-Native -Exe 'docker' -Arguments $a -Capture -AllowFail -Quiet
   if ($r.Code -ne 0 -or (@($r.Out) -join '').Trim() -ne 'postgres') {
-    Stop-Pilot2 "DB ($DbContainer) ажиллахгүй эсвэл PILOT_DB_ADMIN_PASSWORD DB-ийн нууцтай таарахгүй — $hint. Upgrade эхлээгүй, систем ажилласан хэвээр."
+    Stop-Pilot2 "DB ($DbContainer) ажиллахгүй эсвэл postgres-ийн нууц анхдагч биш (Supabase дахин асахгүй) — status/restore. Upgrade эхлээгүй, систем ажилласан хэвээр."
   }
-  Write-Ok 'DB administrator нууц үг баталгаажлаа (upgrade preflight)'
+  Write-Ok 'DB ажиллаж байна (upgrade preflight)'
 }
 
 function Invoke-DbPasswordRotation {
-  if ($Generate -and $Instance -ne 'staging') { Stop-Pilot2 '-Generate зөвхөн staging-д; pilot-д интерактив + -Yes' }
-  $cfg = Import-PilotEnv
-  $envFile = Join-Path $Root $Prof.EnvFile
-  $oldPassword = Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD' 'postgres'
-  if ($Instance -eq 'pilot') {
-    if (-not $Yes) { Stop-Pilot2 'Пилотын нууц үг солиход staging-г эхэлж шалгасны дараа -Yes өгнө' }
-    $confirmation = Read-Host "Баталгаажуулахын тулд $($cfg['DEDICATED_TENANT_SLUG']) гэж бич"
-    if ($confirmation -cne $cfg['DEDICATED_TENANT_SLUG']) { Stop-Pilot2 'Пилотын нууц үг солих цуцлагдлаа' }
-  }
-  if ($Generate) {
-    # v0.2.4.1: staging-д агент/скрипт prompt-гүй солино; нууцыг хэвлэхгүй, зөвхөн .env-д хадгална
-    $newPassword = New-RandomAlnum 40
-    $confirmPassword = $newPassword
-  } else {
-    $first = Read-Host 'Шинэ DB administrator нууц үг (32+ латин үсэг/тоо)' -AsSecureString
-    $second = Read-Host 'Шинэ DB administrator нууц үгийг давтан оруул' -AsSecureString
-    $newPassword = ConvertFrom-SecureInput $first
-    $confirmPassword = ConvertFrom-SecureInput $second
-  }
-  if ($newPassword -notmatch '^[A-Za-z0-9]{32,}$') { Stop-Pilot2 'DB administrator нууц үг зөвхөн латин үсэг/тоо, 32+ тэмдэгт байна' }
-  if ($newPassword -cne $confirmPassword) { Stop-Pilot2 'Нууц үг таарсангүй' }
-  if ($newPassword -ceq $oldPassword) { Stop-Pilot2 'Шинэ нууц үг одоогийн нууц үгтэй ижил байна' }
-
-  # v0.2.4.2: staging зогссон бол DB-г асаана (асаалтын шалгалт нууцыг шаарддаг тул өмнө нь гацдаг байсан)
-  if ($null -eq (Get-SupabaseKeys)) {
-    if ($Instance -ne 'staging') { Stop-Pilot2 "DB ($DbContainer) ажиллахгүй — пилотын нууц үгийг пилот ажиллаж байх үед солино" }
-    Write-Step 'Staging Supabase асааж байна (DB нууц солихын тулд)'
-    Start-PilotSupabase $cfg -AllowPendingConfigChange -AllowDefaultDbPassword | Out-Null
-  }
-
-  $null = Invoke-DbSql 'SELECT current_user' -Capture -User 'postgres' -Password $oldPassword
-  # v0.2.4.2: Supabase-д postgres superuser биш ("Only superusers can alter privileged roles") → supabase_admin-аар солино
-  $sql = "BEGIN; ALTER ROLE postgres WITH PASSWORD '$newPassword'; ALTER ROLE supabase_admin WITH PASSWORD '$newPassword'; COMMIT;"
-  Invoke-DbSql $sql -User 'supabase_admin' -Password $oldPassword | Out-Null
-  try {
-    foreach ($role in 'postgres', 'supabase_admin') {
-      $result = Invoke-DbSql 'SELECT current_user' -Capture -User $role -Password $newPassword
-      if ((@($result.Out) -join '').Trim() -ne $role) { Stop-Pilot2 "DB administrator нууц үгийн шалгалт амжилтгүй ($role)" }
-    }
-    # v0.2.4.2: SYSTEM_DATABASE_URL / DIRECT_URL (postgres) мөн шинэ нууцтай — эс бөгөөс migration, snapshot, backend-ийн system холболт унана
-    $envValues = [ordered]@{ PILOT_DB_ADMIN_PASSWORD = $newPassword }
-    foreach ($k in 'SYSTEM_DATABASE_URL', 'DIRECT_URL') {
-      $url = Get-Cfg $cfg $k
-      if ($url) { $envValues[$k] = Set-PostgresUrlPassword $url $newPassword }
-    }
-    Save-DotEnvValues $envFile $envValues
-  } catch {
-    $saveError = $_.Exception.Message
-    try {
-      $rollback = "BEGIN; ALTER ROLE postgres WITH PASSWORD '$oldPassword'; ALTER ROLE supabase_admin WITH PASSWORD '$oldPassword'; COMMIT;"
-      Invoke-DbSql $rollback -User 'supabase_admin' -Password $newPassword | Out-Null
-    } catch {
-      Stop-Pilot2 "DB password шинэчлэгдсэн боловч .env бичих болон DB rollback хоёулаа амжилтгүй. Нууцыг гараар сэргээнэ. .env алдаа: $saveError; rollback: $($_.Exception.Message)"
-    }
-    Stop-Pilot2 ".env бичиж чадсангүй; DB нууц үгийг хуучнаар буцаав: $saveError"
-  }
-  $env:PILOT_DB_ADMIN_PASSWORD = $newPassword
-  Write-Ok 'postgres / supabase_admin нууц үг солигдож .env шинэчлэгдэв; нууцыг нууц үгийн менежерт хадгал'
+  Stop-Pilot2 'rotate-db-password хасагдсан: Supabase CLI local stack DB admin нууц солихыг дэмждэггүй (солиход дараагийн асаалт унана) — ADR-002, 2026-11-11'
 }
 
 # Алдааны жагсаалт буцаана (хоосон = OK). Анхааруулгыг шууд хэвлэнэ.
@@ -359,8 +301,7 @@ function Test-PilotEnv([hashtable] $cfg, [switch] $NeedBackup) {
   if ((Get-Cfg $cfg 'JWT_SECRET').Length -lt 32) { $errors.Add('JWT_SECRET 32+ тэмдэгт байх ёстой') }
   if ((Get-Cfg $cfg 'JWT_SECRET') -match 'CHANGE') { $errors.Add('JWT_SECRET жишээ утга хэвээр') }
   $dbAdminPassword = Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD'
-  if (-not $dbAdminPassword) { Write-Warn2 'PILOT_DB_ADMIN_PASSWORD тохируулаагүй — нөөцлөсний дараа pilot.ps1 rotate-db-password ажиллуулна' }
-  elseif ($dbAdminPassword -notmatch '^[A-Za-z0-9]{32,}$') { $errors.Add('PILOT_DB_ADMIN_PASSWORD зөвхөн латин үсэг/тоо, 32+ тэмдэгт байна') }
+  if ($dbAdminPassword -and $dbAdminPassword -ne 'postgres') { $errors.Add('PILOT_DB_ADMIN_PASSWORD-ийг хасна — Supabase CLI local stack анхдагч нууцаар л асдаг (ADR-002, 2026-11-11)') }
   $storageDbWarnGb = Get-Cfg $cfg 'PILOT_STORAGE_DB_WARN_GB' '10'
   if ($storageDbWarnGb -notmatch '^\d+(?:\.\d+)?$' -or [double]$storageDbWarnGb -le 0) {
     $errors.Add('PILOT_STORAGE_DB_WARN_GB эерэг тоо байна')
@@ -562,14 +503,10 @@ function Ensure-SupabaseLoopbackNetwork {
   }
 }
 
-function Start-PilotSupabase([hashtable] $cfg, [switch] $AllowPendingConfigChange, [switch] $AllowDefaultDbPassword) {
+function Start-PilotSupabase([hashtable] $cfg, [switch] $AllowPendingConfigChange) {
   # env() → SUPABASE_AUTH_JWT_SECRET. Байхгүй бол CLI demo нууцаар асдаг тул заавал шалгана
   if ((Get-Cfg $cfg 'SUPABASE_AUTH_JWT_SECRET').Length -lt 32) { Stop-Pilot2 'SUPABASE_AUTH_JWT_SECRET алга' }
-  # v0.2.4.2: зөвхөн staging-ийн rotate-db-password — нууц хоосон (анхдагч postgres) үед DB-г солихын тулд асаана
-  $defaultDbAllowed = $AllowDefaultDbPassword -and $Instance -eq 'staging' -and -not (Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD')
-  if (-not $defaultDbAllowed -and (Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD') -notmatch '^[A-Za-z0-9]{32,}$') {
-    Stop-Pilot2 'PILOT_DB_ADMIN_PASSWORD тохируулаагүй/буруу — staging → pilot дарааллаар rotate-db-password ажиллуулна'
-  }
+  Assert-DefaultDbAdminPassword $cfg
   Ensure-SupabaseLoopbackNetwork
   $env:SUPABASE_AUTH_JWT_SECRET = $cfg['SUPABASE_AUTH_JWT_SECRET']
   $keys = Get-SupabaseKeys
@@ -802,16 +739,6 @@ function Get-StorageDir([hashtable] $cfg) {
   return (Join-Path $Root 'storage')
 }
 
-# `supabase db reset`-ийн дараа postgres-ийн нууц анхдагч (postgres) болдог; supabase_admin хэвээр үлддэг
-function Restore-DbAdminPassword([hashtable] $cfg) {
-  $pw = Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD'
-  if (-not $pw) { return }
-  Invoke-DbSql "ALTER ROLE postgres WITH PASSWORD '$pw'" -User 'supabase_admin' -Password $pw | Out-Null
-  $r = Invoke-DbSql 'SELECT current_user' -User 'postgres' -Password $pw -Capture
-  if ((@($r.Out) -join '').Trim() -ne 'postgres') { Stop-Pilot2 'db reset-ийн дараа postgres нууцыг .env-тэй нийцүүлж чадсангүй' }
-  Write-Ok 'postgres нууц үг .env-тэй нийцүүлэв (db reset-ийн дараа)'
-}
-
 function Get-DbAdminPassword([hashtable] $cfg) {
   return (Get-Cfg $cfg 'PILOT_DB_ADMIN_PASSWORD' 'postgres')
 }
@@ -939,8 +866,6 @@ function Invoke-Restore([string] $file) {
     Start-PilotSupabase $cfg -AllowPendingConfigChange | Out-Null
     # v0.2.4.4: --network-id заавал — эс бөгөөс DB контейнер CLI-ийн анхдагч сүлжээнд дахин үүсч auth/rest DB-г олохгүй (no such host)
     Invoke-Supabase -Arguments @('db', 'reset', '--local', '--no-seed', '--yes', '--network-id', $Prof.NetworkId) | Out-Null
-    # v0.2.4.3: db reset нь postgres role-ийн нууцыг анхдагч болгоно → SYSTEM_DATABASE_URL / DIRECT_URL-тэй нийцүүлнэ
-    Restore-DbAdminPassword $cfg
 
     Write-Step 'Өгөгдөл сэргээх'
     Invoke-Native 'docker' @('cp', (Join-Path $tmp 'public.dump'), "${DbContainer}:/tmp/pilot-public.dump") | Out-Null
