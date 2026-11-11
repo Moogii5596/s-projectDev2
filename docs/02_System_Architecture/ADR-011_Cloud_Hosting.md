@@ -22,8 +22,8 @@ tags: [adr, hosting, pilot, deploy, backup, v0.2.5]
 | Орчин | DB + Auth | Backend (NestJS) | Frontend | Redis | Файл |
 |---|---|---|---|---|---|
 | **dev** | Локал Docker Supabase (хэвээр) | локал | локал | локал | локал диск |
-| **staging** | Supabase Cloud Free — төсөл 1 | Render Free — service 1 | Vercel preview (`staging` branch) | Upstash Free | R2 `s-project-staging` |
-| **pilot** | Supabase Cloud Free — төсөл 2 | Render Free — service 2 | Vercel production (`main`) | Upstash Free | R2 `s-project-pilot` |
+| **staging** | Supabase Cloud Free — төсөл `s-project-staging` | Render Free — `s-project-api-staging` (`main`-аас auto-deploy) | Vercel `s-project-staging` (`main`-аас auto) → `staging.gobiverse.website` | Upstash Free | R2 `s-project-staging` |
+| **production** | Supabase Cloud Free — төсөл `s-project-prod` | Render Free — `s-project-api-prod` (auto-deploy ✖, зөвхөн «Deploy production» workflow-ийн deploy hook) | Vercel `s-project-prod` (git auto ✖, зөвхөн workflow-оос `vercel deploy --prod`) → `sino.gobiverse.website` | Upstash Free | R2 `s-project-prod` |
 
 - **Region:** Supabase — Зүүн хойд Ази (Сөүл / Токио); Render — Сингапур.
 - **Домэйн:** `sino.gobiverse.website` → Vercel (Cloudflare DNS); API → Render; файл → R2 custom domain. Cloudflare Tunnel / Caddy пилотод хэрэглэхээ болино.
