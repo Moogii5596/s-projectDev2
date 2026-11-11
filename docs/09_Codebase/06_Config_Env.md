@@ -112,6 +112,7 @@ tags: [codebase, config, generated]
 
 | Script | Команд |
 |---|---|
+| `prepare` | `node -e "try{require('./scripts/git-hooks/install.cjs')}catch(e){if(e.code!=='MODULE_NOT_FOUND')throw e}"` |
 | `build` | `turbo run build` |
 | `dev` | `turbo run dev` |
 | `test` | `turbo run test` |
