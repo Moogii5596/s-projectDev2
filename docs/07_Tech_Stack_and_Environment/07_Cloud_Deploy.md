@@ -113,3 +113,25 @@ tag vX.Y.Z (A0) → PO: Actions → «Deploy production» → Run workflow (tag)
 2. Upstash pay-as-you-go ($0.2 / 100K команд → ≈ $4–5/сар) — мөнгө → PO.
 3. Production-д мөн Render Key Value (Free нь workspace-д 1 — staging эзэлсэн; Starter төлбөртэй) — мөнгө → PO.
 
+
+## 11. Нөөц ба сэргээлт (H5, #19)
+**Өдөр бүр 02:00 (УБ)** + гараар (Actions → **Backup** → Run workflow, орчин сонгоно) — `.github/workflows/backup.yml`:
+`production`, `staging` тус бүрт: DB (`scripts/ci/db-backup.sh`: public, auth, auth_guard, supabase_migrations) + R2 файл (`scripts/ci/r2-backup.sh`, tar) → **age** шифрлэлт → Google Drive `s-project-backups/daily/<орчин>/` → 30 хоногоос хуучныг устгана (`manual/`-д хүрэхгүй). Амжилтгүй → issue (`backup-failed`, P1) + GitHub-ийн имэйл. Өдөр бүрийн холболт Supabase Free-г 7 хоногийн зогсолтоос сэрээнэ.
+
+**Нэг удаагийн тохиргоо (PO):**
+1. GitHub Secrets: `PROD_DB_URL`, `STAGING_DB_URL`, `BACKUP_AGE_RECIPIENT` (✅ 2026-11-11).
+2. **Google Drive** (нөөцийн аккаунт): өөрийн компьютер дээр `rclone config` → New remote нэр **`gdrive`**, type `drive`, scope `drive.file` (зөвхөн rclone-ийн үүсгэсэн файл), browser-оор нэвтэрнэ → `rclone config show gdrive` гаралтыг (`[gdrive]`-ээс эхэлсэн бүтэн хэсэг) secret **`RCLONE_CONFIG_GDRIVE`**-д. Тохируулаагүй бол нөөц Actions artifact (5 хоног) болж хадгалагдана (workflow шар).
+3. **R2** (H2 #17-ийн дараа): Cloudflare → R2 → Manage API tokens → **Object Read only**, хоёр bucket → `R2_BACKUP_ACCESS_KEY_ID`, `R2_BACKUP_SECRET_ACCESS_KEY`; `R2_ENDPOINT` = `https://<account_id>.r2.cloudflarestorage.com`. Алга бол файлын нөөцийг алгасна (warning).
+
+**Сэргээх** (`scripts/ci/db-restore.sh` — local, staging = агент; **production = зөвхөн PO-ийн шууд зөвшөөрөлтэй**, AGENTS.md §4):
+```bash
+# 1) Drive-аас татах: rclone copy gdrive:s-project-backups/daily/production/<файл>.dump.age .
+# 2) Target-ийн schema нөөцийнхтэй ижил/шинэ байх ёстой (үгүй бол эхлээд: supabase db push --db-url "$TARGET_DB_URL")
+TARGET_DB_URL='postgresql://postgres.<ref>:<pw>@aws-…pooler.supabase.com:5432/postgres' \
+AGE_IDENTITY=~/s-project-age-key.txt \
+CONFIRM_TARGET='aws-…pooler.supabase.com' \
+  bash scripts/ci/db-restore.sh prod-db-YYYYMMDDTHHMMSSZ.dump.age
+# 3) Файл: age -d -i key.txt prod-files-….tar.age | tar -x -C ./files ; rclone copy ./files r2:<bucket>
+```
+Скрипт: target-ийн host-ийг `CONFIRM_TARGET`-ээр давтан баталгаажуулна → нөөцийн migration target-д бүгд байгааг шалгана → public/auth/auth_guard хүснэгтүүдийг **нэг transaction-д** TRUNCATE + data-only restore (`session_replication_role = replica`: FK, trigger-ийн дарааллаас үл хамаарна) → мөрийн тоо хэвлэнэ. Алдаа → ROLLBACK (target өөрчлөгдөхгүй).
+Шалгасан (2026-11-12, PostgreSQL 16 локал кластер, Supabase-ийн бүтэцтэй загвар): round-trip (хуучин өгөгдөл солигдсон, sequence зөв, trigger асаагүй), буруу `CONFIRM_TARGET` → зогссон, нөөц шинэ migration-тай → зогссон. **Supabase Cloud дээрх бодит сэргээлтийн дадлага = H4** (staging, хугацааг энд бичнэ).
