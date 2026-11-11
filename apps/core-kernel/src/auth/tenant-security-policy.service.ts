@@ -3,6 +3,7 @@ import Redis from 'ioredis';
 import { AppError } from '../common/i18n/app-error';
 import { SystemPrismaService } from '../db/system-prisma.service';
 import { REDIS_CLIENT } from '../db/redis.module';
+import { L1Cache, l1TtlSeconds } from '../common/cache/l1-cache';
 
 export interface TenantSecurityPolicy {
   passwordMinLength: number;
@@ -24,6 +25,8 @@ const CACHE_PREFIX = 'tenant:security-policy:';
 @Injectable()
 export class TenantSecurityPolicyService {
   private readonly logger = new Logger(TenantSecurityPolicyService.name);
+  /** #32: процесс доторх cache (≤ 30 с) — хүсэлт бүрийн Redis `GET`-ийг багасгана */
+  private readonly l1 = new L1Cache<TenantSecurityPolicy>(l1TtlSeconds() * 1000);
 
   constructor(
     private readonly system: SystemPrismaService,
@@ -32,11 +35,16 @@ export class TenantSecurityPolicyService {
 
   async get(tenantId: string): Promise<TenantSecurityPolicy> {
     const key = `${CACHE_PREFIX}${tenantId}`;
+    const hit = this.l1.get(key);
+    if (hit) return hit;
     try {
       const cached = await this.redis.get(key);
       if (cached) {
         const parsed = JSON.parse(cached) as TenantSecurityPolicy;
-        if (this.isPolicy(parsed)) return parsed;
+        if (this.isPolicy(parsed)) {
+          this.l1.set(key, parsed);
+          return parsed;
+        }
         this.logger.warn(`Security policy cache буруу бүтэцтэй — tenant=${tenantId}`);
       }
     } catch (error) {
@@ -75,6 +83,7 @@ export class TenantSecurityPolicyService {
       : DEFAULT_TENANT_SECURITY_POLICY;
     try {
       await this.redis.setex(key, CACHE_TTL_SECONDS, JSON.stringify(policy));
+      this.l1.set(key, policy, CACHE_TTL_SECONDS * 1000);
     } catch (error) {
       this.logger.warn(`Security policy cache бичилт алдаа — tenant=${tenantId}: ${(error as Error).message}`);
     }
@@ -82,6 +91,7 @@ export class TenantSecurityPolicyService {
   }
 
   async invalidate(tenantId: string): Promise<void> {
+    this.l1.delete(`${CACHE_PREFIX}${tenantId}`);
     try {
       await this.redis.del(`${CACHE_PREFIX}${tenantId}`);
     } catch (error) {

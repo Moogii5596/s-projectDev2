@@ -63,7 +63,7 @@ export default function Layout() {
     debugVisible: showDebugMenu,
   })
   // v0.2.4 WF-06: «Миний батлах» тоо
-  const inbox = useQuery({ queryKey: approvalKeys.inbox, queryFn: approvalsApi.inbox, refetchInterval: 60_000, staleTime: 30_000 })
+  const inbox = useQuery({ queryKey: approvalKeys.inbox, queryFn: approvalsApi.inbox, refetchInterval: 120_000, staleTime: 60_000 }) // #32: 60 с → 120 с
   const pending = inbox.data?.items.length ?? 0
   // v0.2.4 UX-01: утсанд доод таб — «Модулиуд» цэс
   const [modulesOpen, setModulesOpen] = useState(false)

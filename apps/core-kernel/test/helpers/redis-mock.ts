@@ -7,7 +7,8 @@
  *
  * Зан төлөв:
  *   get        → null үргэлж (cache miss → DB-ээс уншина)
- *   incr       → 1 үргэлж    (TenantRateLimitGuard тестэд 429 өгөхгүй)
+ *   incr       → 1 үргэлж
+ *   eval       → KEYS тус бүрт 1 (#32 TenantRateLimitGuard-ийн Lua — 429 өгөхгүй)
  *   scanStream → хоосон stream
  */
 import { Readable } from 'stream';
@@ -21,6 +22,9 @@ export function createRedisMock() {
     del: async (..._keys: string[]): Promise<number> => 1,
     incr: async (_key: string): Promise<number> => 1,
     pexpire: async (_key: string, _ms: number): Promise<number> => 1,
+    eval: async (_script: string, numKeys: number, ..._args: unknown[]): Promise<number[]> => Array.from({ length: numKeys }, () => 1),
+    // Lua script доторх `redis.call(...)`-ийг coverage тест олдог — ioredis-д ч `call` бий
+    call: async (..._args: unknown[]): Promise<unknown> => null,
     publish: async (_channel: string, _message: string): Promise<number> => 0,
     scanStream: (_opts?: unknown): Readable => Readable.from([] as string[][]),
     on: (..._args: unknown[]) => mock,

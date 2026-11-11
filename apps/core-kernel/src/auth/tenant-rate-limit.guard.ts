@@ -11,6 +11,19 @@ import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../db/redis.module';
 import { parseRateLimitConfig } from '../config/rate-limit';
 
+/**
+ * #32: бүх цонхыг НЭГ `EVAL`-аар (өмнө нь цонх бүрт `INCR` + шинэ цонхонд `PEXPIRE` → хүсэлт бүрт 3–6 команд).
+ * KEYS = цонх бүрийн түлхүүр, ARGV = ижил дараалалтай TTL (ms). Буцаах = тоолуурууд.
+ */
+export const RATE_LIMIT_LUA = `
+local out = {}
+for i, key in ipairs(KEYS) do
+  local n = redis.call('INCR', key)
+  if n == 1 then redis.call('PEXPIRE', key, ARGV[i]) end
+  out[i] = n
+end
+return out`;
+
 @Injectable()
 export class TenantRateLimitGuard implements CanActivate {
   private readonly logger = new Logger(TenantRateLimitGuard.name);
@@ -27,24 +40,22 @@ export class TenantRateLimitGuard implements CanActivate {
     const identity = request.user?.tenantId ?? request.ip ?? 'unknown';
     const now = Date.now();
 
-    for (const window of this.windows) {
-      const bucket = Math.floor(now / window.ttlMs);
-      const key = `rate-limit:${window.name}:${identity}:${bucket}`;
-      let count: number;
-      try {
-        count = await this.redis.incr(key);
-        if (count === 1) await this.redis.pexpire(key, window.ttlMs);
-      } catch (err) {
-        // Phase 2.9.2 (A): fail-open — Redis тасарвал бүх API 500 болохоос сэргийлж
-        // хүсэлтийг нэвтрүүлнэ (тэр хугацаанд rate limit түр ажиллахгүй).
-        if (now - this.lastFailOpenWarnAt > 60_000) {
-          this.lastFailOpenWarnAt = now;
-          this.logger.warn(`Rate limit Redis алдаа — fail-open: ${(err as Error).message}`);
-        }
-        return true;
+    const keys = this.windows.map((w) => `rate-limit:${w.name}:${identity}:${Math.floor(now / w.ttlMs)}`);
+    let counts: number[];
+    try {
+      counts = (await this.redis.eval(RATE_LIMIT_LUA, keys.length, ...keys, ...this.windows.map((w) => String(w.ttlMs)))) as number[];
+    } catch (err) {
+      // Phase 2.9.2 (A): fail-open — Redis тасарвал бүх API 500 болохоос сэргийлж
+      // хүсэлтийг нэвтрүүлнэ (тэр хугацаанд rate limit түр ажиллахгүй).
+      if (now - this.lastFailOpenWarnAt > 60_000) {
+        this.lastFailOpenWarnAt = now;
+        this.logger.warn(`Rate limit Redis алдаа — fail-open: ${(err as Error).message}`);
       }
+      return true;
+    }
 
-      if (count > window.limit) {
+    for (const [i, window] of this.windows.entries()) {
+      if (Number(counts[i]) > window.limit) {
         const retryAfter = Math.max(1, Math.ceil((window.ttlMs - (now % window.ttlMs)) / 1000));
         response.header('Retry-After', String(retryAfter));
         throw new HttpException('Rate limit exceeded', HttpStatus.TOO_MANY_REQUESTS);

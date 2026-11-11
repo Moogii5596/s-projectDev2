@@ -33,6 +33,7 @@ tags: [codebase, config, generated]
 | `AUTH_LOCK_WINDOW_MINUTES` | `15` |  |
 | `AUTH_LOCK_DURATION_MINUTES` | `15` |  |
 | `AUTH_LOCK_GOTRUE_HOOK` | `false` | true = self-hosted GoTrue-ийн password hook (deploy/*/supabase/config.toml) асаалттай → буруу оролдлогыг hook тоолно (давхар тоолохгүй). Supabase Cloud (Free) дээр hook байхгүй → false. |
+| `AUTH_L1_CACHE_TTL_SECONDS` | `30` | #32: auth guard-ийн Redis GET-ийн өмнөх процесс доторх cache (сек, 0–30; 0 = унтраах). Олон процесс/instance үед invalidate хамгийн ихдээ энэ хугацаагаар хоцорно |
 | `LOG_FORMAT` |  | ── v0.2.5 H3 (#18): үүлэн орчин (Render + Vercel) — dev-д хоосон. Runbook: docs/07_Tech_Stack_and_Environment/07_Cloud_Deploy.md json = нэг мөр JSON лог (requestId, tenantId; нууцлалтай). Хоосон = энгийн өнгөт лог |
 | `TRUST_PROXY` |  | Render-ийн proxy-ийн ард бодит IP: 1 (hop). Хоосон = итгэхгүй (dev, пилот Caddy X-Real-IP) |
 | `CORS_ORIGINS` |  | Frontend өөр домэйнд (Vercel) бол таслалаар: https://staging.gobiverse.website. Хоосон = CORS унтраалттай (same-origin) |
