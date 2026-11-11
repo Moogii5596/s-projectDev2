@@ -105,6 +105,7 @@ tags: [codebase, config, generated]
 | `VITE_FEED` |  | v0.2.3 Блок 5 (M-0): Feed — хоосон = асаалттай («/» болон нэвтэрсний дараа /feed); off = унтраана (модулийн нүүр) |
 | `VITE_SENTRY_DSN` |  | v0.2.5 H3 (#18): Sentry (PII-гүй). Хоосон = ачаалахгүй. Release = Vercel commit (VERCEL_GIT_COMMIT_SHA) эсвэл VITE_APP_RELEASE |
 | `VITE_SENTRY_ENVIRONMENT` |  |  |
+| `VITE_TURNSTILE_SITE_KEY` | `***` | v0.2.5 #27 — Cloudflare Turnstile site key (staging/production). Хоосон = widget-гүй (dev, local, CI). Secret key = Supabase → Auth → Bot protection (энд ✖). Runbook 07_Cloud_Deploy.md §3. |
 
 ## pnpm script-үүд
 

@@ -1701,5 +1701,8 @@
   "camp.ct.edit_description": "Edit description",
   "camp.ct.item_description": "Work description",
   "camp.ct.confirm_delete_price": "Delete the price effective from {date}?",
-  "camp.ct.terms_document_hint": "Amendment document number for changing an active contract's terms"
+  "camp.ct.terms_document_hint": "Amendment document number for changing an active contract's terms",
+  "auth.captcha.loading": "Loading security check…",
+  "auth.captcha.error": "Security check failed to load.",
+  "auth.captcha.retry": "Try again"
 }

@@ -1,4 +1,4 @@
-import { IsString, MaxLength, MinLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 /** v0.2.2 D-10 — утас / username / имэйл + нууц үг */
 export class SignInDto {
@@ -7,6 +7,10 @@ export class SignInDto {
 
   @IsString() @MinLength(1) @MaxLength(128)
   password!: string;
+
+  /** v0.2.5 #27: Cloudflare Turnstile token (Supabase Bot protection асаалттай орчинд заавал; dev/CI-д байхгүй) */
+  @IsOptional() @IsString() @MaxLength(4096)
+  captchaToken?: string;
 }
 
 /** Tenant-ийн бодлогыг үйлчилгээ шалгана; нийтлэг доод хязгаар = 6 */
@@ -16,6 +20,10 @@ export class ChangePasswordDto {
 
   @IsString() @MinLength(6, { message: 'Шинэ нууц үг хамгийн багадаа 6 тэмдэгт байна' }) @MaxLength(72)
   newPassword!: string;
+
+  /** v0.2.5 #27: Cloudflare Turnstile token (Supabase Bot protection асаалттай орчинд заавал; dev/CI-д байхгүй) */
+  @IsOptional() @IsString() @MaxLength(4096)
+  captchaToken?: string;
 }
 
 /** v0.2.2 Блок 3 — урилга / reset хүлээн авах */

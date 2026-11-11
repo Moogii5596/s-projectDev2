@@ -52,7 +52,11 @@ tag vX.Y.Z (A0) → PO: Actions → «Deploy production» → Run workflow (tag)
 5. API keys (Settings → API Keys): **шинэ key ашиглана** — `SUPABASE_ANON_KEY` / `VITE_SUPABASE_ANON_KEY` = `sb_publishable_…`, `SUPABASE_SERVICE_ROLE_KEY` = `sb_secret_…` (зөвхөн Render; browser-ээс secret key-г Supabase татгалзана). Хувьсагчийн нэр хэвээр.
    Шалгасан (2026-11-12, supabase-js 2.119.0, Supabase CLI 2.122.1 local gateway): `auth.admin.createUser/updateUserById/listUsers/deleteUser`, `signInWithPassword`, `auth.getUser(token)`, `refreshSession`, raw `PUT /auth/v1/user`, `GET /auth/v1/health` (`apikey` толгой) — бүгд ногоон. Backend JWT-г өөрөө шалгадаггүй (`auth.getUser` → GoTrue) тул JWT signing key (ES256) өөрчлөлт нөлөөлөхгүй.
    Cloud дээр 401 гарвал (нөөц арга): API Keys → **Legacy API Keys** таб → `anon` → `SUPABASE_ANON_KEY`, `service_role` → `SUPABASE_SERVICE_ROLE_KEY` (legacy key-г унтраасан бол эхлээд «Re-enable»).
-6. Free төсөл 7 хоног идэвхгүй бол зогсдог → өдөр тутмын нөөц (H5) холбогдож сэрээнэ.
+6. **Bot protection (Turnstile, #27)** — шууд `/auth/v1/token?grant_type=password` замыг хаана (NestJS-ийн түгжээг тойрохгүй):
+   Cloudflare → Turnstile → Add widget (орчин бүрт: hostname `staging.gobiverse.website` / `sino.gobiverse.website`, mode = Managed) → **Site key** → Vercel `VITE_TURNSTILE_SITE_KEY`; **Secret key** → Supabase → Authentication → Attack Protection → Enable CAPTCHA → Turnstile.
+   Дараа нь шалгах: `curl -X POST <SUPABASE_URL>/auth/v1/token?grant_type=password -H "apikey: <anon>" -d '{"email":"x@x","password":"x"}'` → `captcha_failed` (400) байх ёстой; апп-аар нэвтрэлт ажиллана.
+   Анхаар: legacy `POST /api/v1/auth/register` (UI ашигладаггүй) нь password grant-аар токен авдаг тул captcha асаалттай орчинд ажиллахгүй.
+7. Free төсөл 7 хоног идэвхгүй бол зогсдог → өдөр тутмын нөөц (H5) холбогдож сэрээнэ.
 
 ## 4. Render
 1. New → Blueprint → энэ repo → `render.yaml` → 2 service үүснэ. `sync: false` хувьсагчдыг гараар (§5).
@@ -65,7 +69,7 @@ tag vX.Y.Z (A0) → PO: Actions → «Deploy production» → Run workflow (tag)
 **Render (service бүрт):** `DEDICATED_TENANT_SLUG`, `CORS_ORIGINS` (frontend домэйн, таслалаар), `PUBLIC_APP_URL`, `DATABASE_URL`, `SYSTEM_DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `REDIS_URL` (зөвхөн production: Upstash `rediss://default:<token>@<host>:6379` — TLS; staging-д blueprint `fromService`-ээр Key Value-ийн дотоод URL автомат), `JWT_SECRET` (≥32), `FILE_ENCRYPTION_KEY`, `MEDIA_URL_SECRET` (пилотынхтой ИЖИЛ — шифрлэсэн файл, зургийн линк), `SENTRY_DSN`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`. H2-оос: `STORAGE_DRIVER`, `R2_*`.
 Тогтмол (blueprint-д): `NODE_VERSION=22`, `NODE_ENV=production`, `LOG_FORMAT=json`, `TRUST_PROXY=1`, `DEPLOYMENT_MODE=dedicated`, `SENTRY_ENVIRONMENT`, `DEBUG_MENU_ENABLED` (staging true, production false — H1-ийн «түгжээ тайлах» Debug-д байгаа тул production-д асаах эсэхийг PO шийднэ).
 
-**Vercel (project бүрт, Environment Variables → Production):** `VITE_SUPABASE_URL` (cloud URL — `same-origin` ✖), `VITE_SUPABASE_ANON_KEY`, `VITE_API_BASE_URL` (Render URL, жишээ `https://s-project-api-prod.onrender.com`), `VITE_MODULES` (пилот: `camp`), `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`. Project Settings: Root Directory = `apps/web-shell`, Framework = Vite (бусдыг `vercel.json` тодорхойлно).
+**Vercel (project бүрт, Environment Variables → Production):** `VITE_SUPABASE_URL` (cloud URL — `same-origin` ✖), `VITE_SUPABASE_ANON_KEY`, `VITE_API_BASE_URL` (Render URL, жишээ `https://s-project-api-prod.onrender.com`), `VITE_MODULES` (пилот: `camp`), `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`, `VITE_TURNSTILE_SITE_KEY` (#27). Project Settings: Root Directory = `apps/web-shell`, Framework = Vite (бусдыг `vercel.json` тодорхойлно).
 
 **GitHub → Settings → Secrets (repo; Free private-д environment secret ✖):** `STAGING_DB_URL`, `PROD_DB_URL`, `BACKUP_AGE_RECIPIENT` (age нийтийн түлхүүр; хувийн түлхүүр PO-д, repo-д ✖), `RENDER_DEPLOY_HOOK_PROD`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_PROD`.
 **GitHub → Variables:** `STAGING_ENABLED=true` (staging бэлэн болсны дараа — тэр хүртэл staging migration алгасна), `PROD_API_URL`, `PROD_WEB_URL`.

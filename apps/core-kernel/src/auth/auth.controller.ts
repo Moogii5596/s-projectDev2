@@ -92,7 +92,7 @@ export class AuthController {
   @SkipAuth()
   @HttpCode(HttpStatus.OK)
   async signIn(@Body() dto: SignInDto, @Req() req: FastifyRequest) {
-    return this.signInService.signIn(req.headers['host'], clientIpOf(req), dto.identifier, dto.password);
+    return this.signInService.signIn(req.headers['host'], clientIpOf(req), dto.identifier, dto.password, dto.captchaToken);
   }
 
   /** GET /api/v1/auth/invites/:token — v0.2.2 Блок 3 (нэвтрэлтгүй): хүчинтэй эсэх, нэр, нэвтрэх нэр */
@@ -126,7 +126,7 @@ export class AuthController {
     const u = req.user!;
     // PIL-15 / D-1: хэрэглэгчийн өөрийн токеноор солино → одоогийн төхөөрөмж логинтой үлдэнэ (OPS-013)
     const accessToken = SessionRevokeService.bearerToken(req.headers.authorization);
-    return this.signInService.changePassword(u.tenantId, u.id, dto.currentPassword, dto.newPassword, accessToken);
+    return this.signInService.changePassword(u.tenantId, u.id, dto.currentPassword, dto.newPassword, accessToken, dto.captchaToken);
   }
 
   /** GET /api/v1/auth/sessions — нэвтэрсэн төхөөрөмжүүд (PIL-15, D-3) */
