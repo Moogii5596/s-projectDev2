@@ -16,20 +16,20 @@ export interface SignInSession {
  * Утас / нэвтрэх нэр / имэйл + нууц үг → server-ээр нэвтрэх.
  * apiClient биш `fetch`: 401 (буруу нууц үг) нь "session хүчингүй" interceptor-ийг (FE-007) өдөөх ёсгүй.
  */
-export async function signInRequest(identifier: string, password: string, fallbackError: string): Promise<SignInSession> {
+export async function signInRequest(identifier: string, password: string, fallbackError: string, captchaToken?: string | null): Promise<SignInSession> {
   const base = import.meta.env.VITE_API_BASE_URL || ''
   const res = await fetch(`${base}/api/v1/auth/sign-in`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept-Language': currentLang() },
-    body: JSON.stringify({ identifier, password }),
+    body: JSON.stringify(captchaToken ? { identifier, password, captchaToken } : { identifier, password }),
   })
   const body: unknown = await res.json().catch(() => null)
   if (!res.ok) throw new Error(apiErrorMessage(body, fallbackError))
   return body as SignInSession
 }
 
-export async function changePasswordRequest(currentPassword: string, newPassword: string): Promise<void> {
-  await apiClient.post('/api/v1/auth/change-password', { currentPassword, newPassword })
+export async function changePasswordRequest(currentPassword: string, newPassword: string, captchaToken?: string | null): Promise<void> {
+  await apiClient.post('/api/v1/auth/change-password', captchaToken ? { currentPassword, newPassword, captchaToken } : { currentPassword, newPassword })
 }
 
 export async function getPasswordPolicy(): Promise<{ passwordMinLength: number }> {

@@ -68,6 +68,6 @@ tags: [codebase, frontend, generated]
 | `terms.en.json` | 245 |
 | `terms.mn.json` | 245 |
 | `terms.zh.json` | 245 |
-| `web.en.json` | 1703 |
-| `web.mn.json` | 1703 |
-| `web.zh.json` | 1703 |
+| `web.en.json` | 1706 |
+| `web.mn.json` | 1706 |
+| `web.zh.json` | 1706 |

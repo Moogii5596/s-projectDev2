@@ -1701,5 +1701,8 @@
   "camp.ct.edit_description": "Тайлбар засах",
   "camp.ct.item_description": "Ажлын тайлбар",
   "camp.ct.confirm_delete_price": "{date}-ээс хүчинтэй үнийг устгах уу?",
-  "camp.ct.terms_document_hint": "Идэвхтэй гэрээний нөхцөл өөрчлөхөд нэмэлт өөрчлөлтийн баримтын дугаар"
+  "camp.ct.terms_document_hint": "Идэвхтэй гэрээний нөхцөл өөрчлөхөд нэмэлт өөрчлөлтийн баримтын дугаар",
+  "auth.captcha.loading": "Хамгаалалтын шалгалтыг ачаалж байна…",
+  "auth.captcha.error": "Хамгаалалтын шалгалт ачаалагдсангүй.",
+  "auth.captcha.retry": "Дахин оролдох"
 }

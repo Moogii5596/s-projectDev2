@@ -8,6 +8,7 @@ import { changePasswordRequest, getPasswordPolicy } from '../api/auth'
 import { MIN_PASSWORD_LENGTH, apiErrorMessage } from '../lib/password-change'
 import { HOME_PATH } from '../config/enabled-modules'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import TurnstileWidget, { useTurnstile } from '../components/TurnstileWidget'
 
 /**
  * v0.2.2 D-06 — нууц үг солих. `mustChangePassword` үед бусад хуудас хаалттай (backend 403) → энд л үлдэнэ.
@@ -28,6 +29,8 @@ export default function ChangePasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  /** v0.2.5 #27: одоогийн нууц үгийн шалгалт = нууц үг таах өөр зам → Turnstile */
+  const captcha = useTurnstile()
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -36,7 +39,7 @@ export default function ChangePasswordPage() {
     if (next !== confirm) return setError(t('auth.change.mismatch'))
     setSubmitting(true)
     try {
-      await changePasswordRequest(current, next)
+      await changePasswordRequest(current, next, captcha.token)
       await qc.invalidateQueries({ queryKey: ['auth', 'me'] })
       setDone(true)
     } catch (err) {
@@ -44,6 +47,7 @@ export default function ChangePasswordPage() {
       setError(apiErrorMessage(body, t('auth.error')))
     } finally {
       setSubmitting(false)
+      if (captcha.enabled) captcha.reset()
     }
   }
 
@@ -79,8 +83,9 @@ export default function ChangePasswordPage() {
               <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">{t('auth.change.confirm')}</label>
               <input id="confirm-password" type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} className={input} />
             </div>
+            <TurnstileWidget {...captcha.widgetProps} />
             {error && <div className="bg-red-50 text-red-700 text-sm px-3 py-2 rounded-lg">{error}</div>}
-            <button type="submit" disabled={submitting} className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+            <button type="submit" disabled={submitting || !captcha.ready} className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
               {submitting ? t('auth.submitting') : t('auth.change.submit')}
             </button>
             <div className="flex justify-between text-sm">

@@ -58,7 +58,7 @@ describe('AuthController — төхөөрөмжүүд, нууц үг солих 
   it('change-password: хэрэглэгчийн ӨӨРИЙН access token-ыг дамжуулна (одоогийн session үлдэнэ)', async () => {
     const { ctrl, signIn } = build();
     await ctrl.changePassword({ currentPassword: 'a', newPassword: 'b' } as never, req as never);
-    expect(signIn.changePassword).toHaveBeenCalledWith(T, 'auth-1', 'a', 'b', jwt);
+    expect(signIn.changePassword).toHaveBeenCalledWith(T, 'auth-1', 'a', 'b', jwt, undefined);
   });
 
   it('sessions: өөрийн authId + одоогийн session_id-аар жагсаана', async () => {

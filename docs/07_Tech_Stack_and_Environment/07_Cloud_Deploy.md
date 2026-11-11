@@ -52,7 +52,11 @@ tag vX.Y.Z (A0) → PO: Actions → «Deploy production» → Run workflow (tag)
 5. API keys (Settings → API Keys): **шинэ key ашиглана** — `SUPABASE_ANON_KEY` / `VITE_SUPABASE_ANON_KEY` = `sb_publishable_…`, `SUPABASE_SERVICE_ROLE_KEY` = `sb_secret_…` (зөвхөн Render; browser-ээс secret key-г Supabase татгалзана). Хувьсагчийн нэр хэвээр.
    Шалгасан (2026-11-12, supabase-js 2.119.0, Supabase CLI 2.122.1 local gateway): `auth.admin.createUser/updateUserById/listUsers/deleteUser`, `signInWithPassword`, `auth.getUser(token)`, `refreshSession`, raw `PUT /auth/v1/user`, `GET /auth/v1/health` (`apikey` толгой) — бүгд ногоон. Backend JWT-г өөрөө шалгадаггүй (`auth.getUser` → GoTrue) тул JWT signing key (ES256) өөрчлөлт нөлөөлөхгүй.
    Cloud дээр 401 гарвал (нөөц арга): API Keys → **Legacy API Keys** таб → `anon` → `SUPABASE_ANON_KEY`, `service_role` → `SUPABASE_SERVICE_ROLE_KEY` (legacy key-г унтраасан бол эхлээд «Re-enable»).
-6. Free төсөл 7 хоног идэвхгүй бол зогсдог → өдөр тутмын нөөц (H5) холбогдож сэрээнэ.
+6. **Bot protection (Turnstile, #27)** — шууд `/auth/v1/token?grant_type=password` замыг хаана (NestJS-ийн түгжээг тойрохгүй):
+   Cloudflare → Turnstile → Add widget (орчин бүрт: hostname `staging.gobiverse.website` / `sino.gobiverse.website`, mode = Managed) → **Site key** → Vercel `VITE_TURNSTILE_SITE_KEY`; **Secret key** → Supabase → Authentication → Attack Protection → Enable CAPTCHA → Turnstile.
+   Дараа нь шалгах: `curl -X POST <SUPABASE_URL>/auth/v1/token?grant_type=password -H "apikey: <anon>" -d '{"email":"x@x","password":"x"}'` → `captcha_failed` (400) байх ёстой; апп-аар нэвтрэлт ажиллана.
+   Анхаар: legacy `POST /api/v1/auth/register` (UI ашигладаггүй) нь password grant-аар токен авдаг тул captcha асаалттай орчинд ажиллахгүй.
+7. Free төсөл 7 хоног идэвхгүй бол зогсдог → өдөр тутмын нөөц (H5) холбогдож сэрээнэ.
 
 ## 4. Render
 1. New → Blueprint → энэ repo → `render.yaml` → 2 service үүснэ. `sync: false` хувьсагчдыг гараар (§5).
@@ -65,7 +69,7 @@ tag vX.Y.Z (A0) → PO: Actions → «Deploy production» → Run workflow (tag)
 **Render (service бүрт):** `DEDICATED_TENANT_SLUG`, `CORS_ORIGINS` (frontend домэйн, таслалаар), `PUBLIC_APP_URL`, `DATABASE_URL`, `SYSTEM_DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `REDIS_URL` (зөвхөн production: Upstash `rediss://default:<token>@<host>:6379` — TLS; staging-д blueprint `fromService`-ээр Key Value-ийн дотоод URL автомат), `JWT_SECRET` (≥32), `FILE_ENCRYPTION_KEY`, `MEDIA_URL_SECRET` (пилотынхтой ИЖИЛ — шифрлэсэн файл, зургийн линк), `SENTRY_DSN`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`. H2-оос: `STORAGE_DRIVER`, `R2_*`.
 Тогтмол (blueprint-д): `NODE_VERSION=22`, `NODE_ENV=production`, `LOG_FORMAT=json`, `TRUST_PROXY=1`, `DEPLOYMENT_MODE=dedicated`, `SENTRY_ENVIRONMENT`, `DEBUG_MENU_ENABLED` (staging true, production false — H1-ийн «түгжээ тайлах» Debug-д байгаа тул production-д асаах эсэхийг PO шийднэ).
 
-**Vercel (project бүрт, Environment Variables → Production):** `VITE_SUPABASE_URL` (cloud URL — `same-origin` ✖), `VITE_SUPABASE_ANON_KEY`, `VITE_API_BASE_URL` (Render URL, жишээ `https://s-project-api-prod.onrender.com`), `VITE_MODULES` (пилот: `camp`), `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`. Project Settings: Root Directory = `apps/web-shell`, Framework = Vite (бусдыг `vercel.json` тодорхойлно).
+**Vercel (project бүрт, Environment Variables → Production):** `VITE_SUPABASE_URL` (cloud URL — `same-origin` ✖), `VITE_SUPABASE_ANON_KEY`, `VITE_API_BASE_URL` (Render URL, жишээ `https://s-project-api-prod.onrender.com`), `VITE_MODULES` (пилот: `camp`), `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`, `VITE_TURNSTILE_SITE_KEY` (#27). Project Settings: Root Directory = `apps/web-shell`, Framework = Vite (бусдыг `vercel.json` тодорхойлно).
 
 **GitHub → Settings → Secrets (repo; Free private-д environment secret ✖):** `STAGING_DB_URL`, `PROD_DB_URL`, `BACKUP_AGE_RECIPIENT` (age нийтийн түлхүүр; хувийн түлхүүр PO-д, repo-д ✖), `RENDER_DEPLOY_HOOK_PROD`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_PROD`.
 **GitHub → Variables:** `STAGING_ENABLED=true` (staging бэлэн болсны дараа — тэр хүртэл staging migration алгасна), `PROD_API_URL`, `PROD_WEB_URL`.
@@ -116,3 +120,25 @@ tag vX.Y.Z (A0) → PO: Actions → «Deploy production» → Run workflow (tag)
 **Хэрэгжсэн (#32, 2026-11-12) — хувилбар 1:** rate limit = хүсэлт бүрт **1 `EVAL`** (3 цонх нэг Lua script-ээр); auth guard-ийн `GET`-үүд процесс доторх **L1 cache**-аар (`src/common/cache/l1-cache.ts`, TTL ≤ 30 с, `AUTH_L1_CACHE_TTL_SECONDS`, 0 = унтраах; ижил процессын invalidate L1-ийг шууд цэвэрлэнэ); хонх 30 с → **120 с**, батлах inbox 60 с → **120 с**, i18n 60 с → **10 мин** (нуугдсан таб poll хийхгүй).
 Шинэ тооцоо: нээлттэй таб ≈ 1.1 хүсэлт/мин; poll-ийн хооронд L1 хуучирдаг тул хүсэлт бүрт ≈ 1 `EVAL` + ≤ 5 `GET` ≈ 6 команд → ≈ 400 команд/цаг/таб. Пилот (15 × 2 ц × 22 өдөр ≈ 660 таб-цаг) ≈ 0.26M + бусад ≈ 0.02M → **≈ 0.28M/сар** (< 500K, босго 300K-д ойр). Cutover-ийн дараа эхний 7 хоногт Upstash-ийн хэрэглээг өдөр бүр харна; 300K/сар-аас давах хандлагатай бол PO-д (төлбөртэй багц).
 
+
+## 11. Нөөц ба сэргээлт (H5, #19)
+**Өдөр бүр 02:00 (УБ)** + гараар (Actions → **Backup** → Run workflow, орчин сонгоно) — `.github/workflows/backup.yml`:
+`production`, `staging` тус бүрт: DB (`scripts/ci/db-backup.sh`: public, auth, auth_guard, supabase_migrations) + R2 файл (`scripts/ci/r2-backup.sh`, tar) → **age** шифрлэлт → Google Drive `s-project-backups/daily/<орчин>/` → 30 хоногоос хуучныг устгана (`manual/`-д хүрэхгүй). Амжилтгүй → issue (`backup-failed`, P1) + GitHub-ийн имэйл. Өдөр бүрийн холболт Supabase Free-г 7 хоногийн зогсолтоос сэрээнэ.
+
+**Нэг удаагийн тохиргоо (PO):**
+1. GitHub Secrets: `PROD_DB_URL`, `STAGING_DB_URL`, `BACKUP_AGE_RECIPIENT` (✅ 2026-11-11).
+2. **Google Drive** (нөөцийн аккаунт): өөрийн компьютер дээр `rclone config` → New remote нэр **`gdrive`**, type `drive`, scope `drive.file` (зөвхөн rclone-ийн үүсгэсэн файл), browser-оор нэвтэрнэ → `rclone config show gdrive` гаралтыг (`[gdrive]`-ээс эхэлсэн бүтэн хэсэг) secret **`RCLONE_CONFIG_GDRIVE`**-д. Тохируулаагүй бол нөөц Actions artifact (5 хоног) болж хадгалагдана (workflow шар).
+3. **R2** (H2 #17-ийн дараа): Cloudflare → R2 → Manage API tokens → **Object Read only**, хоёр bucket → `R2_BACKUP_ACCESS_KEY_ID`, `R2_BACKUP_SECRET_ACCESS_KEY`; `R2_ENDPOINT` = `https://<account_id>.r2.cloudflarestorage.com`. Алга бол файлын нөөцийг алгасна (warning).
+
+**Сэргээх** (`scripts/ci/db-restore.sh` — local, staging = агент; **production = зөвхөн PO-ийн шууд зөвшөөрөлтэй**, AGENTS.md §4):
+```bash
+# 1) Drive-аас татах: rclone copy gdrive:s-project-backups/daily/production/<файл>.dump.age .
+# 2) Target-ийн schema нөөцийнхтэй ижил/шинэ байх ёстой (үгүй бол эхлээд: supabase db push --db-url "$TARGET_DB_URL")
+TARGET_DB_URL='postgresql://postgres.<ref>:<pw>@aws-…pooler.supabase.com:5432/postgres' \
+AGE_IDENTITY=~/s-project-age-key.txt \
+CONFIRM_TARGET='aws-…pooler.supabase.com' \
+  bash scripts/ci/db-restore.sh prod-db-YYYYMMDDTHHMMSSZ.dump.age
+# 3) Файл: age -d -i key.txt prod-files-….tar.age | tar -x -C ./files ; rclone copy ./files r2:<bucket>
+```
+Скрипт: target-ийн host-ийг `CONFIRM_TARGET`-ээр давтан баталгаажуулна → нөөцийн migration target-д бүгд байгааг шалгана → public/auth/auth_guard хүснэгтүүдийг **нэг transaction-д** TRUNCATE + data-only restore (`session_replication_role = replica`: FK, trigger-ийн дарааллаас үл хамаарна) → мөрийн тоо хэвлэнэ. Алдаа → ROLLBACK (target өөрчлөгдөхгүй).
+Шалгасан (2026-11-12, PostgreSQL 16 локал кластер, Supabase-ийн бүтэцтэй загвар): round-trip (хуучин өгөгдөл солигдсон, sequence зөв, trigger асаагүй), буруу `CONFIRM_TARGET` → зогссон, нөөц шинэ migration-тай → зогссон. **Supabase Cloud дээрх бодит сэргээлтийн дадлага = H4** (staging, хугацааг энд бичнэ).

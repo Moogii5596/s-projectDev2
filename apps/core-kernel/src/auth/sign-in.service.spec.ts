@@ -123,6 +123,19 @@ describe('SignInService (v0.2.2 D-10)', () => {
       await expect(s.svc.signIn(undefined, undefined, '99112233', 'pw')).rejects.toMatchObject({ status: 503 });
     });
 
+    it('#27: captchaToken-ийг GoTrue-д дамжуулна; captcha_failed → 400 auth.captcha_failed, тоолохгүй', async () => {
+      s = setup({ rows: baseRows() });
+      s.signInWithPassword.mockResolvedValue({ data: { session, user: { id: 'auth-1' } }, error: null });
+      await s.svc.signIn(undefined, undefined, '99112233', 'pw', 'tok-1');
+      expect(s.signInWithPassword).toHaveBeenCalledWith({ email: 'bat@sino.mn', password: 'pw', options: { captchaToken: 'tok-1' } });
+      s.signInWithPassword.mockResolvedValue({ data: {}, error: { status: 400, code: 'captcha_failed', message: 'captcha protection: request disallowed' } });
+      for (let i = 0; i < 6; i++) {
+        await expect(s.svc.signIn(undefined, undefined, '99112233', 'pw')).rejects.toMatchObject({ status: 400, code: 'auth.captcha_failed' });
+      }
+      expect(s.loginLock.recordFailure).not.toHaveBeenCalled();
+      expect(s.redis.incr).not.toHaveBeenCalled();
+    });
+
     it('session өөр хэрэглэгчийнх (байх ёсгүй) → токен өгөхгүй 401', async () => {
       s.signInWithPassword.mockResolvedValue({ data: { session, user: { id: 'someone-else' } }, error: null });
       await expect(s.svc.signIn(undefined, undefined, '99112233', 'pw')).rejects.toMatchObject({ status: 401 });
