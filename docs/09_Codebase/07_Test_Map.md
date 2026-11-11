@@ -2,7 +2,7 @@
 title: "Тестийн зураглал"
 type: "Guide"
 status: "Active"
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 tags: [codebase, testing, generated]
 ---
 
@@ -12,7 +12,7 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 41 файл, ~335 тест
+## Integration (бодит PG + RLS) — 41 файл, ~336 тест
 
 Команд: `pnpm test:integration`
 
@@ -43,7 +43,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/core-feedback.integration.spec.ts` | 8 | v0.2.3 Блок F — санал хүсэлт (integration) |
 | `core-kernel/test/core-notifications.integration.spec.ts` | 3 | NTF-01 core notifications (integration) |
 | `core-kernel/test/core-rbac-adr007.integration.spec.ts` | 8 | v0.2.3 Блок 2 — ADR-007 core RBAC (integration) |
-| `core-kernel/test/core-sites.integration.spec.ts` | 2 | Core sites API (integration) |
+| `core-kernel/test/core-sites.integration.spec.ts` | 3 | Core sites API (integration) |
 | `core-kernel/test/core-tenant-settings.integration.spec.ts` | 4 | SYS-01 tenant settings API (integration) |
 | `core-kernel/test/event-bus.integration.spec.ts` | 5 | 🔗 5.2 Гинж: MR → Workflow → Budget → Outbox → Redis · 🔒 5.0 Зэрэгцээ poller — event бүр яг нэг удаа [EVT-001] · ♻️ 5.3 Retry + DLQ |
 | `core-kernel/test/feed.integration.spec.ts` | 13 | v0.2.3 Блок 5 — Feed v0 (integration) |
@@ -185,7 +185,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/storage/tests/local-disk.storage.test.ts` | 7 | LocalDiskStorage · contentTypeOf |
 | `core-kernel/src/storage/tests/media.test.ts` | 11 | MediaUrlSigner — гарын үсэгтэй зургийн URL · parseVariants / pickVariant / mediaImageDto · MediaService — хадгалах / устгах (LocalDiskStorage, бодит sharp) · storageDir |
 
-## Unit — web-shell — 40 файл, ~185 тест
+## Unit — web-shell — 40 файл, ~186 тест
 
 Команд: `pnpm --filter web-shell test`
 
@@ -194,7 +194,7 @@ tags: [codebase, testing, generated]
 | `web-shell/src/components/RouteErrorBoundary.test.tsx` | 1 | RouteErrorBoundary |
 | `web-shell/src/core/tests/ImportDialog.test.tsx` | 1 | ImportDialog |
 | `web-shell/src/core/tests/grid.test.ts` | 3 | grid (хүснэгтээр оруулах) |
-| `web-shell/src/i18n/tests/i18n.test.ts` | 7 | орчуулгын каталог · i18n ажиллагаа |
+| `web-shell/src/i18n/tests/i18n.test.ts` | 8 | орчуулгын каталог · i18n ажиллагаа |
 | `web-shell/src/lib/tests/access.test.ts` | 6 | access (PIL-19, ADR-007 B3-3) |
 | `web-shell/src/lib/tests/devices.test.ts` | 5 | describeUserAgent · deviceTitle · sortDevices / otherDevices |
 | `web-shell/src/lib/tests/home.test.ts` | 3 | M-0 — нэвтэрсний дараах зам (v0.2.3 Блок 5) |

@@ -13,7 +13,7 @@ tags: [lessons, index, generated]
 > **Шинэ алдаа:** тохирох `lessons/LL-*.md`-д `### [TAG-NNN] Гарчиг` + **Тохиолдсон / Шалтгаан / Дүрэм** → [[LL-99_Changelog]]-д мөр → `pnpm docs:gen`. Давтагдвал шинэ ID биш — `### [ID] (давтагдсан, огноо) …`.
 > Файл: [[LL-01_Backend_DB]] · [[LL-02_Test_CI]] · [[LL-03_Env_Ops_Pilot]] · [[LL-04_Architecture_RLS]] · [[LL-05_Frontend]] · [[LL-06_Camp_v02]] · [[LL-07_Docs]] · Хуучин нэгтгэсэн файл (архив): [[lessons_learned_MVP]]
 
-Нийт **190** сургамж.
+Нийт **193** сургамж.
 
 ## DB, Prisma, RLS, migration
 
@@ -32,7 +32,7 @@ tags: [lessons, index, generated]
 | MIG-002 | Migration файлын дугаарыг **хэрэгжүүлэх үед** (бодит дарааллаар) өгнө; tech plan-д зөвхөн «шинэ migration» гэж… | LL-06 §24 |
 | MIG-003 | Enum утга нэмэх migration-д тэр утгыг хэрэглэх юу ч (index, CHECK, seed, функц) бичихгүй. | LL-06 §24 |
 | MIG-004 | Хүснэгт нэрлэх migration-ийн өмнө `grep -l <хүснэгт> supabase/migrations/*.sql`-ээр түүнийг хэрэглэдэг бүх функцийг олж… | LL-06 §24 |
-| MIG-005 | Backfill/sync хийх хүснэгтийн CHECK эх сурвалжийн дүрмээс хатуу байж болохгүй; fixture-д бодит өгөгдлийн хэлбэр; staging-д бодит нөөцөөр туулна. | LL-03 §20 |
+| MIG-005 | Backfill / sync trigger-тэй хүснэгтийн CHECK-ийг эх хүснэгтийн DTO/CHECK-тэй ижил (эсвэл илүү сул) болгоно; fixture-д… | LL-03 §20 |
 | MIGRATE-001 | DROP CHECK → CREATE ENUM → ALTER TYPE → RECREATE CHECK | LL-01 §3 |
 | MIGRATE-002 | DROP index → DROP CHECK → CREATE ENUM → ALTER TYPE → RECREATE index | LL-01 §3 |
 | PRISMA-001 | `id String @id @default(uuid()) @db.Uuid`, `tenantId String @map("tenant_id") @db.Uuid` | LL-01 §2 |
@@ -203,11 +203,11 @@ tags: [lessons, index, generated]
 | OPS-013 | Нууц үг солихдоо хэрэглэгчийн ӨӨРИЙН access token-оор (B) солино → одоогийн төхөөрөмж логинтой үлдэнэ; admin API (A)… | LL-03 §20 |
 | OPS-014 | CLI амжилтгүй бол хуучин snapshot файлыг бүү ашигла; хувилбар тус бүрийн схем ба харьцуулах форматыг шалга. | LL-03 §20 |
 | OPS-015 | A/B эцсийн эрхийг өмнөхийн адил бүрэн харьцуулж, загвар ба эцсийн эрхийн зөрүүний чиглэл болон мөрүүд өөрчлөгдсөн эсэхийг… | LL-03 §20 |
-| OPS-016 | Нууц солихдоо superuser-ээр, түүнийг хэрэглэдэг бүх `.env` түлхүүрийг хамт, `db reset`/restore-ийн дараа дахин тохируулна; release бүрт staging-д upgrade **ба** rollback-ийг туулна. | LL-03 §20 |
+| OPS-016 | Платформын анхдагч нууцыг солихоос өмнө тэр платформ (CLI/stack) үүнийг **дахин асаалтын дараа** дэмждэгийг staging-д… | LL-03 §20 |
 | PS-001 | Windows PowerShell 5.1-д ажиллах скрипт бичих | LL-03 §20 |
 | PS-002 | Процессын нэр шалгадаг кодыг тестлэх shim нь жинхэнэ нэртэй байх (жижиг C wrapper, хүүхэд процесс `PR_SET_PDEATHSIG`-тэй). | LL-06 §21 |
 | PS-003 | Урт амьдрах процесс асаадаг командыг pipe-аар бүү дууд. Windows-ийн процесс/handle-ийн зан төлөвийг Linux shim тестээр… | LL-06 §21 |
-| PS-004 | Native командын аргументад давхар хашилт бүү оруул (PS 5.1 хасдаг) — `{{json .Options}}` + `ConvertFrom-Json`; shim template-ийг шалгана. | LL-03 §20 |
+| PS-004 | Native командын аргументад давхар хашилт бүү оруул — `{{json .Options}}` гэх мэт хашилтгүй template авч PowerShell-д… | LL-03 §20 |
 
 ## Процесс, баримт
 
