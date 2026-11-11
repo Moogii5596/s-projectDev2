@@ -35,7 +35,7 @@ export default function DebugPage() {
       </div>
       {tab === 'system' && <SystemTab canManage={!!me.data?.canManage} />}
       {tab === 'health' && <HealthTab />}
-      {tab === 'permissions' && <PermissionsTab />}
+      {tab === 'permissions' && <PermissionsTab canManage={!!me.data?.canManage} />}
       {tab === 'logs' && <LogsTab />}
       {tab === 'audit' && <AuditTab />}
       {tab === 'i18n' && <I18nTab />}
@@ -180,40 +180,71 @@ function HealthTab() {
   )
 }
 
-function PermissionsTab() {
+/** v0.2.5 H1 (#16): сонгосон хэрэглэгчийн нэвтрэлтийн түгжээ + тайлах (core.debug.manage, audit) */
+function LoginLockCard({ userId, canManage }: { userId: string; canManage: boolean }) {
+  const { t } = useTranslation()
+  const qc = useQueryClient()
+  const key = ['core', 'debug', 'login-lock', userId]
+  const q = useQuery({ queryKey: key, queryFn: () => debugApi.loginLock(userId) })
+  const unlock = useMutation({ mutationFn: () => debugApi.unlockLogin(userId), onSuccess: () => qc.invalidateQueries({ queryKey: key }) })
+  const locale = INTL_LOCALE[currentLang()]
+  const l = q.data
+  return (
+    <Card title={t('debug.lock.title')} actions={canManage && l && (l.locked || l.failedCount > 0) && (
+      <Button size="sm" variant="secondary" loading={unlock.isPending} onClick={() => window.confirm(t('debug.lock.unlock_confirm')) && unlock.mutate()}>{t('debug.lock.unlock')}</Button>
+    )}>
+      {q.isLoading && <Loading />}
+      {(q.error || unlock.error) && <ErrorBox error={q.error ?? unlock.error} />}
+      {unlock.isSuccess && <p className="mb-2 text-xs text-green-700">{t('debug.done')}</p>}
+      {l && (
+        <p className="text-sm">
+          {l.locked
+            ? <><Badge tone="red">{t('debug.lock.locked')}</Badge> {t('debug.lock.until', { at: new Date(l.lockedUntil!).toLocaleString(locale) })}</>
+            : <Badge tone="green">{t('debug.lock.not_locked')}</Badge>}
+          {' '}<span className="text-xs text-gray-500">{t('debug.lock.failed', { n: l.failedCount })}</span>
+        </p>
+      )}
+    </Card>
+  )
+}
+
+function PermissionsTab({ canManage }: { canManage: boolean }) {
   const { t } = useTranslation()
   const [userId, setUserId] = useState('')
   const users = useQuery({ queryKey: ['core', 'debug', 'users'], queryFn: debugApi.users })
   const q = useQuery({ queryKey: ['core', 'debug', 'perms', userId], queryFn: () => debugApi.permissions(userId), enabled: !!userId })
   return (
-    <Card title={t('debug.perms.title')}>
-      <select aria-label={t('debug.perms.user')} className={`${inputSmCls} mb-3 w-full sm:w-96`} value={userId} onChange={(e) => setUserId(e.target.value)}>
-        <option value="">{t('debug.perms.user')}</option>
-        {users.data?.map((u) => <option key={u.id} value={u.id}>{u.fullName ?? u.email} · {u.role}{u.isActive ? '' : ` · ${t('debug.perms.inactive')}`}</option>)}
-      </select>
-      {q.isLoading && userId && <Loading />}
-      {q.isError && <ErrorBox error={q.error} />}
-      {q.data && (
-        <>
-          <p className="mb-2 text-sm">
-            {q.data.user.role}
-            {q.data.isTenantAdmin && <> · <Badge tone="blue">{t('debug.perms.tenant_admin')}</Badge></>}
-            {q.data.debugView && <> · <Badge tone="yellow">Debug</Badge></>}
-          </p>
-          {q.data.items.length === 0 ? <Empty>{t('debug.perms.none')}</Empty> : (
-            <Table head={[t('debug.perms.code'), t('debug.perms.scope'), t('debug.perms.source')]}>
-              {q.data.items.map((p, i) => (
-                <tr key={i} className="border-t border-gray-100">
-                  <td className={td}>{t(`perm.${p.code}`, { defaultValue: p.code })} <span className="font-mono text-[11px] text-gray-400">{p.code}</span></td>
-                  <td className={td}>{p.scope === 'TENANT' ? t('debug.perms.tenant') : p.siteName}</td>
-                  <td className={td}>{p.source}{p.roleName && ` · ${p.roleName}`}</td>
-                </tr>
-              ))}
-            </Table>
-          )}
-        </>
-      )}
-    </Card>
+    <>
+      <Card title={t('debug.perms.title')}>
+        <select aria-label={t('debug.perms.user')} className={`${inputSmCls} mb-3 w-full sm:w-96`} value={userId} onChange={(e) => setUserId(e.target.value)}>
+          <option value="">{t('debug.perms.user')}</option>
+          {users.data?.map((u) => <option key={u.id} value={u.id}>{u.fullName ?? u.email} · {u.role}{u.isActive ? '' : ` · ${t('debug.perms.inactive')}`}</option>)}
+        </select>
+        {q.isLoading && userId && <Loading />}
+        {q.isError && <ErrorBox error={q.error} />}
+        {q.data && (
+          <>
+            <p className="mb-2 text-sm">
+              {q.data.user.role}
+              {q.data.isTenantAdmin && <> · <Badge tone="blue">{t('debug.perms.tenant_admin')}</Badge></>}
+              {q.data.debugView && <> · <Badge tone="yellow">Debug</Badge></>}
+            </p>
+            {q.data.items.length === 0 ? <Empty>{t('debug.perms.none')}</Empty> : (
+              <Table head={[t('debug.perms.code'), t('debug.perms.scope'), t('debug.perms.source')]}>
+                {q.data.items.map((p, i) => (
+                  <tr key={i} className="border-t border-gray-100">
+                    <td className={td}>{t(`perm.${p.code}`, { defaultValue: p.code })} <span className="font-mono text-[11px] text-gray-400">{p.code}</span></td>
+                    <td className={td}>{p.scope === 'TENANT' ? t('debug.perms.tenant') : p.siteName}</td>
+                    <td className={td}>{p.source}{p.roleName && ` · ${p.roleName}`}</td>
+                  </tr>
+                ))}
+              </Table>
+            )}
+          </>
+        )}
+      </Card>
+      {userId && <LoginLockCard userId={userId} canManage={canManage} />}
+    </>
   )
 }
 

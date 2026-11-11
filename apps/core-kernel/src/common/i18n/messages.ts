@@ -43,6 +43,7 @@ export const MESSAGES = {
   // ── Нэвтрэлт (v0.2.2 Блок 2, D-10 / D-06) ──
   'auth.invalid_credentials': { mn: 'Нэвтрэх нэр эсвэл нууц үг буруу', en: 'Incorrect login or password', zh: '登录名或密码错误' },
   'auth.too_many_attempts': { mn: 'Олон удаа оролдсон. Дараа дахин оролдоно уу', en: 'Too many attempts. Please try again later', zh: '尝试次数过多，请稍后重试' },
+  'auth.account_locked': { mn: 'Хэт олон удаа буруу нууц үг оруулсан тул бүртгэл түр түгжигдлээ. {minutes} минутын дараа дахин оролдоно уу', en: 'Too many incorrect passwords — this account is temporarily locked. Try again in {minutes} min', zh: '密码错误次数过多，账户已暂时锁定。请 {minutes} 分钟后再试' },
   'auth.service_unavailable': { mn: 'Нэвтрэлтийн сервис түр ажиллахгүй байна', en: 'The sign-in service is temporarily unavailable', zh: '登录服务暂时不可用' },
   'auth.not_member': { mn: 'Таны нэвтрэх эрх хаагдсан эсвэл энэ байгууллагад бүртгэлгүй байна. Дахин нэвтэрнэ үү', en: 'Your access has been disabled or you are not a member of this organization. Please sign in again', zh: '您的访问权限已被停用或您不属于该组织。请重新登录' },
   'auth.password_change_required': { mn: 'Үргэлжлүүлэхийн өмнө нууц үгээ солино уу', en: 'Please change your password before continuing', zh: '继续之前请修改密码' },

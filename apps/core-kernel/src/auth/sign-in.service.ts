@@ -12,6 +12,7 @@ import { resolveTenantSlug } from './tenant-slug';
 import { LoginIdentifier, maskPhone, parseLoginIdentifier } from './login-identifier';
 import { SessionRevokeService } from './session-revoke.service';
 import { DEFAULT_TENANT_SECURITY_POLICY, TenantSecurityPolicyService } from './tenant-security-policy.service';
+import { LoginLockService, minutesUntil } from './login-lock.service';
 
 export interface SignInSession {
   accessToken: string;
@@ -32,7 +33,7 @@ interface LoginUser {
  * Зөвхөн АМЖИЛТГҮЙ оролдлогыг тоолно (амжилттай нэвтрэлт нэвтрэх нэрийн тоолуурыг тэглэнэ):
  *   нэвтрэх нэр × байгууллага: 15 минутад 10 амжилтгүй; IP: 5 минутад 50 амжилтгүй.
  * Шалтгаан: кемпийн нэг WiFi/NAT-аас өглөө олон ажилтан зэрэг нэвтэрнэ (амжилттайг тоолбол 429).
- * IP-ийг зөвхөн Caddy-ийн `X-Real-IP`-тэй (бодит) үед тоолно. Үндсэн хамгаалалт = GoTrue-ийн бүртгэлийн түгжээ (PIL-07).
+ * IP-ийг зөвхөн Caddy-ийн `X-Real-IP`-тэй (бодит) үед тоолно. Үндсэн хамгаалалт = бүртгэлийн түгжээ (`LoginLockService`, v0.2.5 H1).
  */
 export const SIGN_IN_LIMITS = {
   identifier: { limit: 10, ttlSec: 15 * 60 },
@@ -43,6 +44,9 @@ type FailureLimit = { limit: number; ttlSec: number };
 const invalid = () => new AppError(HttpStatus.UNAUTHORIZED, 'auth.invalid_credentials');
 const tooMany = () => new AppError(HttpStatus.TOO_MANY_REQUESTS, 'auth.too_many_attempts');
 const unavailable = () => new AppError(HttpStatus.SERVICE_UNAVAILABLE, 'auth.service_unavailable');
+/** v0.2.5 H1: бүртгэл түгжигдсэн — `params.minutes` (мессежид), `params.until` (ISO) */
+const accountLocked = (until: Date) =>
+  new AppError(HttpStatus.TOO_MANY_REQUESTS, 'auth.account_locked', { minutes: minutesUntil(until), until: until.toISOString() });
 
 /**
  * GoTrue хүрэх боломжгүй: supabase-js throw хийхгүй, `AuthRetryableFetchError` (status 0/байхгүй) буцаадаг —
@@ -57,7 +61,8 @@ const isAuthServiceDown = (e: { status?: number; name?: string }) =>
  * - Хэрэглэгч байгаа эсэх, имэйл, утас юу ч гадагш гарахгүй: байхгүй / идэвхгүй / буруу нууц үг → ИЖИЛ 401.
  *   Байхгүй хэрэглэгчид ч GoTrue-г хуурамч `.invalid` хаягаар дуудна (хугацааны зөрүүгээр задрахгүй).
  * - Tenant = Host (эсвэл dedicated) — TenantAuthGuard-тай нэг дүрэм (`resolveTenantSlug`).
- * - GoTrue-ийн бүртгэлийн түгжээ (v0.2.1 PIL-07 hook, 429) хэвээр үйлчилнэ.
+ * - v0.2.5 H1 (#16): бүртгэлийн түгжээ = `LoginLockService` (15 мин-д 5 буруу → 15 мин, env-ээр) — GoTrue дуудахаас ӨМНӨ шалгана.
+ *   Self-hosted GoTrue hook (PIL-07) асаалттай бол (`AUTH_LOCK_GOTRUE_HOOK=true`) тоолохыг hook-д үлдээнэ.
  */
 @Injectable()
 export class SignInService {
@@ -69,6 +74,7 @@ export class SignInService {
     private readonly system: SystemPrismaService,
     private readonly tenantCache: TenantCacheService,
     private readonly securityPolicy: TenantSecurityPolicyService,
+    private readonly loginLock: LoginLockService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     /** Тест: GoTrue client-ийг орлуулах */
     @Optional() @Inject('SIGN_IN_GOTRUE_FACTORY') private readonly gotrueFactory?: () => SupabaseClient,
@@ -137,6 +143,33 @@ export class SignInService {
     }, undefined);
   }
 
+  /** Түгжээтэй бүртгэл → GoTrue дуудахгүй 429 (зөв нууц үгтэй ч). DB алдаа → 503 (fail-closed) */
+  private async assertAccountNotLocked(authId: string): Promise<void> {
+    let until: Date | null;
+    try {
+      until = await this.loginLock.lockedUntil(authId);
+    } catch (err) {
+      this.logger.error(`login lock шалгахад алдаа: ${(err as Error).message}`);
+      throw unavailable();
+    }
+    if (until) throw accountLocked(until);
+  }
+
+  /**
+   * Бүртгэлийн буруу оролдлого тоолох (hook асаалттай бол hook тоолно). Энэ оролдлогоор түгжигдсэн бол шууд 429
+   * (хэрэглэгч хэдэн минут хүлээхээ мэднэ). DB алдаа → log, дуудагчийн алдаа (401/400) хэвээр.
+   */
+  private async recordAccountFailure(authId: string): Promise<void> {
+    if (this.loginLock.rules.gotrueHook) return;
+    let until: Date | null = null;
+    try {
+      until = await this.loginLock.recordFailure(authId);
+    } catch (err) {
+      this.logger.error(`login lock тоолоход алдаа: ${(err as Error).message}`);
+    }
+    if (until) throw accountLocked(until);
+  }
+
   /** Идэвхтэй хэрэглэгчийг нэвтрэх нэрээр (RLS-ийг тойрох системийн холболт — tenant шүүлт ЗААВАЛ) */
   async findLoginUser(tenantId: string, id: LoginIdentifier): Promise<LoginUser | null> {
     type Row = { auth_id: string; email: string; must_change_password: boolean };
@@ -178,6 +211,7 @@ export class SignInService {
     await this.assertNotLimited(lk, identifierLimit);
 
     const user = tenantId && parsed ? await this.findLoginUser(tenantId, parsed) : null;
+    if (user) await this.assertAccountNotLocked(user.authId);
     // Байхгүй хэрэглэгч: хуурамч хаяг (RFC 2606 .invalid — хэзээ ч бүртгэгдэхгүй) → GoTrue ижил 400 → 401
     const email = user?.email ?? `nouser-${SignInService.hash(`${slug}:${key}`)}@login.invalid`;
 
@@ -194,6 +228,7 @@ export class SignInService {
       if (isAuthServiceDown(error)) throw unavailable();
       if (user && parsed?.kind === 'phone') this.logger.log(`sign-in татгалзсан: утас ${maskPhone(parsed.value)}`);
       await this.recordFailure(lk, identifierLimit);
+      if (user) await this.recordAccountFailure(user.authId);
       throw invalid();
     }
     // Хамгаалалт: session нь бидний олсон хэрэглэгчийнх биш бол (байх ёсгүй) — токен өгөхгүй
@@ -202,6 +237,7 @@ export class SignInService {
       throw invalid();
     }
     await this.safe(() => this.redis.del(lk.id), 0);
+    await this.loginLock.reset(user.authId);
 
     // PIL-16: сүүлийн амжилттай нэвтрэлтийн огноо (алдаа → зөвхөн log, нэвтрэлтийг зогсоохгүй)
     if (tenantId) {
@@ -242,14 +278,18 @@ export class SignInService {
     const rows = await this.system.$queryRaw<{ id: string; email: string }[]>`
       SELECT id, email FROM core_users WHERE tenant_id = ${tenantId}::uuid AND auth_id = ${authId}::uuid AND is_active LIMIT 1`;
     if (rows.length === 0) throw invalid();
+    // H1: одоогийн нууц үгийн шалгалт = нууц үг таах өөр зам → ижил түгжээ
+    await this.assertAccountNotLocked(authId);
 
     const check = await this.gotrue().auth.signInWithPassword({ email: rows[0].email, password: currentPassword });
     if (check.error) {
       if (check.error.status === 429) throw tooMany();
       if (isAuthServiceDown(check.error)) throw unavailable();
+      await this.recordAccountFailure(authId);
       throw new AppError(HttpStatus.BAD_REQUEST, 'auth.password_current_wrong');
     }
     if (check.data.user?.id !== authId) throw invalid();
+    await this.loginLock.reset(authId);
     // Шалгалтын session — амжилттай бол GoTrue өөрөө устгана; алдаатай бол доор гараар
     const verifySessionId = SessionRevokeService.sessionIdFromJwt(check.data.session?.access_token);
 
