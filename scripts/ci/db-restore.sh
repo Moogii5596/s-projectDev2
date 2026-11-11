@@ -54,5 +54,5 @@ started=$(date +%s)
 } | psql "$TARGET_DB_URL" -q -v ON_ERROR_STOP=1 >/dev/null
 
 # Sequence-ууд (serial) — COPY setval-ийг data.sql агуулдаг; шалгалт: мөрийн тоо
-psql "$TARGET_DB_URL" -At -c "select 'auth.users='||count(*) from auth.users union all select 'core_tenants='||count(*) from public.core_tenants union all select 'core_users='||count(*) from public.core_users" >&2
+psql "$TARGET_DB_URL" -At -c "select 'auth.users='||count(*) from auth.users union all select 'tenants='||count(*) from public.tenants union all select 'core_users='||count(*) from public.core_users" >&2
 echo "сэргээлт дууслаа: $(( $(date +%s) - started )) с ($host)" >&2
