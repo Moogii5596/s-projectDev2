@@ -26,6 +26,17 @@ describe('Core sites API (integration)', () => {
     await app?.close();
   });
 
+  it('accepts camp-style site codes (numeric «01», lowercase, dot) — v0.2.4.2 migration fix', async () => {
+    const numeric = await app.api().post('/api/v1/core/sites').set(app.as('admin')).send({
+      type: 'CAMP', code: '01', name: 'Numeric camp',
+    }).expect(201);
+    expect(numeric.body).toMatchObject({ type: 'CAMP', code: '01' });
+    const camp = await app.prismaAdmin.camp.findFirstOrThrow({ where: { tenantId: app.tenantId, siteId: numeric.body.id } });
+    await app.prismaAdmin.camp.update({ where: { id: camp.id }, data: { code: 'c.01' } });
+    expect(await app.prismaAdmin.coreSite.findFirst({ where: { tenantId: app.tenantId, id: numeric.body.id, code: 'c.01' } })).not.toBeNull();
+    await app.api().post('/api/v1/core/sites').set(app.as('admin')).send({ type: 'OFFICE', code: 'bad code', name: 'x' }).expect(400);
+  });
+
   it('links Camp API records, creates camp and non-camp sites, updates, archives, and audits changes', async () => {
     const legacyCamp = await app.prismaAdmin.camp.findFirstOrThrow({
       where: { tenantId: app.tenantId, code: 'C1' },

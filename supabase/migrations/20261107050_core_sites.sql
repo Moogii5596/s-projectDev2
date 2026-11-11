@@ -2,7 +2,8 @@ CREATE TABLE core_sites (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('CAMP', 'OFFICE', 'MINE', 'OTHER')),
-  code TEXT NOT NULL CHECK (code ~ '^[A-Z][A-Z0-9_-]{0,39}$'),
+  -- Кемпийн кодын дүрэм ([A-Za-z0-9._-], жнь Sino-гийн «01») — trigger кемпийн кодыг хуулдаг тул түүнээс хатуу байж болохгүй (v0.2.4.2)
+  code TEXT NOT NULL CHECK (code ~ '^[A-Za-z0-9._-]{1,40}$'),
   name TEXT NOT NULL CHECK (btrim(name) <> ''),
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
