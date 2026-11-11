@@ -29,6 +29,10 @@ tags: [codebase, config, generated]
 | `DEV_TENANT_SLUG` | `test-tenant` | Development |
 | `DEPLOYMENT_MODE` | `shared` | Deployment mode (ADR-001): shared = SaaS, олон tenant + RLS (default)                             dedicated = Enterprise VPC, нэг deploy = нэг tenant |
 | `DEBUG_MENU_ENABLED` | `false` | Debug-only модулиудыг зөвшөөрөх (production/pilot анхдагчаар унтраалттай) |
+| `AUTH_LOCK_MAX_FAILURES` | `5` | v0.2.5 H1 (#16): бүртгэлийн нэвтрэлтийн түгжээ (NestJS, auth_guard.password_failures) — WINDOW мин-д MAX буруу → DURATION мин |
+| `AUTH_LOCK_WINDOW_MINUTES` | `15` |  |
+| `AUTH_LOCK_DURATION_MINUTES` | `15` |  |
+| `AUTH_LOCK_GOTRUE_HOOK` | `false` | true = self-hosted GoTrue-ийн password hook (deploy/*/supabase/config.toml) асаалттай → буруу оролдлогыг hook тоолно (давхар тоолохгүй). Supabase Cloud (Free) дээр hook байхгүй → false. |
 | `LOG_FORMAT` |  | ── v0.2.5 H3 (#18): үүлэн орчин (Render + Vercel) — dev-д хоосон. Runbook: docs/07_Tech_Stack_and_Environment/07_Cloud_Deploy.md json = нэг мөр JSON лог (requestId, tenantId; нууцлалтай). Хоосон = энгийн өнгөт лог |
 | `TRUST_PROXY` |  | Render-ийн proxy-ийн ард бодит IP: 1 (hop). Хоосон = итгэхгүй (dev, пилот Caddy X-Real-IP) |
 | `CORS_ORIGINS` |  | Frontend өөр домэйнд (Vercel) бол таслалаар: https://staging.gobiverse.website. Хоосон = CORS унтраалттай (same-origin) |
@@ -66,6 +70,10 @@ tags: [codebase, config, generated]
 | `RATE_LIMIT_SHORT` | `100` |  |
 | `RATE_LIMIT_MEDIUM` | `500` |  |
 | `RATE_LIMIT_LONG` | `2000` |  |
+| `AUTH_LOCK_MAX_FAILURES` | `5` | v0.2.5 H1 (#16): нэвтрэлтийн түгжээ (15 мин-д 5 буруу → 15 мин). Энэ орчинд GoTrue hook (supabase/config.toml) асаалттай → hook тоолно |
+| `AUTH_LOCK_WINDOW_MINUTES` | `15` |  |
+| `AUTH_LOCK_DURATION_MINUTES` | `15` |  |
+| `AUTH_LOCK_GOTRUE_HOOK` | `true` |  |
 | `PILOT_MODULES` | `camp` | Web: идэвхтэй модулиуд (camp \| all \| таслалаар). Солибол pilot.ps1 build |
 | `PILOT_HTTP_PORT` | `8088` | Caddy (Funnel → энэ порт, 127.0.0.1) |
 | `PILOT_BACKUP_DIR` | `E:\MoogiiDev\Pilot\backups` | ── Нөөцлөлт (pilot.ps1 backup, өдөр бүр 02:00) ────────────── Өөр диск/USB/OneDrive хавтас байвал илүү. Нууц үгийг нууц үгийн менежерт ХАДГАЛ — алдвал нөөцийг сэргээх боломжгүй. |

@@ -4,7 +4,26 @@ import { DEFAULT_TENANT_SECURITY_POLICY } from './tenant-security-policy.service
 
 const session = { access_token: 'at', refresh_token: 'rt', expires_in: 3600, expires_at: 99, token_type: 'bearer' };
 
-function setup(opts: { tenantId?: string | null; rows?: Record<string, unknown[]> } = {}) {
+/** LoginLockService-ийн санах ойн хувилбар (SQL-ийн бодит дүрэм → test/auth-login-lock.integration.spec.ts) */
+function fakeLoginLock(maxFailures: number, gotrueHook = false) {
+  const fails = new Map<string, number>();
+  const locked = new Map<string, Date>();
+  return {
+    rules: { maxFailures, windowMinutes: 15, lockMinutes: 15, gotrueHook },
+    lockedUntil: vi.fn(async (id: string) => { const u = locked.get(id); return u && u.getTime() > Date.now() ? u : null; }),
+    recordFailure: vi.fn(async (id: string) => {
+      const n = (fails.get(id) ?? 0) + 1;
+      fails.set(id, n);
+      if (n < maxFailures) return null;
+      const u = new Date(Date.now() + 15 * 60_000);
+      locked.set(id, u);
+      return u;
+    }),
+    reset: vi.fn(async (id: string) => { fails.delete(id); locked.delete(id); }),
+  };
+}
+
+function setup(opts: { tenantId?: string | null; rows?: Record<string, unknown[]>; lockMax?: number; gotrueHook?: boolean } = {}) {
   const signInWithPassword = vi.fn();
   const updateUserById = vi.fn().mockResolvedValue({ error: null });
   const gotrue = { auth: { signInWithPassword, admin: { updateUserById } } };
@@ -29,18 +48,22 @@ function setup(opts: { tenantId?: string | null; rows?: Record<string, unknown[]
   };
   const config = { get: (k: string) => ({ DEPLOYMENT_MODE: 'dedicated', DEDICATED_TENANT_SLUG: 'sino' } as Record<string, string>)[k] };
   const sessions = { dropQuietly: vi.fn().mockResolvedValue(undefined), revokeAll: vi.fn().mockResolvedValue(undefined) };
-  const svc = new SignInService(config as never, system as never, tenantCache as never, securityPolicy as never, redis as never, () => gotrue as never, sessions as never);
-  return { svc, signInWithPassword, updateUserById, queryRaw, system, tenantCache, securityPolicy, redis, sessions };
+  const loginLock = fakeLoginLock(opts.lockMax ?? 5, opts.gotrueHook);
+  const svc = new SignInService(config as never, system as never, tenantCache as never, securityPolicy as never, loginLock as never, redis as never, () => gotrue as never, sessions as never);
+  return { svc, signInWithPassword, updateUserById, queryRaw, system, tenantCache, securityPolicy, redis, sessions, loginLock };
 }
 
 const userRow = (over: Record<string, unknown> = {}) => ({ auth_id: 'auth-1', email: 'bat@sino.mn', must_change_password: false, ...over });
+const baseRows = () => ({ phone: [userRow()], email: [userRow()], username: [userRow({ auth_id: 'auth-2', email: 'p99@x.login.invalid' })] });
+/** Redis-ийн нэр/IP хязгаарын тест: бүртгэлийн түгжээ (5) эрт үйлчлэхгүй */
+const noAccountLock = () => setup({ rows: baseRows(), lockMax: 1000 });
 
 describe('SignInService (v0.2.2 D-10)', () => {
   let s: ReturnType<typeof setup>;
 
   describe('signIn', () => {
     beforeEach(() => {
-      s = setup({ rows: { phone: [userRow()], email: [userRow()], username: [userRow({ auth_id: 'auth-2', email: 'p99@x.login.invalid' })] } });
+      s = setup({ rows: baseRows() });
     });
 
     it('утас → тухайн хэрэглэгчийн auth имэйлээр GoTrue → session + mustChangePassword', async () => {
@@ -105,6 +128,7 @@ describe('SignInService (v0.2.2 D-10)', () => {
     });
 
     it('хязгаар: нэг нэвтрэх нэрээр 10 АМЖИЛТГҮЙ → 429 (GoTrue дуудахгүй); формат өөр ч ижил тоолуур', async () => {
+      s = noAccountLock();
       s.signInWithPassword.mockResolvedValue({ data: {}, error: { status: 400, message: 'x' } });
       for (let i = 0; i < SIGN_IN_LIMITS.identifier.limit; i++) {
         await expect(s.svc.signIn(undefined, `10.0.0.${i}`, i % 2 ? '99112233' : '+976 9911 2233', 'bad')).rejects.toMatchObject({ status: 401 });
@@ -115,6 +139,7 @@ describe('SignInService (v0.2.2 D-10)', () => {
     });
 
     it('хязгаар: нэг IP-ээс 50 АМЖИЛТГҮЙ (өөр өөр нэрээр) → 429', async () => {
+      s = noAccountLock();
       s.signInWithPassword.mockResolvedValue({ data: {}, error: { status: 400, message: 'x' } });
       for (let i = 0; i < SIGN_IN_LIMITS.ip.limit; i++) await s.svc.signIn(undefined, '5.5.5.5', `user${i}`, 'x').catch(() => undefined);
       await expect(s.svc.signIn(undefined, '5.5.5.5', 'other', 'x')).rejects.toMatchObject({ status: 429 });
@@ -133,6 +158,7 @@ describe('SignInService (v0.2.2 D-10)', () => {
     });
 
     it('амжилттай нэвтрэлт тоологдохгүй: нэг WiFi-аас 100 хүн, нэг хүн 30 удаа → 429 гарахгүй; амжилт тоолуурыг тэглэнэ', async () => {
+      s = noAccountLock();
       s.signInWithPassword.mockResolvedValue({ data: { session, user: { id: 'auth-1' } }, error: null });
       for (let i = 0; i < 100; i++) await expect(s.svc.signIn(undefined, '5.5.5.5', '99112233', 'pw')).resolves.toBeTruthy();
       s.signInWithPassword.mockResolvedValue({ data: {}, error: { status: 400, message: 'x' } });
@@ -140,6 +166,59 @@ describe('SignInService (v0.2.2 D-10)', () => {
       s.signInWithPassword.mockResolvedValueOnce({ data: { session, user: { id: 'auth-1' } }, error: null });
       await s.svc.signIn(undefined, undefined, '99112233', 'pw'); // тэглэнэ
       for (let i = 0; i < 9; i++) await expect(s.svc.signIn(undefined, undefined, '99112233', 'bad')).rejects.toMatchObject({ status: 401 });
+    });
+
+    describe('бүртгэлийн түгжээ (v0.2.5 H1 #16)', () => {
+      const bad = () => s.signInWithPassword.mockResolvedValue({ data: {}, error: { status: 400, message: 'x' } });
+      const ok = () => s.signInWithPassword.mockResolvedValue({ data: { session, user: { id: 'auth-1' } }, error: null });
+
+      it('5 буруу → 5 дахь нь 429 auth.account_locked (minutes, until); дараа нь зөв нууц үгтэй ч 429, GoTrue дуудахгүй', async () => {
+        bad();
+        for (let i = 0; i < 4; i++) await expect(s.svc.signIn(undefined, undefined, '99112233', 'bad')).rejects.toMatchObject({ status: 401 });
+        const err: unknown = await s.svc.signIn(undefined, undefined, '99112233', 'bad').catch((e: unknown) => e);
+        expect(err).toMatchObject({ status: 429, code: 'auth.account_locked', params: { minutes: 15 } });
+        expect(Date.parse(String((err as { params: Record<string, unknown> }).params.until))).toBeGreaterThan(Date.now());
+        expect(s.loginLock.recordFailure).toHaveBeenCalledWith('auth-1');
+        ok();
+        const calls = s.signInWithPassword.mock.calls.length;
+        await expect(s.svc.signIn(undefined, undefined, '99112233', 'right')).rejects.toMatchObject({ status: 429, code: 'auth.account_locked' });
+        expect(s.signInWithPassword.mock.calls.length).toBe(calls);
+      });
+
+      it('зөв нэвтрэлт тоолуурыг тэглэнэ (4 буруу → зөв → дахин 4 буруу = түгжихгүй)', async () => {
+        bad();
+        for (let i = 0; i < 4; i++) await s.svc.signIn(undefined, undefined, '99112233', 'bad').catch(() => undefined);
+        ok();
+        await expect(s.svc.signIn(undefined, undefined, '99112233', 'pw')).resolves.toMatchObject({ accessToken: 'at' });
+        expect(s.loginLock.reset).toHaveBeenCalledWith('auth-1');
+        bad();
+        for (let i = 0; i < 4; i++) await expect(s.svc.signIn(undefined, undefined, '99112233', 'bad')).rejects.toMatchObject({ status: 401 });
+      });
+
+      it('байхгүй хэрэглэгч → бүртгэлийн тоолуурт хүрэхгүй (ИЖИЛ 401)', async () => {
+        s = setup({ rows: {} });
+        bad();
+        await expect(s.svc.signIn(undefined, undefined, '88112233', 'bad')).rejects.toMatchObject({ status: 401 });
+        expect(s.loginLock.lockedUntil).not.toHaveBeenCalled();
+        expect(s.loginLock.recordFailure).not.toHaveBeenCalled();
+      });
+
+      it('AUTH_LOCK_GOTRUE_HOOK=true → NestJS тоолохгүй (hook тоолно), шалгалт хэвээр', async () => {
+        s = setup({ rows: baseRows(), gotrueHook: true });
+        bad();
+        await expect(s.svc.signIn(undefined, undefined, '99112233', 'bad')).rejects.toMatchObject({ status: 401 });
+        expect(s.loginLock.lockedUntil).toHaveBeenCalledWith('auth-1');
+        expect(s.loginLock.recordFailure).not.toHaveBeenCalled();
+      });
+
+      it('түгжээ шалгах DB алдаа → 503 (fail-closed); тоолох алдаа → 401 хэвээр', async () => {
+        s.loginLock.lockedUntil.mockRejectedValueOnce(new Error('db down'));
+        ok();
+        await expect(s.svc.signIn(undefined, undefined, '99112233', 'pw')).rejects.toMatchObject({ status: 503 });
+        s.loginLock.recordFailure.mockRejectedValueOnce(new Error('db down'));
+        bad();
+        await expect(s.svc.signIn(undefined, undefined, '99112233', 'bad')).rejects.toMatchObject({ status: 401 });
+      });
     });
 
     it('Redis алдаа → fail-open (нэвтрэлт ажиллана)', async () => {
@@ -194,6 +273,21 @@ describe('SignInService (v0.2.2 D-10)', () => {
       await expect(s.svc.changePassword('t1', 'auth-1', 'bad', 'new-password-123', 'tok')).rejects.toMatchObject({ status: 429 });
       expect(fetchMock).not.toHaveBeenCalled();
       expect(s.updateUserById).not.toHaveBeenCalled();
+    });
+
+    it('H1: түгжээтэй бүртгэл → 429 (GoTrue дуудахгүй); одоогийнх буруу → тоолно; зөв → тэглэнэ', async () => {
+      s = setup({ rows: { self: [{ id: 'cu1', email: 'bat@sino.mn' }] }, lockMax: 2 });
+      s.signInWithPassword.mockResolvedValue({ data: {}, error: { status: 400, message: 'x' } });
+      await expect(s.svc.changePassword('t1', 'auth-1', 'bad', 'new-password-123', 'tok')).rejects.toMatchObject({ code: 'auth.password_current_wrong' });
+      await expect(s.svc.changePassword('t1', 'auth-1', 'bad', 'new-password-123', 'tok')).rejects.toMatchObject({ status: 429, code: 'auth.account_locked' });
+      const calls = s.signInWithPassword.mock.calls.length;
+      await expect(s.svc.changePassword('t1', 'auth-1', 'old-password', 'new-password-123', 'tok')).rejects.toMatchObject({ status: 429 });
+      expect(s.signInWithPassword.mock.calls.length).toBe(calls);
+      s = setup({ rows: { self: [{ id: 'cu1', email: 'bat@sino.mn' }] } });
+      s.signInWithPassword.mockResolvedValue({ data: { session: verifySession, user: { id: 'auth-1' } }, error: null });
+      fetchMock.mockResolvedValue({ ok: true, status: 200 });
+      await s.svc.changePassword('t1', 'auth-1', 'old-password', 'new-password-123', 'tok');
+      expect(s.loginLock.reset).toHaveBeenCalledWith('auth-1');
     });
 
     it('tenant-ийн нууц үгийн доод уртыг GoTrue-оос өмнө шалгана', async () => {

@@ -74,7 +74,8 @@ sign_in_sign_ups = 120
 token_refresh = 300
 
 # PIL-07 (SEC-007): бүртгэл тус бүрт 15 мин-д 5 буруу нууц үг → 15 мин түгжинэ (429).
-# Функц: supabase/migrations/20261012006_auth_password_guard.sql. Тайлах: DELETE FROM auth_guard.password_failures WHERE user_id = '<id>'
+# Функц: supabase/migrations/20261012006_auth_password_guard.sql. Тайлах: Debug → Эрх → «Түгжээ тайлах» (v0.2.5 H1).
+# v0.2.5 H1: түгжээг NestJS шалгана (AUTH_LOCK_*); hook асаалттай бол .env-д AUTH_LOCK_GOTRUE_HOOK=true (давхар тоолохгүй). Cloud-д hook ✖.
 [auth.hook.password_verification_attempt]
 enabled = true
 uri = "pg-functions://postgres/auth_guard/hook_password_verification_attempt"
