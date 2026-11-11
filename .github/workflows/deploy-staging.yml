@@ -1,0 +1,44 @@
+name: Deploy staging
+
+# v0.2.5 H3 (#18), ADR-011 / tech plan H-7: `main` push → тест (CI) → staging migration (`supabase db push`).
+# Backend: Render `s-project-api-staging` нь `autoDeployTrigger: checksPass` — энэ workflow (commit-ийн check) ногоон болсны дараа
+# Render өөрөө deploy хийнэ → migration үргэлж кодоос ӨМНӨ. Frontend: Vercel `s-project-staging` git-ээс автомат.
+# Өгөгдөл энд хөдлөхгүй (staging-ийн өгөгдөл = зөвхөн production-ий хуулбар, H5 runbook).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  migrate:
+    name: Staging migration
+    needs: ci
+    # Staging (H4) бэлэн болтол алгасна: repo variable STAGING_ENABLED=true (Settings → Variables) — runbook §5
+    if: vars.STAGING_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.122.1   # = root devDependency `supabase`
+
+      # STAGING_DB_URL (repo secret; GitHub Free private-д environment secret ✖) = Supabase session pooler (5432), postgres — runbook §3
+      - name: supabase db push (staging)
+        env:
+          DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then echo "::error::STAGING_DB_URL secret алга (runbook 07_Cloud_Deploy.md §5)"; exit 1; fi
+          supabase db push --db-url "$DB_URL" --dry-run
+          supabase db push --db-url "$DB_URL"

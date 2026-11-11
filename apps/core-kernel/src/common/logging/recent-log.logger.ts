@@ -1,4 +1,9 @@
-import { ConsoleLogger } from '@nestjs/common';
+import { ConsoleLogger, type LogLevel } from '@nestjs/common';
+import { tenantStorage } from '../../db/tenant-storage';
+import { currentRequestId } from '../observability/request-context';
+import { maskSecrets } from './mask-secrets';
+
+export { maskSecrets };
 
 export interface RecentLogEntry {
   at: string;
@@ -10,16 +15,6 @@ export interface RecentLogEntry {
 const MAX = 300;
 const buffer: RecentLogEntry[] = [];
 
-/** Токен, нууц үг, имэйл, утас — Debug-ийн лог дээр нууцлах (QA-20 / D-1) */
-export function maskSecrets(text: string): string {
-  return text
-    .replace(/(Bearer\s+)[A-Za-z0-9._~+/-]+=*/gi, '$1***')
-    .replace(/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+/g, '***jwt***')
-    .replace(/((?:password|passwd|secret|token|api[_-]?key|authorization)\s*[=:]\s*)("?)[^\s",;]+/gi, '$1$2***')
-    .replace(/(postgres(?:ql)?:\/\/[^:\s]+:)[^@\s]+@/gi, '$1***@')
-    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (m) => `${m[0]}***@${m.split('@')[1]}`)
-    .replace(/\b(\d{2})\d{4}(\d{2})\b/g, '$1****$2');
-}
 
 /**
  * v0.2.4 Блок 10 (DBG-01) — Nest Logger-ийн error/warn-ийг санах ойн цагираган буферт (≤300) хадгалж Debug цэсэнд харуулна.
@@ -38,6 +33,30 @@ export class RecentLogLogger extends ConsoleLogger {
 
   static clear(): void {
     buffer.length = 0;
+  }
+
+  /**
+   * v0.2.5 H3 (#18): `LOG_FORMAT=json` → нэг мөр JSON (Render лог хайлт): `requestId`, `tenantId` нэмж, нууцыг нууцална.
+   * Бусад үед Nest-ийн энгийн өнгөт лог (dev).
+   */
+  static create(env: Record<string, string | undefined> = process.env): RecentLogLogger {
+    return env['LOG_FORMAT']?.trim().toLowerCase() === 'json'
+      ? new RecentLogLogger({ json: true, colors: false })
+      : new RecentLogLogger();
+  }
+
+  protected override getJsonLogObject(
+    message: unknown,
+    options: { context: string; logLevel: LogLevel; writeStreamType?: 'stdout' | 'stderr'; errorStack?: unknown },
+  ) {
+    const obj = super.getJsonLogObject(typeof message === 'string' ? maskSecrets(message) : message, options);
+    const extra = obj as Record<string, unknown>;
+    if (typeof extra['stack'] === 'string') extra['stack'] = maskSecrets(extra['stack']);
+    const requestId = currentRequestId();
+    const tenantId = tenantStorage.getStore()?.tenantId;
+    if (requestId) extra['requestId'] = requestId;
+    if (tenantId) extra['tenantId'] = tenantId;
+    return obj;
   }
 
   override error(message: unknown, ...rest: unknown[]): void {

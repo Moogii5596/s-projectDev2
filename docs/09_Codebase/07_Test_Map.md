@@ -61,7 +61,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 | `core-kernel/test/v024-core-services.integration.spec.ts` | 5 | v0.2.4 core services (integration) |
 
-## Unit — core-kernel — 119 файл, ~890 тест
+## Unit — core-kernel — 121 файл, ~897 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -88,12 +88,14 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/common/i18n/tests/i18n.test.ts` | 5 | parseAcceptLanguage · каталог · t / formatMessage / AppError · AppError helper-ууд (v0.2.0 — Кемпийн алдаа кодтой) |
 | `core-kernel/src/common/i18n/translate.spec.ts` | 2 | backend term interpolation |
 | `core-kernel/src/common/logging/recent-log.logger.spec.ts` | 2 | RecentLogLogger (DBG-01) |
+| `core-kernel/src/common/observability/observability.spec.ts` | 5 | observability (v0.2.5 H3 #18) |
 | `core-kernel/src/common/tests/cursor-pagination.test.ts` | 1 | cursor pagination |
 | `core-kernel/src/common/tests/query-bool.test.ts` | 2 | queryBool |
 | `core-kernel/src/common/tests/redis-mock-coverage.test.ts` | 3 | Integration Redis mock coverage (TEST-003) |
 | `core-kernel/src/common/tests/require-role.helper.test.ts` | 2 | requireRole() |
 | `core-kernel/src/common/xlsx/tests/table-spec.test.ts` | 11 | coerceCell · parseTableXlsx · parseTableRows (хүснэгтээр) · buildTemplate / buildExport |
 | `core-kernel/src/config/app-version.spec.ts` | 2 | APP_VERSION |
+| `core-kernel/src/config/cloud-http.spec.ts` | 2 | cloud-http (v0.2.5 H3) |
 | `core-kernel/src/config/cluster-restart.spec.ts` | 8 | RestartPolicy · resolveRestartPolicyOptions · startClusterPrimary |
 | `core-kernel/src/config/deployment-mode.spec.ts` | 10 | parseDeploymentConfig() |
 | `core-kernel/src/config/env.config.spec.ts` | 11 | EnvConfig — DEPLOYMENT_MODE · EnvConfig — DEBUG_MENU_ENABLED · EnvConfig — RATE_LIMIT_* (Phase 3.1) |
@@ -187,7 +189,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/storage/tests/local-disk.storage.test.ts` | 7 | LocalDiskStorage · contentTypeOf |
 | `core-kernel/src/storage/tests/media.test.ts` | 11 | MediaUrlSigner — гарын үсэгтэй зургийн URL · parseVariants / pickVariant / mediaImageDto · MediaService — хадгалах / устгах (LocalDiskStorage, бодит sharp) · storageDir |
 
-## Unit — web-shell — 40 файл, ~186 тест
+## Unit — web-shell — 41 файл, ~188 тест
 
 Команд: `pnpm --filter web-shell test`
 
@@ -205,6 +207,7 @@ tags: [codebase, testing, generated]
 | `web-shell/src/lib/tests/multipart.test.ts` | 1 | multipart (TEST-009) |
 | `web-shell/src/lib/tests/no-hardcoded-text.test.ts` | 2 | hardcode текст (I18N-03) |
 | `web-shell/src/lib/tests/password-change.test.ts` | 4 | password-change (v0.2.2 D-06) · displayLogin |
+| `web-shell/src/lib/tests/sentry.test.ts` | 2 | Sentry scrub (v0.2.5 H3 #18) |
 | `web-shell/src/lib/tests/unauthorized.test.ts` | 4 | handleUnauthorized [FE-007] · isSessionRevoked (v0.2.2 Блок 6б, №3) |
 | `web-shell/src/modules/camp/lib/tests/camp-lib.test.ts` | 11 | shift-pattern · permissions · apiErrorMessage · dates |
 | `web-shell/src/modules/camp/lib/tests/camp-maint-lib.test.ts` | 8 | formatMoney (string → float-гүй) · maintenance.availableActions (backend maintenance-flow-тэй ижил) · permissions.canInAnyCamp |

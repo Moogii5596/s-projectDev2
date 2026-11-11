@@ -1,16 +1,10 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
-import { AsyncLocalStorage } from 'async_hooks';
+import { tenantStorage, type TenantContext } from './tenant-storage';
 import { resolvePrismaLogLevels } from '../config/prisma-log';
 
-export interface TenantContext {
-  tenantId: string;
-  userId: string;
-}
-
-// AsyncLocalStorage — request бүрт tenant context хадгална
-export const tenantStorage = new AsyncLocalStorage<TenantContext>();
+export { tenantStorage, type TenantContext };
 
 @Injectable()
 export class PrismaTenantClientService extends PrismaClient implements OnModuleInit, OnModuleDestroy {

@@ -1,12 +1,21 @@
 name: CI
 
+# v0.2.5 H3 (#18): `main`-ийн push → «Deploy staging» нь энэ workflow-г workflow_call-оор дуудаж, дараа нь staging migration хийнэ.
+# Зөвхөн баримт (docs/**, *.md) өөрчлөгдсөн бол → зөвхөн docs:check (~1 мин); бусад үед бүтэн CI. Тест үргэлж local Supabase-д (cloud DB ✖).
+# Actions минут (private repo, 2,000 мин/сар): branch push-д ажиллахгүй — зөвхөн PR (нэг commit = нэг run).
+# E2E (PO шийдвэр 2026-11-11): PR-д ✖ — зөвхөн «Deploy staging» (main merge, workflow_call) ба гараар (workflow_dispatch).
+#   «Deploy production»-ий preflight staging ногоон шаарддаг → production үргэлж e2e-ээр шалгагдсан commit.
 on:
   pull_request:
-  push:
-    branches: [main, develop, 'feat/**', 'fix/**', 'chore/**']
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Phase 6.4.1 [CI-004]: local-тай ижил — апп = app_user (RLS), системийн ажил = postgres.
-# Supabase key-ууд `supabase status -o env`-ээс (step "Supabase env") → $GITHUB_ENV.
+# Supabase key-ууд `.github/actions/supabase-start` → $GITHUB_ENV.
 env:
   DATABASE_URL: postgresql://app_user:change_in_production@localhost:54322/postgres?schema=public
   SYSTEM_DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres?schema=public
@@ -14,10 +23,51 @@ env:
   REDIS_URL: redis://localhost:6379
   JWT_SECRET: ci-only-jwt-secret-at-least-32-characters-long   # EnvConfig: min 32
   DEV_TENANT_SLUG: test-tenant
+  SUPABASE_CLI_VERSION: 2.122.1   # = root devDependency `supabase` (pnpm-lock) — "latest" гаралтын формат/зан төлөв өөрчлөгддөг [CI-006]
 
 jobs:
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
+        name: Docs-only эсэх
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          base=""
+          if [ "$EVENT" = "pull_request" ]; then base="$PR_BASE"; fi
+          if [ "$EVENT" = "push" ] && [ -n "$PUSH_BEFORE" ] && ! echo "$PUSH_BEFORE" | grep -qE '^0+$'; then base="$PUSH_BEFORE"; fi
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "Харьцуулах суурь алга ($EVENT) → бүтэн CI"; echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          changed=$(git diff --name-only "$base" "$GITHUB_SHA")
+          echo "$changed"
+          code=$(echo "$changed" | grep -vE '^docs/|\.md$' | grep -c . || true)
+          if [ "$code" -gt 0 ]; then echo "code=true" >> "$GITHUB_OUTPUT"; else echo "code=false" >> "$GITHUB_OUTPUT"; echo "Зөвхөн баримт → docs:check л"; fi
+
+  # 2026-11-07: баримтын шалгалт агентаас CI руу (AGENTS.md §3). node_modules шаардахгүй
+  docs:
+    name: Docs check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: node scripts/docs/gen-codebase-docs.mjs --check
+
   test:
     name: Lint · Unit · Integration · Build
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
 
     services:
@@ -33,15 +83,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
+      # pnpm хувилбар = package.json `packageManager`
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22   # @supabase/supabase-js realtime: native WebSocket (Node 22+) — Dockerfile ч 22 [CI-005]
           cache: pnpm
@@ -53,30 +102,11 @@ jobs:
       - name: Prisma Client
         run: pnpm db:generate
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: 2.120.0   # = pnpm-lock (таны машин) — "latest" гаралтын формат/зан төлөв өөрчлөгддөг [CI-006]
-
       # `supabase start` нь supabase/migrations/*.sql + seed.sql-г автоматаар ажиллуулдаг [CI-002]
-      - name: Start Supabase (local)
-        run: npx supabase start
-
-      - name: Supabase env
-        run: |
-          npx supabase status -o env > /tmp/sb.env 2>/tmp/sb.err || true
-          eval "$(sed -E 's/^export //' /tmp/sb.env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=')"
-          # [CI-006] түлхүүр алга бол хоосон утгаар үргэлжлүүлэхгүй — гаралтын түлхүүрийн НЭРСИЙГ (утгагүй) хэвлээд унана
-          if [ -z "${API_URL:-}" ] || [ -z "${ANON_KEY:-}" ] || [ -z "${SERVICE_ROLE_KEY:-}" ]; then
-            echo "::error::supabase status -o env: API_URL/ANON_KEY/SERVICE_ROLE_KEY алга"; npx supabase --version
-            sed -E 's/=.*$/=…/' /tmp/sb.env; cat /tmp/sb.err; exit 1
-          fi
-          echo "::add-mask::$SERVICE_ROLE_KEY"
-          {
-            echo "SUPABASE_URL=$API_URL"
-            echo "SUPABASE_ANON_KEY=$ANON_KEY"
-            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
-          } >> "$GITHUB_ENV"
+      - name: Start Supabase (local, cached images)
+        uses: ./.github/actions/supabase-start
+        with:
+          cli-version: ${{ env.SUPABASE_CLI_VERSION }}
 
       # QA-21 [MIG-001]: migration-ууд ажилласан DB ↔ prisma/schema — baseline-аас өөр зөрүү гарвал унана
       - name: Prisma schema drift
@@ -84,10 +114,6 @@ jobs:
 
       - name: Lint
         run: pnpm turbo lint
-
-      # 2026-11-07: баримтын шалгалт агентаас CI руу (AGENTS.md §3)
-      - name: Docs check
-        run: pnpm docs:check
 
       # `pnpm test` = core-kernel + web-shell unit (сервергүй) — e2e тусдаа job-д
       - name: Unit tests
@@ -99,10 +125,13 @@ jobs:
       - name: Build
         run: pnpm turbo build
 
+  # PR-д ✖ (дээрх тайлбар). `test`-тэй зэрэг (needs: changes л) → wall ≈ max(test, e2e).
+  # ubuntu-24.04-д бэхэлсэн: Playwright-ийн албан ёсоор дэмждэг OS; ubuntu-latest (26.04) 2026-11-11-нд apt DNS алдаатай байсан.
   e2e:
     name: E2E (Playwright)
-    runs-on: ubuntu-latest
-    needs: test       # Unit/Integration дууссаны дараа
+    runs-on: ubuntu-24.04
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true' && github.event_name != 'pull_request'
     env:
       DEBUG_MENU_ENABLED: 'true'
 
@@ -114,15 +143,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22   # @supabase/supabase-js realtime: native WebSocket (Node 22+) — Dockerfile ч 22 [CI-005]
           cache: pnpm
@@ -130,34 +157,31 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright browsers
-        run: node node_modules/@playwright/test/cli.js install chromium --with-deps
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
-      - name: Setup Supabase
-        uses: supabase/setup-cli@v1
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
         with:
-          version: 2.120.0   # = pnpm-lock (таны машин) — "latest" гаралтын формат/зан төлөв өөрчлөгддөг [CI-006]
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.pw.outputs.version }}
 
-      - name: Start Supabase
-        run: npx supabase start
-
-      - name: Supabase env
+      # apt-гүй: runner image-д Chrome-ийн системийн сангууд бий (2026-11-11: apt *.ubuntu.com DNS алдаагаар E2E бүгд унасан).
+      # Chromium асахгүй бол л --with-deps (apt) руу буцна.
+      - name: Install Playwright browsers
         run: |
-          npx supabase status -o env > /tmp/sb.env 2>/tmp/sb.err || true
-          eval "$(sed -E 's/^export //' /tmp/sb.env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=')"
-          # [CI-006] түлхүүр алга бол хоосон утгаар үргэлжлүүлэхгүй — гаралтын түлхүүрийн НЭРСИЙГ (утгагүй) хэвлээд унана
-          if [ -z "${API_URL:-}" ] || [ -z "${ANON_KEY:-}" ] || [ -z "${SERVICE_ROLE_KEY:-}" ]; then
-            echo "::error::supabase status -o env: API_URL/ANON_KEY/SERVICE_ROLE_KEY алга"; npx supabase --version
-            sed -E 's/=.*$/=…/' /tmp/sb.env; cat /tmp/sb.err; exit 1
+          node node_modules/@playwright/test/cli.js install chromium
+          if ! node -e "require('@playwright/test').chromium.launch().then(b => b.close()).catch(e => { console.error(e.message); process.exit(1); })"; then
+            echo "::warning::Chromium асахгүй байна → системийн сангуудыг apt-аар суулгана"
+            node node_modules/@playwright/test/cli.js install-deps chromium
           fi
-          echo "::add-mask::$SERVICE_ROLE_KEY"
-          {
-            echo "SUPABASE_URL=$API_URL"
-            echo "SUPABASE_ANON_KEY=$ANON_KEY"
-            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
-            echo "VITE_SUPABASE_URL=$API_URL"
-            echo "VITE_SUPABASE_ANON_KEY=$ANON_KEY"
-          } >> "$GITHUB_ENV"
+
+      - name: Start Supabase (local, cached images)
+        uses: ./.github/actions/supabase-start
+        with:
+          cli-version: ${{ env.SUPABASE_CLI_VERSION }}
+          vite-env: 'true'
 
       # Prisma Client (backend dev + e2e fixture), admin@test.mn Auth хэрэглэгч, Кемп e2e-ийн эрх
       - name: Prepare (Prisma, test user, camp grant)
@@ -171,7 +195,7 @@ jobs:
         run: pnpm test:e2e
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-report

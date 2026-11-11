@@ -41,7 +41,7 @@ S Project — гаднаа нийгмийн сүлжээ, цаанаа ERP. Nest
 - [ ] Функц бүрэн: backend-ийн endpoint бүр UI-д ашиглагдсан, UI-ийн үйлдэл бүр backend-тэй; эрхгүй хэрэглэгчид цэс/товч харагдахгүй
 - [ ] mn / en / zh орчуулга бүрэн, hardcode текст алга
 - [ ] tsc + eslint (хөндсөн файл) + unit (хөндсөн) ногоон
-- [ ] Backend өөрчлөгдсөн бол тухайн блокийн integration spec (tenant тусгаарлалт, эрх, гол урсгал); шинэ дэлгэц бол e2e гол урсгал
+- [ ] Backend өөрчлөгдсөн бол тухайн блокийн integration spec (tenant тусгаарлалт, эрх, гол урсгал); шинэ дэлгэц бол e2e гол урсгал — e2e PR-ийн CI-д ажиллахгүй тул хөндсөн spec-ийг **local-д ажиллуулж**, PR-д аль spec ажилласныг бичнэ
 - [ ] Migration бол: local `pnpm supabase:reset` → `pnpm db:generate` → `node scripts/ci/prisma-drift.mjs --update` (шинэ мөр бүр санаатай)
 - [ ] `pnpm docs:gen` (CI `docs:check`-ээр шалгана)
 - [ ] PR нээсэн (template), CI ногоон, Reviewer approve; issue-д тайлан
@@ -74,7 +74,7 @@ S Project — гаднаа нийгмийн сүлжээ, цаанаа ERP. Nest
 - **Орчин** (`docs/02_System_Architecture/ADR-011_Cloud_Hosting.md`, v0.2.5-аас): **local** (Docker Supabase) → **staging** (Supabase Cloud + Render + Vercel, `main` merge-ээр автомат) → **production** (мөн, tag + PO батламж). «Пилот» = Sino Hydro-гийн **хөтөлбөр**; орчныг **production** гэнэ. Өгөгдөл зөвхөн production → staging.
 - Хэрэглэгчийн машин: Windows, **PowerShell 5.1** (`&&` ✖ → `;`), Docker дээр Supabase (DB 54322), pnpm only. Төсөл: `E:\MoogiiDev\Dev\s-project`.
 - Commit хийгээгүй өөрчлөлт байвал (`git status`) — өөр агентын ажил байж болно: хөндөхгүй, тусдаа worktree-д ажилла.
-- CI (`.github/workflows/ci.yml`): `main`, `feat/**`, `chore/**`, `fix/**` push болон PR бүрт lint, unit, integration, build, docs:check, e2e.
+- CI (`.github/workflows/ci.yml`, PO 2026-11-11): **PR бүрт** lint, unit, integration, build, docs:check (branch push-д ✖ — давхар run, Actions минут). **E2E** зөвхөн «Deploy staging» (`main` merge) ба гараар (`workflow_dispatch`); «Deploy production» staging ногоон шаарддаг → production = e2e-ээр шалгагдсан. `main`-д e2e унавал staging алгасна, засах PR = P1.
 
 ## 7. Нэр томьёо (бүтэн → `docs/07_Tech_Stack_and_Environment/09_Team_Handbook.md` §1)
 production (орчин) · deploy (upgrade биш) · version / release / iteration · epic → story → task (блок) · UAT (TC) · data parity (A = B) · feature flag (Debug/унтаа) · test / verify / review / approve — тус тусдаа. Шинэ баримт, issue, commit-д эдгээрийг хэрэглэнэ.

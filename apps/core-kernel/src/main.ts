@@ -1,12 +1,16 @@
+// v0.2.5 H3 (#18): Sentry — бусад модулиас ӨМНӨ (SENTRY_DSN хоосон бол юу ч хийхгүй)
+import { sentryEnabled } from './instrument';
 import cluster from 'node:cluster';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Logger } from '@nestjs/common';
+import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { AppModule } from './app/app.module';
 import { EnvConfig, resolveClusterWorkers } from './config/env.config';
 import { configureApp, JSON_BODY_LIMIT } from './common/http/configure-app';
 import { RecentLogLogger } from './common/logging/recent-log.logger';
 import { RestartPolicy, resolveRestartPolicyOptions, startClusterPrimary } from './config/cluster-restart';
+import { parseCorsOrigins, parseTrustProxy } from './config/cloud-http';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -14,14 +18,25 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     // v0.2.0 §0.5: "Хүснэгтээр оруулах" (≤5000 мөр JSON) — анхдагч 1 MB хүрэхгүй
-    new FastifyAdapter({ logger: false, bodyLimit: JSON_BODY_LIMIT }),
+    // v0.2.5 H3: TRUST_PROXY — Render-ийн proxy-ийн ард бодит IP (sign-in IP хязгаар)
+    // Fastify нь hop тоог (number) дэмждэг; Nest-ийн төрөлд number байхгүй тул cast
+    new FastifyAdapter({ logger: false, bodyLimit: JSON_BODY_LIMIT, trustProxy: parseTrustProxy(process.env['TRUST_PROXY']) as boolean }),
     { bufferLogs: true },
   );
-  // v0.2.4 DBG-01: error/warn → Debug цэсний «Лог» (санах ойн буфер, нууцлалтай)
-  app.useLogger(new RecentLogLogger());
+  // v0.2.4 DBG-01: error/warn → Debug цэсний «Лог» (санах ойн буфер, нууцлалтай); v0.2.5 H3: LOG_FORMAT=json
+  app.useLogger(RecentLogLogger.create());
+
+  // v0.2.5 H3: Vercel (өөр домэйн) → Render API. Хоосон = same-origin (dev proxy, пилот Caddy)
+  const corsOrigins = parseCorsOrigins(process.env['CORS_ORIGINS']);
+  if (corsOrigins.length) {
+    app.enableCors({ origin: corsOrigins, credentials: false, exposedHeaders: ['x-request-id'], maxAge: 600 });
+  }
 
   // Pipe (implicit conversion, forbidNonWhitelisted), 'api/v1' prefix, multipart — integration тестүүдтэй ИЖИЛ [VALID-001]
   await configureApp(app);
+
+  // v0.2.5 H3: 5xx / барьж аваагүй алдаа → Sentry (HttpException 4xx илгээхгүй)
+  if (sentryEnabled()) app.useGlobalFilters(new SentryGlobalFilter(app.getHttpAdapter()));
 
   const config = app.get(EnvConfig);
   const port = config.PORT;
