@@ -13,7 +13,7 @@ export default function LanguageSwitcher({ persist = false }: { persist?: boolea
   const lang = currentLang()
   const choose = (l: Lang) => {
     if (l === lang) return
-    setLanguage(l)
+    setLanguage(l, 'user')
     // Сервер талын текст (алдаа, шошго) шинэ хэлээр
     void qc.invalidateQueries()
     if (persist) void saveLocale(l).catch(() => undefined)

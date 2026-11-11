@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { getWebMessages } from '../api/i18n'
-import { applyOverrides, currentLang, isLang, setLanguage } from '../i18n'
+import { applyOverrides, currentLang, getLanguageSelectionRevision, isLang, setLanguage } from '../i18n'
 import { useMe } from './useMe'
 
 /**
@@ -14,11 +14,18 @@ export function useI18nSync(): void {
   const { i18n } = useTranslation()
   const { me } = useMe()
   const appliedFor = useRef<string | null>(null)
+  const selectionRevisionAtMount = useRef(getLanguageSelectionRevision())
 
   useEffect(() => {
     if (!me || appliedFor.current === me.id) return
     appliedFor.current = me.id
-    if (isLang(me.locale) && me.locale !== currentLang()) setLanguage(me.locale)
+    if (
+      isLang(me.locale) &&
+      me.locale !== currentLang() &&
+      getLanguageSelectionRevision() === selectionRevisionAtMount.current
+    ) {
+      setLanguage(me.locale, 'profile')
+    }
   }, [me])
 
   const lang = isLang(i18n.language) ? i18n.language : 'mn'

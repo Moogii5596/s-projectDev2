@@ -7,7 +7,7 @@ import zh from '@s-project/i18n/web.zh.json'
 import termsMn from '@s-project/i18n/terms.mn.json'
 import termsEn from '@s-project/i18n/terms.en.json'
 import termsZh from '@s-project/i18n/terms.zh.json'
-import i18n, { applyOverrides, setLanguage } from '../index'
+import i18n, { applyOverrides, currentLang, getLanguageSelectionRevision, setLanguage } from '../index'
 
 /**
  * v0.2.0 §0.7 — орчуулгын хамгаалалт (FE-005 загвар):
@@ -98,6 +98,18 @@ describe('орчуулгын каталог', () => {
 })
 
 describe('i18n ажиллагаа', () => {
+  it('профайлын хэл хэрэглэгчийн сонголтын дарааллыг өөрчлөхгүй', () => {
+    const language = currentLang()
+    const revision = getLanguageSelectionRevision()
+
+    setLanguage('en', 'profile')
+    expect(getLanguageSelectionRevision()).toBe(revision)
+    setLanguage('mn', 'user')
+    expect(getLanguageSelectionRevision()).toBe(revision + 1)
+
+    setLanguage(language, 'profile')
+  })
+
   it('гэрээний хувьсагчид гурван хэлээр зөв орлуулагдана', () => {
     for (const lang of ['mn', 'en', 'zh'] as const) {
       const t = i18n.getFixedT(lang)

@@ -25,6 +25,7 @@ export const INTL_LOCALE: Record<Lang, string> = { mn: 'mn-MN', en: 'en-GB', zh:
 const DEFAULTS: Record<Lang, Record<string, string>> = { mn, en, zh }
 const TERMS: Record<Lang, Record<string, string>> = { mn: termsMn, en: termsEn, zh: termsZh }
 const STORAGE_KEY = 's-project.lang'
+let languageSelectionRevision = 0
 
 export const isLang = (v: unknown): v is Lang => typeof v === 'string' && (LANGS as readonly string[]).includes(v)
 
@@ -54,7 +55,10 @@ void i18n.use(initReactI18next).init({
 
 export const currentLang = (): Lang => (isLang(i18n.language) ? i18n.language : 'mn')
 
-export function setLanguage(lang: Lang): void {
+export const getLanguageSelectionRevision = (): number => languageSelectionRevision
+
+export function setLanguage(lang: Lang, source: 'user' | 'profile' = 'user'): void {
+  if (source === 'user') languageSelectionRevision += 1
   try {
     localStorage.setItem(STORAGE_KEY, lang)
   } catch {
