@@ -269,12 +269,12 @@ function Assert-DefaultDbAdminPassword([hashtable] $cfg) {
 # Upgrade preflight: DB ажиллаж, анхдагч admin нууцаар нэвтэрч байгааг pilot-ийг зогсоохоос ӨМНӨ шалгана
 function Assert-DbAdminPasswordReady([hashtable] $cfg) {
   Assert-DefaultDbAdminPassword $cfg
-  $a = @('exec', '-e', 'PGPASSWORD=postgres', $DbContainer, 'psql', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'postgres', '-At', '-c', 'SELECT current_user')
-  $r = Invoke-Native -Exe 'docker' -Arguments $a -Capture -AllowFail -Quiet
-  if ($r.Code -ne 0 -or (@($r.Out) -join '').Trim() -ne 'postgres') {
-    Stop-Pilot2 "DB ($DbContainer) ажиллахгүй эсвэл postgres-ийн нууц анхдагч биш (Supabase дахин асахгүй) — status/restore. Upgrade эхлээгүй, систем ажилласан хэвээр."
+  # v0.2.4.5: init-ийн `migration up`-тай ЯГ ижил замаар (CLI + config.toml, host TCP) — контейнер доторх 127.0.0.1 нь trust тул юу ч баталдаггүй байв
+  $r = Invoke-Supabase -Arguments @('migration', 'list', '--local') -Capture -AllowFail
+  if ($r.Code -ne 0) {
+    Stop-Pilot2 "Supabase CLI DB-д холбогдож чадсангүй (migration list --local) — config.toml [db], DB нууц, Supabase ажиллаж байгаа эсэх. Upgrade эхлээгүй, систем ажилласан хэвээр."
   }
-  Write-Ok 'DB ажиллаж байна (upgrade preflight)'
+  Write-Ok 'Supabase CLI DB-д холбогдлоо (upgrade preflight)'
 }
 
 function Invoke-DbPasswordRotation {

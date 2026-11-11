@@ -350,18 +350,18 @@ git switch main ; git merge release/v0.1   # засварыг v0.2-т ч ору�
 ```
 Пилот дээр §13-ийн алхмаар `git checkout v0.1.7`.
 
-### 13г. v0.2.4 (v0.2.4.4) — staging дадлага, эрхийн gate, пилотын шинэчлэл
+### 13г. v0.2.4 (v0.2.4.5) — staging дадлага, эрхийн gate, пилотын шинэчлэл
 
-> **Staging дадлага 2026-11-11 ✅** (пилотын 2026-11-10-ны нөөцөөр): v0.2.3 → v0.2.4.3 upgrade, `camp:snapshot` A = B, rollback (restore → build → start) туулсан; олдсон алдаанууд v0.2.4.4-д засагдсан ([[CHANGELOG]]). Пилотод **v0.2.4.4** суулгана (v0.2.4.4–.3 бүү суулга). Pilot upgrade-д эзэмшигчийн шууд зөвшөөрөл шаардлагатай. Migration `20261107006` хуучин эрхийн хүснэгтүүдийг устгах тул буцаалт нь migration хийхээс өмнөх DB + storage нөөцийг сэргээх юм.
+> **Staging дадлага 2026-11-11 ✅** (пилотын 2026-11-10-ны нөөцөөр): v0.2.3 → v0.2.4.3 upgrade, `camp:snapshot` A = B, rollback (restore → build → start) туулсан; олдсон алдаанууд v0.2.4.5-д засагдсан ([[CHANGELOG]]). Пилотод **v0.2.4.5** суулгана (v0.2.4.5–.3 бүү суулга). Pilot upgrade-д эзэмшигчийн шууд зөвшөөрөл шаардлагатай. Migration `20261107006` хуучин эрхийн хүснэгтүүдийг устгах тул буцаалт нь migration хийхээс өмнөх DB + storage нөөцийг сэргээх юм.
 
 1. **Бэлтгэл ба нөөц:** пилотын админ PowerShell дээр `.\deploy\pilot\pilot.ps1 backup` ажиллуул. Нөөцөд PostgreSQL ба `storage/` орсныг шалгаж, архив болон гаднах хуулбарын SHA256 таарч байгааг баталгаажуул. `FILE_ENCRYPTION_KEY`-ийг нөөцийн архиваас тусад нь нууц үгийн менежерт хадгал. v0.2.3 нөөцөд v0.2.4-ийн `core_attachments` байхгүй тул staging-д §1а-ийн дагуу тусдаа шинэ түлхүүр хэрэглэнэ; v0.2.4+ шифрлэгдсэн хавсралттай нөөцийг сэргээх бол тухайн нөөцийн түлхүүр шаардлагатай. Бодит `.env`-г Git/чатад бүү хуул.
-1а. **Tools ба нууц (v0.2.4.4):** staging/pilot-ийг ШИНЭ скриптээр ажиллуулна — `git archive --format=zip -o E:\MoogiiDev\Staging\tools.zip v0.2.4.4 deploy` → `Expand-Archive E:\MoogiiDev\Staging\tools.zip E:\MoogiiDev\Staging\tools -Force`. DB admin нууц солихгүй (дээрх «DB administrator-ийн нууц»). Staging-ийн `FILE_ENCRYPTION_KEY` — тусдаа шинэ түлхүүр: v0.2.3 нөөцөд шифрлэгдсэн хавсралт байхгүй (`core_attachments` v0.2.4-д шинэ).
+1а. **Tools ба нууц (v0.2.4.5):** staging/pilot-ийг ШИНЭ скриптээр ажиллуулна — `git archive --format=zip -o E:\MoogiiDev\Staging\tools.zip v0.2.4.5 deploy` → `Expand-Archive E:\MoogiiDev\Staging\tools.zip E:\MoogiiDev\Staging\tools -Force`. DB admin нууц солихгүй (дээрх «DB administrator-ийн нууц»). Staging-ийн `FILE_ENCRYPTION_KEY` — тусдаа шинэ түлхүүр: v0.2.3 нөөцөд шифрлэгдсэн хавсралт байхгүй (`core_attachments` v0.2.4-д шинэ).
 2. **Staging restore:** §13в-ийн тусдаа staging profile-д пилотын backup-ийг сэргээ. Staging-ийн бусад нууц (DB, JWT, backup password) шинээр үүсгэ; v0.2.3 backup-д §1а-ийн дагуу тусдаа `FILE_ENCRYPTION_KEY` тохируулна. v0.2.4+ шифрлэгдсэн хавсралттай backup сэргээвэл уг backup-ийг үүсгэсэн түлхүүрийг secure сувгаар staging-д оруул. Snapshot A-г **одоогийн v0.2.3 DB-г шинэчлэхээс өмнө**, dev-ийн шинэ `camp:snapshot` хэрэгслээр ав:
    ```powershell
    cd E:\MoogiiDev\Dev\s-project
    pnpm camp:snapshot --env=E:\MoogiiDev\Staging\s-project\.env.staging --out=E:\MoogiiDev\Staging\a-v024.json
    ```
-3. **Staging upgrade ба тулгалт:** `& $st upgrade -Tag v0.2.4.4 -Profile staging -Root $sr` ажиллуул. Шинэчлэлтээр `20261107006` legacy alias/хуулбар хүснэгтүүдийг устгаж, `20261110002` өмнөх Camp роль/хэрэглэгчийн эрхийг ижил хүрээтэй Core эрх рүү хуулна. Шинэчилсний дараа ижил CLI-гаар B авч, A-тай яг ижил огноо/мужийг `--like`-аар хадгалж, тулга:
+3. **Staging upgrade ба тулгалт:** `& $st upgrade -Tag v0.2.4.5 -Profile staging -Root $sr` ажиллуул. Шинэчлэлтээр `20261107006` legacy alias/хуулбар хүснэгтүүдийг устгаж, `20261110002` өмнөх Camp роль/хэрэглэгчийн эрхийг ижил хүрээтэй Core эрх рүү хуулна. Шинэчилсний дараа ижил CLI-гаар B авч, A-тай яг ижил огноо/мужийг `--like`-аар хадгалж, тулга:
    ```powershell
    cd E:\MoogiiDev\Dev\s-project
    pnpm camp:snapshot --env=E:\MoogiiDev\Staging\s-project\.env.staging --out=E:\MoogiiDev\Staging\b-v024.json --like=E:\MoogiiDev\Staging\a-v024.json
@@ -374,7 +374,7 @@ git switch main ; git merge release/v0.1   # засварыг v0.2-т ч ору�
    ```powershell
    # ШИНЭ скриптээр (preflight: DB нууц + FILE_ENCRYPTION_KEY-ийг pilot-ийг зогсоохоос ӨМНӨ шалгана)
    $pt = 'E:\MoogiiDev\Staging\tools\deploy\pilot\pilot.ps1'
-   & $pt upgrade -Tag v0.2.4.4 -Profile pilot -Root E:\MoogiiDev\Pilot\s-project
+   & $pt upgrade -Tag v0.2.4.5 -Profile pilot -Root E:\MoogiiDev\Pilot\s-project
    cd E:\MoogiiDev\Pilot\s-project ; .\deploy\pilot\pilot.ps1 status
    ```
    Дараа нь health/smoke, TC-v023-ийн эрхийн шалгалт, TC-v024-ийг ажиллуул; шалгаагүй үр дүнг release-д ногоон гэж тэмдэглэхгүй.

@@ -15,14 +15,16 @@ tags: [release]
 
 ---
 
-## [v0.2.4.4] — 2026-11-11 — Staging дадлагаар илэрсэн засварууд (пилотод суулгах хувилбар)
+## [v0.2.4.5] — 2026-11-11 — Staging дадлагаар илэрсэн засварууд (пилотод суулгах хувилбар)
 
-> Пилотын нөөцөөс сэргээсэн staging дээр v0.2.3 → v0.2.4 шинэчлэл ба rollback-ийг бодит өгөгдлөөр туулж олсон алдаанууд. **Пилотод v0.2.4.4-ийг суулгана** — v0.2.4.1–v0.2.4.3 tag-ууд дундын шат (v0.2.4.1-д pilot дахин асах бүрт унах алдаа бий). Staging: `camp:snapshot` A = B ✅ (хоол, хүн-өдөр, өрөө, 574 ажилтан, эрх, модуль), rollback (restore → build → start) ✅.
+> Пилотын нөөцөөс сэргээсэн staging дээр v0.2.3 → v0.2.4 шинэчлэл ба rollback-ийг бодит өгөгдлөөр туулж олсон алдаанууд. **Пилотод v0.2.4.5-ийг суулгана** — v0.2.4.1–v0.2.4.4 tag-ууд дундын шат (v0.2.4.1-д pilot дахин асах бүрт унах алдаа бий). Staging: `camp:snapshot` A = B ✅ (хоол, хүн-өдөр, өрөө, 574 ажилтан, эрх, модуль), rollback (restore → build → start) ✅.
 
 ### Засварласан
 - **Migration `20261107050_core_sites`** — `core_sites.code`-ийн CHECK кемпийн кодын дүрэмтэй нийцэв (`^[A-Za-z0-9._-]{1,40}$`); өмнө нь тоогоор эхэлсэн кемпийн код (Sino «01») backfill-д upgrade-ийг унагав, sync trigger шинэ/нэр сольсон кемпийг ч унагах байв. Аль хэдийн хэрэгжүүлсэн DB-д `20261111001`; DTO ижил дүрэм.
 - **`camp:snapshot`** — v0.2.3 DB (upgrade-ийн өмнөх A) дээр `camp_positions.name_i18n` баганагүйг тооцно.
 - **`pilot.ps1`** — PowerShell 5.1 давхар хашилт хасдаг тул `docker network inspect`-ийн template эвдэрч loopback сүлжээг «алга» гэж үзэн унадаг байсныг `{{json .Options}}`-оор засав; контейнергүй loopback биш сүлжээг дахин үүсгэнэ; Redis контейнер устсан сүлжээ рүү заасан бол дахин үүсгэнэ.
+- **Upgrade preflight** — DB холболтыг init-тэй ижил замаар (`supabase migration list --local`) шалгана; өмнөх шалгалт контейнер доторх `127.0.0.1` (pg_hba `trust`)-ээр нууц шалгалгүй давдаг байсан тул алдааг пилотыг зогсоосны дараа л илрүүлэх байв.
+- **`config.toml` `[db] password = env(PILOT_DB_ADMIN_PASSWORD)` хасагдсан** (v0.2.4-д нэмэгдсэн) — хувьсагч хоосон үед CLI (`migration up`, `start`) буруу нууц илгээж `28P01`-ээр унадаг байв (v0.2.4.4 staging upgrade).
 - **DB admin нууц солих (`rotate-db-password`) хасагдсан** — Supabase CLI local stack нь `supabase start` үед DB-д үргэлж анхдагч `postgres` нууцаар холбогддог тул admin нууц солиход дараагийн асаалт унана (staging-д 2026-11-11 батлагдсан). Пилот PC-д анхдагч хэвээр; DB-г loopback + Windows Firewall + `app_user` RLS хамгаална; хатуу нууц cloud-д ([[ADR-011_Cloud_Hosting]]). `.env`-д анхдагчаас өөр `PILOT_DB_ADMIN_PASSWORD` байвал скрипт асаахаас татгалзана.
 - **`restore`** — `db reset`-д `--network-id` (эс бөгөөс DB контейнер өөр сүлжээнд үүсч auth `no such host`-оор дахин дахин асна → нэвтрэлт унана).
 - **`status`** — дахин асаж буй / unhealthy Supabase контейнерийг анхааруулж мониторингт `/fail` илгээнэ (өмнө нь backend health ногоон байхад auth унасныг нууж байв).
@@ -30,7 +32,7 @@ tags: [release]
 - Web: хэрэглэгч хэл сонгосны дараа профайлын хэлний sync сонголтыг дарж бичихгүй.
 
 ### ⚠️ Pilot-д суулгахаас өмнө (эзэмшигч)
-- Pilot `.env`-д `FILE_ENCRYPTION_KEY` нэмж нөөцөөс тусад хадгална; `PILOT_DB_ADMIN_PASSWORD` бүү нэм; upgrade/rollback-ийг tools скриптээр (`$pt`, v0.2.4.4) — [[04_Pilot_Camp_Windows]] §13г.
+- Pilot `.env`-д `FILE_ENCRYPTION_KEY` нэмж нөөцөөс тусад хадгална; `PILOT_DB_ADMIN_PASSWORD` бүү нэм; upgrade/rollback-ийг tools скриптээр (`$pt`, v0.2.4.5) — [[04_Pilot_Camp_Windows]] §13г.
 
 ## [v0.2.4.1] — 2026-11-10 — Pilot шинэчлэлийн хамгаалалт
 
