@@ -23,14 +23,14 @@ tags: [release]
 - **Migration `20261107050_core_sites`** — `core_sites.code`-ийн CHECK кемпийн кодын дүрэмтэй нийцэв (`^[A-Za-z0-9._-]{1,40}$`); өмнө нь тоогоор эхэлсэн кемпийн код (Sino «01») backfill-д upgrade-ийг унагав, sync trigger шинэ/нэр сольсон кемпийг ч унагах байв. Аль хэдийн хэрэгжүүлсэн DB-д `20261111001`; DTO ижил дүрэм.
 - **`camp:snapshot`** — v0.2.3 DB (upgrade-ийн өмнөх A) дээр `camp_positions.name_i18n` баганагүйг тооцно.
 - **`pilot.ps1`** — PowerShell 5.1 давхар хашилт хасдаг тул `docker network inspect`-ийн template эвдэрч loopback сүлжээг «алга» гэж үзэн унадаг байсныг `{{json .Options}}`-оор засав; контейнергүй loopback биш сүлжээг дахин үүсгэнэ; Redis контейнер устсан сүлжээ рүү заасан бол дахин үүсгэнэ.
-- **`rotate-db-password`** — `supabase_admin`-аар солино (Supabase-д `postgres` superuser биш); `SYSTEM_DATABASE_URL`/`DIRECT_URL`-ийн нууцыг хамт шинэчилнэ; зогссон staging-ийг асаана.
-- **`restore`** — `supabase db reset`-ийн дараа `postgres`-ийн нууцыг `.env`-ээр дахин тохируулна (эс бөгөөс rollback-ийн backend P1000); `db reset`-д `--network-id` (эс бөгөөс DB контейнер өөр сүлжээнд үүсч auth `no such host`-оор дахин дахин асна → нэвтрэлт унана).
+- **DB admin нууц солих (`rotate-db-password`) хасагдсан** — Supabase CLI local stack нь `supabase start` үед DB-д үргэлж анхдагч `postgres` нууцаар холбогддог тул admin нууц солиход дараагийн асаалт унана (staging-д 2026-11-11 батлагдсан). Пилот PC-д анхдагч хэвээр; DB-г loopback + Windows Firewall + `app_user` RLS хамгаална; хатуу нууц cloud-д ([[ADR-011_Cloud_Hosting]]). `.env`-д анхдагчаас өөр `PILOT_DB_ADMIN_PASSWORD` байвал скрипт асаахаас татгалзана.
+- **`restore`** — `db reset`-д `--network-id` (эс бөгөөс DB контейнер өөр сүлжээнд үүсч auth `no such host`-оор дахин дахин асна → нэвтрэлт унана).
 - **`status`** — дахин асаж буй / unhealthy Supabase контейнерийг анхааруулж мониторингт `/fail` илгээнэ (өмнө нь backend health ногоон байхад auth унасныг нууж байв).
 - **`build`** — ажиллаж буй backend-ийг эхлээд зогсооно (Prisma DLL-ийн түгжээ, EPERM).
 - Web: хэрэглэгч хэл сонгосны дараа профайлын хэлний sync сонголтыг дарж бичихгүй.
 
 ### ⚠️ Pilot-д суулгахаас өмнө (эзэмшигч)
-- `rotate-db-password`-ийг пилотын хавтасны (v0.2.3) скриптээр БИШ, шинэ tools скриптээр (`$pt`) ажиллуулна — v0.2.3 скриптэд энэ команд алга. [[04_Pilot_Camp_Windows]] §13г.
+- Pilot `.env`-д `FILE_ENCRYPTION_KEY` нэмж нөөцөөс тусад хадгална; `PILOT_DB_ADMIN_PASSWORD` бүү нэм; upgrade/rollback-ийг tools скриптээр (`$pt`, v0.2.4.4) — [[04_Pilot_Camp_Windows]] §13г.
 
 ## [v0.2.4.1] — 2026-11-10 — Pilot шинэчлэлийн хамгаалалт
 
