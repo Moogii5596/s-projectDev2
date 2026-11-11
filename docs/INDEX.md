@@ -2,7 +2,7 @@
 title: "S Project — Баримт бичгийн газрын зураг (INDEX)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-11-07
+last_updated: 2026-11-10
 tags: [index, moc]
 ---
 
@@ -24,7 +24,7 @@ tags: [index, moc]
 - [[ARCH-00_System_Overview]] — **архитектурын тойм**: одоо ✅ / зорилт 🧭, эрсдэлийн бүртгэл
 - [[01_Core_API_Gateway_ReverseProxy_Spec]] — edge → API: Cloudflare, Caddy, guard гинж, хязгаар
 - [[ARCH-05_UI_UX_Architecture_Spec]] — frontend шийдвэрүүд
-- ADR: [[ADR-001_Tenant_Isolation]] (RLS + dedicated) · [[ADR-003_Users_Login_Permissions]] (хэрэглэгч, нэвтрэлт, эрх) · [[ADR-004_Feed_Architecture]] · [[ADR-005_Org_Connectivity_Domains]] (домэйн, tunnel, нүүр хуудас) · [[ADR-006_HR_Core_Module]] · [[ADR-007_System_Roles_Permissions]] (роль, эрх системийн түвшинд) · [[ADR-008_Sites]] (ажлын байр) · [[ADR-009_Module_Engine]] (**цөм = модулийн хөдөлгүүр**) · [[ADR-002_Hosting]] (пилот PC)
+- ADR: [[ADR-001_Tenant_Isolation]] (RLS + dedicated) · [[ADR-003_Users_Login_Permissions]] (хэрэглэгч, нэвтрэлт, эрх) · [[ADR-004_Feed_Architecture]] · [[ADR-005_Org_Connectivity_Domains]] (домэйн, tunnel, нүүр хуудас) · [[ADR-006_HR_Core_Module]] · [[ADR-007_System_Roles_Permissions]] (роль, эрх системийн түвшинд) · [[ADR-008_Sites]] (ажлын байр) · [[ADR-009_Module_Engine]] (**цөм = модулийн хөдөлгүүр**) · [[ADR-010_Tenant_Links]] (байгууллага хоорондын холболт, Draft) · [[ADR-011_Cloud_Hosting]] (**үүлэн хостинг**, 2026-11-11) · [[ADR-002_Hosting]] (пилот PC, Deprecated)
 
 ## 🗄 Өгөгдөл ба аюулгүй байдал
 - [[01_PostgreSQL_MultiTenant_RLS_Spec]] — tenant тусгаарлалт, DB роль, policy загвар
@@ -39,14 +39,14 @@ tags: [index, moc]
 - [[01_Tech_Stack_Decision]] — стек (хувилбар, шалтгаан)
 - [[02_Local_Supabase_Docker_Windows]] — local орчин, тест командууд
 - [[03_Enterprise_VPC_Deployment]] — VPC / dedicated runbook
-- [[06_Cursor_Setup]] — Cursor IDE: rules, commands, ignore, UI тохиргоо · repo үндэс `CLAUDE.md` → [[CONTEXT]] (Claude Code)
+- [[06_Cursor_Setup]] · [[08_Engineering_Practices]] (мэргэжлийн стандарт, Draft) · **[[09_Team_Handbook]]** (багийн гарын авлага, Draft) · **[[10_Agent_Team_Workflow]]** (агентын баг, PO-ийн батламж, Draft) — Cursor IDE: rules, commands, ignore, UI тохиргоо · repo үндэс `CLAUDE.md` → [[CONTEXT]] (Claude Code)
 - [[04_Pilot_Camp_Windows]] — пилот: нэг Windows машин, `pilot.ps1`, staging, нөөц
 - [[05_Cloudflare_Tunnel]] — байгууллага холбох
 
 ## 🗺 Төлөвлөгөө
 - [[01_Development_Roadmap]] — **хувилбарын ганц жагсаалт** + шийдвэрийн бүртгэл
 - [[00_rules_and_context]] — RULE-01~21 бүтэн текст
-- `v0.2.x` 🔄: [[03_v0.2_full_plan]] · [[00_backlog_and_tech_debt]] (ID + төлөв) · [[07_v0.2.2_tech_plan]] · [[08_v0.2.2_progress]] · **[[11_v0.2_completion_master_plan]]** (v0.2.4…v0.2.9) · **[[09_v0.2.3_tech_plan]]** · **[[12_v0.2.3_data_import]]** (Блок D — Sino өгөгдөл импорт) · [[10_v0.2.4_tech_plan]]
+- `v0.2.x` 🔄: [[03_v0.2_full_plan]] · [[00_backlog_and_tech_debt]] (ID + төлөв) · [[07_v0.2.2_tech_plan]] · [[08_v0.2.2_progress]] · **[[11_v0.2_completion_master_plan]]** (v0.2.4…v0.2.10) · **[[09_v0.2.3_tech_plan]]** · **[[12_v0.2.3_data_import]]** (Блок D — Sino өгөгдөл импорт) · [[10_v0.2.4_tech_plan]] · **[[13_v0.2.5_tech_plan]]** (үүлэн хостинг)
   - Архив: [[01_plan_draft]] (Deprecated) · [[02_v0.2.0_tech_plan]] · [[04_v0.2.1_tech_plan]] · [[05_v0.2.1_progress]] · [[06_v0.2.1_PIL-07_report]]
 - `v0.3` 📝: [[00_plan_draft]] (дотоод Feed)
 - Кемп модуль: [[01_plan_and_erd]] (ERD v4, V1 ✅, V2 📋) · архив [[01_plan_and_erd.v1]] · [[01_plan_and_erd.v2]] · [[01_plan_and_erd.v3]]

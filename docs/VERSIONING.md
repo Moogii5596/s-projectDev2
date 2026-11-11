@@ -2,7 +2,7 @@
 title: "Хувилбаржуулалтын Бодлого (Versioning Policy)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-11-11
 tags: [release]
 ---
 
@@ -79,6 +79,18 @@ git tag -l "v*" --sort=-v:refname
 ```
 
 ---
+
+## Release-ийн дүрэм (2026-11-11, PO батласан)
+
+| Үе | Tag | Хаана |
+|---|---|---|
+| Staging-д шалгах | `v0.2.5-rc.1`, `v0.2.5-rc.2` … | staging (автомат deploy `main`-аас) |
+| Production-д гаргах | `v0.2.5` | production (GitHub Environment `production`, PO батална) |
+| Production-ийн яаралтай засвар | `v0.2.5.1`, `v0.2.5.2` … | `hotfix/<version>` → PR → staging smoke → PO → production → `main`-д буцааж merge |
+
+- v0.2.x-д PATCH талбарыг feature хувилбарт хэрэглэдэг тул яаралтай засварт **4 оронтой tag** — SemVer-ээс гадуурх **албан ёсны үл хамаарал** (v1.0.0-оос стандарт SemVer).
+- Tag зөвхөн `main`-аас (hotfix — hotfix branch-аас), release workflow-оор. Staging-д олдсон алдаа = шинэ `rc`, production-ийн дугаар биш.
+- Өмнөх `v0.2.4.1`…`v0.2.4.5` (staging-ийн засварт хэрэглэсэн) — цаашид `rc` болно.
 
 ## CHANGELOG.md холбоос
 

@@ -1,12 +1,14 @@
 ---
 title: "ADR-002 — Пилотын хостинг"
 type: "Architecture"
-status: "Active"
-last_updated: 2026-11-07
+status: "Deprecated"
+last_updated: 2026-11-11
 tags: [hosting, pilot, deploy]
 ---
 
 # ADR-002 — Пилотын хостинг
+
+> ⛔ **2026-11-11: орлогдсон** → [[ADR-011_Cloud_Hosting]] (пилотын PC 2026-11-18-нд унтрах тул Supabase Cloud + Render + Vercel + R2). Доорх нь түүх.
 
 > 2026-10-19 · Төлөв: **✅ Батлагдсан** · v0.2.4 Блок 0 (Q15, PIL-06, DOC-01)
 > Холбоотой: ADR-001 (dedicated deployment), ADR-005 (Cloudflare Tunnel), [[10_v0.2.4_tech_plan]]
