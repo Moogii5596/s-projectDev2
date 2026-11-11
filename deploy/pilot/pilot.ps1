@@ -937,7 +937,8 @@ function Invoke-Restore([string] $file) {
     Wait-Docker
     Start-PilotRedis
     Start-PilotSupabase $cfg -AllowPendingConfigChange | Out-Null
-    Invoke-Supabase -Arguments @('db', 'reset', '--local', '--no-seed', '--yes') | Out-Null
+    # v0.2.4.4: --network-id заавал — эс бөгөөс DB контейнер CLI-ийн анхдагч сүлжээнд дахин үүсч auth/rest DB-г олохгүй (no such host)
+    Invoke-Supabase -Arguments @('db', 'reset', '--local', '--no-seed', '--yes', '--network-id', $Prof.NetworkId) | Out-Null
     # v0.2.4.3: db reset нь postgres role-ийн нууцыг анхдагч болгоно → SYSTEM_DATABASE_URL / DIRECT_URL-тэй нийцүүлнэ
     Restore-DbAdminPassword $cfg
 
@@ -1392,7 +1393,13 @@ function Show-Status {
   $healthy = Wait-Http "http://127.0.0.1:$port/api/v1/health" 3
   if ($healthy) { Write-Ok "backend health (127.0.0.1:$port)" } else { Write-Warn2 'backend health алга' }
   if (Wait-Http "http://127.0.0.1:$http/api/v1/health" 3) { Write-Ok "gateway health (127.0.0.1:$http)" } else { Write-Warn2 'gateway (Caddy) health алга' }
-  Invoke-Native 'docker' @('ps', '--filter', "name=$ProjectId", '--format', '{{.Names}}  {{.Status}}') -AllowFail | Out-Null
+  # v0.2.4.4: дахин асаж буй / unhealthy контейнер (жнь auth DB-г олохгүй) health-ийг ногоон харагдуулж нуудаг байв
+  $ps = Invoke-Native 'docker' @('ps', '--filter', "name=$ProjectId", '--format', '{{.Names}}  {{.Status}}') -Capture -AllowFail
+  $containerLines = @(@($ps.Out) | Where-Object { "$_".Trim() -ne '' })
+  foreach ($l in $containerLines) { Write-Host "  $l" }
+  $badContainers = @($containerLines | Where-Object { "$_" -match 'Restarting|unhealthy' })
+  $containersOk = ($ps.Code -eq 0 -and $badContainers.Count -eq 0)
+  if ($badContainers.Count -gt 0) { Write-Warn2 "Supabase контейнер эрүүл биш: $(($badContainers | ForEach-Object { ("$_" -split '\s{2,}')[0] }) -join ', ') — docker logs <нэр>" }
   if (Get-Command tailscale -ErrorAction SilentlyContinue) {
     Write-Step 'Tailscale Funnel'
     $funnel = Invoke-Native 'tailscale' @('funnel', 'status') -Capture -AllowFail
@@ -1421,6 +1428,7 @@ function Show-Status {
   }
   if (Get-Cfg $cfg 'PILOT_HEALTHCHECK_URL') {
     if (-not $healthy) { $sent = Send-HealthPing $cfg 'main' -Fail -Message 'status: backend health алга' }
+    elseif (-not $containersOk) { $sent = Send-HealthPing $cfg 'main' -Fail -Message 'status: Supabase контейнер эрүүл биш' }
     elseif ($storageDbOverLimit -eq $true) { $sent = Send-HealthPing $cfg 'main' -Fail -Message 'status: PostgreSQL + storage хэмжээ босго давсан' }
     elseif ($null -eq $storageDbOverLimit) { $sent = Send-HealthPing $cfg 'main' -Fail -Message 'status: PostgreSQL + storage хэмжээ шалгаж чадсангүй' }
     else { $sent = Send-HealthPing $cfg 'main' -Message 'status OK' }

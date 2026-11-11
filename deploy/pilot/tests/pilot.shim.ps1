@@ -55,6 +55,7 @@ $global:PortMappings = '127.0.0.1:55321->8000/tcp, 127.0.0.1:55322->5432/tcp'
 $global:ArchiveIncludesStorage = $false
 $global:MockProcessId = 40000
 $global:MockProcesses = @{}
+$global:ContainerStatus = @('supabase_db_s-project-pilot  Up 5 minutes (healthy)', 'supabase_auth_s-project-pilot  Up 5 minutes (healthy)')
 New-Item -ItemType Directory -Force "$R/storage/Feed" | Out-Null
 Set-Content "$R/storage/Feed/pilot.jpg" 'fixture'
 New-Item -ItemType Directory -Force "$R/apps/core-kernel/dist/src", "$R/apps/web-shell/dist/assets" | Out-Null
@@ -73,6 +74,7 @@ function global:docker {
     $global:LASTEXITCODE = 1; return
   }
   if ($a -match '^ps --format') { $global:LASTEXITCODE = 0; return $global:PortMappings }
+  if ($a -match '^ps --filter name=') { $global:LASTEXITCODE = 0; return $global:ContainerStatus }
   if ($a -match '^network create') {
     $global:NetworkPresent = $true; $global:NetworkBinding = '127.0.0.1'; $global:LASTEXITCODE = 0; return 'network-id'
   }
@@ -231,6 +233,13 @@ $null = Run @('status')
 Check 'status эрүүл → main OK' ((Pings) -join ';' -eq 'PING https://hc.example/main | pilot main status OK')
 $global:HealthDown = $true; $null = Run @('status'); $global:HealthDown = $false
 Check 'status health алга → main/fail' ((Pings) -join ';' -eq 'PING https://hc.example/main/fail | pilot main status: backend health алга')
+$global:ContainerStatus = @('supabase_db_s-project-pilot  Up 5 minutes (healthy)', 'supabase_auth_s-project-pilot  Restarting (1) 7 seconds ago')
+$null = Run @('status')
+Check 'status: дахин асаж буй контейнер → анхааруулга + main/fail (v0.2.4.4)' (
+  ((Get-Content "$T/out.txt" -Raw) -match 'Supabase контейнер эрүүл биш: supabase_auth_s-project-pilot') -and
+  ((Pings) -join ';' -eq 'PING https://hc.example/main/fail | pilot main status: Supabase контейнер эрүүл биш')
+)
+$global:ContainerStatus = @('supabase_db_s-project-pilot  Up 5 minutes (healthy)', 'supabase_auth_s-project-pilot  Up 5 minutes (healthy)')
 $global:HealthDown = $false; $global:DatabaseSizeBytes = [int64](11GB); $null = Run @('status')
 $diskAlert = (
   ((Get-Content "$T/out.txt" -Raw) -match 'PostgreSQL \+ storage: 11 GB') -and
@@ -294,6 +303,7 @@ Write-Host '8) restore: DB өгөгдөл ба Feed storage-ийг тусгаа�
 Check 'тусгаарласан staging fixture init' (Run @('init', '-Profile', 'staging'))
 $restoreArchive = Get-ChildItem "$T/bk" -Filter 'sinohydro-*.7z' | Select-Object -First 1
 Check 'restore команд' (Run @('restore', $restoreArchive.FullName, '-Profile', 'staging', '-Yes'))
+Check 'restore db reset loopback сүлжээнд (--network-id, v0.2.4.4)' ($global:Log -match 'supabase db reset .*--network-id s-project-staging-loopback')
 Check 'restore db reset-ийн дараа postgres нууцыг .env-ээр сэргээв' (
   ($global:Log -match '-U supabase_admin .*ALTER ROLE postgres WITH PASSWORD') -and
   ((Get-Content "$T/out.txt" -Raw) -notmatch [regex]::Escape('C' * 40))
