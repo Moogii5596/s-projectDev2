@@ -125,12 +125,12 @@ jobs:
       - name: Build
         run: pnpm turbo build
 
-  # PR-д ✖ (дээрх тайлбар). `test`-тэй зэрэг (needs: changes л) → wall ≈ max(test, e2e).
+  # Supabase хоёр job-д зэрэг асахад host-ийн 54322 порт давхцаж болзошгүй тул test дууссаны дараа ажиллуулна.
   # ubuntu-24.04-д бэхэлсэн: Playwright-ийн албан ёсоор дэмждэг OS; ubuntu-latest (26.04) 2026-11-11-нд apt DNS алдаатай байсан.
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-24.04
-    needs: [changes]
+    needs: [changes, test]
     if: needs.changes.outputs.code == 'true' && github.event_name != 'pull_request'
     env:
       DEBUG_MENU_ENABLED: 'true'
