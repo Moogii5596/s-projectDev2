@@ -2,7 +2,7 @@
 title: "Lessons Learned — индекс (ID → дүрэм)"
 type: "Log"
 status: "Active"
-last_updated: 2026-11-06
+last_updated: 2026-11-11
 tags: [lessons, index, generated]
 ---
 
@@ -32,6 +32,7 @@ tags: [lessons, index, generated]
 | MIG-002 | Migration файлын дугаарыг **хэрэгжүүлэх үед** (бодит дарааллаар) өгнө; tech plan-д зөвхөн «шинэ migration» гэж… | LL-06 §24 |
 | MIG-003 | Enum утга нэмэх migration-д тэр утгыг хэрэглэх юу ч (index, CHECK, seed, функц) бичихгүй. | LL-06 §24 |
 | MIG-004 | Хүснэгт нэрлэх migration-ийн өмнө `grep -l <хүснэгт> supabase/migrations/*.sql`-ээр түүнийг хэрэглэдэг бүх функцийг олж… | LL-06 §24 |
+| MIG-005 | Backfill/sync хийх хүснэгтийн CHECK эх сурвалжийн дүрмээс хатуу байж болохгүй; fixture-д бодит өгөгдлийн хэлбэр; staging-д бодит нөөцөөр туулна. | LL-03 §20 |
 | MIGRATE-001 | DROP CHECK → CREATE ENUM → ALTER TYPE → RECREATE CHECK | LL-01 §3 |
 | MIGRATE-002 | DROP index → DROP CHECK → CREATE ENUM → ALTER TYPE → RECREATE index | LL-01 §3 |
 | PRISMA-001 | `id String @id @default(uuid()) @db.Uuid`, `tenantId String @map("tenant_id") @db.Uuid` | LL-01 §2 |
@@ -202,9 +203,11 @@ tags: [lessons, index, generated]
 | OPS-013 | Нууц үг солихдоо хэрэглэгчийн ӨӨРИЙН access token-оор (B) солино → одоогийн төхөөрөмж логинтой үлдэнэ; admin API (A)… | LL-03 §20 |
 | OPS-014 | CLI амжилтгүй бол хуучин snapshot файлыг бүү ашигла; хувилбар тус бүрийн схем ба харьцуулах форматыг шалга. | LL-03 §20 |
 | OPS-015 | A/B эцсийн эрхийг өмнөхийн адил бүрэн харьцуулж, загвар ба эцсийн эрхийн зөрүүний чиглэл болон мөрүүд өөрчлөгдсөн эсэхийг… | LL-03 §20 |
+| OPS-016 | Нууц солихдоо superuser-ээр, түүнийг хэрэглэдэг бүх `.env` түлхүүрийг хамт, `db reset`/restore-ийн дараа дахин тохируулна; release бүрт staging-д upgrade **ба** rollback-ийг туулна. | LL-03 §20 |
 | PS-001 | Windows PowerShell 5.1-д ажиллах скрипт бичих | LL-03 §20 |
 | PS-002 | Процессын нэр шалгадаг кодыг тестлэх shim нь жинхэнэ нэртэй байх (жижиг C wrapper, хүүхэд процесс `PR_SET_PDEATHSIG`-тэй). | LL-06 §21 |
 | PS-003 | Урт амьдрах процесс асаадаг командыг pipe-аар бүү дууд. Windows-ийн процесс/handle-ийн зан төлөвийг Linux shim тестээр… | LL-06 §21 |
+| PS-004 | Native командын аргументад давхар хашилт бүү оруул (PS 5.1 хасдаг) — `{{json .Options}}` + `ConvertFrom-Json`; shim template-ийг шалгана. | LL-03 §20 |
 
 ## Процесс, баримт
 

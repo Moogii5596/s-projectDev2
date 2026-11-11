@@ -2,7 +2,7 @@
 title: "CHANGELOG"
 type: "Log"
 status: "Active"
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 tags: [release]
 ---
 
@@ -14,6 +14,23 @@ tags: [release]
 Хувилбаржуулалт: [SemVer 2.0.0](https://semver.org/) — v0.x.x = pre-production, v1.0.0 = public release
 
 ---
+
+## [v0.2.4.4] — 2026-11-11 — Staging дадлагаар илэрсэн засварууд (пилотод суулгах хувилбар)
+
+> Пилотын нөөцөөс сэргээсэн staging дээр v0.2.3 → v0.2.4 шинэчлэл ба rollback-ийг бодит өгөгдлөөр туулж олсон алдаанууд. **Пилотод v0.2.4.4-ийг суулгана** — v0.2.4.1–v0.2.4.3 tag-ууд дундын шат (v0.2.4.1-д pilot дахин асах бүрт унах алдаа бий). Staging: `camp:snapshot` A = B ✅ (хоол, хүн-өдөр, өрөө, 574 ажилтан, эрх, модуль), rollback (restore → build → start) ✅.
+
+### Засварласан
+- **Migration `20261107050_core_sites`** — `core_sites.code`-ийн CHECK кемпийн кодын дүрэмтэй нийцэв (`^[A-Za-z0-9._-]{1,40}$`); өмнө нь тоогоор эхэлсэн кемпийн код (Sino «01») backfill-д upgrade-ийг унагав, sync trigger шинэ/нэр сольсон кемпийг ч унагах байв. Аль хэдийн хэрэгжүүлсэн DB-д `20261111001`; DTO ижил дүрэм.
+- **`camp:snapshot`** — v0.2.3 DB (upgrade-ийн өмнөх A) дээр `camp_positions.name_i18n` баганагүйг тооцно.
+- **`pilot.ps1`** — PowerShell 5.1 давхар хашилт хасдаг тул `docker network inspect`-ийн template эвдэрч loopback сүлжээг «алга» гэж үзэн унадаг байсныг `{{json .Options}}`-оор засав; контейнергүй loopback биш сүлжээг дахин үүсгэнэ; Redis контейнер устсан сүлжээ рүү заасан бол дахин үүсгэнэ.
+- **`rotate-db-password`** — `supabase_admin`-аар солино (Supabase-д `postgres` superuser биш); `SYSTEM_DATABASE_URL`/`DIRECT_URL`-ийн нууцыг хамт шинэчилнэ; зогссон staging-ийг асаана.
+- **`restore`** — `supabase db reset`-ийн дараа `postgres`-ийн нууцыг `.env`-ээр дахин тохируулна (эс бөгөөс rollback-ийн backend P1000); `db reset`-д `--network-id` (эс бөгөөс DB контейнер өөр сүлжээнд үүсч auth `no such host`-оор дахин дахин асна → нэвтрэлт унана).
+- **`status`** — дахин асаж буй / unhealthy Supabase контейнерийг анхааруулж мониторингт `/fail` илгээнэ (өмнө нь backend health ногоон байхад auth унасныг нууж байв).
+- **`build`** — ажиллаж буй backend-ийг эхлээд зогсооно (Prisma DLL-ийн түгжээ, EPERM).
+- Web: хэрэглэгч хэл сонгосны дараа профайлын хэлний sync сонголтыг дарж бичихгүй.
+
+### ⚠️ Pilot-д суулгахаас өмнө (эзэмшигч)
+- `rotate-db-password`-ийг пилотын хавтасны (v0.2.3) скриптээр БИШ, шинэ tools скриптээр (`$pt`) ажиллуулна — v0.2.3 скриптэд энэ команд алга. [[04_Pilot_Camp_Windows]] §13г.
 
 ## [v0.2.4.1] — 2026-11-10 — Pilot шинэчлэлийн хамгаалалт
 

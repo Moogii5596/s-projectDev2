@@ -2,7 +2,7 @@
 title: "Lessons — Орчин, шинэ машин, пилот / deploy"
 type: "Log"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-11-11
 tags: [lessons]
 ---
 
@@ -165,3 +165,17 @@ tags: [lessons]
 - **Тохиолдсон (v0.2.2 → v0.2.3):** staging-д роль-загвар ба эцсийн эрхийн 16 мөрийн зөрүү шинэчлэлийн өмнө ч, дараа ч ижил байсан боловч B доторх ялгааг тэг гэж шаардсанаас харьцуулалт унав.
 - **Шалтгаан:** шууд эрх болон өөрчлөгдсөн боловч дахин хэрэгжүүлээгүй загвар нь эцсийн эрх ба одоогийн роль-загварыг ялгаатай байлгаж болно.
 - **Шийдэл:** A/B эцсийн эрхийг өмнөхийн адил бүрэн харьцуулж, загвар ба эцсийн эрхийн зөрүүний чиглэл болон мөрүүд өөрчлөгдсөн эсэхийг мөн шалгана. Тестэд хадгалагдсан болон шинэ зөрүүг тусгав.
+
+### [PS-004] PowerShell 5.1 native аргумент доторх давхар хашилтыг хасдаг — docker `--format` template эвдэрнэ
+- **Тохиолдсон (2026-11-11, v0.2.4 staging):** `docker network inspect --format '{{ index .Options "com.docker.network.bridge.host_binding_ipv4" }}'` → `template parsing error: function "com" not defined`; скрипт байгаа сүлжээг «алга» гэж үзээд дахин үүсгэх гэж оролдож `already exists`-ээр унав. Пилот v0.2.4.1-д шилжсэн бол дахин асах бүрт унах байв.
+- **Шалтгаан:** Windows PowerShell 5.1 нь native exe-д дамжуулах аргумент доторх `"`-ийг escape хийлгүй хасдаг (PS 7.3+-д засагдсан). Shim тестийн mock бүх `network inspect`-д утга буцаадаг байсан тул илрээгүй.
+- **Дүрэм:** Native командын аргументад давхар хашилт бүү оруул — `{{json .Options}}` гэх мэт хашилтгүй template авч PowerShell-д `ConvertFrom-Json`-оор задал. Shim-ийн mock аргументын хэлбэрийг (template) шалгадаг байна.
+
+### [OPS-016] DB админ нууц солихдоо түүнийг хэрэглэдэг бүх газар болон restore-ийн урсгалыг хамт шинэчил
+- **Тохиолдсон (2026-11-11, v0.2.4 staging):** `rotate-db-password` (1) зогссон staging-д DB асааж чадахгүй гацсан, (2) `postgres`-оор `ALTER ROLE` хийж «Only superusers can alter privileged roles», (3) `SYSTEM_DATABASE_URL`/`DIRECT_URL`-ийг шинэчлээгүй тул snapshot/backend P1000, (4) restore-ийн `supabase db reset` `postgres`-ийн нууцыг анхдагч болгосон тул rollback-ийн backend P1000, мөн `--network-id`-гүй тул DB контейнер өөр сүлжээнд үүсч auth унав (status ногоон харагдсан). Мөн `build` ажиллаж буй backend-ийн Prisma DLL-ийн түгжээгээр EPERM.
+- **Шалтгаан:** нууцын шилжилтийг зөвхөн shim (mock)-оор шалгаж, бодит Supabase (supabase_admin = superuser, db reset-ийн role seed) болон rollback замыг staging дээр туулаагүй.
+- **Дүрэм:** Нууц солих өөрчлөлтөд: superuser-ээр солих, нууцыг хэрэглэдэг бүх `.env` түлхүүрийг нэг бичилтээр шинэчлэх, `db reset`/restore-ийн дараа дахин тохируулах. Supabase CLI-ийн контейнер үүсгэдэг бүх команд (`start`, `db reset`) ижил `--network-id`-тэй. Release бүрт staging дээр **upgrade ба rollback (restore → build → start)** хоёуланг бодит өгөгдөл дээр туулж, backend health-ээс гадна бүх контейнерийн төлөв ба нэвтрэлтийг (`auth-test`) шалгана.
+
+### [MIG-005] Хүснэгт хооронд өгөгдөл хуулах migration-д хүлээн авагчийн CHECK эх сурвалжийн дүрмээс хатуу байж болохгүй
+- **Тохиолдсон (2026-11-11, v0.2.4 staging):** `20261107050_core_sites` кемпүүдийг `core_sites` руу хуулахад Sino-гийн кемпийн код «01» нь `^[A-Z][A-Z0-9_-]{0,39}$`-д тэнцээгүй → upgrade унав. Dev/CI-ийн fixture код («C1») дүрэмд таардаг байсан.
+- **Дүрэм:** Backfill / sync trigger-тэй хүснэгтийн CHECK-ийг эх хүснэгтийн DTO/CHECK-тэй ижил (эсвэл илүү сул) болгоно; fixture-д бодит өгөгдлийн хэлбэр (тоон код, жижиг үсэг) оруулна; migration-ийг пилотын нөөцөөс сэргээсэн staging дээр туулахаас өмнө release ногоон гэж үзэхгүй.

@@ -355,40 +355,40 @@ git switch main ; git merge release/v0.1   # засварыг v0.2-т ч ору�
 ```
 Пилот дээр §13-ийн алхмаар `git checkout v0.1.7`.
 
-### 13г. v0.2.4 (v0.2.4.1) — staging дадлага, эрхийн gate, пилотын шинэчлэл
+### 13г. v0.2.4 (v0.2.4.4) — staging дадлага, эрхийн gate, пилотын шинэчлэл
 
-> Энэ хэсэг нь заавар; одоогийн release бэлтгэлд staging/pilot-д **ажиллуулахгүй**. Pilot upgrade-д эзэмшигчийн шууд зөвшөөрөл шаардлагатай. Migration `20261107006` хуучин эрхийн хүснэгтүүдийг устгах тул буцаалт нь migration хийхээс өмнөх DB + storage нөөцийг сэргээх юм.
+> **Staging дадлага 2026-11-11 ✅** (пилотын 2026-11-10-ны нөөцөөр): v0.2.3 → v0.2.4.3 upgrade, `camp:snapshot` A = B, rollback (restore → build → start) туулсан; олдсон алдаанууд v0.2.4.4-д засагдсан ([[CHANGELOG]]). Пилотод **v0.2.4.4** суулгана (v0.2.4.4–.3 бүү суулга). Pilot upgrade-д эзэмшигчийн шууд зөвшөөрөл шаардлагатай. Migration `20261107006` хуучин эрхийн хүснэгтүүдийг устгах тул буцаалт нь migration хийхээс өмнөх DB + storage нөөцийг сэргээх юм.
 
 1. **Бэлтгэл ба нөөц:** пилотын админ PowerShell дээр `.\deploy\pilot\pilot.ps1 backup` ажиллуул. Нөөцөд PostgreSQL ба `storage/` орсныг шалгаж, архив болон гаднах хуулбарын SHA256 таарч байгааг баталгаажуул. `FILE_ENCRYPTION_KEY`-ийг нөөцийн архиваас тусад нь нууц үгийн менежерт хадгал. v0.2.3 нөөцөд v0.2.4-ийн `core_attachments` байхгүй тул staging-д §1а-ийн дагуу тусдаа шинэ түлхүүр хэрэглэнэ; v0.2.4+ шифрлэгдсэн хавсралттай нөөцийг сэргээх бол тухайн нөөцийн түлхүүр шаардлагатай. Бодит `.env`-г Git/чатад бүү хуул.
-1а. **Tools ба нууц (v0.2.4.1):** staging/pilot-ийг ШИНЭ скриптээр ажиллуулна — `git archive --format=zip -o E:\MoogiiDev\Staging\tools.zip v0.2.4.1 deploy` → `Expand-Archive E:\MoogiiDev\Staging\tools.zip E:\MoogiiDev\Staging\tools -Force`. Staging-ийн DB administrator нууцыг prompt-гүй: `& $st rotate-db-password -Profile staging -Root $sr -Generate` (`.env.staging`-ийн `PILOT_DB_ADMIN_PASSWORD` хоосон = одоогийн `postgres`; шинэ нууцыг скрипт үүсгэж DB-д тохируулаад `.env.staging`-д хадгална, хэвлэхгүй). Staging-ийн `FILE_ENCRYPTION_KEY` — тусдаа шинэ түлхүүр: v0.2.3 нөөцөд шифрлэгдсэн хавсралт байхгүй (`core_attachments` v0.2.4-д шинэ).
+1а. **Tools ба нууц (v0.2.4.4):** staging/pilot-ийг ШИНЭ скриптээр ажиллуулна — `git archive --format=zip -o E:\MoogiiDev\Staging\tools.zip v0.2.4.4 deploy` → `Expand-Archive E:\MoogiiDev\Staging\tools.zip E:\MoogiiDev\Staging\tools -Force`. Staging-ийн DB administrator нууцыг prompt-гүй: `& $st rotate-db-password -Profile staging -Root $sr -Generate` (`.env.staging`-ийн `PILOT_DB_ADMIN_PASSWORD` хоосон = одоогийн `postgres`; шинэ нууцыг скрипт үүсгэж DB-д тохируулаад `.env.staging`-д хадгална, хэвлэхгүй). Staging-ийн `FILE_ENCRYPTION_KEY` — тусдаа шинэ түлхүүр: v0.2.3 нөөцөд шифрлэгдсэн хавсралт байхгүй (`core_attachments` v0.2.4-д шинэ).
 2. **Staging restore:** §13в-ийн тусдаа staging profile-д пилотын backup-ийг сэргээ. Staging-ийн бусад нууц (DB, JWT, backup password) шинээр үүсгэ; v0.2.3 backup-д §1а-ийн дагуу тусдаа `FILE_ENCRYPTION_KEY` тохируулна. v0.2.4+ шифрлэгдсэн хавсралттай backup сэргээвэл уг backup-ийг үүсгэсэн түлхүүрийг secure сувгаар staging-д оруул. Snapshot A-г **одоогийн v0.2.3 DB-г шинэчлэхээс өмнө**, dev-ийн шинэ `camp:snapshot` хэрэгслээр ав:
    ```powershell
    cd E:\MoogiiDev\Dev\s-project
    pnpm camp:snapshot --env=E:\MoogiiDev\Staging\s-project\.env.staging --out=E:\MoogiiDev\Staging\a-v024.json
    ```
-3. **Staging upgrade ба тулгалт:** `& $st upgrade -Tag v0.2.4.1 -Profile staging -Root $sr` ажиллуул. Шинэчлэлтээр `20261107006` legacy alias/хуулбар хүснэгтүүдийг устгаж, `20261110002` өмнөх Camp роль/хэрэглэгчийн эрхийг ижил хүрээтэй Core эрх рүү хуулна. Шинэчилсний дараа ижил CLI-гаар B авч, A-тай яг ижил огноо/мужийг `--like`-аар хадгалж, тулга:
+3. **Staging upgrade ба тулгалт:** `& $st upgrade -Tag v0.2.4.4 -Profile staging -Root $sr` ажиллуул. Шинэчлэлтээр `20261107006` legacy alias/хуулбар хүснэгтүүдийг устгаж, `20261110002` өмнөх Camp роль/хэрэглэгчийн эрхийг ижил хүрээтэй Core эрх рүү хуулна. Шинэчилсний дараа ижил CLI-гаар B авч, A-тай яг ижил огноо/мужийг `--like`-аар хадгалж, тулга:
    ```powershell
    cd E:\MoogiiDev\Dev\s-project
    pnpm camp:snapshot --env=E:\MoogiiDev\Staging\s-project\.env.staging --out=E:\MoogiiDev\Staging\b-v024.json --like=E:\MoogiiDev\Staging\a-v024.json
    pnpm camp:snapshot --compare E:\MoogiiDev\Staging\a-v024.json E:\MoogiiDev\Staging\b-v024.json
    ```
    `camp:snapshot/2` нь хоол/өрөө/тоо, эрх (Camp/Core хоёр хос grant-ийг ижил эрх гэж тулгана), A-д байсан module status, орчуулгын override-ийн hash-ийг шалгана (текстийг файлд хадгалахгүй). Migration-аар шинээр үүсэх module-ийн анхдагч мөрүүдийг тулгалтаас хасна; B дээр `core`, `hr`, `camp`, `feed` нь `ACTIVE`, debug/сонголтот модулиуд `SUSPENDED` болохыг тусад нь шалга. Зөрүү эсвэл hash өөрчлөлт гарвал pilot руу **шилжүүлэхгүй**.
-3а. **Pilot-ийн бэлтгэл (ЗААВАЛ, pilot ажиллаж байх үед, эзэмшигч):** (1) pilot `.env`-д `FILE_ENCRYPTION_KEY=<openssl rand -base64 32>` нэмж, нөөцөөс тусад нь нууц үгийн менежерт хадгал (байхгүй бол түлхүүр `JWT_SECRET`-ээс гарч, JWT солиход хавсралт уншигдахгүй). (2) `.\deploy\pilot\pilot.ps1 rotate-db-password -Profile pilot -Yes` — `PILOT_DB_ADMIN_PASSWORD` (32+) байхгүй бол v0.2.4-ийн init Supabase асаахаас татгалзана. v0.2.3-ийн pilot скриптэд upgrade preflight байхгүй тул энэ алхмыг алгасвал upgrade pilot-ийг зогсоосны дараа унаж, систем унтарсан хэвээр үлдэнэ.
+3а. **Pilot-ийн бэлтгэл (ЗААВАЛ, pilot ажиллаж байх үед, эзэмшигч):** (1) pilot `.env`-д `FILE_ENCRYPTION_KEY=<openssl rand -base64 32>` нэмж, нөөцөөс тусад нь нууц үгийн менежерт хадгал (байхгүй бол түлхүүр `JWT_SECRET`-ээс гарч, JWT солиход хавсралт уншигдахгүй). (2) `& 'E:\MoogiiDev\Staging\tools\deploy\pilot\pilot.ps1' rotate-db-password -Profile pilot -Root E:\MoogiiDev\Pilot\s-project -Yes` — **tools скриптээр** (пилотын v0.2.3 скриптэд энэ команд алга; шинэ скрипт `supabase_admin`-аар солиж `SYSTEM_DATABASE_URL`/`DIRECT_URL`-ийг хамт шинэчилнэ) — `PILOT_DB_ADMIN_PASSWORD` (32+) байхгүй бол v0.2.4-ийн init Supabase асаахаас татгалзана. v0.2.3-ийн pilot скриптэд upgrade preflight байхгүй тул энэ алхмыг алгасвал upgrade pilot-ийг зогсоосны дараа унаж, систем унтарсан хэвээр үлдэнэ.
 4. **Pilot D-6 gate:** шинэ backup + SHA256-г дахин баталгаажуул. Migration `20261107006`-г ажиллуулахын өмнө TC-v023-ийн **A04 эрхийн шалгалтыг** эрхийн жагсаалт/хэрэглэгчийн жишээн дээр гүйцэтгэж, хэн ч эрхээ алдаагүйг бүртгэ. Дараагийн `20261110002` migration ижил роль, хэрэглэгч, ажлын байрны хүрээтэй Core grant-ыг хуулна; upgrade-ийн дараа snapshot болон TC-v023-A04-өөр дахин тулгана. Энэ gate амжилтгүй эсвэл нотолгоо байхгүй бол зогсоно.
 5. **Зөвшөөрөлтэй pilot upgrade:** зөвхөн staging A = B, D-6 gate, backup, owner зөвшөөрөл бүгд хангагдсан үед:
    ```powershell
    # ШИНЭ скриптээр (preflight: DB нууц + FILE_ENCRYPTION_KEY-ийг pilot-ийг зогсоохоос ӨМНӨ шалгана)
    $pt = 'E:\MoogiiDev\Staging\tools\deploy\pilot\pilot.ps1'
-   & $pt upgrade -Tag v0.2.4.1 -Profile pilot -Root E:\MoogiiDev\Pilot\s-project
+   & $pt upgrade -Tag v0.2.4.4 -Profile pilot -Root E:\MoogiiDev\Pilot\s-project
    cd E:\MoogiiDev\Pilot\s-project ; .\deploy\pilot\pilot.ps1 status
    ```
    Дараа нь health/smoke, TC-v023-ийн эрхийн шалгалт, TC-v024-ийг ажиллуул; шалгаагүй үр дүнг release-д ногоон гэж тэмдэглэхгүй.
 6. **Rollback:** migration буцаах SQL байхгүй. Upgrade алдаа эсвэл өгөгдлийн зөрүү гарвал аппыг зогсоож, кодыг `v0.2.3` руу буцаагаад яг энэ шинэчлэлийн өмнөх backup-ийг сэргээ; дараа нь өмнөх хувилбарыг build/start хий. Restore-д DB + storage болон secure хадгалсан ижил `FILE_ENCRYPTION_KEY` заавал хамт байна:
    ```powershell
-   .\deploy\pilot\pilot.ps1 stop
-   git checkout v0.2.3
-   .\deploy\pilot\pilot.ps1 restore E:\MoogiiDev\Pilot\backups\<энэ-шинэчлэлийн-өмнөх-нөөц>.7z
-   .\deploy\pilot\pilot.ps1 build
+   & $pt stop -Profile pilot -Root E:\MoogiiDev\Pilot\s-project
+   git -C E:\MoogiiDev\Pilot\s-project checkout v0.2.3
+   & $pt restore E:\MoogiiDev\Pilot\backups\<энэ-шинэчлэлийн-өмнөх-нөөц>.7z -Profile pilot -Root E:\MoogiiDev\Pilot\s-project
+   & $pt build -Profile pilot -Root E:\MoogiiDev\Pilot\s-project   # backend-ийг өөрөө зогсооно
    Start-ScheduledTask 'S-Project Pilot'
    ```
 
