@@ -117,6 +117,9 @@ tag vX.Y.Z (A0) → PO: Actions → «Deploy production» → Run workflow (tag)
 2. Upstash pay-as-you-go ($0.2 / 100K команд → ≈ $4–5/сар) — мөнгө → PO.
 3. Production-д мөн Render Key Value (Free нь workspace-д 1 — staging эзэлсэн; Starter төлбөртэй) — мөнгө → PO.
 
+**Хэрэгжсэн (#32, 2026-11-12) — хувилбар 1:** rate limit = хүсэлт бүрт **1 `EVAL`** (3 цонх нэг Lua script-ээр); auth guard-ийн `GET`-үүд процесс доторх **L1 cache**-аар (`src/common/cache/l1-cache.ts`, TTL ≤ 30 с, `AUTH_L1_CACHE_TTL_SECONDS`, 0 = унтраах; ижил процессын invalidate L1-ийг шууд цэвэрлэнэ); хонх 30 с → **120 с**, батлах inbox 60 с → **120 с**, i18n 60 с → **10 мин** (нуугдсан таб poll хийхгүй).
+Шинэ тооцоо: нээлттэй таб ≈ 1.1 хүсэлт/мин; poll-ийн хооронд L1 хуучирдаг тул хүсэлт бүрт ≈ 1 `EVAL` + ≤ 5 `GET` ≈ 6 команд → ≈ 400 команд/цаг/таб. Пилот (15 × 2 ц × 22 өдөр ≈ 660 таб-цаг) ≈ 0.26M + бусад ≈ 0.02M → **≈ 0.28M/сар** (< 500K, босго 300K-д ойр). Cutover-ийн дараа эхний 7 хоногт Upstash-ийн хэрэглээг өдөр бүр харна; 300K/сар-аас давах хандлагатай бол PO-д (төлбөртэй багц).
+
 
 ## 11. Нөөц ба сэргээлт (H5, #19)
 **Өдөр бүр 02:00 (УБ)** + гараар (Actions → **Backup** → Run workflow, орчин сонгоно) — `.github/workflows/backup.yml`:

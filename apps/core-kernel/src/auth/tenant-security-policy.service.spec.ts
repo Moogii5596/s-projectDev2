@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_TENANT_SECURITY_POLICY, TenantSecurityPolicyService } from './tenant-security-policy.service';
 
 function setup(rows: unknown[] = []) {
@@ -10,6 +10,13 @@ function setup(rows: unknown[] = []) {
   };
   return { service: new TenantSecurityPolicyService(system as never, redis as never), system, redis };
 }
+
+beforeEach(() => {
+  vi.stubEnv('AUTH_L1_CACHE_TTL_SECONDS', '0');
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe('TenantSecurityPolicyService', () => {
   it('tenant мөр байхгүй үед анхдагч бодлого хэрэглэж cache-д хадгална', async () => {

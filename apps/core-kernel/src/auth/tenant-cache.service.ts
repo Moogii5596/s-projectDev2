@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { REDIS_CLIENT } from '../db/redis.module';
 import Redis from 'ioredis';
 import { SystemPrismaService } from '../db/system-prisma.service';
+import { L1Cache, l1TtlSeconds } from '../common/cache/l1-cache';
 
 const CACHE_TTL_SECONDS = 300; // 5 минут
 const CACHE_PREFIX = 'tenant:slug:';
@@ -48,6 +49,22 @@ export function authCacheTtlSeconds(token: string, nowMs: number): number {
 @Injectable()
 export class TenantCacheService {
   private readonly logger = new Logger(TenantCacheService.name);
+  /** #32: Redis `GET`-ийн өмнөх процесс доторх cache (≤ 30 с). Түлхүүр = Redis-ийн түлхүүртэй ижил */
+  private readonly l1 = new L1Cache<string>(l1TtlSeconds() * 1000);
+
+  /** L1 → Redis. Redis-ээс олдсон утгыг L1-д хадгална */
+  private async cachedGet(key: string): Promise<string | null> {
+    const hit = this.l1.get(key);
+    if (hit !== undefined) return hit;
+    const v = await this.redis.get(key);
+    if (v !== null && v !== undefined) this.l1.set(key, v);
+    return v ?? null;
+  }
+
+  private async cachedSetex(key: string, ttlSeconds: number, value: string): Promise<void> {
+    await this.redis.setex(key, ttlSeconds, value);
+    this.l1.set(key, value, ttlSeconds * 1000);
+  }
 
   constructor(
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
@@ -59,7 +76,7 @@ export class TenantCacheService {
     const cacheKey = `${CACHE_PREFIX}${slug}`;
 
     // 1. Redis cache шалгах
-    const cached = await this.redis.get(cacheKey);
+    const cached = await this.cachedGet(cacheKey);
     if (cached) {
       return cached;
     }
@@ -78,7 +95,7 @@ export class TenantCacheService {
       const tenantId = tenant[0].id;
 
       // 3. Redis-д cache хийх
-      await this.redis.setex(cacheKey, CACHE_TTL_SECONDS, tenantId);
+      await this.cachedSetex(cacheKey, CACHE_TTL_SECONDS, tenantId);
 
       return tenantId;
     } catch (err) {
@@ -95,7 +112,7 @@ export class TenantCacheService {
   async isMember(tenantId: string, authId: string): Promise<boolean> {
     const cacheKey = `${MEMBER_PREFIX}${tenantId}:${authId}`;
 
-    const cached = await this.redis.get(cacheKey);
+    const cached = await this.cachedGet(cacheKey);
     if (cached === '1') return true;
     if (cached === '0') return false;
 
@@ -115,7 +132,7 @@ export class TenantCacheService {
       return false;
     }
 
-    await this.redis.setex(
+    await this.cachedSetex(
       cacheKey,
       member ? MEMBER_TTL_SECONDS : NON_MEMBER_TTL_SECONDS,
       member ? '1' : '0',
@@ -129,7 +146,7 @@ export class TenantCacheService {
    */
   async getCachedAuthUser(token: string): Promise<CachedAuthUser | null> {
     try {
-      const value = await this.redis.get(`${AUTH_PREFIX}${hashToken(token)}`);
+      const value = await this.cachedGet(`${AUTH_PREFIX}${hashToken(token)}`);
       return value ? (JSON.parse(value) as CachedAuthUser) : null;
     } catch (err) {
       this.logger.warn(`Auth cache унших алдаа: ${(err as Error).message}`);
@@ -142,7 +159,7 @@ export class TenantCacheService {
     const ttl = authCacheTtlSeconds(token, Date.now());
     if (ttl <= 0) return;
     try {
-      await this.redis.setex(`${AUTH_PREFIX}${hashToken(token)}`, ttl, JSON.stringify(user));
+      await this.cachedSetex(`${AUTH_PREFIX}${hashToken(token)}`, ttl, JSON.stringify(user));
     } catch (err) {
       this.logger.warn(`Auth cache бичих алдаа: ${(err as Error).message}`);
     }
@@ -155,7 +172,7 @@ export class TenantCacheService {
    */
   async mustChangePassword(tenantId: string, authId: string): Promise<boolean> {
     const cacheKey = `${PWCHANGE_PREFIX}${tenantId}:${authId}`;
-    const cached = await this.redis.get(cacheKey);
+    const cached = await this.cachedGet(cacheKey);
     if (cached === '1') return true;
     if (cached === '0') return false;
     let must = false;
@@ -173,15 +190,18 @@ export class TenantCacheService {
       this.logger.error(`must_change_password lookup алдаа: ${(err as Error).message}`);
       return false;
     }
-    await this.redis.setex(cacheKey, PWCHANGE_TTL_SECONDS, must ? '1' : '0');
+    await this.cachedSetex(cacheKey, PWCHANGE_TTL_SECONDS, must ? '1' : '0');
     return must;
   }
 
   async invalidateMember(tenantId: string, authId: string): Promise<void> {
-    await this.redis.del(`${MEMBER_PREFIX}${tenantId}:${authId}`, `${PWCHANGE_PREFIX}${tenantId}:${authId}`);
+    const keys = [`${MEMBER_PREFIX}${tenantId}:${authId}`, `${PWCHANGE_PREFIX}${tenantId}:${authId}`];
+    this.l1.delete(...keys);
+    await this.redis.del(...keys);
   }
 
   async invalidate(slug: string): Promise<void> {
+    this.l1.delete(`${CACHE_PREFIX}${slug}`);
     await this.redis.del(`${CACHE_PREFIX}${slug}`);
   }
 }

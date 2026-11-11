@@ -33,8 +33,9 @@ export function useI18nSync(): void {
     queryKey: ['i18n', 'web', lang],
     queryFn: () => getWebMessages(lang),
     enabled: !!me,
-    refetchInterval: 60_000,
-    staleTime: 30_000,
+    // #32: 60 с → 10 мин — админы нэр томьёоны өөрчлөлт хамгийн ихдээ 10 мин-д (эсвэл хуудас дахин ачаалахад) хүрнэ
+    refetchInterval: 600_000,
+    staleTime: 300_000,
   })
   // react-query structural sharing: өөрчлөгдөөгүй бол ижил объект → effect дахин ажиллахгүй
   useEffect(() => {

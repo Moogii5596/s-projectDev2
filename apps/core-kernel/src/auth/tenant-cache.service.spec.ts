@@ -1,6 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TenantCacheService, hashToken, authCacheTtlSeconds, AUTH_CACHE_MAX_TTL_SECONDS } from './tenant-cache.service';
 import { REDIS_CLIENT } from '../db/redis.module';
+
+// Доорх тестүүд Redis-ийн (L2) зан төлөвийг шалгана → процесс доторх L1 (#32)-ийг унтраана; L1 → төгсгөлийн describe
+beforeEach(() => {
+  vi.stubEnv('AUTH_L1_CACHE_TTL_SECONDS', '0');
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe('TenantCacheService', () => {
   let service: TenantCacheService;
@@ -201,5 +209,66 @@ describe('Auth token cache (PERF-003)', () => {
     redis.setex.mockRejectedValueOnce(new Error('down'));
     await expect(service.getCachedAuthUser(jwt(1))).resolves.toBeNull();
     await expect(service.cacheAuthUser(jwt(Math.floor(Date.now() / 1000) + 100), { id: 'u1' })).resolves.toBeUndefined();
+  });
+});
+
+// #32: процесс доторх L1 — Redis `GET`-ийг давтахгүй, invalidate L1-ийг ч цэвэрлэнэ
+describe('L1 cache (#32)', () => {
+  const T = '11111111-1111-1111-1111-111111111111';
+  const U = '22222222-2222-2222-2222-222222222222';
+  let service: TenantCacheService;
+  let redis: { get: ReturnType<typeof vi.fn>; setex: ReturnType<typeof vi.fn>; del: ReturnType<typeof vi.fn> };
+  let tx: { $executeRaw: ReturnType<typeof vi.fn>; $queryRaw: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.stubEnv('AUTH_L1_CACHE_TTL_SECONDS', '30');
+    redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn().mockResolvedValue('OK'), del: vi.fn().mockResolvedValue(1) };
+    tx = { $executeRaw: vi.fn().mockResolvedValue(1), $queryRaw: vi.fn().mockResolvedValue([{ ok: 1 }]) };
+    const prisma = { $queryRaw: vi.fn().mockResolvedValue([{ id: T }]), $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)) };
+    service = new TenantCacheService(redis as never, prisma as never);
+  });
+
+  it('Redis hit-ийг L1-д хадгална: дараагийн 100 дуудлага Redis-гүй', async () => {
+    redis.get.mockResolvedValueOnce('1');
+    for (let i = 0; i < 100; i++) await expect(service.isMember(T, U)).resolves.toBe(true);
+    expect(redis.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('DB-ээс уншсан утга (setex) L1-д орно; invalidateMember → L1 + Redis цэвэрлэж дахин DB', async () => {
+    await expect(service.isMember(T, U)).resolves.toBe(true);
+    await expect(service.isMember(T, U)).resolves.toBe(true);
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    await service.invalidateMember(T, U);
+    expect(redis.del).toHaveBeenCalledWith(`tenant:member:${T}:${U}`, `tenant:pwchange:${T}:${U}`);
+    tx.$queryRaw.mockResolvedValueOnce([]);
+    await expect(service.isMember(T, U)).resolves.toBe(false);
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(2);
+  });
+
+  it('auth token: L1-ийн хугацаа token-ийн Redis TTL-ээс хэтрэхгүй (дууссан token-ийг L1 буцаахгүй)', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(1_800_000_000_000);
+      const exp = 1_800_000_000 + 5; // 5 с үлдсэн
+      const t = ['h', Buffer.from(JSON.stringify({ exp })).toString('base64url'), 's'].join('.');
+      await service.cacheAuthUser(t, { id: 'u1' });
+      redis.get.mockClear();
+      await expect(service.getCachedAuthUser(t)).resolves.toEqual({ id: 'u1' });
+      expect(redis.get).not.toHaveBeenCalled();
+      vi.setSystemTime(1_800_000_000_000 + 6_000);
+      await expect(service.getCachedAuthUser(t)).resolves.toBeNull();
+      expect(redis.get).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('AUTH_L1_CACHE_TTL_SECONDS=0 → L1 унтраалттай (Redis бүрт)', async () => {
+    vi.stubEnv('AUTH_L1_CACHE_TTL_SECONDS', '0');
+    const off = new TenantCacheService(redis as never, { $queryRaw: vi.fn() } as never);
+    redis.get.mockResolvedValue('1');
+    await off.isMember(T, U);
+    await off.isMember(T, U);
+    expect(redis.get).toHaveBeenCalledTimes(2);
   });
 });

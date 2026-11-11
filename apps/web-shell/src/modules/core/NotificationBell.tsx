@@ -17,7 +17,8 @@ export default function NotificationBell({ className = '' }: { className?: strin
   const unread = useQuery({
     queryKey: notificationKeys.unread,
     queryFn: notificationsApi.unreadCount,
-    refetchInterval: 30_000,
+    // #32: 30 с → 120 с (Upstash Free = 500K команд/сар; хүсэлт бүр ≈ 2 команд). Нуугдсан таб poll хийхгүй
+    refetchInterval: 120_000,
     refetchIntervalInBackground: false,
   })
   const list = useQuery({

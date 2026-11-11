@@ -61,7 +61,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 | `core-kernel/test/v024-core-services.integration.spec.ts` | 5 | v0.2.4 core services (integration) |
 
-## Unit — core-kernel — 121 файл, ~900 тест
+## Unit — core-kernel — 122 файл, ~907 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -79,11 +79,12 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/auth/session-revoke.service.spec.ts` | 11 | SessionRevokeService (v0.2.3 Блок 4б, PIL-15) |
 | `core-kernel/src/auth/sign-in.service.spec.ts` | 27 | SignInService (v0.2.2 D-10) |
 | `core-kernel/src/auth/tenant-auth.guard.spec.ts` | 25 | TenantAuthGuard |
-| `core-kernel/src/auth/tenant-cache.service.spec.ts` | 19 | TenantCacheService · TenantCacheService.isMember() · Auth token cache (PERF-003) |
+| `core-kernel/src/auth/tenant-cache.service.spec.ts` | 23 | TenantCacheService · TenantCacheService.isMember() · Auth token cache (PERF-003) · L1 cache (#32) |
 | `core-kernel/src/auth/tenant-module.guard.spec.ts` | 5 | TenantModuleGuard (SYS-02) |
 | `core-kernel/src/auth/tenant-rate-limit.guard.test.ts` | 7 | TenantRateLimitGuard |
 | `core-kernel/src/auth/tenant-security-policy.service.spec.ts` | 3 | TenantSecurityPolicyService |
 | `core-kernel/src/cache/tests/cache.service.test.ts` | 2 | CacheService |
+| `core-kernel/src/common/cache/l1-cache.spec.ts` | 3 | L1Cache (#32) |
 | `core-kernel/src/common/http/configure-app.spec.ts` | 1 | global validation errors |
 | `core-kernel/src/common/i18n/tests/i18n.test.ts` | 5 | parseAcceptLanguage · каталог · t / formatMessage / AppError · AppError helper-ууд (v0.2.0 — Кемпийн алдаа кодтой) |
 | `core-kernel/src/common/i18n/translate.spec.ts` | 2 | backend term interpolation |
