@@ -44,6 +44,7 @@ function setup(opts: { tenantId?: string | null; rows?: Record<string, unknown[]
     get: vi.fn(async (k: string) => (counters.has(k) ? String(counters.get(k)) : null)),
     incr: vi.fn(async (k: string) => { const n = (counters.get(k) ?? 0) + 1; counters.set(k, n); return n; }),
     pexpire: vi.fn(),
+    set: vi.fn(async (k: string, v: string) => { counters.set(k, Number(v)); return 'OK'; }),
     del: vi.fn(async (k: string) => { counters.delete(k); return 1; }),
   };
   const config = { get: (k: string) => ({ DEPLOYMENT_MODE: 'dedicated', DEDICATED_TENANT_SLUG: 'sino' } as Record<string, string>)[k] };
@@ -214,6 +215,28 @@ describe('SignInService (v0.2.2 D-10)', () => {
         await expect(s.svc.signIn(undefined, undefined, '88112233', 'bad')).rejects.toMatchObject({ status: 401 });
         expect(s.loginLock.lockedUntil).not.toHaveBeenCalled();
         expect(s.loginLock.recordFailure).not.toHaveBeenCalled();
+      });
+
+      it('#29: байхгүй нэвтрэх нэр → бодит бүртгэлтэй ИЖИЛ: 5 дахь нь 429 auth.account_locked, дараа нь GoTrue дуудахгүй', async () => {
+        s = setup({ rows: {} });
+        bad();
+        for (let i = 0; i < 4; i++) await expect(s.svc.signIn(undefined, undefined, '88112233', 'bad')).rejects.toMatchObject({ status: 401 });
+        const err: unknown = await s.svc.signIn(undefined, undefined, '88112233', 'bad').catch((e: unknown) => e);
+        expect(err).toMatchObject({ status: 429, code: 'auth.account_locked', params: { minutes: 15 } });
+        expect(Date.parse(String((err as { params: Record<string, unknown> }).params.until))).toBeGreaterThan(Date.now());
+        expect(s.redis.set).toHaveBeenCalledWith(expect.stringContaining('signin:ghost:lock:'), expect.any(String), 'PX', 15 * 60_000);
+        const calls = s.signInWithPassword.mock.calls.length;
+        await expect(s.svc.signIn(undefined, undefined, '88112233', 'any')).rejects.toMatchObject({ status: 429, code: 'auth.account_locked' });
+        expect(s.signInWithPassword.mock.calls.length).toBe(calls);
+        // өөр нэр нөлөөлөхгүй
+        await expect(s.svc.signIn(undefined, undefined, '88112234', 'bad')).rejects.toMatchObject({ status: 401 });
+      });
+
+      it('#29: hook горимд байхгүй нэр ч бодит бүртгэл шиг — түгжих оролдлого 401, дараагийнх 429', async () => {
+        s = setup({ rows: {}, gotrueHook: true });
+        bad();
+        for (let i = 0; i < 5; i++) await expect(s.svc.signIn(undefined, undefined, '88112233', 'bad')).rejects.toMatchObject({ status: 401 });
+        await expect(s.svc.signIn(undefined, undefined, '88112233', 'bad')).rejects.toMatchObject({ status: 429, code: 'auth.account_locked' });
       });
 
       it('AUTH_LOCK_GOTRUE_HOOK=true → NestJS тоолохгүй (hook тоолно), шалгалт хэвээр', async () => {

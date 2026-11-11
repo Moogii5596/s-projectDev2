@@ -40,7 +40,8 @@ S Project — гаднаа нийгмийн сүлжээ, цаанаа ERP. Nest
 ## 2. Дууссан гэх шалгуур (блок бүр)
 - [ ] Функц бүрэн: backend-ийн endpoint бүр UI-д ашиглагдсан, UI-ийн үйлдэл бүр backend-тэй; эрхгүй хэрэглэгчид цэс/товч харагдахгүй
 - [ ] mn / en / zh орчуулга бүрэн, hardcode текст алга
-- [ ] tsc + eslint (хөндсөн файл) + unit (хөндсөн) ногоон
+- [ ] `pnpm verify:changed` ногоон (tsc + eslint + хөндсөн файлын unit). Claude Code-д Stop hook автоматаар ажиллуулна; бусад агент гараар
+- [ ] Mock/shim биш **бодит stack** дээр (local Supabase эсвэл staging) ажиллуулсан; endpoint/эрх өөрчилсөн бол сөрөг тест: эрхгүй · өөр tenant · өндөр эрхтэй зорилт
 - [ ] Backend өөрчлөгдсөн бол тухайн блокийн integration spec (tenant тусгаарлалт, эрх, гол урсгал); шинэ дэлгэц бол e2e гол урсгал — e2e PR-ийн CI-д ажиллахгүй тул хөндсөн spec-ийг **local-д ажиллуулж**, PR-д аль spec ажилласныг бичнэ
 - [ ] Migration бол: local `pnpm supabase:reset` → `pnpm db:generate` → `node scripts/ci/prisma-drift.mjs --update` (шинэ мөр бүр санаатай)
 - [ ] `pnpm docs:gen` (CI `docs:check`-ээр шалгана)
@@ -60,6 +61,7 @@ S Project — гаднаа нийгмийн сүлжээ, цаанаа ERP. Nest
 - **Tag, production deploy** — PO өөрөө: GitHub **Actions → «Deploy production» → Run workflow** (tag сонгоно) = G3. Агент энэ workflow-г ажиллуулахгүй, `gh workflow run` ✖. `main`-д шууд push-ийг local `pre-push` hook хориглоно (GitHub Free + private repo-д branch protection, environment-ийн required reviewer байхгүй (2026-11-11 шалгав)). Staging-д `vX.Y.Z-rc.N`; production-д final tag (`docs/VERSIONING.md`).
 - **PO-ийн шууд зөвшөөрөлтэй л:** өгөгдөл / хүснэгт / багана / хуулбар устгах migration, өгөгдлийн утга өөрчлөх; PII-тэй шинэ зүйл; мөнгө шаардах зүйл (төлбөртэй үйлчилгээ); `supabase db reset` (local-аас бусад); production-ийн өгөгдөлд гар ажиллагаа.
 - `.env*` унших/засах (`.env.example`-ээс бусад) ✖; нууц зөвхөн GitHub / Render / Vercel Secrets-д.
+- Эдгээрийн ихэнхийг `.claude/settings.json`-ийн hook (`scripts/agent/guard.mjs`) Claude Code-д автоматаар хаана; `main` push-ийг `scripts/git-hooks/pre-push` хаана.
 - Production-д хүрэхээс өмнө: нөөц → staging (rc) → data parity (`camp:snapshot` A = B) → PO UAT (G2).
 
 ## 5. Кодын хатуу дүрэм (тайлбар, жишээ → `00_rules_and_context.md`)
