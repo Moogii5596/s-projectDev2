@@ -21,7 +21,8 @@ async function bootstrap() {
     // v0.2.5 H3: TRUST_PROXY — Render-ийн proxy-ийн ард бодит IP (sign-in IP хязгаар)
     // Fastify нь hop тоог (number) дэмждэг; Nest-ийн төрөлд number байхгүй тул cast
     new FastifyAdapter({ logger: false, bodyLimit: JSON_BODY_LIMIT, trustProxy: parseTrustProxy(process.env['TRUST_PROXY']) as boolean }),
-    { bufferLogs: true },
+    // abortOnError: false → эхлэлийн алдаа доорх catch-д ирж stderr-д заавал хэвлэгдэнэ (Render-д чимээгүй exit 1 ✖)
+    { bufferLogs: true, abortOnError: false },
   );
   // v0.2.4 DBG-01: error/warn → Debug цэсний «Лог» (санах ойн буфер, нууцлалтай); v0.2.5 H3: LOG_FORMAT=json
   app.useLogger(RecentLogLogger.create());
@@ -54,8 +55,14 @@ if (cluster.isPrimary && workers > 1) {
   // Phase 3.6.4: crash-loop backoff (config/cluster-restart.ts). Ганц унасан worker → шууд, давтагдвал 1с→30с
   startClusterPrimary(cluster, workers, new RestartPolicy(resolveRestartPolicyOptions()));
 } else {
-  bootstrap().catch((err) => {
-    logger.error('Failed to start Core Kernel', err instanceof Error ? err.stack : String(err));
+  // bufferLogs: true үед Nest Logger useLogger()-ээс өмнө санах ойд хуримтлагддаг → эхлэлийн алдааг console.error-оор шууд
+  const fatal = (label: string) => (err: unknown) => {
+    // eslint-disable-next-line no-console
+    console.error(`[Bootstrap] ${label}:`, err instanceof Error ? err.stack : String(err));
+    logger.error(label, err instanceof Error ? err.stack : String(err));
     process.exit(1);
-  });
+  };
+  process.on('uncaughtException', fatal('Uncaught exception'));
+  process.on('unhandledRejection', fatal('Unhandled rejection'));
+  bootstrap().catch(fatal('Failed to start Core Kernel'));
 }
