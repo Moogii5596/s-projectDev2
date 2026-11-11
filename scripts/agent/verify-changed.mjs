@@ -15,9 +15,11 @@
  *   node scripts/agent/verify-changed.mjs --hook   → Claude Code Stop hook: алдаатай бол exit 2
  *                                                    (Claude зогсолгүй засна; 2 дахь удаадаа хэрэглэгчид сануулна)
  *   --list   → зөвхөн хөндсөн файл/багцыг харуулна
+ *   --force  → өөрчлөлтгүй байсан ч дахин шалгана (анхдагчаар сүүлийн ногоон үр дүнг .git-д хадгалж алгасдаг)
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -84,6 +86,44 @@ export function changedFiles() {
   return [...new Set(sets.flat().filter(Boolean))].filter((f) => existsSync(join(ROOT, f)));
 }
 
+/** Хөндсөн файлуудын хурууны хээ (зам + хэмжээ + mtime) — сүүлийн ногоон шалгалтаас хойш өөрчлөгдөөгүй бол алгасна. */
+export function fingerprint(files) {
+  const h = createHash('sha256');
+  for (const f of [...files].sort()) {
+    let st = null;
+    try {
+      st = statSync(join(ROOT, f));
+    } catch {
+      /* устгагдсан */
+    }
+    h.update(`${f}|${st ? `${st.size}|${st.mtimeMs}` : '-'}\n`);
+  }
+  return h.digest('hex');
+}
+
+function cachePath() {
+  const r = git(['rev-parse', '--git-path', 's-project-verify.json']);
+  return r && r[0] ? join(ROOT, r[0]) : null;
+}
+
+function readCache() {
+  const p = cachePath();
+  try {
+    return p ? JSON.parse(readFileSync(p, 'utf8')).green : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(fp) {
+  const p = cachePath();
+  try {
+    if (p) writeFileSync(p, JSON.stringify({ green: fp, at: new Date().toISOString() }));
+  } catch {
+    /* cache бичигдэхгүй бол зүгээр л дахин шалгана */
+  }
+}
+
 function run(label, cmd, args, cwd) {
   const r = spawnSync(cmd, args, { cwd, encoding: 'utf8', shell: IS_WIN, maxBuffer: 64 * 1024 * 1024 });
   const out = `${r.stdout ?? ''}${r.stderr ?? ''}`.trim();
@@ -139,10 +179,16 @@ async function main(argv) {
     if (!hook && p.reminders.length) process.stdout.write(p.reminders.map((r) => `• ${r}`).join('\n') + '\n');
     return 0;
   }
+  const fp = fingerprint(p.files);
+  if (!argv.includes('--force') && readCache() === fp) {
+    if (!hook) process.stdout.write('Сүүлийн ногоон шалгалтаас хойш өөрчлөлтгүй — алгасав (--force-оор дахин).\n');
+    return 0;
+  }
   const failures = verify(p);
+  if (failures.length === 0) writeCache(fp);
   const reminderText = p.reminders.length ? `\nСануулга:\n${p.reminders.map((r) => `• ${r}`).join('\n')}\n` : '';
   if (failures.length === 0) {
-    if (!hook) process.stdout.write(`Бүгд ногоон.${reminderText}`);
+    if (!hook) process.stdout.write(`Бүгд ногоон.\n${reminderText}`);
     return 0;
   }
   const report = failures.map((f) => `── ${f.label} ──\n${f.tail}`).join('\n\n');
