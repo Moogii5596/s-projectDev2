@@ -1392,7 +1392,9 @@ function Install-NodeDeps {
   $prevNodeEnv = $env:NODE_ENV
   Remove-Item env:NODE_ENV -ErrorAction SilentlyContinue
   Push-Location $Root
-  try { Invoke-Native 'pnpm' @('install', '--frozen-lockfile') | Out-Null } finally {
+  # v0.2.4.6: store-dir солигдсон үед pnpm «modules directories will be removed… Proceed? (Y/n)» гэж асуугаад гаралт
+  # барьсан тул харагдахгүйгээр гацдаг байв (пилотын upgrade 2026-11-11) → асуулгүй дахин суулгана
+  try { Invoke-Native 'pnpm' @('install', '--frozen-lockfile', '--config.confirmModulesPurge=false') | Out-Null } finally {
     Pop-Location
     if ($prevNodeEnv) { $env:NODE_ENV = $prevNodeEnv }
   }
