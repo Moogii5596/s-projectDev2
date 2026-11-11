@@ -297,6 +297,11 @@ Check 'restore storage archive-оос орсон' (
 Write-Host '9) DB administrator нууц үг staging-д солих'
 Check 'staging DB нууц солигдов' (Run @('rotate-db-password', '-Profile', 'staging'))
 Check 'staging .env шинэчлэгдэв' ((Get-Content "$R/.env.staging" -Raw) -match "PILOT_DB_ADMIN_PASSWORD=$global:NewDbPassword")
+Check 'staging DIRECT_URL / SYSTEM_DATABASE_URL шинэ нууцтай' (
+  ((Get-Content "$R/.env.staging" -Raw) -match "(?m)^DIRECT_URL=postgresql://postgres:$global:NewDbPassword@127\.0\.0\.1:56522/") -and
+  ((Get-Content "$R/.env.staging" -Raw) -match "(?m)^SYSTEM_DATABASE_URL=postgresql://postgres:$global:NewDbPassword@127\.0\.0\.1:56522/") -and
+  ((Get-Content "$R/.env.staging" -Raw) -match "(?m)^DATABASE_URL=postgresql://app_user:A{26}@")
+)
 Check 'нууц command log/out-д гараагүй' ((Get-Content "$T/out.txt" -Raw) -notmatch [regex]::Escape($global:NewDbPassword))
 Check 'staging нөөц шинэ DB нууц ашиглав' ((Run @('backup', '-Profile', 'staging')) -and ($global:Log -match "PGPASSWORD=$global:NewDbPassword") -and ($global:Log -notmatch 'PGPASSWORD=postgres'))
 $oldStageEnv = Get-Content "$R/.env.staging" -Raw

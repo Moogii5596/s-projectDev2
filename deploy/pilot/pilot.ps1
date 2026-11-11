@@ -202,6 +202,12 @@ function Import-PilotEnv {
   return $cfg
 }
 
+# postgres хэрэглэгчийн URL-ийн нууцыг солино (бусад хэрэглэгч, жнь app_user — хэвээр)
+function Set-PostgresUrlPassword([string] $url, [string] $password) {
+  if ($url -match '^(postgres(?:ql)?://postgres:)[^@]*(@.*)$') { return "$($Matches[1])$password$($Matches[2])" }
+  return $url
+}
+
 function Get-UrlPassword([string] $url) {
   if ($url -match '^postgres(?:ql)?://([^:/@]+):([^@]*)@') { return $Matches[2] }
   return ''
@@ -216,8 +222,13 @@ function Set-DotEnvValue([string] $content, [string] $key, [string] $value) {
 }
 
 function Save-DotEnvValue([string] $path, [string] $key, [string] $value) {
-  $content = [System.IO.File]::ReadAllText($path)
-  $updated = Set-DotEnvValue $content $key $value
+  Save-DotEnvValues $path ([ordered]@{ $key = $value })
+}
+
+# Олон түлхүүрийг нэг бичилтээр (хагас шинэчлэгдсэн .env үлдэхгүй)
+function Save-DotEnvValues([string] $path, [System.Collections.IDictionary] $values) {
+  $updated = [System.IO.File]::ReadAllText($path)
+  foreach ($k in $values.Keys) { $updated = Set-DotEnvValue $updated $k $values[$k] }
   $temp = "$path.$PID.tmp"
   try {
     $encoding = New-Object System.Text.UTF8Encoding($false)
@@ -307,7 +318,13 @@ function Invoke-DbPasswordRotation {
       $result = Invoke-DbSql 'SELECT current_user' -Capture -User $role -Password $newPassword
       if ((@($result.Out) -join '').Trim() -ne $role) { Stop-Pilot2 "DB administrator нууц үгийн шалгалт амжилтгүй ($role)" }
     }
-    Save-DotEnvValue $envFile 'PILOT_DB_ADMIN_PASSWORD' $newPassword
+    # v0.2.4.2: SYSTEM_DATABASE_URL / DIRECT_URL (postgres) мөн шинэ нууцтай — эс бөгөөс migration, snapshot, backend-ийн system холболт унана
+    $envValues = [ordered]@{ PILOT_DB_ADMIN_PASSWORD = $newPassword }
+    foreach ($k in 'SYSTEM_DATABASE_URL', 'DIRECT_URL') {
+      $url = Get-Cfg $cfg $k
+      if ($url) { $envValues[$k] = Set-PostgresUrlPassword $url $newPassword }
+    }
+    Save-DotEnvValues $envFile $envValues
   } catch {
     $saveError = $_.Exception.Message
     try {
