@@ -2,7 +2,7 @@
 title: "Тохиргоо, env, script"
 type: "Guide"
 status: "Active"
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 tags: [codebase, config, generated]
 ---
 
@@ -50,7 +50,6 @@ tags: [codebase, config, generated]
 | `DATABASE_URL` | `postgresql://app_user:<APP_USER_PASSWORD>@127.0.0.1:55322/postgres?sch` | ── Өгөгдлийн сан (пилотын Supabase, порт 55322) ───────────── app_user нууц үг: ЗӨВХӨН латин үсэг + тоо, 24+ тэмдэгт. pilot.ps1 init/restore нь DB-д тохируулна. |
 | `SYSTEM_DATABASE_URL` | `postgresql://postgres:postgres@127.0.0.1:55322/postgres?schema=public` |  |
 | `DIRECT_URL` | `postgresql://postgres:postgres@127.0.0.1:55322/postgres?schema=public` |  |
-| `PILOT_DB_ADMIN_PASSWORD` | `***` | postgres / supabase_admin — 32+ random alphanumeric; rotate-db-password sets this in .env. |
 | `SUPABASE_URL` | `http://127.0.0.1:55321` | ── Supabase Auth ──────────────────────────────────────────── |
 | `SUPABASE_AUTH_JWT_SECRET` | `***` | Supabase-ийн JWT нууц (40+ тэмдэгт). СОЛИВОЛ: бүх хэрэглэгч дахин нэвтэрнэ + pilot.ps1 build (anon key өөрчлөгдөнө) |
 | `JWT_SECRET` | `***` | Апп-ын дотоод нууц (40+ тэмдэгт) |

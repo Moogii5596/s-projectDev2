@@ -2,7 +2,7 @@
 title: "DB каталог (migration-аас)"
 type: "Database"
 status: "Active"
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 tags: [codebase, database, rls, generated]
 ---
 
@@ -10,7 +10,7 @@ tags: [codebase, database, rls, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Эх сурвалж: `supabase/migrations/*.sql` (81 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **94** хүснэгт, 41 enum, 42 функц, 92 trigger.
+Эх сурвалж: `supabase/migrations/*.sql` (82 файл, дарааллаар задалсан — MIG-001: schema = migration, Prisma нь зөвхөн client). Нийт **94** хүснэгт, 41 enum, 42 функц, 92 trigger.
 
 Тэмдэглэгээ: PK · NN = NOT NULL · UQ = unique · → = FK. RLS: 🔒 enabled, 🔒🔒 enabled + FORCE, 🌐 tenant_id-гүй глобал хүснэгт. `camp_apply_tenant_rls()` болон `DO $$ FOREACH … ARRAY[…]` RLS загварыг танина; бусад динамик SQL-ийг алгасна — эргэлзээтэй бол migration-ыг нээ. RLS загвар: [[ADR-001_Tenant_Isolation]], [[03_Module_Template]].
 
@@ -2039,7 +2039,7 @@ Trigger: `trg_core_sequences_updated_at`
 | created_at | TIMESTAMPTZ | NN |  |
 | updated_at | TIMESTAMPTZ | NN |  |
 
-Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, code)`
+Constraint: `UNIQUE (tenant_id, id)` · `UNIQUE (tenant_id, code)` · `CHECK (code ~ '^[A-Za-z0-9._-]{1,40}$')`
 
 Policy: `tenant_isolation_core_sites` (permissive ALL → app_user (camp_apply_tenant_rls))
 

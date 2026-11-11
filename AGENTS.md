@@ -6,8 +6,20 @@
 S Project — гаднаа нийгмийн сүлжээ, цаанаа ERP. NestJS 11 + Fastify 5 / Prisma 5 / PostgreSQL (Supabase, RLS) / React + Vite, pnpm + Turborepo. Пилот: Sino Hydro (Кемп), `sino.gobiverse.website`.
 Хариулт **монголоор, товч**. Код, identifier, commit — англи.
 
+## 0. Баг ба үүрэг (2026-11-11, PO батласан — бүтэн → `docs/07_Tech_Stack_and_Environment/10_Agent_Team_Workflow.md`)
+| | Үүрэг | Хэрэгсэл | Хийнэ | Хийхгүй |
+|---|---|---|---|---|
+| PO | Product Owner (хэрэглэгч) | — | Хүрээ (G1), хүлээн авах (G2), production-д гаргах (G3), мөнгө/PII/устгалт | Код, PR review, команд |
+| A0 | Tech Lead | Claude — «S Project» Project чат | Issue бэлдэх, хуваарилах, эцсийн review, **`main`-д merge**, release, PO-д монголоор тайлан | Өөрийн бичсэн кодоо өөрөө батлах |
+| A1 | Developer — цөм, backend, DB | Claude Code | Issue-г бүрэн хийж PR нээх | Merge, tag, deploy |
+| A2 | Developer — модуль, UI | Cursor | — | — |
+| A3 | Reviewer | GitHub Copilot PR review + зохиогчоос өөр агент | PR шалгаж comment / approve | Код өөрөө засах |
+| A4 | QA + туслах | Devin | E2E, staging smoke, runbook, chore | Цөм, migration |
+Зэрэг ≤ 2 Developer. Бичсэн агент өөрийн ажлыг батлахгүй. Дамжуулалт зөвхөн GitHub Issue / PR-ээр. Claude-ийн лимит дуусвал бусад нь зөвхөн Ready ажлыг үргэлжлүүлнэ (merge, release ✖).
+
 ## 1. Ажлын урсгал
-1. **Эхлэх:** `docs/CONTEXT.md` → одоогийн хувилбарын tech plan (одоо юу хийгдэж байгаа) → зөвхөн засах файлууд. Бүх баримт, бүх кодыг уншихгүй.
+1. **Эхлэх:** өөрийн **GitHub Issue** → `docs/CONTEXT.md` → одоогийн хувилбарын tech plan (хүрээ, шийдвэр) → зөвхөн засах файлууд. Бүх баримт, бүх кодыг уншихгүй.
+   **Нэг issue = нэг branch (`feat|fix|chore|docs/<#>-<товч>`, `main`-аас) = нэг worktree = нэг агент = нэг PR** (`Closes #N`, template бөглөнө). Ажил дуусахад issue-д 3 мөр: юу хийсэн / тест / үлдсэн.
 2. **Батлуулахгүй, шууд хий** — ажил үндсэн баримттай (PRD, ADR, master plan, tech plan, энэ файл) нийцэж байвал төлөвлөгөө гаргаж батлуулахгүй, шууд эхнээс нь дуустал хийнэ. Алхам бүрийг батлуулахгүй; ажил бүрт шинэ баримт үүсгэхгүй.
    Зөвхөн дараах үед зогсоож **тухайн зүйлийг л** асууна:
    - үндсэн баримттай зөрж байна, эсвэл баримтад шийдэгдээгүй (бизнесийн дүрэм, хүрээ);
@@ -32,22 +44,23 @@ S Project — гаднаа нийгмийн сүлжээ, цаанаа ERP. Nest
 - [ ] Backend өөрчлөгдсөн бол тухайн блокийн integration spec (tenant тусгаарлалт, эрх, гол урсгал); шинэ дэлгэц бол e2e гол урсгал
 - [ ] Migration бол: local `pnpm supabase:reset` → `pnpm db:generate` → `node scripts/ci/prisma-drift.mjs --update` (шинэ мөр бүр санаатай)
 - [ ] `pnpm docs:gen` (CI `docs:check`-ээр шалгана)
-- [ ] Tech plan-д блокийн мөрийг `[x]` + нэг мөр үр дүн (тест тоо, commit)
-- [ ] Commit (өөрийн branch-д) + санал болгох merge команд
+- [ ] PR нээсэн (template), CI ногоон, Reviewer approve; issue-д тайлан
+- [ ] **Done** = `main`-д merge (A0) + staging-д deploy + smoke ногоон. Local-д ажилласан / commit хийгээгүй = In progress
 
 Шалгаагүй кодыг «дууссан» гэж хэлэхгүй, хэрэглэгчээр туршуулахгүй. Ажиллуулж чадаагүй тестийг яг нэрлэж хэлнэ.
 
 ## 3. Баримт — бага, нэг газар
-- **Явц** → зөвхөн одоогийн хувилбарын tech plan (checkbox + нэг мөр). Блок дуусаагүй бол тэнд «Зогссон цэг» (1–3 мөр).
+- **Явц** → **GitHub Issue / Project самбар** (Ready → In progress → Review → Staging → Done). Tech plan = хүрээ, шийдвэр, блокийн төлөв л. Зогсвол issue-д handoff (1–3 мөр).
 - **Release-д нэг удаа:** CHANGELOG, `docs/project-status.md`, roadmap, backlog, `09_Codebase` гар хэсэг (`01_Backend_Modules`, `04_Frontend_Map`).
 - **Алдааны сургамж** (`docs/lessons/LL-*.md`) — зөвхөн давтагдах магадлалтай эсвэл 30+ мин зарцуулсан алдаа. Бичихээс өмнө байгаа эсэхийг хайна.
 - `docs/` = Obsidian vault: frontmatter (title, type, status, last_updated, tags), `[[линк]]`, шинэ файл `docs/INDEX.md`-д. `docs:check` алдааг заана.
 
-## 4. Эрсдэлтэй үйлдэл — хэрэглэгчийн шууд зөвшөөрөлтэй л
-- Өгөгдөл / хүснэгт / багана / хуулбар устгах migration (жнь `legacy_*`), өгөгдлийн утга өөрчлөх
-- `main`-д merge, tag, push; pilot / staging upgrade; `supabase db reset` (local-аас бусад)
-- `.env*` унших/засах (`.env.example`-ээс бусад); нууц үг, түлхүүр
-- Pilot-д суулгахаас өмнө: нөөц → staging upgrade → `camp:snapshot` A = B
+## 4. Эрсдэлтэй үйлдэл ба батламж
+- **`main`-д merge** — зөвхөн A0, CI ногоон + Reviewer approve үед (staging-д автоматаар deploy). Developer merge ✖, `main`-д шууд push ✖.
+- **Tag, production deploy** — PO батална (GitHub Environment `production`). Staging-д `vX.Y.Z-rc.N`; production-д final tag (`docs/VERSIONING.md`).
+- **PO-ийн шууд зөвшөөрөлтэй л:** өгөгдөл / хүснэгт / багана / хуулбар устгах migration, өгөгдлийн утга өөрчлөх; PII-тэй шинэ зүйл; мөнгө шаардах зүйл (төлбөртэй үйлчилгээ); `supabase db reset` (local-аас бусад); production-ийн өгөгдөлд гар ажиллагаа.
+- `.env*` унших/засах (`.env.example`-ээс бусад) ✖; нууц зөвхөн GitHub / Render / Vercel Secrets-д.
+- Production-д хүрэхээс өмнө: нөөц → staging (rc) → data parity (`camp:snapshot` A = B) → PO UAT (G2).
 
 ## 5. Кодын хатуу дүрэм (тайлбар, жишээ → `00_rules_and_context.md`)
 - **DB:** schema = `supabase/migrations/*.sql` (`prisma db push` ✖); migration дугаарыг хэрэгжүүлэх үед; ID `uuid_generate_v7()`; Prisma model → `prisma/schema/<модуль>.prisma`; UUID бүрт `@db.Uuid`; enum өөрчлөх дараалал (R15).
@@ -58,6 +71,10 @@ S Project — гаднаа нийгмийн сүлжээ, цаанаа ERP. Nest
 - **Frontend:** `modules/camp/components/ui.tsx`, шинэ UI сан ✖; бүх текст i18n; Vite proxy (`VITE_API_BASE_URL` хоосон).
 
 ## 6. Орчин
+- **Орчин** (`docs/02_System_Architecture/ADR-011_Cloud_Hosting.md`, v0.2.5-аас): **local** (Docker Supabase) → **staging** (Supabase Cloud + Render + Vercel, `main` merge-ээр автомат) → **production** (мөн, tag + PO батламж). «Пилот» = Sino Hydro-гийн **хөтөлбөр**; орчныг **production** гэнэ. Өгөгдөл зөвхөн production → staging.
 - Хэрэглэгчийн машин: Windows, **PowerShell 5.1** (`&&` ✖ → `;`), Docker дээр Supabase (DB 54322), pnpm only. Төсөл: `E:\MoogiiDev\Dev\s-project`.
 - Commit хийгээгүй өөрчлөлт байвал (`git status`) — өөр агентын ажил байж болно: хөндөхгүй, тусдаа worktree-д ажилла.
 - CI (`.github/workflows/ci.yml`): `main`, `feat/**`, `chore/**`, `fix/**` push болон PR бүрт lint, unit, integration, build, docs:check, e2e.
+
+## 7. Нэр томьёо (бүтэн → `docs/07_Tech_Stack_and_Environment/09_Team_Handbook.md` §1)
+production (орчин) · deploy (upgrade биш) · version / release / iteration · epic → story → task (блок) · UAT (TC) · data parity (A = B) · feature flag (Debug/унтаа) · test / verify / review / approve — тус тусдаа. Шинэ баримт, issue, commit-д эдгээрийг хэрэглэнэ.

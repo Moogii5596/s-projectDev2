@@ -2,7 +2,7 @@
 title: "CONTEXT — юу хаана байна (агентын зураглал)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-11-07
+last_updated: 2026-11-10
 tags: [context, moc]
 ---
 
@@ -25,10 +25,11 @@ tags: [context, moc]
 | Frontend | [[04_Frontend_Map]] → [[09_Frontend_Routes]] → [[PRD-04_UI_UX_Architecture_Spec]] §2 |
 | Тест | [[07_Test_Map]] → [[08_Patterns]] §4 |
 | Алдаа засах | [[lessons_learned]] (индекс) → тухайн `lessons/LL-*.md` |
-| Пилот / deploy / staging | [[04_Pilot_Camp_Windows]] · [[05_Cloudflare_Tunnel]] · [[06_Config_Env]] |
+| Пилот / deploy / staging | **[[ADR-011_Cloud_Hosting]]** (v0.2.5-аас) · [[04_Pilot_Camp_Windows]] · [[05_Cloudflare_Tunnel]] (v0.2.5 хүртэл) · [[06_Config_Env]] |
+| Баг, үүрэг, PO-ийн батламж, урсгал | [[10_Agent_Team_Workflow]] · [[09_Team_Handbook]] (нэр томьёо, Ready/Done, git, release) |
 | IDE тохиргоо | [[06_Cursor_Setup]] |
 | Төлөвлөлт / шинэ хувилбар | [[01_Development_Roadmap]] → [[11_v0.2_completion_master_plan]] → [[00_backlog_and_tech_debt]] → PRD / ADR |
-| Бүтээгдэхүүн / архитектур | [[ADR-009_Module_Engine]] (цөм ↔ модуль) · [[PRD-01_Core_Vision]] · [[ARCH-00_System_Overview]] · [[PRD-06_Vision_Business_Model]] |
+| Бүтээгдэхүүн / архитектур | [[ADR-009_Module_Engine]] (цөм ↔ модуль) · [[ADR-010_Tenant_Links]] (B2B холболт) · [[PRD-01_Core_Vision]] · [[ARCH-00_System_Overview]] · [[PRD-06_Vision_Business_Model]] |
 | Кодын дүрмийн тайлбар | [[00_rules_and_context]] (RULE-01…22, шалтгаан) · [[08_Patterns]] (жишээ файл) |
 | Баримт засах | [[INDEX]] |
 

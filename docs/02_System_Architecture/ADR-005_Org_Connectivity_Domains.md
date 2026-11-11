@@ -2,7 +2,7 @@
 title: "ADR-005 — Байгууллагын холболт ба домэйн (`*.gobiverse.website`)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-10-13
+last_updated: 2026-11-10
 tags: [deploy]
 ---
 
@@ -43,6 +43,8 @@ tags: [deploy]
 - Үндсэн хаяг (apex) = S Project-ийн танилцуулга хуудас ([[PRD-06_Vision_Business_Model]] §7), байгууллагын систем **биш**.
 - Байршуулалт: GitHub repo → **Vercel** (static) → Cloudflare DNS (apex / `www` → Vercel). Байгууллагын дэд домэйнууд (§2.1) tunnel-ээрээ хэвээр.
 - Нүүр хуудас ямар ч байгууллагын өгөгдөл, API-д холбогдохгүй; `.gobiverse.website` cookie дүрэм (§2.3) хамаарна.
+
+> Tenant хооронд өгөгдөл солилцох (B2B, катеринг ↔ захиалагч) → [[ADR-010_Tenant_Links]].
 
 ## 3. Үр дагавар
 - (+) VM, нээлттэй порт, сертификат удирдлага хэрэггүй; байгууллага нэмэх = давтагдах алхам ([[05_Cloudflare_Tunnel]]).
