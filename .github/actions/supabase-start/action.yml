@@ -32,9 +32,18 @@ runs:
       run: zstd -dc /tmp/supabase-images.tar.zst | docker load
 
     # Тестэд хэрэггүй: studio, imgproxy, edge-runtime, logflare, vector, supavisor, postgres-meta, realtime, storage-api
+    # Нэг удаа дахин оролдоно: 5432x портууд Linux-ийн ephemeral мужид (32768–60999) — image pull-ийн гарах холболт
+    # түр эзэлбэл "failed to bind host port 0.0.0.0:54322: address already in use" (2026-11-12, run 43057171070).
     - name: Start Supabase (local)
       shell: bash
-      run: npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta,realtime,storage-api
+      run: |
+        services=studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta,realtime,storage-api
+        if ! npx supabase start -x "$services"; then
+          echo "::warning::supabase start амжилтгүй → stop, 10 с хүлээгээд дахин"
+          npx supabase stop --no-backup || true
+          sleep 10
+          npx supabase start -x "$services"
+        fi
 
     - name: Save Supabase images
       if: steps.cache.outputs.cache-hit != 'true'
