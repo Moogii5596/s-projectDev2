@@ -66,7 +66,7 @@ flowchart TD
 | 9. Staging | Pipeline → A4 | Smoke/e2e үр дүн | Issue comment |
 | 10. **G2** | **PO** | Staging дээр туршилтын жагсаалтаар (≤10 алхам, энгийн үгээр) → ✅ / «X ажиллахгүй байна» | Энэ чат |
 | 11. Release | A0 | Release тайлбар (монголоор): юу өөрчлөгдсөн, эрсдэл, буцаах арга | Энэ чат + GitHub |
-| 12. **G3** | **PO** | GitHub дээр «Approve and deploy» товч (утаснаас болно) | GitHub |
+| 12. **G3** | **PO** | GitHub **Actions → «Deploy production» → Run workflow** (tag сонгоно; утаснаас болно) | GitHub |
 | 13. Хяналт | A0 | 24 цагийн дараа «асуудалгүй» эсвэл осол | Энэ чат |
 
 ## 3. PO-ийн хяналт ба батламж
@@ -123,6 +123,6 @@ comment; бүгд зөв бол "Approve" + 2 мөрийн дүгнэлт. Ко�
 3. Prod-ийн осол → A0 шууд PO-д: юу болсон, нөлөө, авч буй арга хэмжээ ([[09_Team_Handbook]] §10).
 
 ## 6. v0.2.5-д энэ урсгалыг босгох
-- [ ] GitHub: Issues + Projects (Ready / In progress / Review / Staging / Done), label, PR template, branch protection, Environment `production` (PO = required reviewer), Sentry, Copilot code review
+- [ ] GitHub: Issues + Projects (Ready / In progress / Review / Staging / Done), label, PR template, `main`-ийн local `pre-push` hook, «Deploy production» workflow (PO гараар — GitHub Free + private repo-д branch protection, environment-ийн required reviewer байхгүй (2026-11-11 шалгав)), Sentry, Copilot code review
 - [x] `AGENTS.md`-д энэ файлын §1, §3, §4-ийг товч (§0, §4 — 2026-11-11)
 - [ ] Эхний ажлууд (v0.2.5-ын H1–H7)-ыг issue болгож A1/A2/A4-т хуваарилах — урсгалын эхний туршилт

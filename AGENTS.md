@@ -57,7 +57,7 @@ S Project — гаднаа нийгмийн сүлжээ, цаанаа ERP. Nest
 
 ## 4. Эрсдэлтэй үйлдэл ба батламж
 - **`main`-д merge** — зөвхөн A0, CI ногоон + Reviewer approve үед (staging-д автоматаар deploy). Developer merge ✖, `main`-д шууд push ✖.
-- **Tag, production deploy** — PO батална (GitHub Environment `production`). Staging-д `vX.Y.Z-rc.N`; production-д final tag (`docs/VERSIONING.md`).
+- **Tag, production deploy** — PO өөрөө: GitHub **Actions → «Deploy production» → Run workflow** (tag сонгоно) = G3. Агент энэ workflow-г ажиллуулахгүй, `gh workflow run` ✖. `main`-д шууд push-ийг local `pre-push` hook хориглоно (GitHub Free + private repo-д branch protection, environment-ийн required reviewer байхгүй (2026-11-11 шалгав)). Staging-д `vX.Y.Z-rc.N`; production-д final tag (`docs/VERSIONING.md`).
 - **PO-ийн шууд зөвшөөрөлтэй л:** өгөгдөл / хүснэгт / багана / хуулбар устгах migration, өгөгдлийн утга өөрчлөх; PII-тэй шинэ зүйл; мөнгө шаардах зүйл (төлбөртэй үйлчилгээ); `supabase db reset` (local-аас бусад); production-ийн өгөгдөлд гар ажиллагаа.
 - `.env*` унших/засах (`.env.example`-ээс бусад) ✖; нууц зөвхөн GitHub / Render / Vercel Secrets-д.
 - Production-д хүрэхээс өмнө: нөөц → staging (rc) → data parity (`camp:snapshot` A = B) → PO UAT (G2).
