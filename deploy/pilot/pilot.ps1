@@ -518,6 +518,17 @@ function Ensure-SupabaseLoopbackNetwork {
     $binding = Get-SupabaseNetworkHostBinding
   }
   if ($binding -ne '127.0.0.1') {
+    # v0.2.4.2: контейнер (зогссоныг ч) холбогдоогүй бол loopback сүлжээг автоматаар дахин үүсгэнэ
+    $attached = Invoke-Native 'docker' @('ps', '-a', '-q', '--filter', "network=$($Prof.NetworkId)") -Capture -AllowFail -Quiet
+    $ids = @(@($attached.Out) | Where-Object { "$_".Trim() -ne '' })
+    if ($attached.Code -eq 0 -and $ids.Count -eq 0) {
+      Write-Warn2 "Docker network '$($Prof.NetworkId)' loopback биш (host binding='$binding') — контейнергүй тул дахин үүсгэнэ"
+      Invoke-Native 'docker' @('network', 'rm', $Prof.NetworkId) -Quiet | Out-Null
+      Invoke-Native 'docker' @('network', 'create', '--driver', 'bridge', '--opt', 'com.docker.network.bridge.host_binding_ipv4=127.0.0.1', $Prof.NetworkId) -Quiet | Out-Null
+      $binding = Get-SupabaseNetworkHostBinding
+    }
+  }
+  if ($binding -ne '127.0.0.1') {
     Stop-Pilot2 "Docker network '$($Prof.NetworkId)' loopback-д холбогдоогүй (host binding='$binding'); холбогдсон контейнергүйг шалгаад сүлжээг гараар дахин үүсгэнэ"
   }
 }

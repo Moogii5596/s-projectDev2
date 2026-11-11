@@ -46,7 +46,7 @@ PILOT_HEALTHCHECK_BACKUP_URL=https://hc.example/bk
 "@
 $global:Log = [System.Collections.Generic.List[string]]::new()
 $global:SbRunning = $true; $global:Fail7z = $false; $global:HealthDown = $false
-$global:NetworkPresent = $false; $global:NetworkBinding = '127.0.0.1'
+$global:NetworkPresent = $false; $global:NetworkBinding = '127.0.0.1'; $global:NetworkContainers = @()
 $global:FunnelStatus = 'No serve config'; $global:FirewallEnabled = $true
 $global:FirewallPorts = @('3000', '3100', '3200', '5173', '5174', '6379', '8088', '8089', '54320-54329', '55320-55329', '56379', '56520-56529', '56579')
 $global:FailDbPassword = $false; $global:NewDbPassword = 'N' * 40
@@ -69,8 +69,10 @@ function global:docker {
   }
   if ($a -match '^ps --format') { $global:LASTEXITCODE = 0; return $global:PortMappings }
   if ($a -match '^network create') {
-    $global:NetworkPresent = $true; $global:LASTEXITCODE = 0; return 'network-id'
+    $global:NetworkPresent = $true; $global:NetworkBinding = '127.0.0.1'; $global:LASTEXITCODE = 0; return 'network-id'
   }
+  if ($a -match '^network rm') { $global:NetworkPresent = $false; $global:LASTEXITCODE = 0; return }
+  if ($a -match '^ps -a -q --filter network=') { $global:LASTEXITCODE = 0; return $global:NetworkContainers }
   if ($global:FailDbPassword -and $a -match 'ALTER ROLE') { $global:LASTEXITCODE = 2; return }
   if ($a -match 'pg_database_size') { $global:LASTEXITCODE = 0; return "$global:DatabaseSizeBytes" }
   if ($a -match 'psql' -and $a -match 'schema_migrations') { $global:LASTEXITCODE = 0; return @('20261012006') }
@@ -258,6 +260,15 @@ $global:FirewallPorts = @('3100')
 $null = Run @('status')
 Check 'status Firewall port жагсаалт дутуу бол анхааруулав' ((Get-Content "$T/out.txt" -Raw) -match 'Windows Firewall дүрэм алга/идэвхгүй')
 $global:FirewallPorts = @('3000', '3100', '3200', '5173', '5174', '6379', '8088', '8089', '54320-54329', '55320-55329', '56379', '56520-56529', '56579')
+
+Write-Host '7б) loopback биш сүлжээ: контейнергүй бол дахин үүсгэнэ, контейнертэй бол зогсоно (v0.2.4.2)'
+$global:NetworkPresent = $true; $global:NetworkBinding = ''; $global:NetworkContainers = @()
+Check 'контейнергүй сүлжээг дахин үүсгээд init амжилттай' (Run @('init', '-Profile', 'staging'))
+Check 'network rm → create loopback' (($global:Log -match 'docker network rm') -and ($global:Log -match 'docker network create.*host_binding_ipv4=127.0.0.1') -and $global:NetworkBinding -eq '127.0.0.1')
+$global:NetworkBinding = ''; $global:NetworkContainers = @('abc123')
+Check 'контейнертэй сүлжээг устгахгүй, init зогсоно' (-not (Run @('init', '-Profile', 'staging')))
+Check 'контейнертэй үед network rm хийгээгүй' (-not ($global:Log -match 'docker network rm'))
+$global:NetworkBinding = '127.0.0.1'; $global:NetworkContainers = @()
 
 Write-Host '8) restore: DB өгөгдөл ба Feed storage-ийг тусгаарласан root-д сэргээх'
 Check 'тусгаарласан staging fixture init' (Run @('init', '-Profile', 'staging'))
