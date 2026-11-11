@@ -32,7 +32,7 @@ jobs:
 
       - uses: supabase/setup-cli@v3
         with:
-          version: 2.120.0
+          version: 2.122.1   # = root devDependency `supabase`
 
       # STAGING_DB_URL (repo secret; GitHub Free private-д environment secret ✖) = Supabase session pooler (5432), postgres — runbook §3
       - name: supabase db push (staging)

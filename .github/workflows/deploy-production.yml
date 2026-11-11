@@ -22,7 +22,7 @@ permissions:
 
 env:
   TAG: ${{ inputs.tag }}
-  SUPABASE_CLI_VERSION: 2.120.0
+  SUPABASE_CLI_VERSION: 2.122.1   # = root devDependency `supabase`
   VERCEL_CLI_VERSION: 65.9.0
 
 jobs:
@@ -61,28 +61,31 @@ jobs:
   backup:
     name: Нөөц (шифрлэсэн)
     needs: verify
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # PGDG apt repo-д дэмжигдсэн codename (noble); ubuntu-latest = 26.04
     steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+
+      # pg_dump ≥ серверийн major (Supabase = 17) — PGDG-ийн client 17
       - name: PostgreSQL 17 client, age
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-common age
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
           sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
 
-      # public + auth (хэрэглэгч, нууц үгийн hash) + auth_guard. Нууцлал: age (BACKUP_AGE_RECIPIENT = нийтийн түлхүүр; хувийн түлхүүр PO-д)
-      - name: pg_dump → age
+      # Нэг script (H3 + H5 өдөр бүрийн нөөц): public + auth + auth_guard + supabase_migrations, GRANT-уудтай (--no-privileges ✖ —
+      # сэргээсэн DB-д app_user-ийн эрх үлдэнэ). Нууцлал: age (BACKUP_AGE_RECIPIENT = нийтийн түлхүүр; хувийн түлхүүр PO-д).
+      - name: pg_dump → age (scripts/ci/db-backup.sh)
         env:
           DB_URL: ${{ secrets.PROD_DB_URL }}
           AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
         run: |
           if [ -z "$DB_URL" ] || [ -z "$AGE_RECIPIENT" ]; then echo "::error::PROD_DB_URL / BACKUP_AGE_RECIPIENT secret алга"; exit 1; fi
-          mkdir -p backup
-          out="backup/prod-predeploy-${TAG}-$(date -u +%Y%m%dT%H%M%SZ).dump.age"
-          /usr/lib/postgresql/17/bin/pg_dump "$DB_URL" --format=custom --no-owner --no-privileges \
-            --schema=public --schema=auth --schema=auth_guard | age -r "$AGE_RECIPIENT" -o "$out"
-          size=$(stat -c %s "$out"); echo "нөөц: $out ($size байт)"
-          if [ "$size" -lt 10000 ]; then echo "::error::нөөц хэт жижиг ($size) — pg_dump алдаа?"; exit 1; fi
+          pg_dump --version
+          bash scripts/ci/db-backup.sh "prod-predeploy-${TAG}" backup
 
       - uses: actions/upload-artifact@v7
         with:

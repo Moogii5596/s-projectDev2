@@ -1,6 +1,8 @@
 # v0.2.5 H3 (#18) — Render Blueprint (ADR-011). Runbook: docs/07_Tech_Stack_and_Environment/07_Cloud_Deploy.md
 # - staging: `main`-ийн push → CI («Deploy staging» workflow: тест + staging migration) ногоон болсны дараа автомат (checksPass)
 # - production: автомат ✖ — зөвхөн «Deploy production» workflow-ийн deploy hook (PO, G3)
+# Redis: staging = Render Key Value Free (s-project-kv-staging, санах ойд — restart-д өгөгдөл алдагдана, staging-д зөвшөөрнө);
+#        production = Upstash (REDIS_URL = rediss://…, sync: false).
 # Нууц (sync: false) — Render dashboard-д гараар; git-д утга ✖. Health: /api/v1/health (`commit` = RENDER_GIT_COMMIT).
 services:
   - type: web
@@ -40,7 +42,12 @@ services:
       - { key: SUPABASE_URL, sync: false }
       - { key: SUPABASE_ANON_KEY, sync: false }
       - { key: SUPABASE_SERVICE_ROLE_KEY, sync: false }
-      - { key: REDIS_URL, sync: false }
+      # Staging Redis = Render Key Value Free (доорх; дотоод URL). Production = Upstash (Free = данс бүрт 1 DB) — runbook §1/§5
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: s-project-kv-staging
+          property: connectionString
       - { key: JWT_SECRET, sync: false }
       - { key: FILE_ENCRYPTION_KEY, sync: false }
       - { key: MEDIA_URL_SECRET, sync: false }
@@ -98,3 +105,12 @@ services:
       - { key: SMTP_USER, sync: false }
       - { key: SMTP_PASS, sync: false }
       - { key: SMTP_FROM, sync: false }
+
+  # Staging-ийн Redis (cache, rate limit, BullMQ/outbox lock). Free: 25 MB, persistence ✖, workspace-д 1. Зөвхөн Render-ийн дотоод сүлжээнээс
+  # (ipAllowList: [] = гаднаас холбогдох ✖). Production = Upstash (runbook §5).
+  - type: keyvalue
+    name: s-project-kv-staging
+    plan: free
+    region: singapore
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
