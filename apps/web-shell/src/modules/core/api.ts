@@ -230,6 +230,13 @@ export interface DebugHealth {
   }>
 }
 
+/** = backend `LoginLockStatus` (auth/login-lock.service.ts) — v0.2.5 H1 */
+export interface DebugLoginLock {
+  locked: boolean
+  lockedUntil: string | null
+  failedCount: number
+}
+
 export interface DebugPermissions {
   user: { id: string; fullName: string | null; email: string; role: string; isActive: boolean }
   isTenantAdmin: boolean
@@ -252,4 +259,6 @@ export const debugApi = {
     (await apiClient.get<{ items: Array<{ id: string; eventType: string; aggregateType: string; aggregateId: string; status: string; retryCount: number; lastError: string | null; createdAt: string }> }>('/api/v1/core/debug/outbox')).data,
   clearCaches: async () => (await apiClient.post('/api/v1/core/debug/actions/cache-clear')).data,
   retryOutbox: async (id: string) => (await apiClient.post(`/api/v1/core/debug/actions/outbox/${id}/retry`)).data,
+  loginLock: async (userId: string) => (await apiClient.get<DebugLoginLock>(`/api/v1/core/debug/users/${userId}/login-lock`)).data,
+  unlockLogin: async (userId: string) => (await apiClient.post<{ ok: true; wasLocked: boolean }>(`/api/v1/core/debug/actions/users/${userId}/unlock`)).data,
 }

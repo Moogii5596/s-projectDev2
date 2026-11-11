@@ -13,6 +13,7 @@ import { CampEmployeeLoginService } from '../src/modules/camp/rbac/camp-employee
 import { CampUserAccessService } from '../src/modules/camp/rbac/camp-user-access.service';
 import { InviteService } from '../src/auth/invite.service';
 import { SignInService } from '../src/auth/sign-in.service';
+import { LoginLockService } from '../src/auth/login-lock.service';
 import { hashToken } from '../src/auth/invite-token';
 import { DEFAULT_TENANT_SECURITY_POLICY } from '../src/auth/tenant-security-policy.service';
 import { ADMIN_DB_URL, APP_USER_DB_URL } from './helpers/db-urls';
@@ -42,7 +43,7 @@ describe('v0.2.2 Блок 3 — урилга, хэрэглэгч үүсгэх (i
     admin: () => ({ auth: { admin: { deleteUser: async () => ({}) } } }),
   };
   const securityPolicy = { get: async () => DEFAULT_TENANT_SECURITY_POLICY, invalidate: async () => undefined };
-  const signIn = new SignInService({ get: () => undefined } as never, admin as never, tenantCache as never, securityPolicy as never, redis as never);
+  const signIn = new SignInService({ get: () => undefined } as never, admin as never, tenantCache as never, securityPolicy as never, new LoginLockService(admin as never), redis as never);
   const config = { get: (k: string) => (k === 'PUBLIC_APP_URL' ? 'https://sino.gobiverse.website' : undefined) };
   const mailer = { isEnabled: () => false, send: async () => undefined };
   const invites = new InviteService(config as never, rls as never, admin as never, userAdmin as never, mailer as never, tenantCache as never, signIn as never, securityPolicy as never, redis as never);

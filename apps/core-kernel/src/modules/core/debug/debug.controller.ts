@@ -47,6 +47,18 @@ export class DebugController {
     return this.debug.permissions(reqUser(req).tenantId, userId);
   }
 
+  /** v0.2.5 H1 (#16): сонгосон хэрэглэгчийн нэвтрэлтийн түгжээ */
+  @Get('users/:userId/login-lock')
+  loginLock(@Req() req: FastifyRequest, @Param('userId', new ParseUUIDPipe()) userId: string) {
+    return this.debug.loginLock(reqUser(req).tenantId, userId);
+  }
+
+  @Post('actions/users/:userId/unlock')
+  unlockLogin(@Req() req: FastifyRequest, @Param('userId', new ParseUUIDPipe()) userId: string) {
+    const u = reqUser(req);
+    return this.debug.unlockLogin(u.tenantId, u.id, userId);
+  }
+
   @Get('logs')
   logs(@Req() req: FastifyRequest, @Query() q: LogsQueryDto) {
     const u = reqUser(req);

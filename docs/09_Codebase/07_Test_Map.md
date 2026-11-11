@@ -12,12 +12,13 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 41 файл, ~336 тест
+## Integration (бодит PG + RLS) — 42 файл, ~341 тест
 
 Команд: `pnpm test:integration`
 
 | Файл | Тест | describe |
 |---|---|---|
+| `core-kernel/test/auth-login-lock.integration.spec.ts` | 5 | H1 — бүртгэлийн түгжээ |
 | `core-kernel/test/auth.integration.spec.ts` | 6 | AuthService Integration |
 | `core-kernel/test/budget.integration.spec.ts` | 12 | 🧾 Budget API · 🔗 MR ↔ Budget (transaction дотор) · 🔒 RLS leakage (app_user, NOBYPASSRLS) |
 | `core-kernel/test/camp-assets-maintenance.integration.spec.ts` | 15 | 🪑 Үндсэн хөрөнгө · 🔧 Засвар · 🪑🔧 Хөрөнгө ба засвар · 🔒 RLS |
@@ -60,7 +61,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 | `core-kernel/test/v024-core-services.integration.spec.ts` | 5 | v0.2.4 core services (integration) |
 
-## Unit — core-kernel — 118 файл, ~881 тест
+## Unit — core-kernel — 119 файл, ~890 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -73,9 +74,10 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/auth/invite-token.spec.ts` | 5 | invite-token (v0.2.2 Блок 3) · auth-mail (D-04) |
 | `core-kernel/src/auth/invite.service.spec.ts` | 9 | InviteService (v0.2.2 Блок 3) |
 | `core-kernel/src/auth/login-identifier.spec.ts` | 4 | login-identifier (v0.2.2 D-13) |
+| `core-kernel/src/auth/login-lock.service.spec.ts` | 3 | LoginLockService (v0.2.5 H1 #16) |
 | `core-kernel/src/auth/pilot-auth-config.spec.ts` | 7 | пилотын GoTrue тохиргоо (deploy/pilot/supabase/config.toml) |
 | `core-kernel/src/auth/session-revoke.service.spec.ts` | 11 | SessionRevokeService (v0.2.3 Блок 4б, PIL-15) |
-| `core-kernel/src/auth/sign-in.service.spec.ts` | 18 | SignInService (v0.2.2 D-10) |
+| `core-kernel/src/auth/sign-in.service.spec.ts` | 24 | SignInService (v0.2.2 D-10) |
 | `core-kernel/src/auth/tenant-auth.guard.spec.ts` | 25 | TenantAuthGuard |
 | `core-kernel/src/auth/tenant-cache.service.spec.ts` | 19 | TenantCacheService · TenantCacheService.isMember() · Auth token cache (PERF-003) |
 | `core-kernel/src/auth/tenant-module.guard.spec.ts` | 5 | TenantModuleGuard (SYS-02) |
