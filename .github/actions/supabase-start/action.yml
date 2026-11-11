@@ -18,6 +18,13 @@ runs:
       with:
         version: ${{ inputs.cli-version }}
 
+    # #30: Supabase-ийн портууд (54320–54329, config.toml) Linux-ийн ephemeral мужид (32768–60999) орно → image pull /
+    # npm-ийн гарах холболт тэдгээрийг түр эзэлбэл docker "failed to bind host port 0.0.0.0:54322: address already in use"
+    # (2026-11-11: dispatch 43057171070, Deploy staging 43058104898). Kernel-д эдгээрийг гарах холболтод бүү өг гэж reserve хийнэ.
+    - name: Reserve Supabase ports
+      shell: bash
+      run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329
+
     # Image-ийн жагсаалт CLI-ийн хувилбар + config.toml-оос хамаарна
     - name: Restore Supabase images
       id: cache
@@ -34,7 +41,16 @@ runs:
     # Тестэд хэрэггүй: studio, imgproxy, edge-runtime, logflare, vector, supavisor, postgres-meta, realtime, storage-api
     - name: Start Supabase (local)
       shell: bash
-      run: npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta,realtime,storage-api
+      run: |
+        services=studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta,realtime,storage-api
+        if ! npx supabase start -x "$services"; then
+          # Reserve-ээс хойш давтагдвал шалтгааныг логт үлдээнэ (ямар процесс портыг эзэлсэн), дараа нь нэг л удаа дахин
+          echo "::warning::supabase start амжилтгүй — 5432x портын эзэд:"
+          sudo ss -tanp | grep -E ':543(2[0-9])\b' || echo "(5432x-д холболт алга)"
+          npx supabase stop --no-backup || true
+          sleep 10
+          npx supabase start -x "$services"
+        fi
 
     - name: Save Supabase images
       if: steps.cache.outputs.cache-hit != 'true'
