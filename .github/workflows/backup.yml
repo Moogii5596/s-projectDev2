@@ -1,0 +1,130 @@
+name: Backup
+
+# v0.2.5 H5 (#19), tech plan H-5: өдөр бүр (02:00 УБ) + гараар — production, staging × (DB + R2 файл) → age шифрлэлт → Google Drive.
+# Runbook: docs/07_Tech_Stack_and_Environment/07_Cloud_Deploy.md §11.
+# - DB: scripts/ci/db-backup.sh (public, auth, auth_guard, supabase_migrations) — «Deploy production»-тай нэг script
+# - Файл: R2 bucket → tar → age (R2_* secret байхгүй бол алгасна — H2 #17 хүртэл)
+# - Drive: rclone (`RCLONE_CONFIG_GDRIVE` secret); 30 хоногоос хуучныг `daily/`-оос устгана (`manual/`-д хүрэхгүй)
+# - Drive тохируулаагүй бол Actions artifact (5 хоног) — нөөц алдагдахгүй, гэхдээ workflow шар (warning)
+# - Амжилтгүй → issue нээнэ (label `backup-failed`) + GitHub-ийн имэйл мэдэгдэл (scheduled workflow-ийн эзэнд)
+# - Supabase Free 7 хоног идэвхгүй бол зогсдог — өдөр бүрийн холболт сэрүүн байлгана
+on:
+  schedule:
+    - cron: '0 18 * * *'   # 18:00 UTC = 02:00 Asia/Ulaanbaatar
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Орчин'
+        type: choice
+        options: [all, production, staging]
+        default: all
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: Нөөц — ${{ matrix.env }}
+    runs-on: ubuntu-24.04   # PGDG apt (noble) — deploy-production.yml-тэй ижил
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [production, staging]
+    steps:
+      - name: Сонголт
+        id: pick
+        env:
+          WANT: ${{ inputs.env || 'all' }}
+        run: |
+          if [ "$WANT" = all ] || [ "$WANT" = "${{ matrix.env }}" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/checkout@v7
+        if: steps.pick.outputs.run == 'true'
+
+      - name: PostgreSQL 17 client, age, rclone
+        if: steps.pick.outputs.run == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common age rclone
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: DB → age
+        if: steps.pick.outputs.run == 'true'
+        env:
+          # `a && b || c` илэрхийлэл ✖: PROD_DB_URL хоосон бол staging-ийн URL-д унаж, production-ий нэрээр staging-ийг нөөцлөнө
+          PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
+          STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+          AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          ENV_NAME: ${{ matrix.env }}
+        run: |
+          if [ -z "$AGE_RECIPIENT" ]; then echo "::error::BACKUP_AGE_RECIPIENT secret алга"; exit 1; fi
+          if [ "$ENV_NAME" = production ]; then DB_URL="$PROD_DB_URL"; else DB_URL="$STAGING_DB_URL"; fi
+          if [ -z "$DB_URL" ]; then echo "::error::${ENV_NAME}: DB secret алга (PROD_DB_URL / STAGING_DB_URL)"; exit 1; fi
+          DB_URL="$DB_URL" bash scripts/ci/db-backup.sh "${ENV_NAME}-db" backup
+
+      - name: R2 файл → tar → age
+        if: steps.pick.outputs.run == 'true'
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
+          BUCKET: ${{ matrix.env == 'production' && 's-project-prod' || 's-project-staging' }}
+          AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          ENV_NAME: ${{ matrix.env }}
+        run: bash scripts/ci/r2-backup.sh "${ENV_NAME}-files" backup
+
+      - name: Google Drive руу (+ 30 хоногийн цэвэрлэгээ)
+        id: drive
+        if: steps.pick.outputs.run == 'true'
+        env:
+          RCLONE_CONFIG_GDRIVE: ${{ secrets.RCLONE_CONFIG_GDRIVE }}
+          ENV_NAME: ${{ matrix.env }}
+        run: |
+          if [ -z "$RCLONE_CONFIG_GDRIVE" ]; then
+            echo "::warning::RCLONE_CONFIG_GDRIVE secret алга — Drive-д хуулаагүй, Actions artifact (5 хоног) болгон хадгална (runbook §11)"
+            echo "uploaded=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          conf="$RUNNER_TEMP/rclone.conf"
+          printf '%s\n' "$RCLONE_CONFIG_GDRIVE" > "$conf"; chmod 600 "$conf"
+          dest="gdrive:s-project-backups/daily/${ENV_NAME}"
+          rclone --config "$conf" copy backup/ "$dest" --checksum --retries 3 --stats-one-line -v
+          # Сүүлийн хуулсан файлууд Drive дээр байгааг шалгана (хоосон хуулалт «амжилттай» болохгүй)
+          for f in backup/*; do
+            rclone --config "$conf" lsf "$dest/$(basename "$f")" | grep -q . || { echo "::error::Drive-д алга: $(basename "$f")"; exit 1; }
+          done
+          rclone --config "$conf" delete "$dest" --min-age 30d --drive-use-trash=false -v
+          rm -f "$conf"
+          echo "uploaded=true" >> "$GITHUB_OUTPUT"
+
+      - name: Artifact (Drive тохируулаагүй үед)
+        if: steps.pick.outputs.run == 'true' && steps.drive.outputs.uploaded == 'false'
+        uses: actions/upload-artifact@v7
+        with:
+          name: backup-${{ matrix.env }}-${{ github.run_id }}
+          path: backup/
+          retention-days: 5
+          if-no-files-found: error
+
+  notify:
+    name: Алдааны мэдэгдэл
+    needs: backup
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Backup failed $(date -u +%Y-%m-%d)"
+          gh label create backup-failed --repo "$GITHUB_REPOSITORY" --color B60205 --description "Daily backup workflow failed" 2>/dev/null || true
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --label backup-failed,P1 \
+            --body "Өдөр бүрийн нөөц амжилтгүй: $RUN_URL — runbook 07_Cloud_Deploy.md §11. Засаад «Backup» workflow-г гараар дахин ажиллуулна."
