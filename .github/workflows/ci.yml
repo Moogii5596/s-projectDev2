@@ -63,6 +63,8 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/docs/gen-codebase-docs.mjs --check
+      # #36: агентын хамгаалалт (guard / verify:changed) — node_modules шаардахгүй
+      - run: node --test scripts/agent/*.test.mjs
 
   test:
     name: Lint · Unit · Integration · Build

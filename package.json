@@ -12,6 +12,8 @@
     "test:e2e": "turbo run test:e2e",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
+    "verify:changed": "node scripts/agent/verify-changed.mjs",
+    "test:agent": "node --test scripts/agent/*.test.mjs",
     "docs:gen": "node scripts/docs/gen-codebase-docs.mjs",
     "docs:check": "node scripts/docs/gen-codebase-docs.mjs --check",
     "clean": "turbo run clean && rm -rf node_modules",
