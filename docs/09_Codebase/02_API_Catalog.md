@@ -414,7 +414,7 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| GET | `/api/v1/health` | `HealthController.check` → `—` | — | 🌐 `health.controller.ts:18` |
+| GET | `/api/v1/health` | `HealthController.check` → `—` | — | 🌐 `health.controller.ts:9` |
 
 ## modules/hr/attendance
 

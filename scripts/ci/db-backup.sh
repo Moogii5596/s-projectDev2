@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # S Project — DB нөөц: pg_dump (custom format) → age шифрлэлт. Нэг удаа энд, бүх workflow ашиглана
-# («Deploy production»-ий урьдчилсан нөөц — #15/H8; өдөр бүрийн нөөц — #19/H5).
+# («Deploy production»-ий урьдчилсан нөөц — #18/H3; өдөр бүрийн нөөц — #19/H5).
 #
 # Хэрэглээ: scripts/ci/db-backup.sh <label> <out-dir>
 #   env DB_URL         — шууд холболт (5432, postgres role). Pooler (6543) ✖ — pg_dump-д session хэрэгтэй.
@@ -26,10 +26,10 @@ mkdir -p "$out_dir"
 ts="$(date -u +%Y%m%dT%H%M%SZ)"
 out="$out_dir/$label-$ts.dump.age"
 
-# public (апп) + auth (Supabase хэрэглэгч) + supabase_migrations (аль migration орсон). Custom format → pg_restore-оор сонгож сэргээнэ.
+# public (апп) + auth (Supabase хэрэглэгч) + auth_guard (нэвтрэлтийн түгжээ, #16) + supabase_migrations (аль migration орсон). Custom format → pg_restore-оор сонгож сэргээнэ.
 # pipefail: pg_dump унавал хагас файл үлдээхгүй.
 if ! pg_dump "$DB_URL" --format=custom --compress=6 --no-comments \
-      --schema=public --schema=auth --schema=supabase_migrations \
+      --schema=public --schema=auth --schema=auth_guard --schema=supabase_migrations \
     | age --encrypt --recipient "$AGE_RECIPIENT" --output "$out"; then
   rm -f "$out"
   echo "::error::нөөц амжилтгүй ($label)" >&2
