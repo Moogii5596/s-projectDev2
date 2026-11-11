@@ -1,0 +1,76 @@
+name: Start local Supabase (cached images)
+description: >
+  v0.2.5 H3 (#18) — CI-д local Supabase (тест cloud DB-д ✖). Docker image-уудыг actions/cache-д хадгалж (docker save/load),
+  тестэд хэрэггүй сервисийг асаахгүй. SUPABASE_URL / *_KEY-г $GITHUB_ENV-д бичнэ.
+inputs:
+  cli-version:
+    description: Supabase CLI version (= pnpm-lock)
+    required: true
+  vite-env:
+    description: "true → VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY (e2e build)"
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Setup Supabase CLI
+      uses: supabase/setup-cli@v3
+      with:
+        version: ${{ inputs.cli-version }}
+
+    # Image-ийн жагсаалт CLI-ийн хувилбар + config.toml-оос хамаарна
+    - name: Restore Supabase images
+      id: cache
+      uses: actions/cache/restore@v6
+      with:
+        path: /tmp/supabase-images.tar.zst
+        key: supabase-images-${{ runner.os }}-${{ inputs.cli-version }}-${{ hashFiles('supabase/config.toml') }}
+
+    - name: Load Supabase images
+      if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: zstd -dc /tmp/supabase-images.tar.zst | docker load
+
+    # Тестэд хэрэггүй: studio, imgproxy, edge-runtime, logflare, vector, supavisor, postgres-meta, realtime, storage-api
+    - name: Start Supabase (local)
+      shell: bash
+      run: npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta,realtime,storage-api
+
+    - name: Save Supabase images
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        images=$(docker ps --format '{{.Image}}' | sort -u)
+        echo "$images"
+        docker save $images | zstd -T0 -3 -o /tmp/supabase-images.tar.zst
+        ls -lh /tmp/supabase-images.tar.zst
+
+    - name: Cache Supabase images
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: /tmp/supabase-images.tar.zst
+        key: ${{ steps.cache.outputs.cache-primary-key }}
+
+    - name: Supabase env
+      shell: bash
+      env:
+        VITE_ENV: ${{ inputs.vite-env }}
+      run: |
+        npx supabase status -o env > /tmp/sb.env 2>/tmp/sb.err || true
+        eval "$(sed -E 's/^export //' /tmp/sb.env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=')"
+        # [CI-006] түлхүүр алга бол хоосон утгаар үргэлжлүүлэхгүй — гаралтын түлхүүрийн НЭРСИЙГ (утгагүй) хэвлээд унана
+        if [ -z "${API_URL:-}" ] || [ -z "${ANON_KEY:-}" ] || [ -z "${SERVICE_ROLE_KEY:-}" ]; then
+          echo "::error::supabase status -o env: API_URL/ANON_KEY/SERVICE_ROLE_KEY алга"; npx supabase --version
+          sed -E 's/=.*$/=…/' /tmp/sb.env; cat /tmp/sb.err; exit 1
+        fi
+        echo "::add-mask::$SERVICE_ROLE_KEY"
+        {
+          echo "SUPABASE_URL=$API_URL"
+          echo "SUPABASE_ANON_KEY=$ANON_KEY"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          if [ "$VITE_ENV" = "true" ]; then
+            echo "VITE_SUPABASE_URL=$API_URL"
+            echo "VITE_SUPABASE_ANON_KEY=$ANON_KEY"
+          fi
+        } >> "$GITHUB_ENV"

@@ -1,0 +1,180 @@
+name: Deploy production
+
+# v0.2.5 H3 (#18), ADR-011, AGENTS.md §4 — G3: ЗӨВХӨН PO гараар (Actions → «Deploy production» → Run workflow → tag).
+# Агент энэ workflow-г ажиллуулахгүй (`gh workflow run` ✖).
+# Урсгал: tag шалгах (main дээр, staging ногоон) → шифрлэсэн нөөц → migration → backend (Render deploy hook) → health
+#         → frontend (Vercel prod) → health. Аль нэг алхам унавал дараагийнх ажиллахгүй. Runbook: 07_Cloud_Deploy.md §6–7.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (жишээ: v0.2.5, яаралтай засвар v0.2.5.1) — main дээрх, staging-д ногоон'
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  TAG: ${{ inputs.tag }}
+  SUPABASE_CLI_VERSION: 2.120.0
+  VERCEL_CLI_VERSION: 65.9.0
+
+jobs:
+  verify:
+    name: Tag шалгах
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.tag.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: tag
+        name: Tag = production хувилбар, main дээр
+        run: |
+          # VERSIONING.md: production = vX.Y.Z эсвэл vX.Y.Z.N (rc ✖)
+          if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$'; then
+            echo "::error::'$TAG' — production tag биш (vX.Y.Z эсвэл vX.Y.Z.N; -rc ✖)"; exit 1
+          fi
+          git fetch --tags --force origin
+          sha=$(git rev-list -n 1 "refs/tags/$TAG" 2>/dev/null) || { echo "::error::tag '$TAG' алга"; exit 1; }
+          git merge-base --is-ancestor "$sha" origin/main || { echo "::error::$TAG ($sha) main дээр биш"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "$TAG → $sha"
+
+      # Энэ commit staging-ээр (CI + migration) ногоон гарсан байх ёстой
+      - name: Staging ногоон эсэх
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.tag.outputs.sha }}
+        run: |
+          ok=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow deploy-staging.yml --commit "$SHA" --json conclusion --jq '[.[] | select(.conclusion=="success")] | length')
+          if [ "${ok:-0}" -lt 1 ]; then echo "::error::$SHA-д «Deploy staging» амжилттай ажиллаагүй — эхлээд staging (G2)"; exit 1; fi
+
+  backup:
+    name: Нөөц (шифрлэсэн)
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: PostgreSQL 17 client, age
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common age
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
+          sudo apt-get install -y -qq postgresql-client-17
+
+      # public + auth (хэрэглэгч, нууц үгийн hash) + auth_guard. Нууцлал: age (BACKUP_AGE_RECIPIENT = нийтийн түлхүүр; хувийн түлхүүр PO-д)
+      - name: pg_dump → age
+        env:
+          DB_URL: ${{ secrets.PROD_DB_URL }}
+          AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$AGE_RECIPIENT" ]; then echo "::error::PROD_DB_URL / BACKUP_AGE_RECIPIENT secret алга"; exit 1; fi
+          mkdir -p backup
+          out="backup/prod-predeploy-${TAG}-$(date -u +%Y%m%dT%H%M%SZ).dump.age"
+          /usr/lib/postgresql/17/bin/pg_dump "$DB_URL" --format=custom --no-owner --no-privileges \
+            --schema=public --schema=auth --schema=auth_guard | age -r "$AGE_RECIPIENT" -o "$out"
+          size=$(stat -c %s "$out"); echo "нөөц: $out ($size байт)"
+          if [ "$size" -lt 10000 ]; then echo "::error::нөөц хэт жижиг ($size) — pg_dump алдаа?"; exit 1; fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: prod-predeploy-${{ inputs.tag }}-${{ github.run_id }}
+          path: backup/
+          retention-days: 30
+          if-no-files-found: error
+
+  migrate:
+    name: Migration (production)
+    needs: [verify, backup]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: supabase db push (production)
+        env:
+          DB_URL: ${{ secrets.PROD_DB_URL }}
+        run: |
+          supabase db push --db-url "$DB_URL" --dry-run
+          supabase db push --db-url "$DB_URL"
+
+  deploy-api:
+    name: Backend (Render)
+    needs: [verify, migrate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Render deploy hook (тухайн commit)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_PROD }}
+          SHA: ${{ needs.verify.outputs.sha }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "::error::RENDER_DEPLOY_HOOK_PROD secret алга"; exit 1; fi
+          sep='?'; case "$HOOK" in *\?*) sep='&';; esac
+          curl -fsS -X POST "${HOOK}${sep}ref=${SHA}" -o /dev/null
+          echo "deploy эхэллээ: $SHA"
+
+      # Render Free: build ≈ 5–10 мин (+ cold start). /api/v1/health-ийн commit = энэ tag болтол
+      - name: Health (шинэ commit)
+        env:
+          API_URL: ${{ vars.PROD_API_URL }}
+          SHA: ${{ needs.verify.outputs.sha }}
+        run: |
+          if [ -z "$API_URL" ]; then echo "::error::PROD_API_URL repo variable алга"; exit 1; fi
+          for i in $(seq 1 60); do
+            commit=$(curl -fsS --max-time 60 "$API_URL/api/v1/health" | jq -r '.commit // empty' || true)
+            echo "[$i] commit=${commit:-?}"
+            if [ "$commit" = "$SHA" ]; then echo "✅ backend $TAG"; exit 0; fi
+            sleep 20
+          done
+          echo "::error::20 мин дотор $SHA асаагүй — Render-ийн deploy лог шалга (өмнөх хувилбар ажилласаар)"; exit 1
+
+  deploy-web:
+    name: Frontend (Vercel)
+    needs: [verify, deploy-api]
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Build-ийн VITE_* = Vercel prod project-ийн Environment Variables (`vercel pull`)
+      - name: vercel pull / build / deploy --prod
+        run: |
+          npx --yes "vercel@${VERCEL_CLI_VERSION}" pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx --yes "vercel@${VERCEL_CLI_VERSION}" build --prod --token="$VERCEL_TOKEN"
+          npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+      - name: Health (frontend)
+        env:
+          WEB_URL: ${{ vars.PROD_WEB_URL }}
+        run: |
+          if [ -z "$WEB_URL" ]; then echo "::error::PROD_WEB_URL repo variable алга"; exit 1; fi
+          for i in $(seq 1 10); do
+            if curl -fsS --max-time 30 "$WEB_URL/" | grep -q '<div id="root"'; then echo "✅ frontend $TAG"; exit 0; fi
+            sleep 10
+          done
+          echo "::error::$WEB_URL хариу өгөхгүй"; exit 1

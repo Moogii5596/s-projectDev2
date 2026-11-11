@@ -2,7 +2,7 @@
 title: "API каталог (core-kernel)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 tags: [codebase, api, generated]
 ---
 
@@ -414,7 +414,7 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| GET | `/api/v1/health` | `HealthController.check` → `—` | — | 🌐 `health.controller.ts:9` |
+| GET | `/api/v1/health` | `HealthController.check` → `—` | — | 🌐 `health.controller.ts:13` |
 
 ## modules/hr/attendance
 

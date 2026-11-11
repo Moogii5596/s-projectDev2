@@ -29,6 +29,12 @@ tags: [codebase, config, generated]
 | `DEV_TENANT_SLUG` | `test-tenant` | Development |
 | `DEPLOYMENT_MODE` | `shared` | Deployment mode (ADR-001): shared = SaaS, олон tenant + RLS (default)                             dedicated = Enterprise VPC, нэг deploy = нэг tenant |
 | `DEBUG_MENU_ENABLED` | `false` | Debug-only модулиудыг зөвшөөрөх (production/pilot анхдагчаар унтраалттай) |
+| `LOG_FORMAT` |  | ── v0.2.5 H3 (#18): үүлэн орчин (Render + Vercel) — dev-д хоосон. Runbook: docs/07_Tech_Stack_and_Environment/07_Cloud_Deploy.md json = нэг мөр JSON лог (requestId, tenantId; нууцлалтай). Хоосон = энгийн өнгөт лог |
+| `TRUST_PROXY` |  | Render-ийн proxy-ийн ард бодит IP: 1 (hop). Хоосон = итгэхгүй (dev, пилот Caddy X-Real-IP) |
+| `CORS_ORIGINS` |  | Frontend өөр домэйнд (Vercel) бол таслалаар: https://staging.gobiverse.website. Хоосон = CORS унтраалттай (same-origin) |
+| `SENTRY_DSN` |  | Sentry (PII-гүй). Хоосон = унтраалттай |
+| `SENTRY_ENVIRONMENT` | `development` |  |
+| `SENTRY_TRACES_SAMPLE_RATE` | `0` |  |
 | `RATE_LIMIT_SHORT` | `100` | Tenant rate limit (Phase 3.1) — 1с / 10с / 60с цонх тус бүрийн хүсэлтийн тоо Load test-д: RATE_LIMIT_SHORT=1000000 RATE_LIMIT_MEDIUM=1000000 RATE_LIMIT_LONG=1000000 |
 | `RATE_LIMIT_MEDIUM` | `500` |  |
 | `RATE_LIMIT_LONG` | `2000` |  |
@@ -89,6 +95,8 @@ tags: [codebase, config, generated]
 | `VITE_SUPABASE_ANON_KEY` | `***` |  |
 | `VITE_API_BASE_URL` |  |  |
 | `VITE_FEED` |  | v0.2.3 Блок 5 (M-0): Feed — хоосон = асаалттай («/» болон нэвтэрсний дараа /feed); off = унтраана (модулийн нүүр) |
+| `VITE_SENTRY_DSN` |  | v0.2.5 H3 (#18): Sentry (PII-гүй). Хоосон = ачаалахгүй. Release = Vercel commit (VERCEL_GIT_COMMIT_SHA) эсвэл VITE_APP_RELEASE |
+| `VITE_SENTRY_ENVIRONMENT` |  |  |
 
 ## pnpm script-үүд
 

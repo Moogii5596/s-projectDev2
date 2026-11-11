@@ -30,10 +30,12 @@ const PUBLIC_CONFIG = new Set([
   'NODE_ENV', 'PORT', 'DEPLOYMENT_MODE', 'DEDICATED_TENANT_SLUG', 'DEV_TENANT_SLUG', 'DEBUG_MENU_ENABLED', 'RATE_LIMIT_SHORT',
   'RATE_LIMIT_MEDIUM', 'RATE_LIMIT_LONG', 'NODE_CLUSTER_WORKERS', 'PRISMA_LOG_LEVELS', 'STORAGE_DIR', 'ESCALATION_CRON',
   'OUTBOX_POLLER_CRON', 'NOTIFICATION_MAIL_CRON', 'PUBLIC_APP_URL', 'SMTP_HOST', 'SMTP_PORT', 'SUPABASE_URL', 'PILOT_STORAGE_DB_WARN_GB',
+  'LOG_FORMAT', 'TRUST_PROXY', 'CORS_ORIGINS', 'SENTRY_ENVIRONMENT',
 ]);
 const SECRET_CONFIG = [
   'DATABASE_URL', 'SYSTEM_DATABASE_URL', 'DIRECT_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY', 'SUPABASE_AUTH_JWT_SECRET',
   'REDIS_URL', 'JWT_SECRET', 'MEDIA_URL_SECRET', 'FILE_ENCRYPTION_KEY', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM',
+  'SENTRY_DSN',
 ];
 
 async function timed<T>(fn: () => Promise<T>): Promise<{ ok: boolean; ms: number; value?: T; error?: string }> {
@@ -75,7 +77,7 @@ export class DebugService {
     ].sort((a, b) => a.key.localeCompare(b.key));
     return {
       version: APP_VERSION,
-      commit: process.env['GIT_COMMIT'] ?? process.env['BUILD_SHA'] ?? null,
+      commit: process.env['GIT_COMMIT'] ?? process.env['BUILD_SHA'] ?? process.env['RENDER_GIT_COMMIT'] ?? null,
       buildDate: process.env['BUILD_DATE'] ?? null,
       startedAt: new Date(Date.now() - process.uptime() * 1000).toISOString(),
       uptimeSec: Math.round(process.uptime()),

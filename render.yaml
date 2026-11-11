@@ -1,0 +1,100 @@
+# v0.2.5 H3 (#18) — Render Blueprint (ADR-011). Runbook: docs/07_Tech_Stack_and_Environment/07_Cloud_Deploy.md
+# - staging: `main`-ийн push → CI («Deploy staging» workflow: тест + staging migration) ногоон болсны дараа автомат (checksPass)
+# - production: автомат ✖ — зөвхөн «Deploy production» workflow-ийн deploy hook (PO, G3)
+# Нууц (sync: false) — Render dashboard-д гараар; git-д утга ✖. Health: /api/v1/health (`commit` = RENDER_GIT_COMMIT).
+services:
+  - type: web
+    name: s-project-api-staging
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    autoDeployTrigger: checksPass
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm db:generate && pnpm --filter @s-project/core-kernel build
+    startCommand: node apps/core-kernel/dist/src/main
+    healthCheckPath: /api/v1/health
+    buildFilter:
+      ignoredPaths:
+        - docs/**
+        - apps/web-shell/**
+        - apps/e2e/**
+        - apps/mfe-requisitions/**
+        - deploy/**
+        - "**/*.md"
+    envVars:
+      - { key: NODE_VERSION, value: "22" }
+      - { key: NODE_ENV, value: production }
+      - { key: LOG_FORMAT, value: json }
+      - { key: TRUST_PROXY, value: "1" }
+      - { key: NODE_CLUSTER_WORKERS, value: "1" }
+      - { key: PRISMA_LOG_LEVELS, value: "warn,error" }
+      - { key: DEPLOYMENT_MODE, value: dedicated }
+      - { key: DEBUG_MENU_ENABLED, value: "true" }
+      - { key: SENTRY_ENVIRONMENT, value: staging }
+      - { key: DEDICATED_TENANT_SLUG, sync: false }
+      - { key: CORS_ORIGINS, sync: false }
+      - { key: PUBLIC_APP_URL, sync: false }
+      - { key: DATABASE_URL, sync: false }
+      - { key: SYSTEM_DATABASE_URL, sync: false }
+      - { key: DIRECT_URL, sync: false }
+      - { key: SUPABASE_URL, sync: false }
+      - { key: SUPABASE_ANON_KEY, sync: false }
+      - { key: SUPABASE_SERVICE_ROLE_KEY, sync: false }
+      - { key: REDIS_URL, sync: false }
+      - { key: JWT_SECRET, sync: false }
+      - { key: FILE_ENCRYPTION_KEY, sync: false }
+      - { key: MEDIA_URL_SECRET, sync: false }
+      - { key: SENTRY_DSN, sync: false }
+      - { key: SMTP_HOST, sync: false }
+      - { key: SMTP_PORT, sync: false }
+      - { key: SMTP_USER, sync: false }
+      - { key: SMTP_PASS, sync: false }
+      - { key: SMTP_FROM, sync: false }
+
+  - type: web
+    name: s-project-api-prod
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    autoDeployTrigger: off
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm db:generate && pnpm --filter @s-project/core-kernel build
+    startCommand: node apps/core-kernel/dist/src/main
+    healthCheckPath: /api/v1/health
+    buildFilter:
+      ignoredPaths:
+        - docs/**
+        - apps/web-shell/**
+        - apps/e2e/**
+        - apps/mfe-requisitions/**
+        - deploy/**
+        - "**/*.md"
+    envVars:
+      - { key: NODE_VERSION, value: "22" }
+      - { key: NODE_ENV, value: production }
+      - { key: LOG_FORMAT, value: json }
+      - { key: TRUST_PROXY, value: "1" }
+      - { key: NODE_CLUSTER_WORKERS, value: "1" }
+      - { key: PRISMA_LOG_LEVELS, value: "warn,error" }
+      - { key: DEPLOYMENT_MODE, value: dedicated }
+      - { key: DEBUG_MENU_ENABLED, value: "false" }
+      - { key: SENTRY_ENVIRONMENT, value: production }
+      - { key: DEDICATED_TENANT_SLUG, sync: false }
+      - { key: CORS_ORIGINS, sync: false }
+      - { key: PUBLIC_APP_URL, sync: false }
+      - { key: DATABASE_URL, sync: false }
+      - { key: SYSTEM_DATABASE_URL, sync: false }
+      - { key: DIRECT_URL, sync: false }
+      - { key: SUPABASE_URL, sync: false }
+      - { key: SUPABASE_ANON_KEY, sync: false }
+      - { key: SUPABASE_SERVICE_ROLE_KEY, sync: false }
+      - { key: REDIS_URL, sync: false }
+      - { key: JWT_SECRET, sync: false }
+      - { key: FILE_ENCRYPTION_KEY, sync: false }
+      - { key: MEDIA_URL_SECRET, sync: false }
+      - { key: SENTRY_DSN, sync: false }
+      - { key: SMTP_HOST, sync: false }
+      - { key: SMTP_PORT, sync: false }
+      - { key: SMTP_USER, sync: false }
+      - { key: SMTP_PASS, sync: false }
+      - { key: SMTP_FROM, sync: false }

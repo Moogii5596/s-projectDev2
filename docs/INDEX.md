@@ -41,6 +41,7 @@ tags: [index, moc]
 - [[03_Enterprise_VPC_Deployment]] — VPC / dedicated runbook
 - [[06_Cursor_Setup]] · [[08_Engineering_Practices]] (мэргэжлийн стандарт, Draft) · **[[09_Team_Handbook]]** (багийн гарын авлага, Draft) · **[[10_Agent_Team_Workflow]]** (агентын баг, PO-ийн батламж, Draft) — Cursor IDE: rules, commands, ignore, UI тохиргоо · repo үндэс `CLAUDE.md` → [[CONTEXT]] (Claude Code)
 - [[04_Pilot_Camp_Windows]] — пилот: нэг Windows машин, `pilot.ps1`, staging, нөөц
+- **[[07_Cloud_Deploy]]** — үүлэн deploy runbook (v0.2.5-аас): Supabase Cloud + Render + Vercel, нууцын жагсаалт, «Deploy production»
 - [[05_Cloudflare_Tunnel]] — байгууллага холбох
 
 ## 🗺 Төлөвлөгөө
