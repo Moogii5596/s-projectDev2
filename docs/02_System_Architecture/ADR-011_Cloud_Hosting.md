@@ -32,7 +32,7 @@ tags: [adr, hosting, pilot, deploy, backup, v0.2.5]
 - **Brute-force хамгаалалт:** Supabase-ийн `password_verification_attempt` hook зөвхөн Team/Enterprise төлөвлөгөөнд → **NestJS sign-in урсгалд бүртгэл тус бүрээр түгжинэ** (одоогийн дүрэм: 15 мин-д 5 буруу → 15 мин түгжээ), `auth_guard.password_failures` хүснэгтийг дахин ашиглана. Нэвтрэлт аль хэдийн `POST /api/v1/auth/login`-оор дамждаг.
 - **Нөөц:** GitHub Actions (өдөр бүр) → хоёр төслийн `pg_dump` (public + auth) + R2 хуулбар → **шифрлэж** (`age`) → `rclone` → хэрэглэгчийн Google Drive (`s-project-backups/`), 30 хоног хадгална; сард нэг удаа restore туршилт. Энэ ажил DB-д холбогддог тул Free төслийн 7 хоногийн идэвхгүй зогсолтоос хамгаална.
 - **Нууц:** Render / Vercel / GitHub Secrets-д; `.env`-д зөвхөн dev. Баримт, git, чатад утга орохгүй.
-- **Deploy урсгал:** schema = migration-аас автомат; `main` merge → staging автомат; tag → GitHub Environment `production` (PO батална) → нөөц → migration → deploy → health. Өгөгдөл зөвхөн production → staging; dev-ээс хэзээ ч үгүй ([[10_Agent_Team_Workflow]]).
+- **Deploy урсгал:** schema = migration-аас автомат; `main` merge → staging автомат; tag → PO **«Deploy production» workflow-г гараар ажиллуулна** (`workflow_dispatch`; GitHub Free + private repo-д branch protection, environment-ийн required reviewer байхгүй (2026-11-11 шалгав)) → нөөц → migration → deploy → health. Өгөгдөл зөвхөн production → staging; dev-ээс хэзээ ч үгүй ([[10_Agent_Team_Workflow]]).
 - **Хяналт:** Sentry (PII-гүй), JSON лог, гаднын uptime monitor `/health`.
 - **Нэр:** «pilot» орчныг цаашид **production** гэнэ (Sino Hydro = пилот хөтөлбөр).
 

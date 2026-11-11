@@ -35,7 +35,7 @@ tags: [process, ci-cd, release, quality, observability, security, v0.2.5]
 
 ### 3.1 Git ба review (trunk-based)
 - `main` = үргэлж deploy хийж болох төлөв. Ажил бүр **богино branch** (`feat/<блок>`, 1–3 өдөр) → **PR** → CI ногоон → squash merge. Урт насалдаг хувилбарын branch ✖.
-- **Branch protection (`main`):** шууд push ✖, CI-ийн шаардлагатай шалгалтууд ногоон байх, branch шинэчлэгдсэн байх. Ганц хүний repo тул «шаардлагатай approve» биш — **PR template-ийн checklist** (`AGENTS.md` §2) + **хоёр дахь агентын review** (өөр загвар/агент PR-ийг шалгаж тайлбар бичнэ).
+- **Branch protection (`main`):** (GitHub Free + private repo-д branch protection, environment-ийн required reviewer байхгүй (2026-11-11 шалгав) → local `pre-push` hook + `AGENTS.md` дүрэм; GitHub Pro ($4/сар) авбал жинхэнэ хамгаалалт) шууд push ✖, CI-ийн шаардлагатай шалгалтууд ногоон байх, branch шинэчлэгдсэн байх. Ганц хүний repo тул «шаардлагатай approve» биш — **PR template-ийн checklist** (`AGENTS.md` §2) + **хоёр дахь агентын review** (өөр загвар/агент PR-ийг шалгаж тайлбар бичнэ).
 - Агент commit/push хийж болно (өөрийн branch), **merge, tag, deploy** — хэрэглэгч (GitHub UI / утаснаас).
 
 ### 3.2 Хувилбар ба release
@@ -46,7 +46,7 @@ tags: [process, ci-cd, release, quality, observability, security, v0.2.5]
 
 ### 3.3 CI/CD ба орчин ([[ADR-011_Cloud_Hosting]])
 - PR бүрт Vercel **preview** орчин (frontend) автоматаар.
-- `main` → staging автоматаар; tag → GitHub Environment `pilot` (хэрэглэгч батална) → нөөц → migration → deploy → health → алдаатай бол автоматаар зогсох.
+- `main` → staging автоматаар; tag → PO «Deploy production» workflow-г гараар ажиллуулна → нөөц → migration → deploy → health → алдаатай бол автоматаар зогсох.
 - Migration: **expand → contract** (багана устгах/нэр солихыг хоёр хувилбарт хувааж, хуучин код шинэ schema-тай ажиллах) — rollback-д код буцаахад DB эвдрэхгүй.
 - Staging-ийн өгөгдөл: production-ий хуулбар (PII нууцлал — PO-ийн шийдвэрээр одоохондоо үгүй; хандалтыг багаар хязгаарлана).
 
