@@ -54,7 +54,7 @@ jobs:
         run: pnpm db:generate
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.120.0   # = pnpm-lock (таны машин) — "latest" гаралтын формат/зан төлөв өөрчлөгддөг [CI-006]
 
@@ -134,7 +134,7 @@ jobs:
         run: node node_modules/@playwright/test/cli.js install chromium --with-deps
 
       - name: Setup Supabase
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.120.0   # = pnpm-lock (таны машин) — "latest" гаралтын формат/зан төлөв өөрчлөгддөг [CI-006]
 
