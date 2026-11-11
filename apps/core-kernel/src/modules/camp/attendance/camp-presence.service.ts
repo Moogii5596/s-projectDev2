@@ -45,11 +45,18 @@ export { effectiveEmployee,  } from '../common/position-defaults';
 export type { PositionDefaults } from '../common/position-defaults';
 import { effectiveEmployee, loadPositionDefaults, type PositionDefaults } from '../common/position-defaults';
 
+/** Хуучин schema дээр (staging snapshot A) ачаалах тохиргоо */
+export interface PresenceLoadOptions {
+  legacy?: boolean;
+  catalogI18n?: boolean;
+}
+
 /**
  * D өдрийн хоолны суурь тоо — DB-ээс ачаалж тооцно (API + `camp:snapshot` CLI, v0.2.0 §0.2).
  * `legacy` — v0.2.0-ийн schema (албан тушаал/ажилтны хоолны багана алга): хэлтсийн байршлаар (staging snapshot A).
+ * `catalogI18n: false` — v0.2.3-ийн schema (`camp_positions.name_i18n` алга, v0.2.4-д нэмэгдсэн): албан тушаалын орчуулгыг уншихгүй.
  */
-export async function loadPresence(tx: Tx, tenantId: string, campId: string, date: string, opts: { legacy?: boolean } = {}): Promise<PresenceResult> {
+export async function loadPresence(tx: Tx, tenantId: string, campId: string, date: string, opts: PresenceLoadOptions = {}): Promise<PresenceResult> {
   const { settings, employees } = await loadPresenceEmployees(tx, tenantId, campId, date, opts);
   return computePresence(employees, date, settings, settings.defaultMealLocationId);
 }
@@ -60,7 +67,7 @@ export async function loadPresenceEmployees(
   tenantId: string,
   campId: string,
   date: string,
-  opts: { legacy?: boolean } = {},
+  opts: PresenceLoadOptions = {},
 ): Promise<{ settings: Awaited<ReturnType<typeof getRosterSettings>>; employees: PresenceEmployee[] }> {
   const settings = await getRosterSettings(tx, tenantId, campId);
   const d = toDbDate(date);
@@ -82,7 +89,7 @@ export async function loadPresenceEmployees(
       }))
     : await tx.hrEmployee.findMany({
         where: { tenantId, campId, stays: { some: stayWhere } },
-        select: { ...base, positionId: true, mealLocationId: true, mealsIncluded: true, positionRef: { select: { name: true, nameI18n: true } } },
+        select: { ...base, positionId: true, mealLocationId: true, mealsIncluded: true, positionRef: { select: { name: true, nameI18n: opts.catalogI18n !== false } } },
       });
   const defaults = opts.legacy ? (new Map() as PositionDefaults) : await loadPositionDefaults(tx, tenantId, campId);
   const employees: PresenceEmployee[] = emps.map((e) => {

@@ -196,6 +196,10 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
   const cols = await prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'camp_employees' AND column_name = 'meal_location_id'`;
   const legacy = Number(cols[0]?.n ?? 0) === 0;
+  // v0.2.3-ийн schema (staging snapshot A, v0.2.4 upgrade-ийн өмнө): каталогийн name_i18n алга (20261107051)
+  const i18nCols = await prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'camp_positions' AND column_name = 'name_i18n'`;
+  const catalogI18n = Number(i18nCols[0]?.n ?? 0) > 0;
 
   const permTables = await prisma.$queryRaw<{ table_name: string }[]>`SELECT table_name::text AS table_name FROM information_schema.tables
     WHERE table_schema = 'public' AND table_name IN (
@@ -220,7 +224,7 @@ export async function buildSnapshot(prisma: PrismaClient, opts: SnapshotOptions)
           const locName = new Map(locs.map((l) => [l.id, l.name]));
           const meals: Record<string, CampSnapshotDay> = {};
           for (const d of days) {
-            const p = await loadPresence(tx as Tx, t.id, c.id, d, { legacy });
+            const p = await loadPresence(tx as Tx, t.id, c.id, d, { legacy, catalogI18n });
             const m: Record<string, number> = {};
             for (const l of p.lines) {
               const k = `${l.mealType}@${l.mealLocationId ? (locName.get(l.mealLocationId) ?? l.mealLocationId) : '-'}`;
