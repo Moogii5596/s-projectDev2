@@ -42,8 +42,8 @@ export function useAuth() {
    * v0.2.2 D-10: утас / нэвтрэх нэр / имэйл → backend `/auth/sign-in` → `setSession`.
    * Буцаах утга: нууц үг солих шаардлагатай эсэх (LoginPage → /change-password).
    */
-  const signIn = async (identifier: string, password: string, fallbackError: string): Promise<{ mustChangePassword: boolean }> => {
-    const s = await signInRequest(identifier, password, fallbackError)
+  const signIn = async (identifier: string, password: string, fallbackError: string, captchaToken?: string | null): Promise<{ mustChangePassword: boolean }> => {
+    const s = await signInRequest(identifier, password, fallbackError, captchaToken)
     const { error } = await supabase.auth.setSession({ access_token: s.accessToken, refresh_token: s.refreshToken })
     if (error) throw error
     return { mustChangePassword: s.mustChangePassword }

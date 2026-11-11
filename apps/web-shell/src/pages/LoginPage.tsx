@@ -6,6 +6,7 @@ import { postLoginPath } from '../lib/home'
 import { CHANGE_PASSWORD_PATH } from '../lib/password-change'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import TurnstileWidget, { useTurnstile } from '../components/TurnstileWidget'
 
 export default function LoginPage() {
   const { signIn, user, loading } = useAuth()
@@ -19,6 +20,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  /** v0.2.5 #27: Turnstile (site key алга бол widget-гүй) */
+  const captcha = useTurnstile()
 
   // Нэвтэрсэн хэрэглэгч /login-д ирвэл нүүр (HOME_PATH) руу чиглүүлнэ
   useEffect(() => {
@@ -33,12 +36,14 @@ export default function LoginPage() {
     setSubmitting(true)
 
     try {
-      const r = await signIn(identifier, password, t('auth.error'))
+      const r = await signIn(identifier, password, t('auth.error'), captcha.token)
       navigate(r.mustChangePassword ? CHANGE_PASSWORD_PATH : target)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth.error'))
     } finally {
       setSubmitting(false)
+      // Token нэг удаагийнх — дараагийн оролдлогод шинэ challenge
+      if (captcha.enabled) captcha.reset()
     }
   }
 
@@ -98,6 +103,8 @@ export default function LoginPage() {
             />
           </div>
 
+          <TurnstileWidget {...captcha.widgetProps} />
+
           {error && (
             <div className="bg-red-50 text-red-700 text-sm px-3 py-2 rounded-lg">
               {error}
@@ -106,7 +113,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !captcha.ready}
             className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? t('auth.submitting') : t('auth.submit')}

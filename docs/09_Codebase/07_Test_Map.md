@@ -61,7 +61,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 | `core-kernel/test/v024-core-services.integration.spec.ts` | 5 | v0.2.4 core services (integration) |
 
-## Unit — core-kernel — 121 файл, ~897 тест
+## Unit — core-kernel — 121 файл, ~898 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -77,7 +77,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/auth/login-lock.service.spec.ts` | 3 | LoginLockService (v0.2.5 H1 #16) |
 | `core-kernel/src/auth/pilot-auth-config.spec.ts` | 7 | пилотын GoTrue тохиргоо (deploy/pilot/supabase/config.toml) |
 | `core-kernel/src/auth/session-revoke.service.spec.ts` | 11 | SessionRevokeService (v0.2.3 Блок 4б, PIL-15) |
-| `core-kernel/src/auth/sign-in.service.spec.ts` | 24 | SignInService (v0.2.2 D-10) |
+| `core-kernel/src/auth/sign-in.service.spec.ts` | 25 | SignInService (v0.2.2 D-10) |
 | `core-kernel/src/auth/tenant-auth.guard.spec.ts` | 25 | TenantAuthGuard |
 | `core-kernel/src/auth/tenant-cache.service.spec.ts` | 19 | TenantCacheService · TenantCacheService.isMember() · Auth token cache (PERF-003) |
 | `core-kernel/src/auth/tenant-module.guard.spec.ts` | 5 | TenantModuleGuard (SYS-02) |
@@ -189,7 +189,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/storage/tests/local-disk.storage.test.ts` | 7 | LocalDiskStorage · contentTypeOf |
 | `core-kernel/src/storage/tests/media.test.ts` | 11 | MediaUrlSigner — гарын үсэгтэй зургийн URL · parseVariants / pickVariant / mediaImageDto · MediaService — хадгалах / устгах (LocalDiskStorage, бодит sharp) · storageDir |
 
-## Unit — web-shell — 41 файл, ~188 тест
+## Unit — web-shell — 42 файл, ~191 тест
 
 Команд: `pnpm --filter web-shell test`
 
@@ -208,6 +208,7 @@ tags: [codebase, testing, generated]
 | `web-shell/src/lib/tests/no-hardcoded-text.test.ts` | 2 | hardcode текст (I18N-03) |
 | `web-shell/src/lib/tests/password-change.test.ts` | 4 | password-change (v0.2.2 D-06) · displayLogin |
 | `web-shell/src/lib/tests/sentry.test.ts` | 2 | Sentry scrub (v0.2.5 H3 #18) |
+| `web-shell/src/lib/tests/turnstile.test.ts` | 3 | turnstile (v0.2.5 #27) |
 | `web-shell/src/lib/tests/unauthorized.test.ts` | 4 | handleUnauthorized [FE-007] · isSessionRevoked (v0.2.2 Блок 6б, №3) |
 | `web-shell/src/modules/camp/lib/tests/camp-lib.test.ts` | 11 | shift-pattern · permissions · apiErrorMessage · dates |
 | `web-shell/src/modules/camp/lib/tests/camp-maint-lib.test.ts` | 8 | formatMoney (string → float-гүй) · maintenance.availableActions (backend maintenance-flow-тэй ижил) · permissions.canInAnyCamp |

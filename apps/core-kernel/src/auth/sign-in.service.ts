@@ -43,6 +43,10 @@ type FailureLimit = { limit: number; ttlSec: number };
 
 const invalid = () => new AppError(HttpStatus.UNAUTHORIZED, 'auth.invalid_credentials');
 const tooMany = () => new AppError(HttpStatus.TOO_MANY_REQUESTS, 'auth.too_many_attempts');
+/** v0.2.5 #27: Turnstile token алга / хүчингүй / хугацаа дууссан (GoTrue `captcha_failed`) — нууц үгийн оролдлогод тоологдохгүй */
+const captchaFailed = () => new AppError(HttpStatus.BAD_REQUEST, 'auth.captcha_failed');
+const isCaptchaFailure = (e: { code?: string; message?: string }) =>
+  e.code === 'captcha_failed' || /captcha/i.test(e.message ?? '');
 const unavailable = () => new AppError(HttpStatus.SERVICE_UNAVAILABLE, 'auth.service_unavailable');
 /** v0.2.5 H1: бүртгэл түгжигдсэн — `params.minutes` (мессежид), `params.until` (ISO) */
 const accountLocked = (until: Date) =>
@@ -197,7 +201,7 @@ export class SignInService {
     return slug ? this.tenantCache.getTenantId(slug) : null;
   }
 
-  async signIn(host: string | undefined, clientIp: string | undefined, identifier: string, password: string): Promise<SignInSession> {
+  async signIn(host: string | undefined, clientIp: string | undefined, identifier: string, password: string, captchaToken?: string): Promise<SignInSession> {
     const slug = resolveTenantSlug(this.deployment, host);
     const tenantId = slug ? await this.tenantCache.getTenantId(slug) : null;
     const policy = tenantId ? await this.securityPolicy.get(tenantId) : DEFAULT_TENANT_SECURITY_POLICY;
@@ -217,7 +221,7 @@ export class SignInService {
 
     let result: Awaited<ReturnType<SupabaseClient['auth']['signInWithPassword']>>;
     try {
-      result = await this.gotrue().auth.signInWithPassword({ email, password });
+      result = await this.gotrue().auth.signInWithPassword({ email, password, options: captchaToken ? { captchaToken } : undefined });
     } catch (err) {
       this.logger.error(`GoTrue sign-in алдаа: ${(err as Error).message}`);
       throw new AppError(HttpStatus.SERVICE_UNAVAILABLE, 'auth.service_unavailable');
@@ -226,6 +230,7 @@ export class SignInService {
     if (error) {
       if (error.status === 429) throw tooMany();
       if (isAuthServiceDown(error)) throw unavailable();
+      if (isCaptchaFailure(error)) throw captchaFailed();
       if (user && parsed?.kind === 'phone') this.logger.log(`sign-in татгалзсан: утас ${maskPhone(parsed.value)}`);
       await this.recordFailure(lk, identifierLimit);
       if (user) await this.recordAccountFailure(user.authId);
@@ -269,7 +274,14 @@ export class SignInService {
    * Шалгалтын `signInWithPassword` үүсгэсэн нэмэлт session-ыг цэвэрлэнэ (төхөөрөмжийн жагсаалтад «сүнс» гарахгүй).
    * `accessToken` алга (тооцоолоогүй) → admin API (бүх session устна).
    */
-  async changePassword(tenantId: string, authId: string, currentPassword: string, newPassword: string, accessToken: string | null = null): Promise<{ changed: true }> {
+  async changePassword(
+    tenantId: string,
+    authId: string,
+    currentPassword: string,
+    newPassword: string,
+    accessToken: string | null = null,
+    captchaToken?: string,
+  ): Promise<{ changed: true }> {
     if (currentPassword === newPassword) throw new AppError(HttpStatus.BAD_REQUEST, 'auth.password_same');
     const policy = await this.securityPolicy.get(tenantId);
     if (newPassword.length < policy.passwordMinLength) {
@@ -281,10 +293,15 @@ export class SignInService {
     // H1: одоогийн нууц үгийн шалгалт = нууц үг таах өөр зам → ижил түгжээ
     await this.assertAccountNotLocked(authId);
 
-    const check = await this.gotrue().auth.signInWithPassword({ email: rows[0].email, password: currentPassword });
+    const check = await this.gotrue().auth.signInWithPassword({
+      email: rows[0].email,
+      password: currentPassword,
+      options: captchaToken ? { captchaToken } : undefined,
+    });
     if (check.error) {
       if (check.error.status === 429) throw tooMany();
       if (isAuthServiceDown(check.error)) throw unavailable();
+      if (isCaptchaFailure(check.error)) throw captchaFailed();
       await this.recordAccountFailure(authId);
       throw new AppError(HttpStatus.BAD_REQUEST, 'auth.password_current_wrong');
     }

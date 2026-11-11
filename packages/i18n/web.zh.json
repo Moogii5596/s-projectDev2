@@ -1701,5 +1701,8 @@
   "camp.ct.edit_description": "编辑说明",
   "camp.ct.item_description": "工作说明",
   "camp.ct.confirm_delete_price": "删除自 {date} 起生效的价格？",
-  "camp.ct.terms_document_hint": "修改有效$t(term.contract.nom)条款时的变更文件编号"
+  "camp.ct.terms_document_hint": "修改有效$t(term.contract.nom)条款时的变更文件编号",
+  "auth.captcha.loading": "正在加载安全验证…",
+  "auth.captcha.error": "安全验证加载失败。",
+  "auth.captcha.retry": "重试"
 }
