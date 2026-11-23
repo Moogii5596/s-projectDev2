@@ -36,9 +36,9 @@
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "eslint": "^8.57.1",
-    "prettier": "^3.9.10",
+    "prettier": "^3.10.1",
     "supabase": "^2.122.1",
-    "turbo": "^2.11.10",
+    "turbo": "^2.11.13",
     "typescript": "^5.4.5"
   },
   "packageManager": "pnpm@9.12.0",
