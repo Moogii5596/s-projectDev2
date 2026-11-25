@@ -3,8 +3,8 @@ import { CampAuditAction, CampEmployeeStatus, CampMovementDirection } from '@pri
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { UserAdminService } from '../../../auth/user-admin.service';
 import { TenantCacheService } from '../../../auth/tenant-cache.service';
-import { CampAccessService } from '../../camp/common/camp-access.service';
-import { CampAuditService, type AuditEntry } from '../../camp/common/camp-audit.service';
+import { AccessService } from '../../core/platform/access.service';
+import { AuditService, type AuditEntry } from '../../core/platform/audit.service';
 import { isInternalEmail } from '../../../auth/invite-token';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
 import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
@@ -38,7 +38,7 @@ export function terminationUserBlocker(
   if (!user || !user.isActive) return null;
   if (user.id === actorUserId) return 'camp.err.user.1';
   // SEC-009: системийн админы (OWNER / ADMIN) нэвтрэх эрхийг зөвхөн системийн админ хаана
-  if (!actorIsTenantAdmin && CampAccessService.isTenantAdminRole(user.role)) return 'camp.err.access.admin';
+  if (!actorIsTenantAdmin && AccessService.isTenantAdminRole(user.role)) return 'camp.err.access.admin';
   if (user.role === 'OWNER' && activeOwners <= 1) return 'camp.err.user.2';
   return null;
 }
@@ -61,8 +61,8 @@ export function terminationDateError(date: string, today: string): 'camp.err.emp
 export class HrEmployeeLifecycleService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
     private readonly employees: HrEmployeesService,
     private readonly attendanceHooks: HrAttendanceHooks,
     private readonly hooks: HrEmployeeHooks,
@@ -209,7 +209,7 @@ export class HrEmployeeLifecycleService {
       await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_TERMINATE);
       const loaded = await this.loadForRehire(tx, tenantId, campId, id, dto);
       // SEC-009: системийн админы нэвтрэх эрхийг (идэвхжүүлэх, роль цэвэрлэх) зөвхөн системийн админ шилжүүлнэ
-      if (transfer && loaded.old.user && CampAccessService.isTenantAdminRole(loaded.old.user.role)) {
+      if (transfer && loaded.old.user && AccessService.isTenantAdminRole(loaded.old.user.role)) {
         await this.access.requireTenantAdmin(tx, tenantId, authId);
       }
       return loaded;
@@ -379,7 +379,7 @@ export class HrEmployeeLifecycleService {
         rooms,
         history,
         can: {
-          terminate: CampAccessService.has(actor.perms, campId, P.EMPLOYEE_TERMINATE),
+          terminate: AccessService.has(actor.perms, campId, P.EMPLOYEE_TERMINATE),
           // SEC-009 (Блок 6б): «Хэн үзсэн» — зөвхөн системийн админ (OWNER / ADMIN)
           viewPiiLog: actor.perms.isTenantAdmin,
         },

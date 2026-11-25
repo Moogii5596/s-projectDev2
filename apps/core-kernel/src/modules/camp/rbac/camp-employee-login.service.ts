@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
-import { CampAuditService } from '../common/camp-audit.service';
+import { AccessService } from '../../core/platform/access.service';
+import { AuditService } from '../../core/platform/audit.service';
 import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
@@ -24,8 +24,8 @@ const unkey = (k: string) => {
 export class CampEmployeeLoginService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
     private readonly tenantCache: TenantCacheService,
   ) {}
 

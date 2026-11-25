@@ -6,8 +6,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createHash, randomUUID } from 'crypto';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaClient, UserRole } from '@prisma/client';
-import { CampAccessService } from '../src/modules/camp/common/camp-access.service';
-import { CampAuditService } from '../src/modules/camp/common/camp-audit.service';
+import { AccessService } from '../src/modules/core/platform/access.service';
+import { AuditService } from '../src/modules/core/platform/audit.service';
 import { CampRbacService } from '../src/modules/camp/rbac/camp-rbac.service';
 import { CampUserAccessService } from '../src/modules/camp/rbac/camp-user-access.service';
 import { ADMIN_DB_URL, APP_USER_DB_URL } from './helpers/db-urls';
@@ -26,8 +26,8 @@ const cache = {
 describe('v0.2.2 Блок 4 — хэрэглэгч удирдах (integration)', () => {
   const admin = new PrismaClient({ datasources: { db: { url: ADMIN_DB_URL } } });
   const rls = new PrismaClient({ datasources: { db: { url: APP_USER_DB_URL } } });
-  const access = new CampAccessService(cache as never);
-  const audit = new CampAuditService(rls as never, access);
+  const access = new AccessService(cache as never);
+  const audit = new AuditService(rls as never, access);
   const rbac = new CampRbacService(rls as never, access, audit);
   const banned: [string, boolean][] = [];
   const userAdmin = { setBanned: async (authId: string, b: boolean) => void banned.push([authId, b]) };

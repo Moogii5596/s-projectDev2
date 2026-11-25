@@ -9,7 +9,7 @@ import { STORAGE_SERVICE, type StorageService } from '../../../storage/storage.s
 import { decryptFile, detectFileType, encryptFile, resolveFileKey, safeFileName, sha256Hex, type FileKey } from '../../../storage/file-crypto';
 import { CoreTenantModulesService } from '../modules/core-tenant-modules.service';
 import { isTenantModuleId } from '../modules/module-registry';
-import { CampAuditService } from '../../camp/common/camp-audit.service';
+import { AuditService } from '../platform/audit.service';
 import { AttachmentTypeRegistry, type AttachmentTypeHandler } from './attachment-type.registry';
 import type { UploadedFile } from './file-upload';
 import { compileNamePattern, DEFAULT_NAME_PATTERN, parseFileName } from './attachment-name-pattern';
@@ -53,7 +53,7 @@ export class AttachmentsService {
     @Inject(STORAGE_SERVICE) private readonly storage: StorageService,
     private readonly registry: AttachmentTypeRegistry,
     private readonly modules: CoreTenantModulesService,
-    private readonly audit: CampAuditService,
+    private readonly audit: AuditService,
   ) {}
 
   private key(): FileKey {

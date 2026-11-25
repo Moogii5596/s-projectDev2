@@ -133,7 +133,7 @@ tags: [codebase, api, generated]
 
 | Method | Зам | Handler → Service | Эрх | Тэмдэглэл |
 |---|---|---|---|---|
-| GET | `/api/v1/camp/camps/:campId/audit` | `CampAuditController.list` → `CampAuditService.list` | гишүүн | `camp-audit.controller.ts:21` |
+| GET | `/api/v1/camp/camps/:campId/audit` | `CampAuditController.list` → `AuditService.list` | гишүүн | `camp-audit.controller.ts:21` |
 
 ## modules/camp/catalog
 

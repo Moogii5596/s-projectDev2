@@ -2,7 +2,7 @@ import { FeedLinksService, type FeedLinkDto } from './feed-links.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { FeedReactionKind, FeedReportStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../camp/common/camp-access.service';
+import { AccessService } from '../core/platform/access.service';
 import { inTenantTx, type Tx } from '../core/platform/tenant-tx';
 import { withAppErrors } from '../core/platform/db-errors';
 import { PERMISSIONS } from '../core/permissions/permission-registry';
@@ -77,7 +77,7 @@ function visibleWhere(v: FeedViewer) {
 export class FeedService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
     private readonly media: MediaService,
     @Inject(MEDIA_URL_SIGNER) private readonly signer: MediaUrlSigner,
     private readonly links: FeedLinksService,
@@ -86,7 +86,7 @@ export class FeedService {
   /** authId → core_users + модератор эсэх (OWNER/ADMIN = isTenantAdmin → автоматаар) */
   async viewer(tx: Tx, tenantId: string, authId: string): Promise<FeedViewer> {
     const a = await this.access.resolve(tx, tenantId, authId);
-    return { userId: a.userId, isModerator: CampAccessService.hasInAnyCamp(a.perms, PERMISSIONS.FEED_MODERATE) };
+    return { userId: a.userId, isModerator: AccessService.hasInAnyCamp(a.perms, PERMISSIONS.FEED_MODERATE) };
   }
 
   // ── DTO ──────────────────────────────────────────────────

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { CampMaintenanceStatus, CampRoomStatus } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
-import { CampAuditService } from '../common/camp-audit.service';
+import { AccessService } from '../../core/platform/access.service';
+import { AuditService } from '../../core/platform/audit.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
@@ -37,8 +37,8 @@ const ROOM_AUDIT_FIELDS = ['buildingId', 'roomNo', 'floor', 'capacity', 'status'
 export class CampFacilitiesService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
   ) {}
 
   /** v0.2.1 (C-12): байрны төрөл — байгууллагын каталог, идэвхтэй */

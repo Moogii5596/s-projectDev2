@@ -1,11 +1,11 @@
 /**
- * Camp unit тестийн туслах: Prisma transaction mock (model.method → vi.fn автоматаар) + бодит CampAccessService.
+ * Camp unit тестийн туслах: Prisma transaction mock (model.method → vi.fn автоматаар) + бодит AccessService.
  * Хэрэглэгч/эрхийг `setActor`-оор тохируулна.
  */
 import { vi, type Mock } from 'vitest';
 import { UserRole } from '@prisma/client';
-import { CampAccessService } from '../camp-access.service';
-import { CampAuditService } from '../camp-audit.service';
+import { AccessService } from '../../../core/platform/access.service';
+import { AuditService } from '../../../core/platform/audit.service';
 
 type ModelMock = Record<string, Mock>;
 export type TxMock = Record<string, ModelMock> & { $executeRaw: Mock; $queryRaw: Mock };
@@ -79,8 +79,8 @@ export function setup() {
   const tx = createTx();
   const prisma = createPrisma(tx);
   const cache = createCache();
-  const access = new CampAccessService(cache as never);
-  const audit = new CampAuditService(prisma as never, access);
+  const access = new AccessService(cache as never);
+  const audit = new AuditService(prisma as never, access);
   return { tx, prisma, cache, access, audit };
 }
 

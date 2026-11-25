@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { CampAuditAction } from '@prisma/client';
 import { conflict, notFound } from '../../../common/i18n/app-error';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../../camp/common/camp-access.service';
-import { CampAuditService } from '../../camp/common/camp-audit.service';
+import { AccessService } from '../platform/access.service';
+import { AuditService } from '../platform/audit.service';
 import { withAppErrors } from '../platform/db-errors';
 import { inTenantTx } from '../platform/tenant-tx';
 import { CreateSiteDto, QuerySitesDto, UpdateSiteDto } from './core-sites.dto';
@@ -23,8 +23,8 @@ const SITE_FIELDS = ['type', 'code', 'name', 'isActive'] as const;
 export class CoreSitesService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(tenantId: string, authId: string, query: QuerySitesDto) {

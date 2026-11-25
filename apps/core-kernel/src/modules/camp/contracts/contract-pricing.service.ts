@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { fromDbDate, inTenantTx, toDbDate, type Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -32,7 +32,7 @@ export interface ResolvedPrice {
 export class ContractPricingService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
   ) {}
 
   /** Тухайн өдрийн үнэ — гэрээ хүчингүй (21) эсвэл үнэгүй (22) бол алдаа */

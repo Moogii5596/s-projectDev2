@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { FeedModule } from '../feed/feed.module';
-import { CampCommonModule } from '../camp/common/camp-common.module';
+import { PlatformModule } from './platform/platform.module';
 import { CoreOrganizationsController } from './organizations/core-organizations.controller';
 import { CoreOrganizationsService } from './organizations/core-organizations.service';
 import { CoreFeedbackController } from './feedback/core-feedback.controller';
@@ -45,7 +45,7 @@ import { ScheduledJobRegistry } from './scheduler/scheduled-job.registry';
  * Санал хүсэлт (v0.2.3 Блок F, FB-SYS-01a) — `core_feedback`; дэлгэцийн зураг (Блок 5) — `core_feedback_attachments`.
  */
 @Module({
-  imports: [CampCommonModule, StorageModule, FeedModule],
+  imports: [PlatformModule, StorageModule, FeedModule],
   controllers: [CoreOrganizationsController, CoreFeedbackController, ExchangeRatesController, CoreTenantSettingsController, CoreTenantModulesController, CoreCalendarController, NotificationsController, ApprovalsController, CoreSitesController, AttachmentsController, DebugController],
   providers: [
     EnvConfig,

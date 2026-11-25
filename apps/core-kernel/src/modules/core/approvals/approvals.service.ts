@@ -3,8 +3,8 @@ import { CampAuditAction, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { inTenantTx } from '../../../db/tenant-tx';
 import { badRequest, conflict, forbidden, notFound } from '../../../common/i18n/app-error';
-import { CampAccessService } from '../../camp/common/camp-access.service';
-import { CampAuditService } from '../../camp/common/camp-audit.service';
+import { AccessService } from '../platform/access.service';
+import { AuditService } from '../platform/audit.service';
 import { CoreTenantModulesService } from '../modules/core-tenant-modules.service';
 import { isTenantModuleId, TENANT_MODULES } from '../modules/module-registry';
 import { isPermission } from '../permissions/permission-registry';
@@ -42,8 +42,8 @@ export interface ApprovalListItem {
 export class ApprovalsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
     private readonly modules: CoreTenantModulesService,
     private readonly registry: ApprovalEntityRegistry,
     private readonly engine: ApprovalEngineService,

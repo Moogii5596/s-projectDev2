@@ -10,7 +10,7 @@ import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { FeedReportReason, PrismaClient, UserRole } from '@prisma/client';
-import { CampAccessService } from '../src/modules/camp/common/camp-access.service';
+import { AccessService } from '../src/modules/core/platform/access.service';
 import { FeedService } from '../src/modules/feed/feed.service';
 import { FeedReportsService } from '../src/modules/feed/feed-reports.service';
 import { FeedLinksService } from '../src/modules/feed/feed-links.service';
@@ -29,7 +29,7 @@ describe('v0.2.3 Блок 5 — Feed v0 (integration)', () => {
   const signer = new MediaUrlSigner('x'.repeat(32));
   // Эрхийн кэшгүй (тест бүр шинэ эрх)
   const cache = { buildKey: () => 'k', get: async () => null, set: async () => undefined, del: async () => undefined };
-  const access = new CampAccessService(cache as never);
+  const access = new AccessService(cache as never);
   const feed = new FeedService(rls as never, access, media, signer, new FeedLinksService());
   const reports = new FeedReportsService(rls as never, feed, media);
 

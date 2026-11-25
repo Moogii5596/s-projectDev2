@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
-import { CampAuditService } from '../common/camp-audit.service';
+import { AccessService } from '../../core/platform/access.service';
+import { AuditService } from '../../core/platform/audit.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -24,8 +24,8 @@ const ITEM = { id: true, name: true, nameI18n: true, isActive: true, createdAt: 
 export class CampCatalogService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
   ) {}
 
   private async assertUniqueName(tx: Tx, tenantId: string, name: string, exceptId?: string) {

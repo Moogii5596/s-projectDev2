@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CampAssetCondition, CampEmployeeStatus, CampRoomStatus, CampShiftAdjustmentReason, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -60,7 +60,7 @@ export function firstOverCapacityNight(
 export class CampRoomsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
   ) {}
 
   async allocate(tenantId: string, authId: string, campId: string, dto: CreateRoomAllocationDto) {

@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
-import { CampAccessService } from './camp-access.service';
-import { CampAuditService } from './camp-audit.service';
+import { PlatformModule } from '../../core/platform/platform.module';
 import { SiteDataTransferScope } from './site-data-transfer.scope';
 
 /**
- * v0.2.2 H1 — эрх шалгах, аудитын нийтлэг цөм (Кемп, HR, Core хуваалцана; эрхийн код v0.3 хүртэл `camp.*`).
- * HR/Core нь CampModule-ийг import хийхгүй, зөвхөн энэ модулийг — тойрог хамааралгүй.
+ * Ажлын байр (кемп)-ийн хүрээтэй модулиудын (Кемп, HR) хуваалцах хэсэг. Эрх шалгах / audit нь цөмийн
+ * `PlatformModule`-д (C1, 2026-11-25) — энд дахин экспортолно; нэмэлт: импорт/экспортын хүрээ (CORE-10).
  */
 @Module({
-  providers: [CampAccessService, CampAuditService, SiteDataTransferScope],
-  exports: [CampAccessService, CampAuditService, SiteDataTransferScope],
+  imports: [PlatformModule],
+  providers: [SiteDataTransferScope],
+  exports: [PlatformModule, SiteDataTransferScope],
 })
 export class CampCommonModule {}

@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { CampAuditAction } from '@prisma/client';
 import { badRequest, notFound } from '../../../common/i18n/app-error';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../../camp/common/camp-access.service';
-import { CampAuditService } from '../../camp/common/camp-audit.service';
+import { AccessService } from '../platform/access.service';
+import { AuditService } from '../platform/audit.service';
 import { inTenantTx } from '../platform/tenant-tx';
 import { CreateCalendarHolidayDto, CreateHolidayCalendarDto, UpdateHolidayCalendarDto } from './core-calendar.dto';
 
@@ -31,8 +31,8 @@ const HOLIDAY_SELECT = {
 export class CoreCalendarService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(tenantId: string, authId: string) {

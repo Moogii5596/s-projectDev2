@@ -53,6 +53,19 @@ module.exports = {
       },
     },
     {
+      // ADR-009 (C1, CORE-01): backend цөм бизнес модулиас хамаарахгүй. Feed = цөмийн боломж (AGENTS.md §1б) тул зөвшөөрнө.
+      files: ['apps/core-kernel/src/modules/core/**/*.ts'],
+      excludedFiles: ['**/*.spec.ts', '**/*.test.ts'],
+      rules: {
+        'no-restricted-imports': ['error', {
+          patterns: [{
+            group: ['**/modules/camp/**', '**/modules/hr/**', '../camp/**', '../../camp/**', '../hr/**', '../../hr/**'],
+            message: 'ADR-009: цөм (modules/core) Кемп / HR модулиас import хийхгүй — нийтлэг зүйлийг core/platform-д, модулийн зүйлийг registry / интерфейсээр.',
+          }],
+        }],
+      },
+    },
+    {
       files: ['apps/web-shell/src/core/**/*.{ts,tsx}'],
       rules: {
         'no-restricted-imports': ['error', { patterns: ['**/modules/**'] }],

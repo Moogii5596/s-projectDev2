@@ -12,7 +12,7 @@ import {
   parseTableRows,
   parseTableXlsx,
 } from '../../../common/xlsx/table-spec';
-import { CampAuditService } from '../../camp/common/camp-audit.service';
+import { AuditService } from '../platform/audit.service';
 import { inTenantTx, Tx } from '../platform/tenant-tx';
 import { withAppErrors } from '../platform/db-errors';
 import type { DataImportHandler, DataTransferScope, PlannedRow } from './data-transfer.types';
@@ -60,7 +60,7 @@ const storable = (rows: ParsedTableRow[]) => rows.map(({ row, values, errors, is
 export class DataTransferService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly audit: CampAuditService,
+    private readonly audit: AuditService,
     private readonly transfers: DataTransferRegistry,
   ) {}
 

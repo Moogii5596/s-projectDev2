@@ -1,7 +1,7 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { CampMealOrderStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { fromDbDate, fromDbTime, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -94,7 +94,7 @@ const MEAL_NOTIFICATION_TYPES = [
 export class MealOrdersService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
     private readonly approvals: ApprovalEngineService,
     registry: ApprovalEntityRegistry,
     @Optional() private readonly notifications?: NotificationService,
@@ -562,8 +562,8 @@ export class MealOrdersService {
   private async begin(tx: Tx, tenantId: string, authId: string, campId: string, write: boolean) {
     const actorSet = await this.access.requireAccess(tx, tenantId, authId, campId);
     await getCampOr404(tx, tenantId, campId);
-    const canOrder = CampAccessService.has(actorSet.perms, campId, P.MEAL_ORDER);
-    const canAccept = CampAccessService.has(actorSet.perms, campId, P.MEAL_ACCEPT);
+    const canOrder = AccessService.has(actorSet.perms, campId, P.MEAL_ORDER);
+    const canAccept = AccessService.has(actorSet.perms, campId, P.MEAL_ACCEPT);
     if (write) await this.access.require(tx, tenantId, authId, campId, [P.MEAL_ORDER, P.MEAL_ACCEPT]);
     const actor: Actor = { userId: actorSet.userId, canOrder, canAccept };
     return { actor, settings: await loadMealOrderSettings(tx, tenantId, campId) };

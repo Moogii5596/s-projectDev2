@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { CampAuditAction, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
-import { CampAccessService } from './camp-access.service';
-import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
+import { AccessService } from './access.service';
+import { inTenantTx, Tx } from './tenant-tx';
 import { badRequest } from '../../../common/i18n/app-error';
 
 /** v0.2.0-д түүх хөтлөх бичлэгүүд (v0.2.x-д нэмэгдэнэ) */
-export const CAMP_AUDIT_ENTITIES = [
+export const AUDIT_ENTITIES = [
   'employee', 'department', 'crew', 'building', 'room', 'position_setting',
   // v0.2.2 Блок 1 — эрх (tenant түвшин, campId = олголтын кемп эсвэл null)
   'role', 'role_apply', 'user_role', 'user_permission', 'position_template',
@@ -28,7 +28,7 @@ export const CAMP_AUDIT_ENTITIES = [
   // #28 (H-13)
   'user_login_lock',
 ] as const;
-type CampAuditEntity = (typeof CAMP_AUDIT_ENTITIES)[number];
+type CampAuditEntity = (typeof AUDIT_ENTITIES)[number];
 
 export type AuditScalar = string | number | boolean | null;
 export type AuditDiff = Record<string, { from: AuditScalar; to: AuditScalar }>;
@@ -119,10 +119,10 @@ export interface AuditQuery {
  * бичлэг амжилтгүй бол түүх ч rollback.
  */
 @Injectable()
-export class CampAuditService {
+export class AuditService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
   ) {}
 
   async record(tx: Tx, entry: AuditEntry): Promise<void> {

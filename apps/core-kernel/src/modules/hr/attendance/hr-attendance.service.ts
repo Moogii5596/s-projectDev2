@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CampImportStatus, CampMovementDirection, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../../camp/common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
 import { fromDbDate, inTenantTx, toDbDate } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -52,7 +52,7 @@ const rowErrors = (rows: PlannedRow[]) =>
 export class HrAttendanceService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
     private readonly hooks: HrAttendanceHooks,
     private readonly employees: HrEmployeesService,
   ) {}
