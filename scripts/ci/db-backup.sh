@@ -22,6 +22,10 @@ esac
 command -v pg_dump >/dev/null || { echo "::error::pg_dump алга" >&2; exit 1; }
 command -v age >/dev/null || { echo "::error::age алга" >&2; exit 1; }
 
+# dump/татахаас өмнө түлхүүрийг шалгана — буруу бол эндээ тодорхой алдаатай зогсоно
+. "$(dirname "${BASH_SOURCE[0]}")/age-recipient.sh"
+AGE_RECIPIENT="$(resolve_age_recipient "$AGE_RECIPIENT")"
+
 mkdir -p "$out_dir"
 ts="$(date -u +%Y%m%dT%H%M%SZ)"
 out="$out_dir/$label-$ts.dump.age"

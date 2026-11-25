@@ -2,7 +2,7 @@
 title: "Үүлэн deploy — staging, production (Supabase Cloud + Render + Vercel + Upstash)"
 type: "Guide"
 status: "Active"
-last_updated: 2026-11-12
+last_updated: 2026-11-25
 tags: [deploy, hosting, runbook, v0.2.5]
 ---
 
@@ -123,10 +123,12 @@ tag vX.Y.Z (A0) → PO: Actions → «Deploy production» → Run workflow (tag)
 
 ## 11. Нөөц ба сэргээлт (H5, #19)
 **Өдөр бүр 02:00 (УБ)** + гараар (Actions → **Backup** → Run workflow, орчин сонгоно) — `.github/workflows/backup.yml`:
-`production`, `staging` тус бүрт: DB (`scripts/ci/db-backup.sh`: public, auth, auth_guard, supabase_migrations) + R2 файл (`scripts/ci/r2-backup.sh`, tar) → **age** шифрлэлт → Google Drive `s-project-backups/daily/<орчин>/` → 30 хоногоос хуучныг устгана (`manual/`-д хүрэхгүй). Амжилтгүй → issue (`backup-failed`, P1) + GitHub-ийн имэйл. Өдөр бүрийн холболт Supabase Free-г 7 хоногийн зогсолтоос сэрээнэ.
+`production`, `staging` тус бүрт: DB (`scripts/ci/db-backup.sh`: public, auth, auth_guard, supabase_migrations) + R2 файл (`scripts/ci/r2-backup.sh`, tar) → **age** шифрлэлт → Google Drive `s-project-backups/daily/<орчин>/` → 30 хоногоос хуучныг устгана (`manual/`-д хүрэхгүй). Амжилтгүй → нэг issue (`backup-failed`, P1; давтагдвал тэр issue-д comment) + GitHub-ийн имэйл; дараагийн амжилттай run issue-г өөрөө хаана. Өдөр бүрийн холболт Supabase Free-г 7 хоногийн зогсолтоос сэрээнэ.
 
 **Нэг удаагийн тохиргоо (PO):**
 1. GitHub Secrets: `PROD_DB_URL`, `STAGING_DB_URL`, `BACKUP_AGE_RECIPIENT` (✅ 2026-11-11).
+   - `BACKUP_AGE_RECIPIENT` = **зөвхөн нийтийн түлхүүр**: `age-keygen -y s-project-age-key.txt`-ийн гаралт (`age1…`, 62 тэмдэгт, нэг мөр). Хувийн түлхүүр (`AGE-SECRET-KEY-…`) болон түлхүүрийн файлыг бүтнээр нь Secrets-д хийхгүй.
+   - ⚠️ 2026-11-12…25: нөөц өдөр бүр унасан (#43–#57) — `age: unknown recipient type` = secret-ийн утга `age1…` хэлбэргүй. `scripts/ci/age-recipient.sh` одоо dump эхлэхээс өмнө шалгаж (хоосон зай, CR, хашилт, бүтэн файл → цэвэрлэнэ + warning; танигдахгүй бол урт, төрлийг хэлж зогсоно). Засвар: secret-ийг дээрх утгаар солиод **Backup → Run workflow**.
 2. **Google Drive** (нөөцийн аккаунт): өөрийн компьютер дээр `rclone config` → New remote нэр **`gdrive`**, type `drive`, scope `drive.file` (зөвхөн rclone-ийн үүсгэсэн файл), browser-оор нэвтэрнэ → `rclone config show gdrive` гаралтыг (`[gdrive]`-ээс эхэлсэн бүтэн хэсэг) secret **`RCLONE_CONFIG_GDRIVE`**-д. Тохируулаагүй бол нөөц Actions artifact (5 хоног) болж хадгалагдана (workflow шар).
 3. **R2** (H2 #17-ийн дараа): Cloudflare → R2 → Manage API tokens → **Object Read only**, хоёр bucket → `R2_BACKUP_ACCESS_KEY_ID`, `R2_BACKUP_SECRET_ACCESS_KEY`; `R2_ENDPOINT` = `https://<account_id>.r2.cloudflarestorage.com`. Алга бол файлын нөөцийг алгасна (warning).
 

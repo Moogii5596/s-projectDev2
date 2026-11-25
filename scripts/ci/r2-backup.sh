@@ -21,6 +21,10 @@ case "$label" in *[!A-Za-z0-9._-]*) echo "::error::label-д зөвхөн A-Z a-z
 command -v rclone >/dev/null || { echo "::error::rclone алга" >&2; exit 1; }
 command -v age >/dev/null || { echo "::error::age алга" >&2; exit 1; }
 
+# dump/татахаас өмнө түлхүүрийг шалгана — буруу бол эндээ тодорхой алдаатай зогсоно
+. "$(dirname "${BASH_SOURCE[0]}")/age-recipient.sh"
+AGE_RECIPIENT="$(resolve_age_recipient "$AGE_RECIPIENT")"
+
 export RCLONE_CONFIG_R2_TYPE=s3 RCLONE_CONFIG_R2_PROVIDER=Cloudflare RCLONE_CONFIG_R2_ENDPOINT="$R2_ENDPOINT" \
        RCLONE_CONFIG_R2_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
        RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true
