@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { CAMP_PERMISSIONS } from '../../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../../core/permissions/permission-registry';
 import { setActor, setup } from '../../../camp/common/tests/camp-test-utils';
 import { HrEmployeesService } from '../hr-employees.service';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const CAMP = { id: 'c1', code: 'C1', name: 'Кемп 1', isActive: true };
 const emp = (id: string, over: Record<string, unknown> = {}) => ({
   id, employeeCode: id.toUpperCase(), fullName: id, position: null, positionId: null, mealLocationId: null, mealsIncluded: null,

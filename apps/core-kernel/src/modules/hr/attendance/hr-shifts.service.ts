@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CampEmployeeStatus, CampShiftAdjustmentReason } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
-import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { fromDbDate, inTenantTx, toDbDate } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404, getRosterSettings } from '../../camp/common/camp-lookup';
@@ -12,7 +12,7 @@ import { assertRange } from './range';
 import { CalendarQueryDto, CreateShiftAdjustmentsDto, RangeQueryDto } from './hr-attendance.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const MAX_ADJ_DAYS = 366;
 const MAX_CALENDAR_DAYS = 31;
 

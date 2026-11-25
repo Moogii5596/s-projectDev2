@@ -1,6 +1,6 @@
 import { CampDataImportType } from '@prisma/client';
 import { CellValue, TableSpec } from '../../../common/xlsx/table-spec';
-import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { ApplyCtx, DataImportHandler, has, PlannedRow, upper } from './import-types';
 
 /**
@@ -27,7 +27,7 @@ const SELECT = { id: true, code: true, name: true, isActive: true } as const;
 export const departmentsHandler: DataImportHandler = {
   type: CampDataImportType.DEPARTMENTS,
   spec: DEPARTMENTS_SPEC,
-  permission: CAMP_PERMISSIONS.MASTER_MANAGE,
+  permission: PERMISSIONS.MASTER_MANAGE,
 
   async plan(tx, ctx, rows) {
     const [depts, activeCounts] = await Promise.all([

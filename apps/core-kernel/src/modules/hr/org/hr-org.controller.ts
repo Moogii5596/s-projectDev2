@@ -3,7 +3,7 @@ import type { FastifyRequest } from 'fastify';
 import { reqUser } from '../../core/platform/request';
 import { HrDepartmentsService } from './hr-departments.service';
 import { HrCrewsService } from './hr-crews.service';
-import { QueryActiveOnlyDto } from '../../camp/common/common.dto';
+import { QueryActiveOnlyDto } from '../../core/platform/common.dto';
 import { CreateCrewDto, CreateDepartmentDto, SetShiftPatternDto, UpdateCrewDto, UpdateDepartmentDto } from './hr-org.dto';
 
 const uuid = () => new ParseUUIDPipe();

@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { CampRbacService } from '../camp-rbac.service';
-import { CAMP_PERMISSIONS, CAMP_PERMISSION_AVAILABILITY, CAMP_PERMISSION_CODES, campPermissionAvailableIn } from '../../common/camp-permissions';
+import { PERMISSIONS, PERMISSION_AVAILABILITY, PERMISSION_CODES, permissionAvailableIn } from '../../../core/permissions/permission-registry';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const role = (over: Record<string, unknown> = {}) => ({
   id: 'r1',
   name: 'Нягтлан',
@@ -237,17 +237,17 @@ describe('CampRbacService (Шат 2.2)', () => {
 
 describe('Эрхийн V1/V2 хүрээ (D8, 2026-10-09)', () => {
   it('каталогийн код бүр тэмдэглэгээтэй; V2 = бохир ус/хог, зардлын тайлан (яг 3)', () => {
-    expect(Object.keys(CAMP_PERMISSION_AVAILABILITY).sort()).toEqual([...CAMP_PERMISSION_CODES].sort());
-    const v2 = CAMP_PERMISSION_CODES.filter((c) => CAMP_PERMISSION_AVAILABILITY[c] === 'v2').sort();
+    expect(Object.keys(PERMISSION_AVAILABILITY).sort()).toEqual([...PERMISSION_CODES].sort());
+    const v2 = PERMISSION_CODES.filter((c) => PERMISSION_AVAILABILITY[c] === 'v2').sort();
     expect(v2).toEqual(
       [P.HAUL_CREATE, P.HAUL_APPROVE, P.REPORT_VIEW].sort(),
     );
     // Шат 2–4-ийн эрхүүд V1 (засвар хаах = сэлбэгийн зардал — гэрээнээс хамааралгүй)
     for (const c of [P.SETTINGS_MANAGE, P.MASTER_MANAGE, P.EMPLOYEE_MANAGE, P.MOVEMENT_IMPORT, P.SHIFT_ADJUST,
       P.ROOM_MANAGE, P.ASSET_MANAGE, P.MEAL_ORDER, P.MEAL_ACCEPT, P.CONTRACT_MANAGE, P.MAINTENANCE_CREATE, P.MAINTENANCE_PARTS, P.MAINTENANCE_CLOSE]) {
-      expect(campPermissionAvailableIn(c)).toBe('v1');
+      expect(permissionAvailableIn(c)).toBe('v1');
     }
-    expect(campPermissionAvailableIn('camp.unknown.code')).toBe('v2');
+    expect(permissionAvailableIn('camp.unknown.code')).toBe('v2');
   });
 
   it('listPermissions: DB-ийн мөр бүрт availableIn нэмнэ (DB-ээс юу ч хасахгүй)', async () => {

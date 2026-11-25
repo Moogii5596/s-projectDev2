@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { fromDbDate, inTenantTx, toDbDate, type Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404 } from '../common/camp-lookup';
@@ -35,7 +35,7 @@ import type {
   UpdateContractItemDto,
 } from './contracts.dto';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 
 const PRICE_SELECT = {
   id: true,

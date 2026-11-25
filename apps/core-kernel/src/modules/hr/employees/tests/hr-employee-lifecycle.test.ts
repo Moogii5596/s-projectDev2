@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { CampAuditAction, CampEmployeeStatus, UserRole } from '@prisma/client';
-import { CAMP_PERMISSIONS } from '../../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../../core/permissions/permission-registry';
 import { expectTenantTx, setActor, setup } from '../../../camp/common/tests/camp-test-utils';
 import { MESSAGES } from '../../../../common/i18n/messages';
 import { HrEmployeesService } from '../hr-employees.service';
@@ -12,7 +12,7 @@ import { HrEmployeeHooks } from '../employee-hooks';
 import { HrEmployeeLifecycleService, terminationDateError, terminationUserBlocker } from '../hr-employee-lifecycle.service';
 import { todayUb } from '../../../core/platform/date';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const TODAY = todayUb();
 const USER = { id: 'u-emp', authId: 'auth-emp', role: UserRole.REQUESTER, isActive: true, fullName: 'Бат', email: 'u@sino.login.invalid' };
 const emp = (over: Record<string, unknown> = {}) => ({

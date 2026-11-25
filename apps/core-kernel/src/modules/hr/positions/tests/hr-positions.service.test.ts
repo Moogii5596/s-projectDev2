@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { normalizeName } from '../../../../common/name-normalization';
-import { CAMP_PERMISSIONS } from '../../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../../core/permissions/permission-registry';
 import { expectTenantTx, setActor, setup } from '../../../camp/common/tests/camp-test-utils';
 import { HrPositionsService, resolvePositionByName } from '../hr-positions.service';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 
 describe('v0.2.1 каталог — нэрийн нормчлол / resolvePositionByName', () => {
   it('зай, том/жижиг үсэг үл хамаарна', () => {

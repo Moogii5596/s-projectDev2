@@ -1,6 +1,6 @@
 import { CampDataImportType, CampEmployeeStatus, Prisma } from '@prisma/client';
 import { CellValue, TableSpec } from '../../../common/xlsx/table-spec';
-import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { Tx } from '../../core/platform/tenant-tx';
 import { EMPLOYEE_AUDIT_FIELDS } from '../employees/hr-employees.service';
 import { normalizeName } from '../../../common/name-normalization';
@@ -101,7 +101,7 @@ async function loadRefs(tx: Tx, ctx: ImportCtx, codes: string[]) {
 export const employeesHandler: DataImportHandler = {
   type: CampDataImportType.EMPLOYEES,
   spec: EMPLOYEES_SPEC,
-  permission: CAMP_PERMISSIONS.EMPLOYEE_MANAGE,
+  permission: PERMISSIONS.EMPLOYEE_MANAGE,
 
   async plan(tx, ctx, rows) {
     const codes = rows.map((r) => r.values.employeeCode).filter((c): c is string => typeof c === 'string' && c !== '');

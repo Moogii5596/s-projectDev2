@@ -2,7 +2,7 @@ import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsEnum, IsInt, IsNotEmp
 import { Transform, Type } from 'class-transformer';
 import { CampShiftType } from '@prisma/client';
 import { ISO_DATE, trim, trimOrNull } from '../../core/platform/dto.util';
-import { CatalogNameI18nDto, CODE, CODE_MSG } from '../../camp/common/common.dto';
+import { CatalogNameI18nDto, CODE, CODE_MSG } from '../../core/platform/common.dto';
 
 // ── Хэлтэс + ээлжийн загвар ──────────────────────────────────
 export class ShiftSegmentDto {

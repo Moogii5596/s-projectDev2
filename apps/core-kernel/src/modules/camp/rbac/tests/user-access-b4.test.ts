@@ -7,11 +7,11 @@ import { UserRole } from '@prisma/client';
 import { CampRbacService } from '../camp-rbac.service';
 import { CampUserAccessService } from '../camp-user-access.service';
 import { buildUserRows, deactivateBlocker, inviteStatus } from '../user-list';
-import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
+import { PERMISSIONS } from '../../../core/permissions/permission-registry';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
 import { MESSAGES } from '../../../../common/i18n/messages';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const NOW = new Date('2026-10-16T04:00:00Z');
 const tenantCache = { invalidateMember: vi.fn().mockResolvedValue(undefined) };
 const d = (iso: string) => new Date(iso);

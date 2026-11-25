@@ -6,7 +6,7 @@ import { TenantCacheService } from '../../../auth/tenant-cache.service';
 import { AccessService } from '../../core/platform/access.service';
 import { AuditService, type AuditEntry } from '../../core/platform/audit.service';
 import { isInternalEmail } from '../../../auth/invite-token';
-import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { isRealIsoDate, todayUb } from '../../core/platform/date';
@@ -22,7 +22,7 @@ import { normalizeExtraPhones, phonesOut, replaceExtraPhones, resolveNames } fro
 import { applyIssues, clearedBy, readIssues, toJson } from './data-issues';
 import { QueryPiiViewsDto, RehireEmployeeDto, TerminateEmployeeDto } from './hr-employees.dto';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const TX = { timeout: 30_000, maxWait: 10_000 };
 /** B5-Q6: нэг хүн × нэг ажилтан — энэ хугацаанд дахин нээвэл шинэ мөр бичихгүй */
 const PII_DEDUP_MINUTES = 15;

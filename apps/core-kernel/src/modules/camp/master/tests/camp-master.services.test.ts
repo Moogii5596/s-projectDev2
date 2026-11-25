@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CampEmployeeStatus, CampOrgType, CampShiftType, UserRole } from '@prisma/client';
-import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
+import { PERMISSIONS } from '../../../core/permissions/permission-registry';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
 import { CampsService } from '../camps.service';
 import { CampFacilitiesService } from '../camp-facilities.service';
@@ -11,7 +11,7 @@ import { HrCrewsService } from '../../../hr/org/hr-crews.service';
 import { HrEmployeesService } from '../../../hr/employees/hr-employees.service';
 import { encodeCursor } from '../../../../common/utils/cursor';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const CAMP = { id: 'c1', code: 'C1', name: 'Кемп 1', isActive: true };
 
 describe('CampsService (Шат 2.4)', () => {

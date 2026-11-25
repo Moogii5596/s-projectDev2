@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CampAssetCondition, CampMaintenanceStatus as S, CampPartSource, CampRoomStatus, Prisma, UserRole } from '@prisma/client';
-import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
+import { PERMISSIONS } from '../../../core/permissions/permission-registry';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
 import { todayUb } from '../../../core/platform/date';
 import { CampMaintenanceService, costPreview } from '../camp-maintenance.service';
 import { formatRequestNo, requestNoPrefix, TRANSITIONS } from '../maintenance-flow';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const CAMP = { id: 'c1', code: 'C1', name: 'Кемп 1', isActive: true };
 const D = (v: string | number) => new Prisma.Decimal(v);
 

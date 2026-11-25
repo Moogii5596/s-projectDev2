@@ -49,7 +49,7 @@ async create(tenantId: string, authId: string, campId: string, dto: CreateXDto) 
 ```
 
 - Унших endpoint → `access.requireAccess(...)` (гишүүнчлэл); бичих → `access.require(..., P.CODE)`.
-- Шинэ эрх: migration INSERT `camp_permissions` + `camp-permissions.ts` + (хэрэгтэй бол) `camp_seed_default_roles` → [[05_Permissions_Catalog]].
+- Шинэ эрх: migration INSERT `core_permissions` + `core/permissions/permission-registry.ts` + (хэрэгтэй бол) `camp_seed_default_roles` → [[05_Permissions_Catalog]].
 - Шинэ public route → `@SkipAuth()`; шинэ модуль → `camp.module.ts` (эсвэл `app.module.ts`)-д бүртгэ.
 - Алдааны код: `badRequest('camp.err.<area>.<n>')` + `messages.ts`-д mn/en/zh.
 

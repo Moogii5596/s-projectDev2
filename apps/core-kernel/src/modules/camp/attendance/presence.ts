@@ -3,7 +3,7 @@ import { addDays } from '../../core/platform/date';
 import { fullDayMeals, MealSlot, movementMealSlots } from '../../hr/attendance/meal-rules';
 import { RosterSettings } from '../../hr/attendance/roster';
 import { AdjustmentRange, PatternSegment, resolveShift, ShiftSource } from '../../hr/attendance/shift-resolver';
-import type { CatalogNameTranslations } from '../common/catalog-name-i18n';
+import type { CatalogNameTranslations } from '../../core/platform/catalog-name-i18n';
 
 interface PresenceStay {
   startDate: string;

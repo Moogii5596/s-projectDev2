@@ -8,7 +8,7 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { AccessService } from '../src/modules/core/platform/access.service';
 import { AuditService } from '../src/modules/core/platform/audit.service';
-import { CAMP_PERMISSIONS as P } from '../src/modules/camp/common/camp-permissions';
+import { PERMISSIONS as P } from '../src/modules/core/permissions/permission-registry';
 import { CampRbacService } from '../src/modules/camp/rbac/camp-rbac.service';
 import { CampEmployeeLoginService } from '../src/modules/camp/rbac/camp-employee-login.service';
 import { SignInService } from '../src/auth/sign-in.service';

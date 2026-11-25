@@ -6,7 +6,7 @@ import { assertDate } from '../../hr/attendance/range';
 import type { AttendanceStayStore, NewStay, StayRow } from '../../hr/attendance/stay-store';
 import { StayShiftGroup } from './camp-attendance.dto';
 import { loadPresenceEmployees } from './camp-presence.service';
-import { readCatalogNameI18n } from '../common/catalog-name-i18n';
+import { readCatalogNameI18n } from '../../core/platform/catalog-name-i18n';
 import { employeeDay } from './presence';
 
 /**

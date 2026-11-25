@@ -2,18 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
 import { AuditService } from '../../core/platform/audit.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { assertMealLocation, getCampOr404, getRosterSettings } from '../common/camp-lookup';
 import { normalizeShiftPattern } from '../../hr/org/shift-pattern';
 import { conflict, notFound } from '../../../common/i18n/app-error';
 import { normalizeName } from '../../../common/name-normalization';
-import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../common/common.dto';
+import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../../core/platform/common.dto';
 import { UpsertPositionSettingDto } from './camp-catalog.dto';
-import { mergeCatalogNameI18n } from '../common/catalog-name-i18n';
+import { mergeCatalogNameI18n } from '../../core/platform/catalog-name-i18n';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const ITEM = { id: true, name: true, nameI18n: true, isActive: true, createdAt: true, updatedAt: true } as const;
 /**
  * v0.2.1 — байгууллагын каталог: байрны төрөл (C-12, Q4). Албан тушаал → HR (`HrPositionsService`, v0.2.2 H1).

@@ -3,7 +3,7 @@ import { CampAssetCondition, CampRoomStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
 import { AccessService } from '../../core/platform/access.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404 } from '../common/camp-lookup';
@@ -20,9 +20,9 @@ import {
   WriteOffAssetDto,
 } from './camp-assets.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
-import { mergeCatalogNameI18n } from '../common/catalog-name-i18n';
+import { mergeCatalogNameI18n } from '../../core/platform/catalog-name-i18n';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 
 const CATEGORY_SELECT = { id: true, name: true, nameI18n: true, isActive: true, createdAt: true, updatedAt: true } as const;
 const ASSET_SELECT = {

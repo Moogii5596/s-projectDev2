@@ -2,7 +2,7 @@ import { Injectable, Optional } from '@nestjs/common';
 import { CampMealOrderStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { fromDbDate, fromDbTime, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { assertMealLocation, getCampOr404 } from '../common/camp-lookup';
@@ -38,7 +38,7 @@ import { ApprovalEngineService } from '../../core/approvals/approval-engine.serv
 import { ApprovalEntityRegistry, type ApprovalDecisionContext } from '../../core/approvals/approval-entity.registry';
 import type { AddMealExtraDto, MealReasonDto, PutMealTemplateDto, QueryMealOrdersDto, RequestMealChangeDto, UpsertMealOrderDto } from './meal-orders.dto';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const MAX_RANGE_DAYS = 92;
 
 type Actor = { userId: string; canOrder: boolean; canAccept: boolean };

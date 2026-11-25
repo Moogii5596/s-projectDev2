@@ -2,7 +2,7 @@ import { IsBoolean, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Mat
 import { Transform, Type } from 'class-transformer';
 import { CampRoomStatus } from '@prisma/client';
 import { trim, trimOrNull } from '../../core/platform/dto.util';
-import { CODE, CODE_MSG } from '../common/common.dto';
+import { CODE, CODE_MSG } from '../../core/platform/common.dto';
 
 // ── Кемп ─────────────────────────────────────────────────────
 export class CreateCampDto {

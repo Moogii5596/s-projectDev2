@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CampAssetCondition, CampEmployeeStatus, CampRoomStatus, CampShiftAdjustmentReason, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
@@ -13,7 +13,7 @@ import { OPEN_STATUSES } from '../maintenance/maintenance-flow';
 import { CreateRoomAllocationDto, EndRoomAllocationDto, QueryAllocationsDto } from './camp-attendance.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 /** Багтаамжийг шалгах цонх — нэг бүтэн ростерын мөчлөг (28 хоног) */
 export const CAPACITY_WINDOW_NIGHTS = 28;
 

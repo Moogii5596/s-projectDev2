@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { inTenantTx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404 } from '../common/camp-lookup';
 import { CreateCampDto, UpdateCampDto } from './camp-master.dto';
-import { QueryActiveOnlyDto } from '../common/common.dto';
+import { QueryActiveOnlyDto } from '../../core/platform/common.dto';
 import { conflict, notFound } from '../../../common/i18n/app-error';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const CAMP_SELECT = { id: true, code: true, name: true, location: true, isActive: true, createdAt: true, updatedAt: true } as const;
 
 /**

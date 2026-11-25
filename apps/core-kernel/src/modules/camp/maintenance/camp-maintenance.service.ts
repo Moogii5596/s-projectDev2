@@ -12,7 +12,7 @@ import { CampAssetCondition, CampMaintenanceStatus, CampPartSource, CampRoomStat
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
 import { AccessService } from '../../core/platform/access.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { statusText } from '../common/camp-i18n';
@@ -39,7 +39,7 @@ import {
 } from './maintenance-flow';
 import { badRequest, conflict, notFound, forbidden } from '../../../common/i18n/app-error';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const DEFAULT_VAT_RATE = 10;
 
 const REQUEST_SELECT = {
