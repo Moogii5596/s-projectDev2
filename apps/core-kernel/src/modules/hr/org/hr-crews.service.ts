@@ -3,8 +3,8 @@ import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.serv
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CampAuditService } from '../../camp/common/camp-audit.service';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
-import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../camp/common/camp-tx';
-import { withCampErrors } from '../../camp/common/camp-errors';
+import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { weekdayText } from '../../camp/common/camp-i18n';
 import { getCampOr404, getRosterSettings } from '../../camp/common/camp-lookup';
 import { CreateCrewDto, UpdateCrewDto } from './hr-org.dto';
@@ -53,7 +53,7 @@ export class HrCrewsService {
   }
 
   async create(tenantId: string, authId: string, campId: string, dto: CreateCrewDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         await getCampOr404(tx, tenantId, campId);
@@ -74,7 +74,7 @@ export class HrCrewsService {
   }
 
   async update(tenantId: string, authId: string, campId: string, id: string, dto: UpdateCrewDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         const crew = await tx.hrCrew.findFirst({ where: { id, tenantId, campId }, select: CREW_SELECT });

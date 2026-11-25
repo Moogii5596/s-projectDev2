@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { reqUser } from '../../camp/common/camp-request';
+import { reqUser } from '../../core/platform/request';
 import { HrPositionsService } from './hr-positions.service';
 import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../../camp/common/common.dto';
 

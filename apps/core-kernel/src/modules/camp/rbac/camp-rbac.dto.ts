@@ -1,7 +1,7 @@
 import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CampTemplateScope } from '@prisma/client';
-import { trim, trimOrNull } from '../common/camp-dto.util';
+import { trim, trimOrNull } from '../../core/platform/dto.util';
 
 export class CreateCampRoleDto {
   @Transform(trim) @IsString() @IsNotEmpty({ message: 'name шаардлагатай' }) @MaxLength(100)

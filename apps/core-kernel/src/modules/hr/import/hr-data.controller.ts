@@ -3,7 +3,7 @@ import { IsBoolean, IsOptional, Matches } from 'class-validator';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { badRequest, payloadTooLarge } from '../../../common/i18n/app-error';
 import { TABLE_MAX_ROWS } from '../../../common/xlsx/table-spec';
-import { reqUser } from '../../camp/common/camp-request';
+import { reqUser } from '../../core/platform/request';
 import { DataTransferService, type ImportInput } from '../../core/import-export/data-transfer.service';
 
 const uuid = () => new ParseUUIDPipe();

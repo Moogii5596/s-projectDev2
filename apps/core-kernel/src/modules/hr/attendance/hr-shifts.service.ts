@@ -3,10 +3,10 @@ import { CampEmployeeStatus, CampShiftAdjustmentReason } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
-import { fromDbDate, inTenantTx, toDbDate } from '../../camp/common/camp-tx';
-import { withCampErrors } from '../../camp/common/camp-errors';
+import { fromDbDate, inTenantTx, toDbDate } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404, getRosterSettings } from '../../camp/common/camp-lookup';
-import { coversDay, eachDay } from '../../camp/common/camp-date';
+import { coversDay, eachDay } from '../../core/platform/date';
 import { resolveShift } from './shift-resolver';
 import { assertRange } from './range';
 import { CalendarQueryDto, CreateShiftAdjustmentsDto, RangeQueryDto } from './hr-attendance.dto';
@@ -48,7 +48,7 @@ export class HrShiftsService {
   async createAdjustments(tenantId: string, authId: string, campId: string, dto: CreateShiftAdjustmentsDto) {
     assertRange(dto.startDate, dto.endDate, MAX_ADJ_DAYS);
     if (dto.reasonType === CampShiftAdjustmentReason.OTHER && !dto.reason) throw badRequest('camp.err.shifts.1');
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorId = await this.access.require(tx, tenantId, authId, campId, P.SHIFT_ADJUST);
         await getCampOr404(tx, tenantId, campId);

@@ -4,8 +4,8 @@ import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.serv
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CampAuditService } from '../../camp/common/camp-audit.service';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
-import { inTenantTx, Tx } from '../../camp/common/camp-tx';
-import { withCampErrors } from '../../camp/common/camp-errors';
+import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { assertMealLocation, getCampOr404, getRosterSettings } from '../../camp/common/camp-lookup';
 import { assertPosition, resolvePositionByName } from '../positions/hr-positions.service';
 import { effectiveEmployee, loadPositionDefaults } from '../../camp/common/position-defaults';
@@ -184,7 +184,7 @@ export class HrEmployeesService {
   }
 
   async create(tenantId: string, authId: string, campId: string, dto: CreateEmployeeDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_MANAGE);
         await getCampOr404(tx, tenantId, campId);
@@ -235,7 +235,7 @@ export class HrEmployeesService {
   }
 
   async update(tenantId: string, authId: string, campId: string, id: string, dto: UpdateEmployeeDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.EMPLOYEE_MANAGE);
         const e = await tx.hrEmployee.findFirst({ where: { id, tenantId, campId }, select: EMPLOYEE_AUDIT_SELECT });
@@ -310,7 +310,7 @@ export class HrEmployeesService {
 
   /** v0.2.1 (Д-2) — олон ажилтанд нэг дор (≤ 500): хоол авах / ажлын хоолны байршил / албан тушаал. Нэг transaction, audit. */
   async bulkUpdate(tenantId: string, authId: string, campId: string, dto: BulkEmployeesDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(
         this.prisma,
         tenantId,

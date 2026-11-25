@@ -3,8 +3,8 @@ import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { fromDbDate, inTenantTx, toDbDate, type Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
+import { fromDbDate, inTenantTx, toDbDate, type Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404 } from '../common/camp-lookup';
 import { badRequest, notFound } from '../../../common/i18n/app-error';
 import { billableOn, convertAmounts, invertRate, lineAmounts, monthStart, paymentRate, priceAt } from './contract-pricing';
@@ -129,7 +129,7 @@ export class ContractPricingService {
   }
 
   async quote(tenantId: string, authId: string, campId: string, contractId: string, q: QuoteDto): Promise<PriceQuote> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.CONTRACT_MANAGE);
         await getCampOr404(tx, tenantId, campId);

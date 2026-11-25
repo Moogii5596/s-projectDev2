@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Put, Query, Req, Res, StreamableFile } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { IsString, IsUUID, Matches, MaxLength } from 'class-validator';
-import { reqUser } from '../../camp/common/camp-request';
+import { reqUser } from '../platform/request';
 import { notFound } from '../../../common/i18n/app-error';
 import { AttachmentsService, MAX_BULK_ATTACHMENT_FILES } from './attachments.service';
 import { AttachmentTypeRegistry } from './attachment-type.registry';

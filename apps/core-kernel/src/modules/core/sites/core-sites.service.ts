@@ -4,8 +4,8 @@ import { conflict, notFound } from '../../../common/i18n/app-error';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CampAuditService } from '../../camp/common/camp-audit.service';
-import { withCampErrors } from '../../camp/common/camp-errors';
-import { inTenantTx } from '../../camp/common/camp-tx';
+import { withAppErrors } from '../platform/db-errors';
+import { inTenantTx } from '../platform/tenant-tx';
 import { CreateSiteDto, QuerySitesDto, UpdateSiteDto } from './core-sites.dto';
 
 const SITE_SELECT = {
@@ -39,7 +39,7 @@ export class CoreSitesService {
   }
 
   async create(tenantId: string, authId: string, dto: CreateSiteDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         const duplicate = await tx.coreSite.findFirst({ where: { tenantId, code: dto.code }, select: { id: true } });
@@ -73,7 +73,7 @@ export class CoreSitesService {
   }
 
   async update(tenantId: string, authId: string, id: string, dto: UpdateSiteDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         const before = await tx.coreSite.findFirst({ where: { tenantId, id }, select: SITE_SELECT });

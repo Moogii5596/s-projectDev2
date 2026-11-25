@@ -3,8 +3,8 @@ import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.serv
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CampAuditService } from '../../camp/common/camp-audit.service';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
-import { inTenantTx, Tx } from '../../camp/common/camp-tx';
-import { withCampErrors } from '../../camp/common/camp-errors';
+import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404, getRosterSettings } from '../../camp/common/camp-lookup';
 import { CreateDepartmentDto, SetShiftPatternDto, UpdateDepartmentDto } from './hr-org.dto';
 import { QueryActiveOnlyDto } from '../../camp/common/common.dto';
@@ -92,7 +92,7 @@ export class HrDepartmentsService {
   }
 
   async create(tenantId: string, authId: string, campId: string, dto: CreateDepartmentDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         await getCampOr404(tx, tenantId, campId);
@@ -112,7 +112,7 @@ export class HrDepartmentsService {
 
   /** v0.2.1 (Q1): хоолны байршил хэлтсээс хасагдсан — `mealLocationId` (хуучин клиент) үл тоогдоно */
   async update(tenantId: string, authId: string, campId: string, id: string, dto: UpdateDepartmentDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         const before = await this.getDept(tx, tenantId, campId, id);
@@ -138,7 +138,7 @@ export class HrDepartmentsService {
   }
 
   async setShiftPattern(tenantId: string, authId: string, campId: string, id: string, dto: SetShiftPatternDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         const before = await this.getDept(tx, tenantId, campId, id);

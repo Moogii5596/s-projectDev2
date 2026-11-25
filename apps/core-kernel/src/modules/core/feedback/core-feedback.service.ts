@@ -5,8 +5,8 @@ import { NotificationService } from '../notifications/notification.service';
 import type { CoreFeedback, UserRole } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { inTenantTx, Tx } from '../../camp/common/camp-tx';
-import { withCampErrors } from '../../camp/common/camp-errors';
+import { inTenantTx, Tx } from '../platform/tenant-tx';
+import { withAppErrors } from '../platform/db-errors';
 import { badRequest, forbidden, notFound } from '../../../common/i18n/app-error';
 import { APP_VERSION } from '../../../config/app-version';
 import {
@@ -137,7 +137,7 @@ export class CoreFeedbackService {
 
   /** @param fromPostId v0.2.4 FEED-05: постоос (нэг transaction-д feed_links) */
   async create(tenantId: string, authId: string, dto: CreateFeedbackDto, fromPostId?: string): Promise<FeedbackItemDto> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const a = await this.actor(tx, tenantId, authId);
         if (fromPostId) {
@@ -163,7 +163,7 @@ export class CoreFeedbackService {
   }
 
   async update(tenantId: string, authId: string, id: string, dto: UpdateFeedbackDto): Promise<FeedbackItemDto> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const a = await this.actor(tx, tenantId, authId);
         const cur = await this.load(tx, tenantId, id, a);
@@ -183,7 +183,7 @@ export class CoreFeedbackService {
   }
 
   async setStatus(tenantId: string, authId: string, id: string, dto: SetFeedbackStatusDto): Promise<FeedbackItemDto> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const a = await this.actor(tx, tenantId, authId);
         if (!a.isAdmin) throw forbidden('core.err.feedback.admin_only');
@@ -221,7 +221,7 @@ export class CoreFeedbackService {
   }
 
   async remove(tenantId: string, authId: string, id: string): Promise<{ id: string }> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const a = await this.actor(tx, tenantId, authId);
         const cur = await this.load(tx, tenantId, id, a);
@@ -238,7 +238,7 @@ export class CoreFeedbackService {
 
   /** «+1» (on = true) / буцаах. Давхар дарах нь алдаагүй (idempotent); тоо = votes-ийн бодит тоо (нэг tx). */
   async vote(tenantId: string, authId: string, id: string, on: boolean): Promise<FeedbackItemDto> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const a = await this.actor(tx, tenantId, authId);
         const cur = await this.load(tx, tenantId, id, a);

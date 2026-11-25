@@ -1,6 +1,6 @@
 import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { HHMM, toBool, trim } from '../common/camp-dto.util';
+import { HHMM, toBool, trim } from '../../core/platform/dto.util';
 import { CatalogNameI18nDto } from '../common/common.dto';
 
 /** PUT — бүх талбар заавал (бүтэн тохиргоо) */

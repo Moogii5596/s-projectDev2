@@ -4,10 +4,10 @@ import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.serv
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { inTenantTx, toDbDate, Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
+import { inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404 } from '../common/camp-lookup';
-import { isRealIsoDate, todayUb } from '../common/camp-date';
+import { isRealIsoDate, todayUb } from '../../core/platform/date';
 import { OPEN_STATUSES } from '../maintenance/maintenance-flow';
 import {
   CreateAssetCategoryDto,
@@ -90,7 +90,7 @@ export class CampAssetsService {
   }
 
   async createCategory(tenantId: string, authId: string, dto: CreateAssetCategoryDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireInAnyCamp(tx, tenantId, authId, P.ASSET_MANAGE);
         await this.assertCategoryNameFree(tx, tenantId, dto.name);
@@ -103,7 +103,7 @@ export class CampAssetsService {
   }
 
   async updateCategory(tenantId: string, authId: string, id: string, dto: UpdateAssetCategoryDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireInAnyCamp(tx, tenantId, authId, P.ASSET_MANAGE);
         const c = await tx.campAssetCategory.findFirst({ where: { id, tenantId }, select: { id: true, name: true, nameI18n: true } });
@@ -231,7 +231,7 @@ export class CampAssetsService {
   }
 
   async create(tenantId: string, authId: string, campId: string, dto: CreateAssetDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const userId = await this.access.require(tx, tenantId, authId, campId, P.ASSET_MANAGE);
         await getCampOr404(tx, tenantId, campId);
@@ -275,7 +275,7 @@ export class CampAssetsService {
   }
 
   async update(tenantId: string, authId: string, campId: string, id: string, dto: UpdateAssetDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.ASSET_MANAGE);
         const a = await this.getAssetOr404(tx, tenantId, campId, id);
@@ -302,7 +302,7 @@ export class CampAssetsService {
   }
 
   async move(tenantId: string, authId: string, campId: string, id: string, dto: MoveAssetDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const userId = await this.access.require(tx, tenantId, authId, campId, P.ASSET_MANAGE);
         const a = await this.getAssetOr404(tx, tenantId, campId, id);
@@ -346,7 +346,7 @@ export class CampAssetsService {
    * Нээлттэй (OPEN/IN_PROGRESS) засвартай бол 409 — эхлээд засварыг дуусгах/цуцлах.
    */
   async writeOff(tenantId: string, authId: string, campId: string, id: string, dto: WriteOffAssetDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const userId = await this.access.require(tx, tenantId, authId, campId, P.ASSET_MANAGE);
         const a = await this.getAssetOr404(tx, tenantId, campId, id);

@@ -2,7 +2,7 @@
 title: "Тестийн зураглал"
 type: "Guide"
 status: "Active"
-last_updated: 2026-11-11
+last_updated: 2026-11-25
 tags: [codebase, testing, generated]
 ---
 
@@ -12,13 +12,13 @@ tags: [codebase, testing, generated]
 
 Орчин, fixture: [[02_Local_Supabase_Docker_Windows]] · тест бичих дүрэм: [[08_Patterns]] · сургамж: [[lessons_learned]] (TEST-*). Тестийн тоо = `it(`/`test(` мөрийн тоо (ойролцоо).
 
-## Integration (бодит PG + RLS) — 42 файл, ~341 тест
+## Integration (бодит PG + RLS) — 42 файл, ~342 тест
 
 Команд: `pnpm test:integration`
 
 | Файл | Тест | describe |
 |---|---|---|
-| `core-kernel/test/auth-login-lock.integration.spec.ts` | 5 | H1 — бүртгэлийн түгжээ |
+| `core-kernel/test/auth-login-lock.integration.spec.ts` | 6 | H1 — бүртгэлийн түгжээ |
 | `core-kernel/test/auth.integration.spec.ts` | 6 | AuthService Integration |
 | `core-kernel/test/budget.integration.spec.ts` | 12 | 🧾 Budget API · 🔗 MR ↔ Budget (transaction дотор) · 🔒 RLS leakage (app_user, NOBYPASSRLS) |
 | `core-kernel/test/camp-assets-maintenance.integration.spec.ts` | 15 | 🪑 Үндсэн хөрөнгө · 🔧 Засвар · 🪑🔧 Хөрөнгө ба засвар · 🔒 RLS |
@@ -61,7 +61,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 | `core-kernel/test/v024-core-services.integration.spec.ts` | 5 | v0.2.4 core services (integration) |
 
-## Unit — core-kernel — 122 файл, ~907 тест
+## Unit — core-kernel — 123 файл, ~914 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -74,7 +74,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/auth/invite-token.spec.ts` | 5 | invite-token (v0.2.2 Блок 3) · auth-mail (D-04) |
 | `core-kernel/src/auth/invite.service.spec.ts` | 9 | InviteService (v0.2.2 Блок 3) |
 | `core-kernel/src/auth/login-identifier.spec.ts` | 4 | login-identifier (v0.2.2 D-13) |
-| `core-kernel/src/auth/login-lock.service.spec.ts` | 3 | LoginLockService (v0.2.5 H1 #16) |
+| `core-kernel/src/auth/login-lock.service.spec.ts` | 4 | LoginLockService (v0.2.5 H1 #16) |
 | `core-kernel/src/auth/pilot-auth-config.spec.ts` | 7 | пилотын GoTrue тохиргоо (deploy/pilot/supabase/config.toml) |
 | `core-kernel/src/auth/session-revoke.service.spec.ts` | 11 | SessionRevokeService (v0.2.3 Блок 4б, PIL-15) |
 | `core-kernel/src/auth/sign-in.service.spec.ts` | 27 | SignInService (v0.2.2 D-10) |
@@ -127,6 +127,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/camp/rbac/tests/camp-rbac.service.test.ts` | 25 | CampRbacService (Шат 2.2) · Эрхийн V1/V2 хүрээ (D8, 2026-10-09) · CampRbacService — v0.2.2 Блок 1 (загвар хэрэгжүүлэх, шууд эрх) |
 | `core-kernel/src/modules/camp/rbac/tests/template-diff.test.ts` | 2 | template-diff (v0.2.2 D-09) |
 | `core-kernel/src/modules/camp/rbac/tests/user-access-b4.test.ts` | 16 | user-list (цэвэр) · CampRbacService.listUsers (B4-Q3) · CampUserAccessService.setActive (B4-Q2) · SEC-009 (Блок 6б) — хэрэглэгч удирдах = зөвхөн системийн админ (OWNER / ADMIN) |
+| `core-kernel/src/modules/camp/rbac/tests/user-login-lock.service.test.ts` | 6 | UserLoginLockService (#28) |
 | `core-kernel/src/modules/camp/settings/tests/camp-settings.service.test.ts` | 12 | CampSettingsService (Шат 2.3) |
 | `core-kernel/src/modules/core/approvals/approval-engine.service.spec.ts` | 9 | ApprovalEngineService (WF-06) · approval-steps (WF-06) |
 | `core-kernel/src/modules/core/approvals/approval-entity.registry.spec.ts` | 3 | ApprovalEntityRegistry |
@@ -239,7 +240,7 @@ tags: [codebase, testing, generated]
 | `web-shell/src/modules/report/lib/tests/report.test.ts` | 5 | report lib |
 | `web-shell/src/release-notes/tests/release-notes.test.ts` | 7 | release notes — функц · release notes — өгөгдөл (notes.ts) |
 
-## E2E (Playwright) — 19 файл, ~91 тест
+## E2E (Playwright) — 19 файл, ~92 тест
 
 Команд: `pnpm test:e2e`
 
@@ -253,7 +254,7 @@ tags: [codebase, testing, generated]
 | `e2e/tests/camp-v020.spec.ts` | 8 |  |
 | `e2e/tests/camp-v021.spec.ts` | 7 |  |
 | `e2e/tests/camp-v022-terminate.spec.ts` | 5 |  |
-| `e2e/tests/camp-v022-users.spec.ts` | 5 |  |
+| `e2e/tests/camp-v022-users.spec.ts` | 6 |  |
 | `e2e/tests/camp-v023-shiftchange.spec.ts` | 5 |  |
 | `e2e/tests/camp.spec.ts` | 6 |  |
 | `e2e/tests/core-v023-access.spec.ts` | 3 |  |

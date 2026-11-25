@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { reqUser } from '../../camp/common/camp-request';
+import { reqUser } from '../../core/platform/request';
 import { HrEmployeesService } from './hr-employees.service';
 import { HrEmployeeLifecycleService } from './hr-employee-lifecycle.service';
 import { BulkEmployeesDto, CreateEmployeeDto, QueryEmployeesDto, QueryPiiViewsDto, RehireEmployeeDto, TerminateEmployeeDto, UpdateEmployeeDto } from './hr-employees.dto';

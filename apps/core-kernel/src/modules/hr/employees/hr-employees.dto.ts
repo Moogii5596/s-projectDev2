@@ -1,7 +1,7 @@
 import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CampEmployeeStatus, CampTerminationReason } from '@prisma/client';
-import { toBool, trim, trimOrNull } from '../../camp/common/camp-dto.util';
+import { toBool, trim, trimOrNull } from '../../core/platform/dto.util';
 import { compactPhone, EXTRA_PHONES_MAX, PHONE_RE } from './employee-names';
 
 const compactPhones = ({ value }: { value: unknown }) => (Array.isArray(value) ? value.map((v) => (typeof v === 'string' ? compactPhone(v) : v)) : value);

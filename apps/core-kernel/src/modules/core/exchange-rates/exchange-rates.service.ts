@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../../camp/common/camp-access.service';
-import { fromDbDate, inTenantTx, toDbDate } from '../../camp/common/camp-tx';
-import { withCampErrors } from '../../camp/common/camp-errors';
+import { fromDbDate, inTenantTx, toDbDate } from '../platform/tenant-tx';
+import { withAppErrors } from '../platform/db-errors';
 import { badRequest, notFound } from '../../../common/i18n/app-error';
 import { PERMISSIONS } from '../permissions/permission-registry';
 import type { ExchangeRateView, QueryExchangeRatesDto, UpsertExchangeRateDto } from './exchange-rates.dto';
@@ -33,7 +33,7 @@ export class ExchangeRatesService {
   ) {}
 
   async list(tenantId: string, authId: string, q: QueryExchangeRatesDto): Promise<ExchangeRateView[]> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireInAnyCamp(tx, tenantId, authId, PERMISSIONS.EXCHANGE_RATE_MANAGE);
         const rows = await tx.coreExchangeRate.findMany({
@@ -52,7 +52,7 @@ export class ExchangeRatesService {
   }
 
   async upsert(tenantId: string, authId: string, dto: UpsertExchangeRateDto): Promise<ExchangeRateView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const userId = await this.access.requireInAnyCamp(tx, tenantId, authId, PERMISSIONS.EXCHANGE_RATE_MANAGE);
         if (dto.baseCurrency === dto.quoteCurrency) throw badRequest('core.err.fx.1');
@@ -69,7 +69,7 @@ export class ExchangeRatesService {
   }
 
   async remove(tenantId: string, authId: string, id: string): Promise<void> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireInAnyCamp(tx, tenantId, authId, PERMISSIONS.EXCHANGE_RATE_MANAGE);
         const { count } = await tx.coreExchangeRate.deleteMany({ where: { id, tenantId } });

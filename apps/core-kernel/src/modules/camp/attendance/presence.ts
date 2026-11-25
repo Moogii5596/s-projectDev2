@@ -1,5 +1,5 @@
 import { CampMealType, CampShiftType } from '@prisma/client';
-import { addDays } from '../common/camp-date';
+import { addDays } from '../../core/platform/date';
 import { fullDayMeals, MealSlot, movementMealSlots } from '../../hr/attendance/meal-rules';
 import { RosterSettings } from '../../hr/attendance/roster';
 import { AdjustmentRange, PatternSegment, resolveShift, ShiftSource } from '../../hr/attendance/shift-resolver';

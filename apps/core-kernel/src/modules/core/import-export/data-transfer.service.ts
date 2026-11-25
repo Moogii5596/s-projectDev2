@@ -15,8 +15,8 @@ import {
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CampAuditService } from '../../camp/common/camp-audit.service';
 import { getCampOr404 } from '../../camp/common/camp-lookup';
-import { inTenantTx, Tx } from '../../camp/common/camp-tx';
-import { withCampErrors } from '../../camp/common/camp-errors';
+import { inTenantTx, Tx } from '../platform/tenant-tx';
+import { withAppErrors } from '../platform/db-errors';
 import type { DataImportHandler, PlannedRow } from './data-transfer.types';
 import { DataTransferRegistry } from './data-transfer.registry';
 
@@ -92,7 +92,7 @@ export class DataTransferService {
   async preview(tenantId: string, authId: string, campId: string, type: string, input: ImportInput) {
     const h = this.handlerFor(type);
     const parsed = input.kind === 'xlsx' ? await parseTableXlsx(input.buffer, h.spec) : parseTableRows(input.rows, h.spec);
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorId = await this.access.require(tx, tenantId, authId, campId, h.permission);
         await getCampOr404(tx, tenantId, campId);
@@ -145,7 +145,7 @@ export class DataTransferService {
   }
 
   async confirm(tenantId: string, authId: string, campId: string, id: string, skipErrors = false) {
-    const result = await withCampErrors(() =>
+    const result = await withAppErrors(() =>
       inTenantTx(
         this.prisma,
         tenantId,

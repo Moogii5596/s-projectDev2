@@ -51,7 +51,7 @@ HTTP (Caddy → :3000 / пилот :3100)
          · must_change_password → зөвхөн @AllowPasswordChangeRequired route
      └─ TenantRateLimitGuard (APP_GUARD) · TenantContextInterceptor · DrainingInterceptor (gateway/) · I18nInterceptor (хэл, байгууллагын орчуулга) — бүгд app.module.ts-д глобал
          └─ Controller (зөвхөн params/DTO, reqUser(req)) → Service
-             └─ inTenantTx (db/tenant-tx.ts; Кемп — modules/camp/common/camp-tx.ts, ижил нэртэй) — set_config('app.tenant_id') + бүх query НЭГ tx (RULE-03/04)
+             └─ inTenantTx (db/tenant-tx.ts — ганц хэрэгжүүлэлт; модулиуд modules/core/platform/tenant-tx.ts-ээр) — set_config('app.tenant_id') + бүх query НЭГ tx (RULE-03/04)
                  └─ Prisma → DATABASE_URL = app_user (NOBYPASSRLS) → RLS policy `tenant_isolation_*`
                  └─ Outbox мөр (event-bus) → OutboxPoller → Redis publish / DLQ
 ```

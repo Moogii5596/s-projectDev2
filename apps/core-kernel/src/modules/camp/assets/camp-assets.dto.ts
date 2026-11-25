@@ -1,7 +1,7 @@
 import { IsBoolean, IsEnum, IsInt, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CampAssetCondition } from '@prisma/client';
-import { ISO_DATE, toBool, trim, trimOrNull } from '../common/camp-dto.util';
+import { ISO_DATE, toBool, trim, trimOrNull } from '../../core/platform/dto.util';
 import { CatalogNameI18nDto } from '../common/common.dto';
 
 export class CreateAssetCategoryDto {

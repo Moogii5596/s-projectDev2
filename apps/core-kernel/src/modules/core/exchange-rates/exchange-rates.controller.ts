@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Put, Query, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { reqUser } from '../../camp/common/camp-request';
+import { reqUser } from '../platform/request';
 import { ExchangeRatesService } from './exchange-rates.service';
 import { QueryExchangeRatesDto, UpsertExchangeRateDto } from './exchange-rates.dto';
 

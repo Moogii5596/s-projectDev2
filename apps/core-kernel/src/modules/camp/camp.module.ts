@@ -12,6 +12,7 @@ import { CoreRbacController } from './rbac/core-rbac.controller';
 import { CampRbacService } from './rbac/camp-rbac.service';
 import { CampEmployeeLoginService } from './rbac/camp-employee-login.service';
 import { CampUserAccessService } from './rbac/camp-user-access.service';
+import { UserLoginLockService } from './rbac/user-login-lock.service';
 import { CampSettingsController } from './settings/camp-settings.controller';
 import { CampSettingsService } from './settings/camp-settings.service';
 import { MealOrdersController } from './meal-orders/meal-orders.controller';
@@ -65,6 +66,7 @@ import { CampCatalogService } from './catalog/camp-catalog.service';
     CampRbacService,
     CampEmployeeLoginService,
     CampUserAccessService,
+    UserLoginLockService,
     CampSettingsService,
     MealOrdersService,
     ContractCatalogService,

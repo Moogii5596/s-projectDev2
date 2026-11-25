@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { CampMealType, CampMovementDirection, CampShiftType } from '@prisma/client';
-import { addDays, diffDays, eachDay, isRealIsoDate, weekday } from '../../common/camp-date';
+import { addDays, diffDays, eachDay, isRealIsoDate, weekday } from '../../../core/platform/date';
 import { classifyMovement, expectedNight, rosterDayNo } from '../../../hr/attendance/roster';
 import { resolveShift, uniformShift } from '../../../hr/attendance/shift-resolver';
 import { fullDayMeals, movementMealSlots } from '../../../hr/attendance/meal-rules';

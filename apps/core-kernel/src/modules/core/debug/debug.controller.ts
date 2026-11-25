@@ -2,7 +2,7 @@ import { Controller, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } fr
 import type { FastifyRequest } from 'fastify';
 import { IsIn, IsInt, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { reqUser } from '../../camp/common/camp-request';
+import { reqUser } from '../platform/request';
 import { DebugAccessGuard } from './debug-access.guard';
 import { DebugService } from './debug.service';
 
@@ -45,18 +45,6 @@ export class DebugController {
   @Get('permissions/:userId')
   permissions(@Req() req: FastifyRequest, @Param('userId', new ParseUUIDPipe()) userId: string) {
     return this.debug.permissions(reqUser(req).tenantId, userId);
-  }
-
-  /** v0.2.5 H1 (#16): сонгосон хэрэглэгчийн нэвтрэлтийн түгжээ */
-  @Get('users/:userId/login-lock')
-  loginLock(@Req() req: FastifyRequest, @Param('userId', new ParseUUIDPipe()) userId: string) {
-    return this.debug.loginLock(reqUser(req).tenantId, userId);
-  }
-
-  @Post('actions/users/:userId/unlock')
-  unlockLogin(@Req() req: FastifyRequest, @Param('userId', new ParseUUIDPipe()) userId: string) {
-    const u = reqUser(req);
-    return this.debug.unlockLogin(u.tenantId, u.id, userId);
   }
 
   @Get('logs')

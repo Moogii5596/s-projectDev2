@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
-import { fromDbDate, inTenantTx, toDbDate, Tx } from '../common/camp-tx';
+import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
-import { addDays } from '../common/camp-date';
+import { addDays } from '../../core/platform/date';
 import { computePresence, PresenceEmployee, PresenceResult } from './presence';
 import { assertDate } from '../../hr/attendance/range';
 import { readCatalogNameI18n } from '../common/catalog-name-i18n';

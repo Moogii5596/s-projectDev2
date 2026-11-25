@@ -1,7 +1,7 @@
 import { IsBoolean, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CampMaintenancePriority, CampMaintenanceStatus, CampPartSource } from '@prisma/client';
-import { trim, trimOrNull } from '../common/camp-dto.util';
+import { trim, trimOrNull } from '../../core/platform/dto.util';
 
 export class CreateMaintenanceDto {
   /** Өрөө ба/эсвэл хөрөнгө (хоёулаа байхгүй бол 400). Зөвхөн хөрөнгө өгвөл түүний одоогийн өрөө авна */

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Tx } from '../../camp/common/camp-tx';
+import type { Tx } from '../../core/platform/tenant-tx';
 
 /** Ажилтны кемпэд байх хугацаа (stay) — ирцээс (ирсэн/явсан) үүснэ, хадгалалт нь Кемпийнх (`camp_stays`) */
 export interface StayRow {

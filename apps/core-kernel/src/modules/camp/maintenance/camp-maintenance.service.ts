@@ -13,12 +13,12 @@ import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.serv
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { inTenantTx, toDbDate, Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
+import { inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { statusText } from '../common/camp-i18n';
 import { t } from '../../../common/i18n/translate';
 import { getCampOr404 } from '../common/camp-lookup';
-import { todayUb } from '../common/camp-date';
+import { todayUb } from '../../core/platform/date';
 import { computeVat, sumVat, vatView } from '../costs/vat';
 import { writeMaintenancePartCosts } from '../costs/cost-entry-writer';
 import {
@@ -326,7 +326,7 @@ export class CampMaintenanceService {
    * @param fromPostId v0.2.4 FEED-03: Feed-ийн постоос үүсгэх — пост харагдах, холбоосгүйг шалгаж нэг transaction-д `feed_links`
    */
   async create(tenantId: string, authId: string, campId: string, dto: CreateMaintenanceDto, fromPostId?: string) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const userId = await this.access.require(tx, tenantId, authId, campId, P.MAINTENANCE_CREATE);
         if (fromPostId) {
@@ -382,7 +382,7 @@ export class CampMaintenanceService {
 
   /** Гарчиг/тайлбар/зэрэглэл — OPEN/IN_PROGRESS үед; үүсгэсэн хүн эсвэл close эрхтэй */
   async update(tenantId: string, authId: string, campId: string, id: string, dto: UpdateMaintenanceDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const r = await this.loadCoreAuthorized(tx, tenantId, authId, campId, id, [P.MAINTENANCE_CLOSE], true);
         if (!DETAILS_EDITABLE.includes(r.status)) {
@@ -426,7 +426,7 @@ export class CampMaintenanceService {
 
   async transition(tenantId: string, authId: string, campId: string, id: string, action: MaintenanceAction, dto?: CancelMaintenanceDto) {
     const rule = TRANSITIONS[action];
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const r = await this.loadCoreAuthorized(tx, tenantId, authId, campId, id, rule.perms, rule.reporterMay);
         if (!rule.from.includes(r.status)) {
@@ -494,7 +494,7 @@ export class CampMaintenanceService {
   }
 
   async addPart(tenantId: string, authId: string, campId: string, id: string, dto: CreatePartDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const { userId } = await this.loadForParts(tx, tenantId, authId, campId, id);
         CampMaintenanceService.assertPriced(dto.source, dto.unitPrice);
@@ -518,7 +518,7 @@ export class CampMaintenanceService {
   }
 
   async updatePart(tenantId: string, authId: string, campId: string, id: string, partId: string, dto: UpdatePartDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.loadForParts(tx, tenantId, authId, campId, id);
         const part = await tx.campMaintenancePart.findFirst({ where: { id: partId, tenantId, requestId: id }, select: PART_SELECT });
@@ -544,7 +544,7 @@ export class CampMaintenanceService {
   }
 
   async removePart(tenantId: string, authId: string, campId: string, id: string, partId: string) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.loadForParts(tx, tenantId, authId, campId, id);
         const res = await tx.campMaintenancePart.deleteMany({ where: { id: partId, tenantId, requestId: id } });

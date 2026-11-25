@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { addDays } from '../common/camp-date';
-import { fromDbDate, toDbDate, Tx } from '../common/camp-tx';
+import { addDays } from '../../core/platform/date';
+import { fromDbDate, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import type { EmployeeSitePort, ProfileRoomAllocation } from '../../hr/employees/employee-hooks';
 
 /**

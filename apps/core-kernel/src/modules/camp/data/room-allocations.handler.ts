@@ -5,8 +5,8 @@ import { upper } from '../../core/import-export/data-transfer.types';
 import { CAPACITY_WINDOW_NIGHTS, firstOverCapacityNight, type OccupantPlan } from '../attendance/camp-rooms.service';
 import { getRosterSettings } from '../common/camp-lookup';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { todayUb } from '../common/camp-date';
-import { fromDbDate, toDbDate } from '../common/camp-tx';
+import { todayUb } from '../../core/platform/date';
+import { fromDbDate, toDbDate } from '../../core/platform/tenant-tx';
 
 /**
  * v0.2.3 Блок D (S6) — Өрөөнд байрлуулалт (ТҮҮХТЭЙ): ажилтны код + байр + өрөө + эхэлсэн/дууссан огноо.

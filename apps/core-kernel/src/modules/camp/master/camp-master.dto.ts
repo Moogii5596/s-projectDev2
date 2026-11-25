@@ -1,7 +1,7 @@
 import { IsBoolean, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CampRoomStatus } from '@prisma/client';
-import { trim, trimOrNull } from '../common/camp-dto.util';
+import { trim, trimOrNull } from '../../core/platform/dto.util';
 import { CODE, CODE_MSG } from '../common/common.dto';
 
 // ── Кемп ─────────────────────────────────────────────────────

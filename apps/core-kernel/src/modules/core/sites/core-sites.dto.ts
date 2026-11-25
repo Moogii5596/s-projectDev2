@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
-import { toBool, trim } from '../../camp/common/camp-dto.util';
+import { toBool, trim } from '../platform/dto.util';
 
 /** Кемпийн кодын дүрэмтэй ижил (CODE, camp/common) + 40 тэмдэгт — DB check `core_sites_code_check` */
 export const SITE_CODE = /^[A-Za-z0-9._-]{1,40}$/;

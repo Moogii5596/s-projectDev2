@@ -1,7 +1,7 @@
 import { CampEmployeeStatus, CampMovementDirection } from '@prisma/client';
 import { getRosterSettings } from '../../camp/common/camp-lookup';
-import { fromDbDate, toDbDate } from '../../camp/common/camp-tx';
-import type { Tx } from '../../camp/common/camp-tx';
+import { fromDbDate, toDbDate } from '../../core/platform/tenant-tx';
+import type { Tx } from '../../core/platform/tenant-tx';
 import type { ParsedRow } from './import-parser';
 import { rosterDayNo, RosterSettings } from './roster';
 import type { AttendanceStayStore } from './stay-store';

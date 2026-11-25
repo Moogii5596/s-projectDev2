@@ -17,6 +17,7 @@ const user = (o: Partial<CampUser> = {}): CampUser => ({
   employee: { id: 'e1', employeeCode: 'E001', fullName: 'Бат', campId: 'c1', campCode: 'K1' },
   invite: null,
   lastSignInAt: null,
+  loginLock: { locked: false, lockedUntil: null, failedCount: 0 },
   ...o,
 })
 

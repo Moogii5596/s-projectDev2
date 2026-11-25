@@ -1,4 +1,4 @@
-import { addDays } from '../common/camp-date';
+import { addDays } from '../../core/platform/date';
 import type {
   DefaultFillMode,
   MealOrderAction,

@@ -25,6 +25,9 @@ export interface LoginLockStatus {
   failedCount: number;
 }
 
+/** Мөргүй бүртгэл = түгжээгүй */
+export const NO_LOGIN_LOCK: LoginLockStatus = Object.freeze({ locked: false, lockedUntil: null, failedCount: 0 });
+
 const intEnv = (raw: string | undefined, fallback: number, min: number, max: number): number => {
   const n = Number(raw);
   return Number.isInteger(n) && n >= min && n <= max ? n : fallback;
@@ -109,22 +112,32 @@ export class LoginLockService {
     }
   }
 
-  /** Debug: төлөв */
+  /** Хэрэглэгчийн удирдлага (#28): нэг бүртгэлийн төлөв */
   async status(authId: string): Promise<LoginLockStatus> {
-    const rows = await this.system.$queryRaw<{ failed_count: number; window_start: Date; locked_until: Date | null }[]>`
-      SELECT failed_count, window_start, locked_until FROM auth_guard.password_failures WHERE user_id = ${authId}::uuid`;
-    const r = rows[0];
-    if (!r) return { locked: false, lockedUntil: null, failedCount: 0 };
-    const locked = !!r.locked_until && r.locked_until.getTime() > Date.now();
-    const windowOpen = r.window_start.getTime() > Date.now() - this.rules.windowMinutes * 60_000;
-    return {
-      locked,
-      lockedUntil: locked ? r.locked_until!.toISOString() : null,
-      failedCount: locked || (windowOpen && !r.locked_until) ? r.failed_count : 0,
-    };
+    return (await this.statuses([authId])).get(authId) ?? NO_LOGIN_LOCK;
   }
 
-  /** Debug: түгжээ тайлах (тоолуур устгана). Буцаах = өмнө нь түгжээтэй байсан эсэх */
+  /** Олон бүртгэлийн төлөв нэг query-ээр (хэрэглэгчийн жагсаалт). Мөргүй бүртгэл map-д орохгүй = түгжээгүй */
+  async statuses(authIds: string[]): Promise<Map<string, LoginLockStatus>> {
+    const out = new Map<string, LoginLockStatus>();
+    if (authIds.length === 0) return out;
+    const rows = await this.system.$queryRaw<{ user_id: string; failed_count: number; window_start: Date; locked_until: Date | null }[]>`
+      SELECT user_id::text AS user_id, failed_count, window_start, locked_until
+      FROM auth_guard.password_failures WHERE user_id = ANY(${authIds}::uuid[])`;
+    const now = Date.now();
+    for (const r of rows) {
+      const locked = !!r.locked_until && r.locked_until.getTime() > now;
+      const windowOpen = r.window_start.getTime() > now - this.rules.windowMinutes * 60_000;
+      out.set(r.user_id, {
+        locked,
+        lockedUntil: locked ? r.locked_until!.toISOString() : null,
+        failedCount: locked || (windowOpen && !r.locked_until) ? r.failed_count : 0,
+      });
+    }
+    return out;
+  }
+
+  /** Түгжээ тайлах (тоолуур устгана). Буцаах = өмнө нь түгжээтэй байсан эсэх */
   async unlock(authId: string): Promise<{ wasLocked: boolean }> {
     const rows = await this.system.$queryRaw<{ locked_until: Date | null }[]>`
       DELETE FROM auth_guard.password_failures WHERE user_id = ${authId}::uuid RETURNING locked_until`;

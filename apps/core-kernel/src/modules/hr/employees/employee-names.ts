@@ -1,4 +1,4 @@
-import type { Tx } from '../../camp/common/camp-tx';
+import type { Tx } from '../../core/platform/tenant-tx';
 
 /**
  * v0.2.3 Блок D (S1, S2) — ажилтны нэр ба нэмэлт утас.

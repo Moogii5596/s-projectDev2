@@ -1,7 +1,7 @@
 import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, ValidateIf } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { CampOrgType } from '@prisma/client';
-import { toBool, trim, trimOrNull } from '../../camp/common/camp-dto.util';
+import { toBool, trim, trimOrNull } from '../platform/dto.util';
 
 // ── Байгууллага ──────────────────────────────────────────────
 export class CreateOrganizationDto {

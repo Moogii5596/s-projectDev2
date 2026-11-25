@@ -8,7 +8,7 @@ import { Prisma } from '@prisma/client';
  * app `app_user` (NOBYPASSRLS)-ээр холбогдоход RLS policy tenant-ийг эндээс уншина.
  * Transaction-ий гадуурх `this.prisma.model.*` дуудлага app_user-д 0 мөр / P2025 өгнө.
  *
- * Camp модуль ижил загварын `camp/common/camp-tx.ts`-ийг ашигладаг.
+ * Модулиуд `modules/core/platform/tenant-tx.ts`-ээр дамжуулан (ижил функц + `Tx`, огнооны хөрвүүлэлт) ашиглана.
  */
 export type TenantTx = Prisma.TransactionClient;
 

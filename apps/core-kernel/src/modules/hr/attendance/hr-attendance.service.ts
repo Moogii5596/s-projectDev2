@@ -3,8 +3,8 @@ import { CampImportStatus, CampMovementDirection, Prisma } from '@prisma/client'
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
-import { fromDbDate, inTenantTx, toDbDate } from '../../camp/common/camp-tx';
-import { withCampErrors } from '../../camp/common/camp-errors';
+import { fromDbDate, inTenantTx, toDbDate } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404 } from '../../camp/common/camp-lookup';
 import { assertDate, assertRange } from './range';
 import { buildAttendanceTemplate, parseAttendanceXlsx, ParsedRow } from './import-parser';
@@ -20,7 +20,7 @@ import { loadRosterGaps, RosterGap } from './roster-gaps';
 import { HrEmployeesService } from '../employees/hr-employees.service';
 import { HR_ID_PENDING } from '../employees/data-issues';
 import { normalizeName } from '../../../common/name-normalization';
-import type { Tx } from '../../camp/common/camp-tx';
+import type { Tx } from '../../core/platform/tenant-tx';
 
 const P = CAMP_PERMISSIONS;
 const CONFIRM_TX = { timeout: 120_000, maxWait: 10_000 };
@@ -103,7 +103,7 @@ export class HrAttendanceService {
   }
 
   private async previewParsed(tenantId: string, authId: string, campId: string, fileName: string, parsed: ParsedRow[], meta: PreviewMeta) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorId = await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
         await getCampOr404(tx, tenantId, campId);
@@ -159,7 +159,7 @@ export class HrAttendanceService {
    * Зөвхөн PREVIEW (бусад төлөвт 409); ажилтан = энэ кемпийн ажилтан. Ирцийн lock-оор CONFIRM-тэй дараалуулна.
    */
   async updateRows(tenantId: string, authId: string, campId: string, id: string, dto: UpdateImportRowsDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
         await lockCampAttendance(tx, campId);
@@ -261,7 +261,7 @@ export class HrAttendanceService {
 
   /** Бүх мөр зөв үед л бичнэ (all-or-nothing). DB төлвийг transaction дотор дахин уншиж төлөвлөнө (PREVIEW-ээс хойш өөрчлөгдсөн байж болно). */
   async confirm(tenantId: string, authId: string, campId: string, id: string) {
-    const result = await withCampErrors(() =>
+    const result = await withAppErrors(() =>
       inTenantTx(
         this.prisma,
         tenantId,
@@ -312,7 +312,7 @@ export class HrAttendanceService {
 
   async createMovement(tenantId: string, authId: string, campId: string, dto: CreateMovementDto) {
     assertDate(dto.date);
-    const result = await withCampErrors(() =>
+    const result = await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorId = await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
         await lockCampAttendance(tx, campId);
@@ -332,7 +332,7 @@ export class HrAttendanceService {
 
   /** Зөвхөн ажилтны ХАМГИЙН СҮҮЛИЙН бүртгэлийг устгана: ирэлт → stay устгана, явалт → stay-г дахин нээнэ */
   async deleteMovement(tenantId: string, authId: string, campId: string, id: string) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.MOVEMENT_IMPORT);
         await lockCampAttendance(tx, campId);

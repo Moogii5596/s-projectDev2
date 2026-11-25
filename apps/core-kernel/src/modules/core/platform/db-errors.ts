@@ -2,6 +2,10 @@ import { HttpException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
+/**
+ * Цөмийн platform (ADR-009, C1 / CORE-01; хуучин `camp/common/camp-errors.ts`, `withCampErrors`).
+ * DB trigger-ийн `<CODE>:` угтвар → мессежийн код. Одоогоор бүгд Кемпийн trigger — модулийн manifest-ээс бүртгэх нь C1-ийн дараагийн алхам.
+ */
 const TRIGGER_MESSAGE_CODES: Record<string, string> = {
   CAMP_CONTRACT_HISTORY: 'camp.err.trigger.contract_history',
   CAMP_COST_IMMUTABLE: 'camp.err.trigger.cost_immutable',
@@ -21,7 +25,7 @@ const TRIGGER_MESSAGE_CODES: Record<string, string> = {
  *   P2002 unique → 409 · P2003 FK → 400 · P2025 not found → 404
  *   trigger `CAMP_*:` → 409 · EXCLUDE (ex_*) → 409 · CHECK (chk_* / *_check) → 400
  */
-export function toCampHttpError(err: unknown): unknown {
+export function toAppHttpError(err: unknown): unknown {
   if (err instanceof HttpException) return err;
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === 'P2002') {
@@ -54,10 +58,10 @@ export function toCampHttpError(err: unknown): unknown {
 }
 
 /** fn-ийг ажиллуулж DB алдааг HTTP алдаа болгон дахин шиднэ */
-export async function withCampErrors<T>(fn: () => Promise<T>): Promise<T> {
+export async function withAppErrors<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (err) {
-    throw toCampHttpError(err);
+    throw toAppHttpError(err);
   }
 }

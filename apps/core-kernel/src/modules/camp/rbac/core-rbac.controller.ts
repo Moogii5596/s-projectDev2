@@ -1,9 +1,10 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { reqUser } from '../common/camp-request';
+import { reqUser } from '../../core/platform/request';
 import { CampRbacService } from './camp-rbac.service';
 import { CampEmployeeLoginService } from './camp-employee-login.service';
 import { CampUserAccessService } from './camp-user-access.service';
+import { UserLoginLockService } from './user-login-lock.service';
 import {
   AssignUserRoleDto,
   CreateCampRoleDto,
@@ -19,7 +20,7 @@ import {
 
 /**
  * Роль, эрх — системийн түвшин (ADR-007): `/api/v1/core/rbac/{permissions,me,users,roles,user-roles,
- * user-permissions,positions/:id/role-templates,invites}`.
+ * user-permissions,positions/:id/role-templates,invites}`; `users/:id/login-unlock` (#28).
  * Service нь camp/rbac-д үлдэнэ (ARC-01 — v0.3).
  */
 @Controller('core/rbac')
@@ -28,6 +29,7 @@ export class CoreRbacController {
     private readonly rbac: CampRbacService,
     private readonly login: CampEmployeeLoginService,
     private readonly userAccess: CampUserAccessService,
+    private readonly loginLocks: UserLoginLockService,
   ) {}
 
   @Get('permissions')
@@ -42,9 +44,10 @@ export class CoreRbacController {
   }
 
   @Get('users')
-  users(@Req() req: FastifyRequest) {
+  async users(@Req() req: FastifyRequest) {
     const u = reqUser(req);
-    return this.rbac.listUsers(u.tenantId, u.id);
+    // #28: мөр бүрт нэвтрэлтийн түгжээний төлөв (listUsers эрхийг шалгана)
+    return this.loginLocks.attach(u.tenantId, await this.rbac.listUsers(u.tenantId, u.id));
   }
 
   @Get('roles')
@@ -162,6 +165,14 @@ export class CoreRbacController {
   setUserActive(@Req() req: FastifyRequest, @Param('userId', new ParseUUIDPipe()) userId: string, @Body() dto: SetUserActiveDto) {
     const u = reqUser(req);
     return this.userAccess.setActive(u.tenantId, u.id, userId, dto.isActive);
+  }
+
+  /** #28 (H-13): нэвтрэлтийн түгжээ тайлах — системийн админ, audit */
+  @Post('users/:userId/login-unlock')
+  @HttpCode(200)
+  unlockLogin(@Req() req: FastifyRequest, @Param('userId', new ParseUUIDPipe()) userId: string) {
+    const u = reqUser(req);
+    return this.loginLocks.unlock(u.tenantId, u.id, userId);
   }
 
   @Get('invites/options')

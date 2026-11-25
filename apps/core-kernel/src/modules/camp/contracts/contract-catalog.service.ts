@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { inTenantTx, type Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
+import { inTenantTx, type Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import type { ContractCatalogView, QuantitySource, ServiceTypeView, UnitView } from './contract.types';
 import type { CreateServiceTypeDto, CreateUnitDto, UpdateServiceTypeDto, UpdateUnitDto } from './contracts.dto';
@@ -46,7 +46,7 @@ export class ContractCatalogService {
   }
 
   async catalog(tenantId: string, authId: string): Promise<ContractCatalogView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireAccess(tx, tenantId, authId, null);
         await this.ensureSeeded(tx, tenantId);
@@ -60,7 +60,7 @@ export class ContractCatalogService {
   }
 
   async createUnit(tenantId: string, authId: string, dto: CreateUnitDto): Promise<UnitView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireInAnyCamp(tx, tenantId, authId, P.CONTRACT_MANAGE);
         return tx.coreUnit.create({
@@ -80,7 +80,7 @@ export class ContractCatalogService {
   }
 
   async updateUnit(tenantId: string, authId: string, id: string, dto: UpdateUnitDto): Promise<UnitView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireInAnyCamp(tx, tenantId, authId, P.CONTRACT_MANAGE);
         const found = await tx.coreUnit.findFirst({ where: { id, tenantId }, select: { id: true } });
@@ -99,7 +99,7 @@ export class ContractCatalogService {
   }
 
   async createServiceType(tenantId: string, authId: string, dto: CreateServiceTypeDto): Promise<ServiceTypeView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireInAnyCamp(tx, tenantId, authId, P.CONTRACT_MANAGE);
         await this.assertUnit(tx, tenantId, dto.defaultUnitId);
@@ -122,7 +122,7 @@ export class ContractCatalogService {
   }
 
   async updateServiceType(tenantId: string, authId: string, id: string, dto: UpdateServiceTypeDto): Promise<ServiceTypeView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireInAnyCamp(tx, tenantId, authId, P.CONTRACT_MANAGE);
         const found = await tx.campServiceType.findFirst({ where: { id, tenantId }, select: { quantitySource: true } });

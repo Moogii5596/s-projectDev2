@@ -17,7 +17,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { ISO_DATE, toBool, trim, trimOrNull } from '../common/camp-dto.util';
+import { ISO_DATE, toBool, trim, trimOrNull } from '../../core/platform/dto.util';
 import { CURRENCY, RATE } from '../../core/exchange-rates/exchange-rates.dto';
 export { CURRENCY, RATE } from '../../core/exchange-rates/exchange-rates.dto';
 import {

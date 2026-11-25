@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
-import { inTenantTx, Tx } from '../../camp/common/camp-tx';
-import { withCampErrors } from '../../camp/common/camp-errors';
+import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../../camp/common/common.dto';
 import { mergeCatalogNameI18n } from '../../camp/common/catalog-name-i18n';
@@ -43,7 +43,7 @@ export class HrPositionsService {
   }
 
   async create(tenantId: string, authId: string, dto: CreateCatalogItemDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
         const name = dto.name.replace(/\s+/g, ' ');
@@ -54,7 +54,7 @@ export class HrPositionsService {
   }
 
   async update(tenantId: string, authId: string, id: string, dto: UpdateCatalogItemDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
         const cur = await tx.hrPosition.findFirst({ where: { id, tenantId }, select: { id: true, name: true, nameI18n: true } });

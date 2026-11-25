@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { reqUser } from '../common/camp-request';
+import { reqUser } from '../../core/platform/request';
 import { MealOrdersService } from './meal-orders.service';
 import { AddMealExtraDto, MealReasonDto, PutMealTemplateDto, QueryMealOrdersDto, RequestMealChangeDto, UpsertMealOrderDto } from './meal-orders.dto';
 

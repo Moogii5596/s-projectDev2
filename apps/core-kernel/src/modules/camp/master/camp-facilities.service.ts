@@ -4,10 +4,10 @@ import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.serv
 import { CampAccessService } from '../common/camp-access.service';
 import { CampAuditService } from '../common/camp-audit.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { inTenantTx, Tx } from '../common/camp-tx';
+import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { BULK_ROOMS_MAX, roomNumbers } from './room-range';
-import { withCampErrors } from '../common/camp-errors';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404 } from '../common/camp-lookup';
 import { BulkRoomsDto, CreateBuildingDto, CreateRoomDto, QueryRoomsDto, UpdateBuildingDto, UpdateRoomDto } from './camp-master.dto';
 import { QueryActiveOnlyDto } from '../common/common.dto';
@@ -67,7 +67,7 @@ export class CampFacilitiesService {
   }
 
   async createBuilding(tenantId: string, authId: string, campId: string, dto: CreateBuildingDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         await getCampOr404(tx, tenantId, campId);
@@ -88,7 +88,7 @@ export class CampFacilitiesService {
   }
 
   async updateBuilding(tenantId: string, authId: string, campId: string, id: string, dto: UpdateBuildingDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         const b = await tx.campBuilding.findFirst({ where: { id, tenantId, campId }, select: BUILDING_SELECT });
@@ -121,7 +121,7 @@ export class CampFacilitiesService {
 
   /** FB-07 — POST buildings/:id/rooms/bulk ("+ Олон өрөө") */
   async bulkRooms(tenantId: string, authId: string, campId: string, buildingId: string, dto: BulkRoomsDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, ROOM_WRITE);
         const b = await tx.campBuilding.findFirst({ where: { id: buildingId, tenantId, campId }, select: { id: true, code: true, isActive: true } });
@@ -178,7 +178,7 @@ export class CampFacilitiesService {
   }
 
   async createRoom(tenantId: string, authId: string, campId: string, dto: CreateRoomDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, ROOM_WRITE);
         await getCampOr404(tx, tenantId, campId);
@@ -209,7 +209,7 @@ export class CampFacilitiesService {
   }
 
   async updateRoom(tenantId: string, authId: string, campId: string, id: string, dto: UpdateRoomDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, ROOM_WRITE);
         const room = await tx.campRoom.findFirst({ where: { id, tenantId, campId }, select: ROOM_SELECT });

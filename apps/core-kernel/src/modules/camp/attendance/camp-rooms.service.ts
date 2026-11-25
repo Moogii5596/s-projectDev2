@@ -3,10 +3,10 @@ import { CampAssetCondition, CampEmployeeStatus, CampRoomStatus, CampShiftAdjust
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { fromDbDate, inTenantTx, toDbDate, Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
+import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
-import { addDays, coversDay } from '../common/camp-date';
+import { addDays, coversDay } from '../../core/platform/date';
 import { expectedNight, RosterSettings } from '../../hr/attendance/roster';
 import { assertDate } from '../../hr/attendance/range';
 import { OPEN_STATUSES } from '../maintenance/maintenance-flow';
@@ -65,7 +65,7 @@ export class CampRoomsService {
 
   async allocate(tenantId: string, authId: string, campId: string, dto: CreateRoomAllocationDto) {
     assertDate(dto.startDate, 'startDate');
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.ROOM_MANAGE);
         await getCampOr404(tx, tenantId, campId);
@@ -141,7 +141,7 @@ export class CampRoomsService {
 
   async end(tenantId: string, authId: string, campId: string, id: string, dto: EndRoomAllocationDto) {
     assertDate(dto.endDate, 'endDate');
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.ROOM_MANAGE);
         const a = await tx.campRoomAllocation.findFirst({ where: { id, tenantId, campId }, select: { id: true, startDate: true, endDate: true } });

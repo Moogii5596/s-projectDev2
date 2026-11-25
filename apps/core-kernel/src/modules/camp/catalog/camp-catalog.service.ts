@@ -3,8 +3,8 @@ import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.serv
 import { CampAccessService } from '../common/camp-access.service';
 import { CampAuditService } from '../common/camp-audit.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { inTenantTx, Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
+import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { assertMealLocation, getCampOr404, getRosterSettings } from '../common/camp-lookup';
 import { normalizeShiftPattern } from '../../hr/org/shift-pattern';
 import { conflict, notFound } from '../../../common/i18n/app-error';
@@ -47,7 +47,7 @@ export class CampCatalogService {
   }
 
   async create(tenantId: string, authId: string, dto: CreateCatalogItemDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
         const name = dto.name.replace(/\s+/g, ' ');
@@ -58,7 +58,7 @@ export class CampCatalogService {
   }
 
   async update(tenantId: string, authId: string, id: string, dto: UpdateCatalogItemDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
         const cur = await tx.campBuildingType.findFirst({ where: { id, tenantId }, select: { id: true, name: true, nameI18n: true } });
@@ -122,7 +122,7 @@ export class CampCatalogService {
   }
 
   async upsertSetting(tenantId: string, authId: string, campId: string, positionId: string, dto: UpsertPositionSettingDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         await getCampOr404(tx, tenantId, campId);

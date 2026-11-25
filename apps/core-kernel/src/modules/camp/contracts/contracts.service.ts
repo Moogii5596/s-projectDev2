@@ -3,10 +3,10 @@ import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { fromDbDate, inTenantTx, toDbDate, type Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
+import { fromDbDate, inTenantTx, toDbDate, type Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404 } from '../common/camp-lookup';
-import { todayUb } from '../common/camp-date';
+import { todayUb } from '../../core/platform/date';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { effectiveEnd, paymentTermsError, priceAt, quantityRuleError, ratePolicyError, withinPeriod } from './contract-pricing';
 import type {
@@ -276,7 +276,7 @@ export class ContractsService {
 
   // ── гэрээ ──
   async list(tenantId: string, authId: string, campId: string, q: QueryContractsDto): Promise<ContractListItem[]> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.guard(tx, tenantId, authId, campId);
         const on = q.activeOn ? toDbDate(q.activeOn) : null;
@@ -302,7 +302,7 @@ export class ContractsService {
   }
 
   async get(tenantId: string, authId: string, campId: string, id: string): Promise<ContractView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.guard(tx, tenantId, authId, campId);
         return this.view(tx, tenantId, campId, id);
@@ -311,7 +311,7 @@ export class ContractsService {
   }
 
   async create(tenantId: string, authId: string, campId: string, dto: CreateContractDto): Promise<ContractView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.guard(tx, tenantId, authId, campId);
         const v = {
@@ -352,7 +352,7 @@ export class ContractsService {
   }
 
   async update(tenantId: string, authId: string, campId: string, id: string, dto: UpdateContractDto): Promise<ContractView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const userId = await this.guard(tx, tenantId, authId, campId);
         const cur = await this.load(tx, tenantId, campId, id);
@@ -444,7 +444,7 @@ export class ContractsService {
   }
 
   async remove(tenantId: string, authId: string, campId: string, id: string): Promise<void> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.guard(tx, tenantId, authId, campId);
         const cur = await tx.campContract.findFirst({ where: { id, tenantId, campId }, select: { status: true } });
@@ -456,7 +456,7 @@ export class ContractsService {
   }
 
   async activate(tenantId: string, authId: string, campId: string, id: string): Promise<ContractView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.guard(tx, tenantId, authId, campId);
         const cur = await this.load(tx, tenantId, campId, id);
@@ -473,7 +473,7 @@ export class ContractsService {
   }
 
   async terminate(tenantId: string, authId: string, campId: string, id: string, dto: TerminateContractDto): Promise<ContractView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const userId = await this.guard(tx, tenantId, authId, campId);
         const cur = await this.load(tx, tenantId, campId, id);
@@ -542,7 +542,7 @@ export class ContractsService {
   }
 
   async addItem(tenantId: string, authId: string, campId: string, id: string, dto: CreateContractItemDto): Promise<ContractItemView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.guard(tx, tenantId, authId, campId);
         const c = await this.contractStatus(tx, tenantId, campId, id);
@@ -573,7 +573,7 @@ export class ContractsService {
   }
 
   async updateItem(tenantId: string, authId: string, campId: string, id: string, itemId: string, dto: UpdateContractItemDto): Promise<ContractItemView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.guard(tx, tenantId, authId, campId);
         const c = await this.contractStatus(tx, tenantId, campId, id);
@@ -600,7 +600,7 @@ export class ContractsService {
   }
 
   async removeItem(tenantId: string, authId: string, campId: string, id: string, itemId: string): Promise<void> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.guard(tx, tenantId, authId, campId);
         const c = await this.contractStatus(tx, tenantId, campId, id);
@@ -613,7 +613,7 @@ export class ContractsService {
 
   // ── үнэ ──
   async addPrice(tenantId: string, authId: string, campId: string, id: string, itemId: string, dto: AddContractPriceDto): Promise<ContractPriceView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const userId = await this.guard(tx, tenantId, authId, campId);
         const c = await this.contractStatus(tx, tenantId, campId, id);
@@ -666,7 +666,7 @@ export class ContractsService {
   }
 
   async removePrice(tenantId: string, authId: string, campId: string, id: string, itemId: string, priceId: string): Promise<void> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.guard(tx, tenantId, authId, campId);
         const c = await this.contractStatus(tx, tenantId, campId, id);
@@ -681,7 +681,7 @@ export class ContractsService {
 
   // ── нэмэлт өөрчлөлт (сунгалт G-5) ──
   async addAmendment(tenantId: string, authId: string, campId: string, id: string, dto: AddAmendmentDto): Promise<ContractAmendmentView> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const userId = await this.guard(tx, tenantId, authId, campId);
         const c = await this.contractStatus(tx, tenantId, campId, id);

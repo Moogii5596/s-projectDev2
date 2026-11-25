@@ -26,12 +26,29 @@ describe('LoginLockService (v0.2.5 H1 #16)', () => {
     queryRaw.mockResolvedValueOnce([]);
     expect(await svc.status('a')).toEqual({ locked: false, lockedUntil: null, failedCount: 0 });
     const until = new Date(Date.now() + 60_000);
-    queryRaw.mockResolvedValueOnce([{ failed_count: 5, window_start: new Date(), locked_until: until }]);
+    queryRaw.mockResolvedValueOnce([{ user_id: 'a', failed_count: 5, window_start: new Date(), locked_until: until }]);
     expect(await svc.status('a')).toEqual({ locked: true, lockedUntil: until.toISOString(), failedCount: 5 });
-    queryRaw.mockResolvedValueOnce([{ failed_count: 5, window_start: new Date(Date.now() - 20 * 60_000), locked_until: new Date(Date.now() - 1) }]);
+    queryRaw.mockResolvedValueOnce([{ user_id: 'a', failed_count: 5, window_start: new Date(Date.now() - 20 * 60_000), locked_until: new Date(Date.now() - 1) }]);
     expect(await svc.status('a')).toEqual({ locked: false, lockedUntil: null, failedCount: 0 });
-    queryRaw.mockResolvedValueOnce([{ failed_count: 2, window_start: new Date(), locked_until: null }]);
+    queryRaw.mockResolvedValueOnce([{ user_id: 'a', failed_count: 2, window_start: new Date(), locked_until: null }]);
     expect(await svc.status('a')).toEqual({ locked: false, lockedUntil: null, failedCount: 2 });
     await expect(svc.reset('a')).resolves.toBeUndefined();
+  });
+
+  it('statuses: нэг query-ээр олон бүртгэл; мөргүй бүртгэл map-д алга; хоосон жагсаалт → query хийхгүй', async () => {
+    const queryRaw = vi.fn();
+    const svc = new LoginLockService({ $queryRaw: queryRaw } as never, { get: () => undefined } as never);
+    expect((await svc.statuses([])).size).toBe(0);
+    expect(queryRaw).not.toHaveBeenCalled();
+    const until = new Date(Date.now() + 60_000);
+    queryRaw.mockResolvedValueOnce([
+      { user_id: 'a', failed_count: 5, window_start: new Date(), locked_until: until },
+      { user_id: 'b', failed_count: 2, window_start: new Date(), locked_until: null },
+    ]);
+    const m = await svc.statuses(['a', 'b', 'c']);
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+    expect(m.get('a')).toEqual({ locked: true, lockedUntil: until.toISOString(), failedCount: 5 });
+    expect(m.get('b')).toEqual({ locked: false, lockedUntil: null, failedCount: 2 });
+    expect(m.has('c')).toBe(false);
   });
 });
