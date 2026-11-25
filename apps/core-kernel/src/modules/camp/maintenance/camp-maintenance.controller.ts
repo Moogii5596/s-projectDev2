@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { reqUser } from '../common/camp-request';
+import { reqUser } from '../../core/platform/request';
 import { CampMaintenanceService } from './camp-maintenance.service';
 import { CancelMaintenanceDto, CreateMaintenanceDto, CreatePartDto, QueryMaintenanceDto, UpdateMaintenanceDto, UpdatePartDto } from './camp-maintenance.dto';
 

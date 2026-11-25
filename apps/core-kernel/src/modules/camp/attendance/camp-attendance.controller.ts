@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { reqUser } from '../common/camp-request';
+import { reqUser } from '../../core/platform/request';
 import { CampStaysService } from './camp-stays.service';
 import { CampRoomsService } from './camp-rooms.service';
 import { CampPresenceService } from './camp-presence.service';

@@ -4,8 +4,8 @@ import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.serv
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSION_CODES, campPermissionAvailableIn, isCampPermission } from '../common/camp-permissions';
 import { permissionModule } from '../../core/permissions/permission-registry';
-import { inTenantTx, Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
+import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import {
   AssignUserRoleDto,
   CreateCampRoleDto,
@@ -174,7 +174,7 @@ export class CampRbacService {
 
   async createRole(tenantId: string, authId: string, dto: CreateCampRoleDto) {
     const codes = this.normalizeCodes(dto.permissionCodes ?? []);
-    const role = await withCampErrors(() =>
+    const role = await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireTenantAdmin(tx, tenantId, authId);
         const dup = await tx.coreRole.findFirst({ where: { tenantId, name: dto.name }, select: { id: true } });
@@ -191,7 +191,7 @@ export class CampRbacService {
   }
 
   async updateRole(tenantId: string, authId: string, id: string, dto: UpdateCampRoleDto) {
-    const role = await withCampErrors(() =>
+    const role = await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireTenantAdmin(tx, tenantId, authId);
         await this.findRole(tx, tenantId, id);
@@ -213,7 +213,7 @@ export class CampRbacService {
   }
 
   async deleteRole(tenantId: string, authId: string, id: string) {
-    await withCampErrors(() =>
+    await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireTenantAdmin(tx, tenantId, authId);
         const role = await this.findRole(tx, tenantId, id);
@@ -228,7 +228,7 @@ export class CampRbacService {
   /** Ролийн эрхийн багцыг бүхэлд нь солино (системийн рольд ч зөвшөөрнө — ERD v4: админ засна) */
   async setRolePermissions(tenantId: string, authId: string, id: string, dto: SetRolePermissionsDto) {
     const codes = this.normalizeCodes(dto.permissionCodes);
-    const role = await withCampErrors(() =>
+    const role = await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         const before = await this.findRole(tx, tenantId, id);
@@ -275,7 +275,7 @@ export class CampRbacService {
 
   /** Загварыг тухайн ролийн БҮХ олголтод хэрэгжүүлнэ (TEMPLATE мөрийг загвартай тэнцүүлнэ; DIRECT хөндөхгүй) */
   async applyRoleTemplate(tenantId: string, authId: string, id: string) {
-    const res = await withCampErrors(() =>
+    const res = await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         const role = await this.findRole(tx, tenantId, id);
@@ -341,7 +341,7 @@ export class CampRbacService {
 
   async assignUserRole(tenantId: string, authId: string, dto: AssignUserRoleDto) {
     const campId = dto.campId ?? null;
-    const row = await withCampErrors(() =>
+    const row = await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         const user = await tx.coreUser.findFirst({ where: { id: dto.userId, tenantId }, select: { id: true, isActive: true, email: true, fullName: true } });
@@ -388,7 +388,7 @@ export class CampRbacService {
   }
 
   async removeUserRole(tenantId: string, authId: string, id: string) {
-    await withCampErrors(() =>
+    await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         const row = await tx.coreUserRole.findFirst({
@@ -453,7 +453,7 @@ export class CampRbacService {
   async grantDirectPermission(tenantId: string, authId: string, userId: string, dto: GrantDirectPermissionDto) {
     const [permissionCode] = this.normalizeCodes([dto.permissionCode]);
     const campId = dto.campId ?? null;
-    const row = await withCampErrors(() =>
+    const row = await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         const user = await tx.coreUser.findFirst({ where: { id: userId, tenantId }, select: { id: true, isActive: true, email: true, fullName: true } });
@@ -485,7 +485,7 @@ export class CampRbacService {
 
   /** Зөвхөн DIRECT мөрийг хасна; TEMPLATE мөр → ролийг хасах (400) */
   async revokeDirectPermission(tenantId: string, authId: string, id: string) {
-    await withCampErrors(() =>
+    await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         const row = await tx.coreUserPermission.findFirst({
@@ -526,7 +526,7 @@ export class CampRbacService {
   async setPositionTemplates(tenantId: string, authId: string, positionId: string, dto: SetPositionTemplatesDto) {
     const roleIds = dto.templates.map((t) => t.roleId);
     if (new Set(roleIds).size !== roleIds.length) throw badRequest('camp.err.rbac.13');
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         const pos = await tx.hrPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true, name: true } });

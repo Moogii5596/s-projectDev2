@@ -1,6 +1,6 @@
 import { ArrayMaxSize, IsArray, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { trim } from '../common/camp-dto.util';
+import { trim } from '../../core/platform/dto.util';
 
 const MEAL_TYPES = ['BREAKFAST', 'LUNCH', 'DINNER', 'NIGHT'] as const;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;

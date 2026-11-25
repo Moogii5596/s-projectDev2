@@ -3,8 +3,8 @@ import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { fromDbTime, inTenantTx, toDbTime, Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
+import { fromDbTime, inTenantTx, toDbTime, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { assertMealLocation, getCampOr404 } from '../common/camp-lookup';
 import { CreateMealLocationDto, QueryActiveDto, UpdateCampSettingsDto, UpdateMealLocationDto } from './camp-settings.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
@@ -109,7 +109,7 @@ export class CampSettingsService {
   }
 
   async updateSettings(tenantId: string, authId: string, campId: string, dto: UpdateCampSettingsDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.SETTINGS_MANAGE);
         await getCampOr404(tx, tenantId, campId);
@@ -201,7 +201,7 @@ export class CampSettingsService {
   }
 
   async createMealLocation(tenantId: string, authId: string, campId: string, dto: CreateMealLocationDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.SETTINGS_MANAGE);
         await getCampOr404(tx, tenantId, campId);
@@ -216,7 +216,7 @@ export class CampSettingsService {
   }
 
   async updateMealLocation(tenantId: string, authId: string, campId: string, id: string, dto: UpdateMealLocationDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.SETTINGS_MANAGE);
         const loc = await tx.campMealLocation.findFirst({ where: { id, tenantId, campId }, select: { id: true, name: true, nameI18n: true } });

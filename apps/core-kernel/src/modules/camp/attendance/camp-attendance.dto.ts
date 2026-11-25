@@ -1,6 +1,6 @@
 import { IsBoolean, IsIn, IsOptional, IsString, IsUUID, Matches } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { ISO_DATE, toBool } from '../common/camp-dto.util';
+import { ISO_DATE, toBool } from '../../core/platform/dto.util';
 
 const DATE_MSG = (f: string) => ({ message: `${f} YYYY-MM-DD` });
 

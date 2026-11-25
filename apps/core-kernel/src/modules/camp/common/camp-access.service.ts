@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { CacheService } from '../../../cache/cache.service';
 import { CampPermission } from './camp-permissions';
-import { Tx } from './camp-tx';
+import { Tx } from '../../core/platform/tenant-tx';
 import { forbidden } from '../../../common/i18n/app-error';
 import { isAdminBypassExcluded } from '../../core/permissions/permission-registry';
 

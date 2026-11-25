@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Query, Req, Res, StreamableFile } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { reqUser } from '../../camp/common/camp-request';
+import { reqUser } from '../platform/request';
 import { CoreFeedbackService } from './core-feedback.service';
 import { CreateFeedbackDto, QueryFeedbackDto, SetFeedbackStatusDto, UpdateFeedbackDto } from './core-feedback.dto';
 import { CoreFeedbackAttachmentsService, FEEDBACK_MAX_IMAGES } from './core-feedback-attachments.service';

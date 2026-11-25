@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { reqUser } from '../common/camp-request';
+import { reqUser } from '../../core/platform/request';
 import { CampRbacService } from './camp-rbac.service';
 import { CampEmployeeLoginService } from './camp-employee-login.service';
 import { CampUserAccessService } from './camp-user-access.service';

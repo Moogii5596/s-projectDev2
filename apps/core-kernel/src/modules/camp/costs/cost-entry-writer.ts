@@ -1,6 +1,6 @@
 import { CampCostSource, Prisma } from '@prisma/client';
-import { Tx } from '../common/camp-tx';
-import { toDbDate } from '../common/camp-tx';
+import { Tx } from '../../core/platform/tenant-tx';
+import { toDbDate } from '../../core/platform/tenant-tx';
 import { computeVat } from './vat';
 
 /**

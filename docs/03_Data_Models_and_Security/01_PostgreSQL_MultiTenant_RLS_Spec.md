@@ -30,7 +30,7 @@ inTenantTx(prisma, tenantId, async (tx) => { /* бүх query энд */ })
 ```
 - `set_config(…, true)` — **зөвхөн тухайн transaction-д** (RULE-03; `SET LOCAL` / session түвшин хориотой). Transaction-ий гадуурх `prisma.model.*` → `app_user`-д 0 мөр / P2025.
 - Connection pooler (PgBouncer transaction mode) нэмэгдсэн ч аюулгүй: context transaction-аас гарахгүй.
-- Файл: `db/tenant-tx.ts`, Кемп `modules/camp/common/camp-tx.ts`. `AsyncLocalStorage` (`prisma-tenant-client.service.ts`) — request-ийн tenant-ийг дамжуулах л үүрэгтэй; RLS-ийг `inTenantTx` хангана.
+- Файл: `db/tenant-tx.ts` (ганц хэрэгжүүлэлт); модулиуд `modules/core/platform/tenant-tx.ts`-ээр (C1, 2026-11-25). `AsyncLocalStorage` (`prisma-tenant-client.service.ts`) — request-ийн tenant-ийг дамжуулах л үүрэгтэй; RLS-ийг `inTenantTx` хангана.
 
 ## 4. Policy загвар (RULE-12, RLS-004)
 ```sql

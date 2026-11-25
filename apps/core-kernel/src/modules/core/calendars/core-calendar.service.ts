@@ -4,7 +4,7 @@ import { badRequest, notFound } from '../../../common/i18n/app-error';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CampAuditService } from '../../camp/common/camp-audit.service';
-import { inTenantTx } from '../../camp/common/camp-tx';
+import { inTenantTx } from '../platform/tenant-tx';
 import { CreateCalendarHolidayDto, CreateHolidayCalendarDto, UpdateHolidayCalendarDto } from './core-calendar.dto';
 
 const CALENDAR_SELECT = {

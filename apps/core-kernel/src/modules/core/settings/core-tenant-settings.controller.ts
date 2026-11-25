@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Patch, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { reqUser } from '../../camp/common/camp-request';
+import { reqUser } from '../platform/request';
 import { CoreTenantSettingsService } from './core-tenant-settings.service';
 import { UpdateTenantProfileDto, UpdateTenantSecurityPolicyDto } from './core-tenant-settings.dto';
 

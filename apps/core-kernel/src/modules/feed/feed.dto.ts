@@ -2,7 +2,7 @@ import type { FeedLinkDto } from './feed-links.service';
 import { IsEnum, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { FeedReportReason, FeedReportStatus } from '@prisma/client';
-import { trim, trimOrNull } from '../camp/common/camp-dto.util';
+import { trim, trimOrNull } from '../core/platform/dto.util';
 import type { MediaImageDto } from '../../storage/media.service';
 import { COMMENT_BODY_MAX, COMMENT_PAGE_MAX, FEED_PAGE_MAX, POST_BODY_MAX } from './feed-rules';
 

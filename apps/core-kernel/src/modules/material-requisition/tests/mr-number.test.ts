@@ -3,7 +3,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MaterialRequisitionService } from '../services/material-requisition.service';
-import { todayUb } from '../../camp/common/camp-date';
+import { todayUb } from '../../core/platform/date';
 
 const T = '00000000-0000-0000-0000-000000000003';
 

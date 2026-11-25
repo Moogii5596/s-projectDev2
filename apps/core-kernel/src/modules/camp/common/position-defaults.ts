@@ -1,4 +1,4 @@
-import type { Tx } from './camp-tx';
+import type { Tx } from '../../core/platform/tenant-tx';
 import type { PatternSegment } from '../../hr/attendance/shift-resolver';
 
 /** v0.2.2 H1: camp-presence-оос салгав — HR (ажилтны эффектив утга) ба Кемп (хоолны тоо) хоёулаа ашиглана. v0.3-т ажилтан ↔ кемпийн тохиргоо салахад дахин харна. */

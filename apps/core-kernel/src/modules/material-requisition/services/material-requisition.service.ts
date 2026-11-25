@@ -25,7 +25,7 @@ import { ApprovalEngineService, LEGACY_ENTITY_TYPE } from '../../core/approvals/
 import { ApprovalEntityRegistry, type ApprovalDecisionContext } from '../../core/approvals/approval-entity.registry';
 import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { SequenceService } from '../../core/sequences/sequence.service';
-import { todayUb } from '../../camp/common/camp-date';
+import { todayUb } from '../../core/platform/date';
 
 const MR_DETAIL_INCLUDE = {
   items: { orderBy: { lineNumber: 'asc' } },

@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { inTenantTx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
+import { inTenantTx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404 } from '../common/camp-lookup';
 import { CreateCampDto, UpdateCampDto } from './camp-master.dto';
 import { QueryActiveOnlyDto } from '../common/common.dto';
@@ -46,7 +46,7 @@ export class CampsService {
   }
 
   async create(tenantId: string, authId: string, dto: CreateCampDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, P.MASTER_MANAGE);
         const dup = await tx.camp.findFirst({ where: { tenantId, code: dto.code }, select: { id: true } });
@@ -62,7 +62,7 @@ export class CampsService {
   }
 
   async update(tenantId: string, authId: string, campId: string, dto: UpdateCampDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.MASTER_MANAGE);
         await getCampOr404(tx, tenantId, campId);

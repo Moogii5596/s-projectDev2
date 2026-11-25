@@ -1,4 +1,4 @@
-import { diffDays, isRealIsoDate } from '../../camp/common/camp-date';
+import { diffDays, isRealIsoDate } from '../../core/platform/date';
 import { badRequest } from '../../../common/i18n/app-error';
 
 /** [from, to] огнооны муж хүчинтэй, maxDays-ээс ихгүй эсэх (400) */

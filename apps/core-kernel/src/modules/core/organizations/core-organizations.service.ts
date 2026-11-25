@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../../camp/common/camp-access.service';
-import { inTenantTx, Tx } from '../../camp/common/camp-tx';
-import { withCampErrors } from '../../camp/common/camp-errors';
+import { inTenantTx, Tx } from '../platform/tenant-tx';
+import { withAppErrors } from '../platform/db-errors';
 import { CreateOrganizationDto, QueryOrganizationsDto, UpdateOrganizationDto } from './core-organizations.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { PERMISSIONS } from '../permissions/permission-registry';
@@ -100,7 +100,7 @@ export class CoreOrganizationsService {
   }
 
   async create(tenantId: string, authId: string, dto: CreateOrganizationDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, PERMISSIONS.ORGANIZATION_MANAGE);
         await this.assertRegUnique(tx, tenantId, dto.regNumber);
@@ -128,7 +128,7 @@ export class CoreOrganizationsService {
   }
 
   async update(tenantId: string, authId: string, id: string, dto: UpdateOrganizationDto) {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, null, PERMISSIONS.ORGANIZATION_MANAGE);
         const org = await tx.coreOrganization.findFirst({ where: { id, tenantId }, select: { id: true, serviceTypes: { select: { serviceType: { select: { code: true } } } } } });

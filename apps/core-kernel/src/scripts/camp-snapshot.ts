@@ -16,10 +16,10 @@
  */
 import { createHash } from 'node:crypto';
 import { Prisma, PrismaClient } from '@prisma/client';
-import { addDays } from '../modules/camp/common/camp-date';
+import { addDays } from '../modules/core/platform/date';
 import { loadPresence } from '../modules/camp/attendance/camp-presence.service';
 import { computeRoomBoard } from '../modules/camp/attendance/camp-rooms.service';
-import type { Tx } from '../modules/camp/common/camp-tx';
+import type { Tx } from '../modules/core/platform/tenant-tx';
 import { RETIRED_PERMISSIONS } from '../modules/core/permissions/permission-registry';
 
 const SNAPSHOT_FORMAT = 'camp-snapshot/2';

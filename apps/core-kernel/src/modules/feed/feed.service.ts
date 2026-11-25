@@ -3,8 +3,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { FeedReactionKind, FeedReportStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../camp/common/camp-access.service';
-import { inTenantTx, type Tx } from '../camp/common/camp-tx';
-import { withCampErrors } from '../camp/common/camp-errors';
+import { inTenantTx, type Tx } from '../core/platform/tenant-tx';
+import { withAppErrors } from '../core/platform/db-errors';
 import { PERMISSIONS } from '../core/permissions/permission-registry';
 import { displayAuthor } from '../core/feedback/feedback-rules';
 import { badRequest, forbidden, notFound } from '../../common/i18n/app-error';
@@ -178,7 +178,7 @@ export class FeedService {
     await inTenantTx(this.prisma, tenantId, (tx) => this.viewer(tx, tenantId, authId));
     const stored = await this.media.storeMany(tenantId, 'feed', images);
     try {
-      return await withCampErrors(() =>
+      return await withAppErrors(() =>
         inTenantTx(this.prisma, tenantId, async (tx) => {
           const v = await this.viewer(tx, tenantId, authId);
           const post = await tx.feedPost.create({
@@ -211,7 +211,7 @@ export class FeedService {
   /** Зөвхөн текст; өмнөх текст → feed_revisions */
   async update(tenantId: string, authId: string, id: string, body: string): Promise<FeedPostDto> {
     const text = body.trim();
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const v = await this.viewer(tx, tenantId, authId);
         const cur = await this.loadPost(tx, tenantId, id, v);
@@ -280,7 +280,7 @@ export class FeedService {
   }
 
   async addComment(tenantId: string, authId: string, postId: string, body: string): Promise<FeedCommentDto> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const v = await this.viewer(tx, tenantId, authId);
         await this.loadPost(tx, tenantId, postId, v);
@@ -296,7 +296,7 @@ export class FeedService {
 
   async updateComment(tenantId: string, authId: string, id: string, body: string): Promise<FeedCommentDto> {
     const text = body.trim();
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const v = await this.viewer(tx, tenantId, authId);
         const cur = await this.loadComment(tx, tenantId, id, v);

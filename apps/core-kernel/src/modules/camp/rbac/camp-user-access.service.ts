@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CampAuditService } from '../common/camp-audit.service';
-import { inTenantTx } from '../common/camp-tx';
+import { inTenantTx } from '../../core/platform/tenant-tx';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { UserAdminService } from '../../../auth/user-admin.service';
 import { InviteService } from '../../../auth/invite.service';

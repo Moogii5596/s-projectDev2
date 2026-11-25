@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { inTenantTx, type Tx } from '../../camp/common/camp-tx';
-import { withCampErrors } from '../../camp/common/camp-errors';
+import { inTenantTx, type Tx } from '../platform/tenant-tx';
+import { withAppErrors } from '../platform/db-errors';
 import { badRequest, forbidden, notFound } from '../../../common/i18n/app-error';
 import { MediaService, mediaImageDto, parseVariants, pickVariant, type MediaImageDto, type MediaVariantRef } from '../../../storage/media.service';
 import { MEDIA_URL_SIGNER, MediaUrlSigner } from '../../../storage/media-url';
@@ -45,7 +45,7 @@ export class CoreFeedbackAttachmentsService {
     if (existing + images.length > FEEDBACK_MAX_IMAGES) throw badRequest('feed.err.too_many_images', { max: FEEDBACK_MAX_IMAGES });
     const stored = await this.media.storeMany(tenantId, 'feedback', images);
     try {
-      return await withCampErrors(() =>
+      return await withAppErrors(() =>
         inTenantTx(this.prisma, tenantId, async (tx) => {
           await this.editable(tx, tenantId, authId, feedbackId);
           const used = new Set(

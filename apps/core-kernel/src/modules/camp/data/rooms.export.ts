@@ -1,6 +1,6 @@
 import type { TableSpec } from '../../../common/xlsx/table-spec';
 import type { ImportCtx } from '../../core/import-export/data-transfer.types';
-import type { Tx } from '../common/camp-tx';
+import type { Tx } from '../../core/platform/tenant-tx';
 
 /** §2.4 — Өрөөний экспорт; v0.2.3 Блок D-оос импорт ч мөн энэ форматаар (`facilities.handlers.ts`). */
 export const ROOMS_SPEC: TableSpec = {

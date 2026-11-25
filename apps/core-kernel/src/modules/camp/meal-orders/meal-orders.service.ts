@@ -3,10 +3,10 @@ import { CampMealOrderStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { fromDbDate, fromDbTime, inTenantTx, toDbDate, Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
+import { fromDbDate, fromDbTime, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { assertMealLocation, getCampOr404 } from '../common/camp-lookup';
-import { addDays, diffDays, isRealIsoDate } from '../common/camp-date';
+import { addDays, diffDays, isRealIsoDate } from '../../core/platform/date';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import {
   allowedActions,
@@ -159,7 +159,7 @@ export class MealOrdersService {
 
   async upsert(tenantId: string, authId: string, campId: string, date: string, dto: UpsertMealOrderDto): Promise<MealOrderView> {
     this.assertDate(date);
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const { actor, settings } = await this.begin(tx, tenantId, authId, campId, true);
         await this.assertLines(tx, tenantId, campId, dto.lines);
@@ -192,7 +192,7 @@ export class MealOrdersService {
 
   async remove(tenantId: string, authId: string, campId: string, date: string): Promise<void> {
     this.assertDate(date);
-    await withCampErrors(() =>
+    await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const { actor, settings } = await this.begin(tx, tenantId, authId, campId, true);
         const row = await this.mustFind(tx, tenantId, campId, date);
@@ -204,7 +204,7 @@ export class MealOrdersService {
 
   async addExtra(tenantId: string, authId: string, campId: string, date: string, dto: AddMealExtraDto): Promise<MealOrderView> {
     this.assertDate(date);
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const { actor, settings } = await this.begin(tx, tenantId, authId, campId, true);
         await assertMealLocation(tx, tenantId, campId, dto.mealLocationId);
@@ -225,7 +225,7 @@ export class MealOrdersService {
 
   async removeExtra(tenantId: string, authId: string, campId: string, date: string, extraId: string): Promise<MealOrderView> {
     this.assertDate(date);
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const { actor, settings } = await this.begin(tx, tenantId, authId, campId, true);
         const row = await this.mustFind(tx, tenantId, campId, date);
@@ -245,7 +245,7 @@ export class MealOrdersService {
 
   async submit(tenantId: string, authId: string, campId: string, date: string): Promise<MealOrderView> {
     this.assertDate(date);
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const { actor, settings } = await this.begin(tx, tenantId, authId, campId, true);
         await this.lockOrder(tx, tenantId, campId, date);
@@ -298,7 +298,7 @@ export class MealOrdersService {
 
   async requestChange(tenantId: string, authId: string, campId: string, date: string, dto: RequestMealChangeDto): Promise<MealOrderView> {
     this.assertDate(date);
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const { actor, settings } = await this.begin(tx, tenantId, authId, campId, true);
         await this.lockOrder(tx, tenantId, campId, date);
@@ -351,7 +351,7 @@ export class MealOrdersService {
   }
 
   async putTemplate(tenantId: string, authId: string, campId: string, dto: PutMealTemplateDto): Promise<{ lines: MealOrderLineView[] }> {
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.require(tx, tenantId, authId, campId, P.SETTINGS_MANAGE);
         await getCampOr404(tx, tenantId, campId);
@@ -371,7 +371,7 @@ export class MealOrdersService {
 
   private async review(tenantId: string, authId: string, campId: string, date: string, action: 'accept' | 'reject', reason?: string) {
     this.assertDate(date);
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const { actor, settings } = await this.begin(tx, tenantId, authId, campId, true);
         const row = await this.mustFind(tx, tenantId, campId, date);
@@ -398,7 +398,7 @@ export class MealOrdersService {
     reason?: string,
   ) {
     this.assertDate(date);
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const { actor, settings } = await this.begin(tx, tenantId, authId, campId, true);
         const row = await this.mustFind(tx, tenantId, campId, date);

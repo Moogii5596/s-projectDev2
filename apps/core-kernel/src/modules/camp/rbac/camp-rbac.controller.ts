@@ -1,6 +1,6 @@
 import { Body, Controller, HttpCode, Param, ParseUUIDPipe, Post, Put, Get, Query, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { reqUser } from '../common/camp-request';
+import { reqUser } from '../../core/platform/request';
 import { CampEmployeeLoginService } from './camp-employee-login.service';
 import { CampUserAccessService } from './camp-user-access.service';
 import { CreateEmployeeUserDto, LinkEmployeeUserDto, PositionPreviewQueryDto } from './camp-rbac.dto';

@@ -1,7 +1,7 @@
 import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CampImportStatus, CampMealType, CampMovementDirection, CampShiftAdjustmentReason, CampShiftType } from '@prisma/client';
-import { ISO_DATE, trimOrNull } from '../../camp/common/camp-dto.util';
+import { ISO_DATE, trimOrNull } from '../../core/platform/dto.util';
 
 const DATE_MSG = (f: string) => ({ message: `${f} YYYY-MM-DD` });
 

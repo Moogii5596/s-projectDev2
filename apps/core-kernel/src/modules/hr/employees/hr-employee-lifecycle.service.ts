@@ -7,9 +7,9 @@ import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CampAuditService, type AuditEntry } from '../../camp/common/camp-audit.service';
 import { isInternalEmail } from '../../../auth/invite-token';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
-import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../camp/common/camp-tx';
-import { withCampErrors } from '../../camp/common/camp-errors';
-import { isRealIsoDate, todayUb } from '../../camp/common/camp-date';
+import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
+import { isRealIsoDate, todayUb } from '../../core/platform/date';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { t, type I18nParams } from '../../../common/i18n/translate';
 import { HrAttendanceHooks } from '../attendance/stay-store';
@@ -100,7 +100,7 @@ export class HrEmployeeLifecycleService {
     if (banUser) await this.userAdmin.setBanned(banUser.authId, true);
     let result: Awaited<ReturnType<HrEmployeeLifecycleService['terminateTx']>>;
     try {
-      result = await withCampErrors(() => inTenantTx(this.prisma, tenantId, (tx) => this.terminateTx(tx, tenantId, authId, campId, id, dto, banUser !== null), TX));
+      result = await withAppErrors(() => inTenantTx(this.prisma, tenantId, (tx) => this.terminateTx(tx, tenantId, authId, campId, id, dto, banUser !== null), TX));
     } catch (err) {
       if (banUser) await this.userAdmin.setBanned(banUser.authId, false).catch(() => undefined);
       throw err;
@@ -218,7 +218,7 @@ export class HrEmployeeLifecycleService {
     if (unbanUser && !unbanUser.isActive) await this.userAdmin.setBanned(unbanUser.authId, false);
     let created: Awaited<ReturnType<HrEmployeeLifecycleService['rehireTx']>>;
     try {
-      created = await withCampErrors(() => inTenantTx(this.prisma, tenantId, (tx) => this.rehireTx(tx, tenantId, authId, campId, id, dto, transfer), TX));
+      created = await withAppErrors(() => inTenantTx(this.prisma, tenantId, (tx) => this.rehireTx(tx, tenantId, authId, campId, id, dto, transfer), TX));
     } catch (err) {
       if (unbanUser && !unbanUser.isActive) await this.userAdmin.setBanned(unbanUser.authId, true).catch(() => undefined);
       throw err;

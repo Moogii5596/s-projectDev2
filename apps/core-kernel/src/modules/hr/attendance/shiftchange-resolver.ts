@@ -1,6 +1,6 @@
 import { CampEmployeeStatus, CampMovementDirection } from '@prisma/client';
 import { t } from '../../../common/i18n/translate';
-import type { Tx } from '../../camp/common/camp-tx';
+import type { Tx } from '../../core/platform/tenant-tx';
 import type { ParsedRow } from './import-parser';
 import type { ShiftChangeRow } from './shiftchange-parser';
 

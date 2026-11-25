@@ -2,7 +2,7 @@ import { Controller, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } fr
 import type { FastifyRequest } from 'fastify';
 import { IsIn, IsInt, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { reqUser } from '../../camp/common/camp-request';
+import { reqUser } from '../platform/request';
 import { DebugAccessGuard } from './debug-access.guard';
 import { DebugService } from './debug.service';
 

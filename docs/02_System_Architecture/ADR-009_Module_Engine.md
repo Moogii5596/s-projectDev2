@@ -46,7 +46,7 @@ tags: [adr, architecture, core, modules, v0.2.4]
 
 | Боломж | Төлөв (2026-11-07) |
 |---|---|
-| Tenant / RLS / transaction (`inTenantTx`), алдаа (`code`+`params`), DTO туслах, огноо (tenant-ийн цагийн бүс) | 🔄 `camp/common`-д → цөм рүү |
+| Tenant / RLS / transaction (`inTenantTx`), алдаа (`code`+`params`), DTO туслах, огноо (tenant-ийн цагийн бүс) | ✅ `core/platform` (2026-11-25; огноо одоогоор УБ-ын бүсээр) |
 | Нэвтрэлт, хэрэглэгч, session, төхөөрөмж | ✅ `auth` |
 | Эрх: registry + шалгах service (scope: tenant / site) | 🔄 registry ✅ цөмд; access service `camp/common`-д |
 | Audit | 🔄 `camp_audit_log` → `core_audit_log` |

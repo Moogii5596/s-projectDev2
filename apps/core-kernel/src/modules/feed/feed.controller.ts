@@ -15,7 +15,7 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { reqUser } from '../camp/common/camp-request';
+import { reqUser } from '../core/platform/request';
 import { SkipAuth } from '../../common/decorators/skip-auth.decorator';
 import { badRequest, notFound } from '../../common/i18n/app-error';
 import { readImageUpload } from '../../storage/image-upload';

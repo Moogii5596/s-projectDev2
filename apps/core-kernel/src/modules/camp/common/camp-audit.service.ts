@@ -3,7 +3,7 @@ import { CampAuditAction, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
 import { CampAccessService } from './camp-access.service';
-import { inTenantTx, Tx } from './camp-tx';
+import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
 import { badRequest } from '../../../common/i18n/app-error';
 
 /** v0.2.0-д түүх хөтлөх бичлэгүүд (v0.2.x-д нэмэгдэнэ) */

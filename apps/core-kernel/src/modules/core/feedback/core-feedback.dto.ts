@@ -1,7 +1,7 @@
 import { IsEnum, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CoreFeedbackKind, CoreFeedbackStatus } from '@prisma/client';
-import { toBool, trim, trimOrNull } from '../../camp/common/camp-dto.util';
+import { toBool, trim, trimOrNull } from '../platform/dto.util';
 import type { MediaImageDto } from '../../../storage/media.service';
 
 // ── Санал хүсэлт (v0.2.3 Блок F) ─────────────────────────────

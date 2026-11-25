@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
-import { fromDbDate, inTenantTx, toDbDate, Tx } from '../common/camp-tx';
+import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { assertDate } from '../../hr/attendance/range';
 import type { AttendanceStayStore, NewStay, StayRow } from '../../hr/attendance/stay-store';
 import { StayShiftGroup } from './camp-attendance.dto';

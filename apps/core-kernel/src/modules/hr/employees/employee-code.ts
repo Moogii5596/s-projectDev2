@@ -1,5 +1,5 @@
 import { getRosterSettings } from '../../camp/common/camp-lookup';
-import type { Tx } from '../../camp/common/camp-tx';
+import type { Tx } from '../../core/platform/tenant-tx';
 
 /**
  * v0.2.3 Блок R7 (PIL-25, R-9) — кодгүй ажилтны автомат код: `<угтвар><4+ орон>` (Z0001 …).

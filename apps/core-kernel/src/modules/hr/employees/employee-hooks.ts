@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Tx } from '../../camp/common/camp-tx';
+import type { Tx } from '../../core/platform/tenant-tx';
 
 /** Профайлд харуулах өрөөний хуваарилалт (Кемпийнх) */
 export interface ProfileRoomAllocation {

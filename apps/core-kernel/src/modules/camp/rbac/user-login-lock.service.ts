@@ -5,7 +5,7 @@ import { LoginLockService, NO_LOGIN_LOCK, type LoginLockStatus } from '../../../
 import { notFound } from '../../../common/i18n/app-error';
 import { CampAccessService } from '../common/camp-access.service';
 import { CampAuditService } from '../common/camp-audit.service';
-import { inTenantTx } from '../common/camp-tx';
+import { inTenantTx } from '../../core/platform/tenant-tx';
 
 /**
  * #28 (H-13) — нэвтрэлтийн түгжээ хэрэглэгчийн удирдлагад: жагсаалтын мөрөнд төлөв, «Түгжээ тайлах» (audit).

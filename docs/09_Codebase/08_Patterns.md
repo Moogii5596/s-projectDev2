@@ -38,7 +38,7 @@ create(@Req() req: FastifyRequest, @Param('campId', uuid()) campId: string, @Bod
 
 // service — public метод бүр ижил бүтэцтэй
 async create(tenantId: string, authId: string, campId: string, dto: CreateXDto) {
-  return withCampErrors(() =>                    // DB алдаа → HTTP (нөөц хамгаалалт)
+  return withAppErrors(() =>                    // DB алдаа → HTTP (нөөц хамгаалалт)
     inTenantTx(this.prisma, tenantId, async (tx) => {               // RLS context + нэг tx
       const userId = await this.access.require(tx, tenantId, authId, campId, P.X_MANAGE); // эрх → core_users.id
       // … бизнес логик (цэвэр функцээ тусад нь файлд — unit тест) …

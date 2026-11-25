@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { FeedReportStatus } from '@prisma/client';
 import { PrismaTenantClientService } from '../../db/prisma-tenant-client.service';
-import { inTenantTx, type Tx } from '../camp/common/camp-tx';
-import { withCampErrors } from '../camp/common/camp-errors';
+import { inTenantTx, type Tx } from '../core/platform/tenant-tx';
+import { withAppErrors } from '../core/platform/db-errors';
 import { badRequest, conflict, forbidden, notFound } from '../../common/i18n/app-error';
 import { MediaService, parseVariants } from '../../storage/media.service';
 import { canReport, canView, type FeedContentState, type FeedViewer } from './feed-rules';
@@ -34,7 +34,7 @@ export class FeedReportsService {
 
   async create(tenantId: string, authId: string, dto: CreateReportDto): Promise<FeedReportResultDto> {
     if (!!dto.postId === !!dto.commentId) throw badRequest('feed.err.report_target');
-    return withCampErrors(() =>
+    return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const v = await this.feed.viewer(tx, tenantId, authId);
         let target: ({ id: string } & FeedContentState) | null;

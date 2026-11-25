@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../common/camp-access.service';
 import { CampAuditService } from '../common/camp-audit.service';
-import { inTenantTx, Tx } from '../common/camp-tx';
-import { withCampErrors } from '../common/camp-errors';
+import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
+import { withAppErrors } from '../../core/platform/db-errors';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { normalizeMnPhone, usernameFromCode } from '../../../auth/login-identifier';
 import { TenantCacheService } from '../../../auth/tenant-cache.service';
@@ -62,7 +62,7 @@ export class CampEmployeeLoginService {
 
   /** PUT /camp/camps/:campId/employees/:id/user — userId = null → салгах (автомат роль trigger-ээр хасагдана) */
   async link(tenantId: string, authId: string, campId: string, employeeId: string, userId: string | null) {
-    const res = await withCampErrors(() =>
+    const res = await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         const actorUserId = await this.access.requireTenantAdmin(tx, tenantId, authId);
         const e = await this.findEmployee(tx, tenantId, campId, employeeId);
@@ -144,7 +144,7 @@ export class CampEmployeeLoginService {
    * (нэвтрэх эрхтэй) бүх ажилтанд дахин хуулах. Гараар олгосон олголт хөндөгдөхгүй.
    */
   async applyPositionTemplates(tenantId: string, authId: string, positionId: string) {
-    const res = await withCampErrors(() =>
+    const res = await withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
         await this.access.requireTenantAdmin(tx, tenantId, authId);
         const pos = await tx.hrPosition.findFirst({ where: { id: positionId, tenantId }, select: { id: true } });

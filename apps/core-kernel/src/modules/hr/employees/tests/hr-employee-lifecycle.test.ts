@@ -10,7 +10,7 @@ import { MESSAGES } from '../../../../common/i18n/messages';
 import { HrEmployeesService } from '../hr-employees.service';
 import { HrEmployeeHooks } from '../employee-hooks';
 import { HrEmployeeLifecycleService, terminationDateError, terminationUserBlocker } from '../hr-employee-lifecycle.service';
-import { todayUb } from '../../../camp/common/camp-date';
+import { todayUb } from '../../../core/platform/date';
 
 const P = CAMP_PERMISSIONS;
 const TODAY = todayUb();

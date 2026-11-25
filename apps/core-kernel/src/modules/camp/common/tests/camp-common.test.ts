@@ -3,8 +3,8 @@ import { BadRequestException, ConflictException, ForbiddenException, NotFoundExc
 import { Prisma, UserRole } from '@prisma/client';
 import { CAMP_PERMISSIONS, CAMP_PERMISSION_CODES, isCampPermission } from '../camp-permissions';
 import { CampAccessService, CampPermissionSet } from '../camp-access.service';
-import { toCampHttpError, withCampErrors } from '../camp-errors';
-import { fromDbDate, fromDbTime, inTenantTx, toDbDate, toDbTime } from '../camp-tx';
+import { toAppHttpError, withAppErrors } from '../../../core/platform/db-errors';
+import { fromDbDate, fromDbTime, inTenantTx, toDbDate, toDbTime } from '../../../core/platform/tenant-tx';
 import { expectTenantTx, setActor, setup } from './camp-test-utils';
 import { i18nStorage } from '../../../../common/i18n/i18n-context';
 
@@ -124,34 +124,34 @@ describe('camp-errors (Шат 2.1)', () => {
     new Prisma.PrismaClientKnownRequestError('x', { code, clientVersion: '5.22.0', meta });
 
   it('P2002 → 409 (талбар нэрлэнэ), P2003 → 400, P2025 → 404', () => {
-    const e = toCampHttpError(known('P2002', { target: ['tenant_id', 'code'] }));
+    const e = toAppHttpError(known('P2002', { target: ['tenant_id', 'code'] }));
     expect(e).toBeInstanceOf(ConflictException);
     expect((e as Error).message).toContain('tenant_id, code');
-    expect(toCampHttpError(known('P2003'))).toBeInstanceOf(BadRequestException);
-    expect(toCampHttpError(known('P2025'))).toBeInstanceOf(NotFoundException);
+    expect(toAppHttpError(known('P2003'))).toBeInstanceOf(BadRequestException);
+    expect(toAppHttpError(known('P2025'))).toBeInstanceOf(NotFoundException);
   });
 
   it('trigger CAMP_* → 409 мессежтэй; EXCLUDE → 409; CHECK → 400; бусад → өөрчлөхгүй', () => {
-    const trig = toCampHttpError(new Error('db error: ERROR: CAMP_SYSTEM_ROLE: системийн ролийг устгах боломжгүй (Кемп админ)'));
+    const trig = toAppHttpError(new Error('db error: ERROR: CAMP_SYSTEM_ROLE: системийн ролийг устгах боломжгүй (Кемп админ)'));
     expect(trig).toBeInstanceOf(ConflictException);
     expect((trig as ConflictException).getResponse()).toMatchObject({
       code: 'camp.err.trigger.system_role',
       message: 'Системийн ролийг устгах эсвэл кодыг өөрчлөх боломжгүй',
     });
-    expect(toCampHttpError(new Error('conflicting key value violates exclusion constraint "ex_camp_stays_overlap"'))).toBeInstanceOf(ConflictException);
-    expect(toCampHttpError(new Error('new row for relation "camp_rooms" violates check constraint "camp_rooms_capacity_check"'))).toBeInstanceOf(BadRequestException);
-    expect((toCampHttpError(new Error('ERROR: CAMP_FUTURE_RULE: ирээдүйн нөхцөл')) as ConflictException).getResponse())
+    expect(toAppHttpError(new Error('conflicting key value violates exclusion constraint "ex_camp_stays_overlap"'))).toBeInstanceOf(ConflictException);
+    expect(toAppHttpError(new Error('new row for relation "camp_rooms" violates check constraint "camp_rooms_capacity_check"'))).toBeInstanceOf(BadRequestException);
+    expect((toAppHttpError(new Error('ERROR: CAMP_FUTURE_RULE: ирээдүйн нөхцөл')) as ConflictException).getResponse())
       .toMatchObject({ code: 'camp.err.errors.4' });
     const other = new Error('connection lost');
-    expect(toCampHttpError(other)).toBe(other);
+    expect(toAppHttpError(other)).toBe(other);
     const http = new NotFoundException('x');
-    expect(toCampHttpError(http)).toBe(http);
+    expect(toAppHttpError(http)).toBe(http);
   });
 
   it('known trigger errors use the request language instead of the database detail', () => {
     const error = i18nStorage.run(
       { lang: 'en', overrides: new Map() },
-      () => toCampHttpError(new Error('ERROR: CAMP_HAUL_LOCKED: Батлагдсан бүртгэлийг өөрчлөх боломжгүй (H-1)')),
+      () => toAppHttpError(new Error('ERROR: CAMP_HAUL_LOCKED: Батлагдсан бүртгэлийг өөрчлөх боломжгүй (H-1)')),
     );
     expect(error).toBeInstanceOf(ConflictException);
     expect((error as ConflictException).getResponse()).toMatchObject({
@@ -169,23 +169,23 @@ describe('camp-errors (Шат 2.1)', () => {
     );
 
   it('Prisma хэлбэр: EXCLUDE (\\"ex_*\\") → 409 constraint нэртэй; CHECK (\\"..._check\\") → 400', () => {
-    const ex = toCampHttpError(prismaPg('23P01', 'conflicting key value violates exclusion constraint \\"ex_camp_shift_patterns_overlap\\"'));
+    const ex = toAppHttpError(prismaPg('23P01', 'conflicting key value violates exclusion constraint \\"ex_camp_shift_patterns_overlap\\"'));
     expect(ex).toBeInstanceOf(ConflictException);
     expect((ex as Error).message).toBe('Хугацаа/муж давхцаж байна (ex_camp_shift_patterns_overlap)');
-    const ck = toCampHttpError(prismaPg('23514', 'new row for relation \\"camp_rooms\\" violates check constraint \\"camp_rooms_capacity_check\\"'));
+    const ck = toAppHttpError(prismaPg('23514', 'new row for relation \\"camp_rooms\\" violates check constraint \\"camp_rooms_capacity_check\\"'));
     expect(ck).toBeInstanceOf(BadRequestException);
     expect((ck as Error).message).toBe('Өгөгдөл дүрэм зөрчиж байна (camp_rooms_capacity_check)');
   });
 
   it('Prisma хэлбэр: мессеж танигдахгүй ч SQLSTATE 23P01 / 23514 → 409 / 400', () => {
-    expect(toCampHttpError(prismaPg('23P01', 'өөр хэлбэрийн текст'))).toBeInstanceOf(ConflictException);
-    expect(toCampHttpError(prismaPg('23514', 'өөр хэлбэрийн текст'))).toBeInstanceOf(BadRequestException);
+    expect(toAppHttpError(prismaPg('23P01', 'өөр хэлбэрийн текст'))).toBeInstanceOf(ConflictException);
+    expect(toAppHttpError(prismaPg('23514', 'өөр хэлбэрийн текст'))).toBeInstanceOf(BadRequestException);
     const other = prismaPg('40001', 'could not serialize access');
-    expect(toCampHttpError(other)).toBe(other);
+    expect(toAppHttpError(other)).toBe(other);
   });
 
   it('Prisma хэлбэр: trigger мессеж (кирилл) → 409, төгсгөлд хашилт/escape үлдэхгүй', () => {
-    const e = toCampHttpError(prismaPg('23514', 'CAMP_HAUL_LOCKED: батлагдсан бүртгэлийг өөрчлөх боломжгүй (H-1)'));
+    const e = toAppHttpError(prismaPg('23514', 'CAMP_HAUL_LOCKED: батлагдсан бүртгэлийг өөрчлөх боломжгүй (H-1)'));
     expect(e).toBeInstanceOf(ConflictException);
     expect((e as ConflictException).getResponse()).toMatchObject({
       code: 'camp.err.trigger.haul_locked',
@@ -193,9 +193,9 @@ describe('camp-errors (Шат 2.1)', () => {
     });
   });
 
-  it('withCampErrors: амжилт → утга; алдаа → хөрвүүлж шиднэ', async () => {
-    await expect(withCampErrors(async () => 5)).resolves.toBe(5);
-    await expect(withCampErrors(async () => { throw known('P2002'); })).rejects.toThrow(ConflictException);
+  it('withAppErrors: амжилт → утга; алдаа → хөрвүүлж шиднэ', async () => {
+    await expect(withAppErrors(async () => 5)).resolves.toBe(5);
+    await expect(withAppErrors(async () => { throw known('P2002'); })).rejects.toThrow(ConflictException);
   });
 });
 

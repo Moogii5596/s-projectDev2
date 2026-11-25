@@ -1,4 +1,4 @@
-import { Tx } from './camp-tx';
+import { Tx } from '../../core/platform/tenant-tx';
 import { badRequest, notFound } from '../../../common/i18n/app-error';
 
 /** Кемп tenant-д байгаа эсэх (404). Эрх шалгахаас ӨМНӨ дуудахгүй — эрхгүй хэрэглэгчид оршин буйг илчлэхгүй */

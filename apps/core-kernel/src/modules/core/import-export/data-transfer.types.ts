@@ -2,7 +2,7 @@ import type { CampDataImportType } from '@prisma/client';
 import type { CellValue, ParsedTableRow, TableSpec } from '../../../common/xlsx/table-spec';
 import type { CampPermission } from '../../camp/common/camp-permissions';
 import type { CampAuditService } from '../../camp/common/camp-audit.service';
-import type { Tx } from '../../camp/common/camp-tx';
+import type { Tx } from '../platform/tenant-tx';
 
 type RowOp = 'create' | 'update' | 'unchanged' | 'error';
 

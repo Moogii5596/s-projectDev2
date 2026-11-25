@@ -2,7 +2,7 @@ import { Controller, Get, Param, ParseUUIDPipe, Query, Req } from '@nestjs/commo
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import type { FastifyRequest } from 'fastify';
-import { reqUser } from '../common/camp-request';
+import { reqUser } from '../../core/platform/request';
 import { CAMP_AUDIT_ENTITIES, CampAuditService } from '../common/camp-audit.service';
 
 export class QueryAuditDto {

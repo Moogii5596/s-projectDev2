@@ -1,7 +1,7 @@
 import { CampDataImportType, CampEmployeeStatus, Prisma } from '@prisma/client';
 import { CellValue, TableSpec } from '../../../common/xlsx/table-spec';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
-import { Tx } from '../../camp/common/camp-tx';
+import { Tx } from '../../core/platform/tenant-tx';
 import { EMPLOYEE_AUDIT_FIELDS } from '../employees/hr-employees.service';
 import { normalizeName } from '../../../common/name-normalization';
 import { resolvePositionByName } from '../positions/hr-positions.service';

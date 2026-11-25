@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { reqUser } from '../common/camp-request';
+import { reqUser } from '../../core/platform/request';
 import { CampsService } from './camps.service';
 import { CampFacilitiesService } from './camp-facilities.service';
 import { BulkRoomsDto, CreateBuildingDto, CreateCampDto, CreateRoomDto, QueryRoomsDto, UpdateBuildingDto, UpdateCampDto, UpdateRoomDto } from './camp-master.dto';

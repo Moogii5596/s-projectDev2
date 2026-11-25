@@ -5,7 +5,7 @@ import { SystemPrismaService } from '../../../db/system-prisma.service';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CampAuditService } from '../../camp/common/camp-audit.service';
-import { inTenantTx } from '../../camp/common/camp-tx';
+import { inTenantTx } from '../platform/tenant-tx';
 import { TenantSecurityPolicyService } from '../../../auth/tenant-security-policy.service';
 import { UpdateTenantProfileDto, UpdateTenantSecurityPolicyDto } from './core-tenant-settings.dto';
 

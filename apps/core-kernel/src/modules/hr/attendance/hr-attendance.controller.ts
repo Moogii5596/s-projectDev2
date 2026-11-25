@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { reqUser } from '../../camp/common/camp-request';
+import { reqUser } from '../../core/platform/request';
 import { badRequest, payloadTooLarge } from '../../../common/i18n/app-error';
 import { HrAttendanceService } from './hr-attendance.service';
 import { HrShiftsService } from './hr-shifts.service';

@@ -4,8 +4,8 @@ import { normalizeName } from '../../../common/name-normalization';
 import type { ApplyCtx, DataImportHandler, PlannedRow } from '../../core/import-export/data-transfer.types';
 import { has, upper } from '../../core/import-export/data-transfer.types';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
-import { todayUb } from '../common/camp-date';
-import { toDbDate } from '../common/camp-tx';
+import { todayUb } from '../../core/platform/date';
+import { toDbDate } from '../../core/platform/tenant-tx';
 import { exportRooms, ROOMS_SPEC } from './rooms.export';
 
 /**
