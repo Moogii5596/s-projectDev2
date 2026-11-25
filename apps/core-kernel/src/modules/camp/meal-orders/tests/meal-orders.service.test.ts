@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { MealOrdersService } from '../meal-orders.service';
 import { ApprovalEntityRegistry, type ApprovalDecisionContext } from '../../../core/approvals/approval-entity.registry';
-import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
+import { PERMISSIONS } from '../../../core/permissions/permission-registry';
 import { setActor, setup } from '../../common/tests/camp-test-utils';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const FUTURE = '2099-01-10';
 const PAST = '2020-01-10';
 const L = (mealType: string, mealLocationId: string, baseCount: number) => ({ mealType, mealLocationId, baseCount });

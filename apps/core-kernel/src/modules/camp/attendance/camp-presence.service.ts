@@ -6,7 +6,7 @@ import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
 import { addDays } from '../../core/platform/date';
 import { computePresence, PresenceEmployee, PresenceResult } from './presence';
 import { assertDate } from '../../hr/attendance/range';
-import { readCatalogNameI18n } from '../common/catalog-name-i18n';
+import { readCatalogNameI18n } from '../../core/platform/catalog-name-i18n';
 
 /** D өдрийн хоолны суурь тоо (Шат 3.5) — V2-ийн хоолны захиалга (Шат 6, D8) үүнийг ашиглана */
 @Injectable()

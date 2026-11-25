@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { UserLoginLockService } from '../user-login-lock.service';
-import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
+import { PERMISSIONS } from '../../../core/permissions/permission-registry';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
 import { MESSAGES } from '../../../../common/i18n/messages';
 
@@ -47,7 +47,7 @@ describe('UserLoginLockService (#28)', () => {
   });
 
   it('unlock: системийн админ биш → 403, тоолуурт хүрэхгүй', async () => {
-    setActor(s.tx, { roles: [{ campId: null, perms: [CAMP_PERMISSIONS.SETTINGS_MANAGE] }] });
+    setActor(s.tx, { roles: [{ campId: null, perms: [PERMISSIONS.SETTINGS_MANAGE] }] });
     await expect(svc.unlock('t1', 'a1', 'u2')).rejects.toThrow(ForbiddenException);
     expect(locks.unlock).not.toHaveBeenCalled();
   });

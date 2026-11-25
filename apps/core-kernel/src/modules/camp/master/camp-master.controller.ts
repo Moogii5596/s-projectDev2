@@ -4,7 +4,7 @@ import { reqUser } from '../../core/platform/request';
 import { CampsService } from './camps.service';
 import { CampFacilitiesService } from './camp-facilities.service';
 import { BulkRoomsDto, CreateBuildingDto, CreateCampDto, CreateRoomDto, QueryRoomsDto, UpdateBuildingDto, UpdateCampDto, UpdateRoomDto } from './camp-master.dto';
-import { QueryActiveOnlyDto } from '../common/common.dto';
+import { QueryActiveOnlyDto } from '../../core/platform/common.dto';
 
 const uuid = () => new ParseUUIDPipe();
 

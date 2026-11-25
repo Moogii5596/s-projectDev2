@@ -5,9 +5,6 @@ import { Tx } from './tenant-tx';
 import { forbidden } from '../../../common/i18n/app-error';
 import { isAdminBypassExcluded, type Permission } from '../permissions/permission-registry';
 
-/** Эрхийн код (системийн түвшин, ADR-007). Хуучин нэр `CampPermission` — C1-ийн дараагийн алхамд дуудагчдад солигдоно */
-type CampPermission = Permission;
-
 /** Tenant-ийн эдгээр role бүх кемпийн бүх эрхтэй (анхны тохиргоо хийх боломж, ERD v4 §2.1) */
 const TENANT_ADMIN_ROLES: readonly UserRole[] = [UserRole.OWNER, UserRole.ADMIN];
 const PERMS_TTL_SECONDS = 300;
@@ -70,7 +67,7 @@ export class AccessService {
   }
 
   /** Тухайн кемпэд (null = tenant түвшин) эрх байгаа эсэх */
-  static has(perms: CampPermissionSet, campId: string | null, code: CampPermission): boolean {
+  static has(perms: CampPermissionSet, campId: string | null, code: Permission): boolean {
     if ((perms.isTenantAdmin && !isAdminBypassExcluded(code)) || perms.global.includes(code)) return true;
     return campId !== null && (perms.byCamp[campId]?.includes(code) ?? false);
   }
@@ -83,7 +80,7 @@ export class AccessService {
   }
 
   /** Эрхүүдийн аль НЭГ нь байвал зөвшөөрнө; core_users.id буцаана */
-  async require(tx: Tx, tenantId: string, authId: string, campId: string | null, codes: CampPermission | CampPermission[]): Promise<string> {
+  async require(tx: Tx, tenantId: string, authId: string, campId: string | null, codes: Permission | Permission[]): Promise<string> {
     const list = Array.isArray(codes) ? codes : [codes];
     const actor = await this.resolve(tx, tenantId, authId);
     if (!list.some((c) => AccessService.has(actor.perms, campId, c))) {
@@ -109,11 +106,11 @@ export class AccessService {
   }
 
   /** Тухайн эрх аль НЭГ кемпэд (эсвэл бүх кемпэд) байвал — tenant түвшний лавлах (жнь хөрөнгийн ангилал) */
-  static hasInAnyCamp(perms: CampPermissionSet, code: CampPermission): boolean {
+  static hasInAnyCamp(perms: CampPermissionSet, code: Permission): boolean {
     return AccessService.has(perms, null, code) || Object.values(perms.byCamp).some((p) => p.includes(code));
   }
 
-  async requireInAnyCamp(tx: Tx, tenantId: string, authId: string, code: CampPermission): Promise<string> {
+  async requireInAnyCamp(tx: Tx, tenantId: string, authId: string, code: Permission): Promise<string> {
     const actor = await this.resolve(tx, tenantId, authId);
     if (!AccessService.hasInAnyCamp(actor.perms, code)) throw forbidden('camp.err.access.3', { code });
     return actor.userId;

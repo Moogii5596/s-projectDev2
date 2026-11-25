@@ -3,16 +3,16 @@ import { CampMaintenanceStatus, CampRoomStatus } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
 import { AuditService } from '../../core/platform/audit.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { BULK_ROOMS_MAX, roomNumbers } from './room-range';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404 } from '../common/camp-lookup';
 import { BulkRoomsDto, CreateBuildingDto, CreateRoomDto, QueryRoomsDto, UpdateBuildingDto, UpdateRoomDto } from './camp-master.dto';
-import { QueryActiveOnlyDto } from '../common/common.dto';
+import { QueryActiveOnlyDto } from '../../core/platform/common.dto';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 /** Өрөөг кемпийн мастер эсвэл өрөөний эрхтэй хүн удирдана (ERD v4 §2.2: катеринг админ room.manage-тэй) */
 const ROOM_WRITE = [P.ROOM_MANAGE, P.MASTER_MANAGE];
 const BUILDING_SELECT = { id: true, code: true, name: true, isActive: true, typeId: true, type: { select: { name: true, nameI18n: true } }, createdAt: true, updatedAt: true } as const;

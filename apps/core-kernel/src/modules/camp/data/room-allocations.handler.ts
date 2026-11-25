@@ -4,7 +4,7 @@ import type { ApplyCtx, DataImportHandler, PlannedRow } from '../../core/import-
 import { upper } from '../../core/import-export/data-transfer.types';
 import { CAPACITY_WINDOW_NIGHTS, firstOverCapacityNight, type OccupantPlan } from '../attendance/camp-rooms.service';
 import { getRosterSettings } from '../common/camp-lookup';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { todayUb } from '../../core/platform/date';
 import { fromDbDate, toDbDate } from '../../core/platform/tenant-tx';
 
@@ -39,7 +39,7 @@ const overlaps = (aS: string, aE: string | null, bS: string, bE: string | null) 
 export const roomAllocationsHandler: DataImportHandler = {
   type: CampDataImportType.ROOM_ALLOCATIONS,
   spec: ROOM_ALLOCATIONS_SPEC,
-  permission: CAMP_PERMISSIONS.ROOM_MANAGE,
+  permission: PERMISSIONS.ROOM_MANAGE,
 
   async plan(tx, ctx, rows) {
     const codes = [...new Set(rows.map((r) => r.values.employeeCode).filter((c): c is string => typeof c === 'string' && c !== ''))];

@@ -2,17 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
 import { AuditService } from '../../core/platform/audit.service';
-import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404, getRosterSettings } from '../../camp/common/camp-lookup';
 import { CreateDepartmentDto, SetShiftPatternDto, UpdateDepartmentDto } from './hr-org.dto';
-import { QueryActiveOnlyDto } from '../../camp/common/common.dto';
+import { QueryActiveOnlyDto } from '../../core/platform/common.dto';
 import { normalizeShiftPattern, ShiftSegment } from './shift-pattern';
 import { conflict, notFound } from '../../../common/i18n/app-error';
-import { mergeCatalogNameI18n } from '../../camp/common/catalog-name-i18n';
+import { mergeCatalogNameI18n } from '../../core/platform/catalog-name-i18n';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const DEPT_SELECT = {
   id: true,
   code: true,

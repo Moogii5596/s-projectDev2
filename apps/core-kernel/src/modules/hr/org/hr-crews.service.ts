@@ -2,16 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
 import { AuditService } from '../../core/platform/audit.service';
-import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { weekdayText } from '../../camp/common/camp-i18n';
 import { getCampOr404, getRosterSettings } from '../../camp/common/camp-lookup';
 import { CreateCrewDto, UpdateCrewDto } from './hr-org.dto';
-import { QueryActiveOnlyDto } from '../../camp/common/common.dto';
+import { QueryActiveOnlyDto } from '../../core/platform/common.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const CREW_SELECT = { id: true, code: true, name: true, rosterAnchorDate: true, isActive: true, createdAt: true, updatedAt: true } as const;
 
 type CrewRow = { id: string; code: string; name: string | null; rosterAnchorDate: Date; isActive: boolean; createdAt: Date; updatedAt: Date };

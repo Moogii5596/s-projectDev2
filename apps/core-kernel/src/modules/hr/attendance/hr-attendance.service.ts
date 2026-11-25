@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CampImportStatus, CampMovementDirection, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
-import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { fromDbDate, inTenantTx, toDbDate } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { getCampOr404 } from '../../camp/common/camp-lookup';
@@ -22,7 +22,7 @@ import { HR_ID_PENDING } from '../employees/data-issues';
 import { normalizeName } from '../../../common/name-normalization';
 import type { Tx } from '../../core/platform/tenant-tx';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const CONFIRM_TX = { timeout: 120_000, maxWait: 10_000 };
 const MAX_RANGE_DAYS = 93;
 const IMPORT_SELECT = { id: true, fileName: true, status: true, totalRows: true, okRows: true, errorRows: true, createdAt: true } as const;

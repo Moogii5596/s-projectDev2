@@ -10,7 +10,7 @@ import { ConflictException, ForbiddenException, NotFoundException } from '@nestj
 import { CampEmployeeStatus, PrismaClient, UserRole } from '@prisma/client';
 import { AccessService } from '../src/modules/core/platform/access.service';
 import { AuditService } from '../src/modules/core/platform/audit.service';
-import { CAMP_PERMISSIONS as P } from '../src/modules/camp/common/camp-permissions';
+import { PERMISSIONS as P } from '../src/modules/core/permissions/permission-registry';
 import { addDays, todayUb } from '../src/modules/core/platform/date';
 import { fromDbDate, inTenantTx, toDbDate } from '../src/modules/core/platform/tenant-tx';
 import { CampStayStore } from '../src/modules/camp/attendance/camp-stays.service';

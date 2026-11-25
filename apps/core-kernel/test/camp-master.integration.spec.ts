@@ -24,8 +24,7 @@ import { REDIS_CLIENT } from '../src/db/redis.module';
 import { createRedisMock } from './helpers/redis-mock';
 import { TenantAuthGuard } from '../src/auth/tenant-auth.guard';
 import { TenantCacheService } from '../src/auth/tenant-cache.service';
-import { CAMP_PERMISSION_CODES, campPermissionAvailableIn } from '../src/modules/camp/common/camp-permissions';
-import { permissionModule } from '../src/modules/core/permissions/permission-registry';
+import { PERMISSION_CODES, permissionAvailableIn, permissionModule } from '../src/modules/core/permissions/permission-registry';
 import { toAppHttpError } from '../src/modules/core/platform/db-errors';
 import { configureApp } from '../src/common/http/configure-app';
 import { ADMIN_DB_URL } from './helpers/db-urls';
@@ -124,12 +123,12 @@ afterAll(async () => {
 }, 30_000);
 
 describe('🔑 Каталог ба анхдагч роль', () => {
-  it('кодын CAMP_PERMISSIONS = DB core_permissions (код, модуль, хувилбар) — зөрөхгүй', async () => {
+  it('кодын PERMISSIONS = DB core_permissions (код, модуль, хувилбар) — зөрөхгүй', async () => {
     const rows = await prismaAdmin.corePermission.findMany({ select: { code: true, module: true, availableIn: true } });
-    expect(rows.map((p) => p.code).sort()).toEqual([...CAMP_PERMISSION_CODES].sort());
+    expect(rows.map((p) => p.code).sort()).toEqual([...PERMISSION_CODES].sort());
     for (const r of rows) {
       expect(r.module).toBe(permissionModule(r.code));
-      expect(r.availableIn).toBe(campPermissionAvailableIn(r.code));
+      expect(r.availableIn).toBe(permissionAvailableIn(r.code));
     }
   });
 

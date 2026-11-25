@@ -8,7 +8,7 @@ import { BadRequestException, ForbiddenException, NotFoundException } from '@nes
 import { PrismaClient, UserRole } from '@prisma/client';
 import { AccessService } from '../src/modules/core/platform/access.service';
 import { AuditService } from '../src/modules/core/platform/audit.service';
-import { CAMP_PERMISSIONS as P } from '../src/modules/camp/common/camp-permissions';
+import { PERMISSIONS as P } from '../src/modules/core/permissions/permission-registry';
 import { CampRbacService } from '../src/modules/camp/rbac/camp-rbac.service';
 import { buildSnapshot, comparePerms } from '../src/scripts/camp-snapshot';
 import { ADMIN_DB_URL, APP_USER_DB_URL } from './helpers/db-urls';

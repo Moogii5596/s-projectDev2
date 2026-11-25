@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { inTenantTx, type Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import type { ContractCatalogView, QuantitySource, ServiceTypeView, UnitView } from './contract.types';
 import type { CreateServiceTypeDto, CreateUnitDto, UpdateServiceTypeDto, UpdateUnitDto } from './contracts.dto';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 
 const UNIT_SELECT = { id: true, code: true, nameMn: true, nameEn: true, nameZh: true, decimals: true, sortOrder: true, isActive: true } as const;
 const TYPE_SELECT = {

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import ExcelJS from 'exceljs';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CampEmployeeStatus, CampImportStatus, CampRoomStatus, CampShiftType, UserRole } from '@prisma/client';
-import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
+import { PERMISSIONS } from '../../../core/permissions/permission-registry';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
 import { HrAttendanceHooks } from '../../../hr/attendance/stay-store';
 import { CampStayStore, CampStaysService } from '../camp-stays.service';
@@ -12,7 +12,7 @@ import { HrEmployeesService } from '../../../hr/employees/hr-employees.service';
 import { CampRoomsService, firstOverCapacityNight } from '../camp-rooms.service';
 import { CampPresenceService } from '../camp-presence.service';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const S = { rosterOnDays: 14, rosterOffDays: 14, changeoverWeekday: 3 };
 const CAMP = { id: 'c1', code: 'C1', name: 'C1', isActive: true };
 const d = (iso: string) => new Date(`${iso}T00:00:00.000Z`);

@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
-import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
-import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../../camp/common/common.dto';
-import { mergeCatalogNameI18n } from '../../camp/common/catalog-name-i18n';
+import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../../core/platform/common.dto';
+import { mergeCatalogNameI18n } from '../../core/platform/catalog-name-i18n';
 import { normalizeName } from '../../../common/name-normalization';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const ITEM = { id: true, name: true, nameI18n: true, code: true, isActive: true, createdAt: true, updatedAt: true } as const;
 
 /**

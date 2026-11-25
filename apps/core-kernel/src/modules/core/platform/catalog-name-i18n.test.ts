@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeCatalogNameI18n, readCatalogNameI18n } from '../catalog-name-i18n';
+import { mergeCatalogNameI18n, readCatalogNameI18n } from './catalog-name-i18n';
 
 describe('catalog name translations', () => {
   it('keeps translations that were not included in an update', () => {

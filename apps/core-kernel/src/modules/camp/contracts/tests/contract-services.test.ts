@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Prisma } from '@prisma/client';
 import { setup, setActor } from '../../common/tests/camp-test-utils';
-import { CAMP_PERMISSIONS as P } from '../../common/camp-permissions';
+import { PERMISSIONS as P } from '../../../core/permissions/permission-registry';
 import { ContractsService } from '../contracts.service';
 import { ContractPricingService } from '../contract-pricing.service';
 import { ContractCatalogService } from '../contract-catalog.service';

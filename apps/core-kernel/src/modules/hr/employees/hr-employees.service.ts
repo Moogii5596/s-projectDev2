@@ -3,7 +3,7 @@ import { CampEmployeeStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
 import { AuditService } from '../../core/platform/audit.service';
-import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { assertMealLocation, getCampOr404, getRosterSettings } from '../../camp/common/camp-lookup';
@@ -16,7 +16,7 @@ import { normalizeExtraPhones, phonesOut, replaceExtraPhones, resolveNames } fro
 import { applyIssues, clearedBy, DataIssue, readIssues, toJson } from './data-issues';
 import { allocateEmployeeCode } from './employee-code';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const EMPLOYEE_SELECT = {
   id: true,
   employeeCode: true,

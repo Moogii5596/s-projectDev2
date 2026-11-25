@@ -2,15 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { AccessService } from '../../core/platform/access.service';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { fromDbTime, inTenantTx, toDbTime, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
 import { assertMealLocation, getCampOr404 } from '../common/camp-lookup';
 import { CreateMealLocationDto, QueryActiveDto, UpdateCampSettingsDto, UpdateMealLocationDto } from './camp-settings.dto';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
-import { mergeCatalogNameI18n } from '../common/catalog-name-i18n';
+import { mergeCatalogNameI18n } from '../../core/platform/catalog-name-i18n';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 
 /** Тохиргоо байхгүй кемпийн анхдагч утга (DB DEFAULT-тай ижил) */
 const CAMP_SETTINGS_DEFAULTS = {

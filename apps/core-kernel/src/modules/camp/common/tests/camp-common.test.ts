@@ -1,25 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
-import { CAMP_PERMISSIONS, CAMP_PERMISSION_CODES, isCampPermission } from '../camp-permissions';
+import { PERMISSIONS, PERMISSION_CODES, isPermission } from '../../../core/permissions/permission-registry';
 import { AccessService, CampPermissionSet } from '../../../core/platform/access.service';
 import { toAppHttpError, withAppErrors } from '../../../core/platform/db-errors';
 import { fromDbDate, fromDbTime, inTenantTx, toDbDate, toDbTime } from '../../../core/platform/tenant-tx';
 import { expectTenantTx, setActor, setup } from './camp-test-utils';
 import { i18nStorage } from '../../../../common/i18n/i18n-context';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 
 describe('Camp permission каталог (Шат 2.1)', () => {
   it('23 эрх (ADR-007, core shared permissions орсон), давхардалгүй, <модуль>.<x>.<y> хэлбэртэй (DB CHECK-тэй ижил regex)', () => {
-    expect(CAMP_PERMISSION_CODES).toHaveLength(23);
-    expect(new Set(CAMP_PERMISSION_CODES).size).toBe(23);
-    for (const c of CAMP_PERMISSION_CODES) expect(c).toMatch(/^(camp|hr|core|feed|mr)\.[a-z_]+\.[a-z_]+$/);
-    expect(CAMP_PERMISSION_CODES).not.toContain('camp.roles.manage');
+    expect(PERMISSION_CODES).toHaveLength(23);
+    expect(new Set(PERMISSION_CODES).size).toBe(23);
+    for (const c of PERMISSION_CODES) expect(c).toMatch(/^(camp|hr|core|feed|mr)\.[a-z_]+\.[a-z_]+$/);
+    expect(PERMISSION_CODES).not.toContain('camp.roles.manage');
   });
-  it('isCampPermission', () => {
-    expect(isCampPermission('camp.master.manage')).toBe(true);
-    expect(isCampPermission('camp.master.delete')).toBe(false);
+  it('isPermission', () => {
+    expect(isPermission('camp.master.manage')).toBe(true);
+    expect(isPermission('camp.master.delete')).toBe(false);
   });
 });
 

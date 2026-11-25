@@ -2,7 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Que
 import type { FastifyRequest } from 'fastify';
 import { reqUser } from '../../core/platform/request';
 import { HrPositionsService } from './hr-positions.service';
-import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../../camp/common/common.dto';
+import { CreateCatalogItemDto, QueryCatalogDto, UpdateCatalogItemDto } from '../../core/platform/common.dto';
 
 const uuid = () => new ParseUUIDPipe();
 

@@ -1,6 +1,6 @@
 import { IsBoolean, IsNotEmpty, IsObject, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { toBool, trim } from '../../core/platform/dto.util';
+import { toBool, trim } from './dto.util';
 
 export const CODE = /^[A-Za-z0-9._-]+$/;
 

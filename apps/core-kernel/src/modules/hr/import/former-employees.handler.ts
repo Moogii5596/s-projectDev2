@@ -1,6 +1,6 @@
 import { CampDataImportType, CampEmployeeStatus, CampTerminationReason } from '@prisma/client';
 import { CellValue, TableSpec } from '../../../common/xlsx/table-spec';
-import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { Tx } from '../../core/platform/tenant-tx';
 import { todayUb } from '../../core/platform/date';
 import { EMPLOYEE_AUDIT_FIELDS } from '../employees/hr-employees.service';
@@ -120,7 +120,7 @@ async function linkRehireChains(tx: Tx, tenantId: string, codes: readonly string
 export const formerEmployeesHandler: DataImportHandler = {
   type: CampDataImportType.FORMER_EMPLOYEES,
   spec: FORMER_EMPLOYEES_SPEC,
-  permission: CAMP_PERMISSIONS.EMPLOYEE_TERMINATE,
+  permission: PERMISSIONS.EMPLOYEE_TERMINATE,
 
   async plan(tx, ctx, rows) {
     const codes = rows.map((r) => r.values.employeeCode).filter((c): c is string => typeof c === 'string' && c !== '');

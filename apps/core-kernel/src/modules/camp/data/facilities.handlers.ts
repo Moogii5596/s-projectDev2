@@ -3,7 +3,7 @@ import { CellValue, TableSpec } from '../../../common/xlsx/table-spec';
 import { normalizeName } from '../../../common/name-normalization';
 import type { ApplyCtx, DataImportHandler, PlannedRow } from '../../core/import-export/data-transfer.types';
 import { has, upper } from '../../core/import-export/data-transfer.types';
-import { CAMP_PERMISSIONS } from '../common/camp-permissions';
+import { PERMISSIONS } from '../../core/permissions/permission-registry';
 import { todayUb } from '../../core/platform/date';
 import { toDbDate } from '../../core/platform/tenant-tx';
 import { exportRooms, ROOMS_SPEC } from './rooms.export';
@@ -12,7 +12,7 @@ import { exportRooms, ROOMS_SPEC } from './rooms.export';
  * v0.2.3 Блок D (S5) — Өрөөний тохиргооны импорт: байрны төрөл → байр → өрөө (дараалал чухал — нэр/кодоор холбоно).
  * HR-ийн нийтлэг импортын урсгал (PREVIEW → CONFIRM, `camp_data_imports`) — `CampHrBridge.registerHandler`.
  */
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const CODE = /^[A-Za-z0-9._-]+$/;
 const BUILDING_AUDIT_FIELDS = ['code', 'name', 'isActive', 'typeId'] as const;
 const ROOM_AUDIT_FIELDS = ['buildingId', 'roomNo', 'floor', 'capacity', 'status', 'note'] as const;

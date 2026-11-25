@@ -97,9 +97,9 @@ function permsIn(text, aliases = ['CAMP_PERMISSIONS']) {
   for (const m of text.matchAll(/'(camp\.[a-z]+\.[a-z]+)'/g)) out.add(m[1]);
   return [...out];
 }
-/** Файл дахь CAMP_PERMISSIONS-ийн alias (`const P = CAMP_PERMISSIONS` эсвэл `import { CAMP_PERMISSIONS as P }`). */
+/** Файл дахь PERMISSIONS-ийн alias (`const P = PERMISSIONS` эсвэл `import { PERMISSIONS as P }`; хуучин `CAMP_PERMISSIONS` нэрийг ч танина). */
 // v0.2.3 Блок 5: `PERMISSIONS.X` (core/permissions/permission-registry — feed г.м. шинэ код)
-const permAliases = (src) => ['CAMP_PERMISSIONS', 'PERMISSIONS', ...[...src.matchAll(/(?:const\s+(\w+)\s*=\s*CAMP_PERMISSIONS\b|CAMP_PERMISSIONS\s+as\s+(\w+))/g)].map((m) => m[1] ?? m[2])];
+const permAliases = (src) => ['CAMP_PERMISSIONS', 'PERMISSIONS', ...[...src.matchAll(/(?:const\s+(\w+)\s*=\s*(?:CAMP_)?PERMISSIONS\b|\b(?:CAMP_)?PERMISSIONS\s+as\s+(\w+))/g)].map((m) => m[1] ?? m[2])];
 /** Service методын эрх + гишүүнчлэлийн шалгалт; нэг түвшин гүнзгий (`this.helper(`). */
 /** `export const TABLE = { key: { … perms: [P.X] … } }` → тухайн key-ийн эрх (өгөгдлөөр удирдсан шалгалт). */
 function tablePerms(table, key) {

@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { CampSettingsService } from '../camp-settings.service';
-import { CAMP_PERMISSIONS } from '../../common/camp-permissions';
+import { PERMISSIONS } from '../../../core/permissions/permission-registry';
 import { expectTenantTx, setActor, setup } from '../../common/tests/camp-test-utils';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 const dto = {
   vatRate: 10,
   changeoverWeekday: 3,

@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { CAMP_PERMISSIONS } from '../../../camp/common/camp-permissions';
+import { PERMISSIONS } from '../../../core/permissions/permission-registry';
 import { setActor, setup } from '../../../camp/common/tests/camp-test-utils';
 import { HrEmployeesService } from '../hr-employees.service';
 import { nextAutoCode } from '../employee-code';
 
-const P = CAMP_PERMISSIONS;
+const P = PERMISSIONS;
 
 describe('nextAutoCode (R7)', () => {
   it('эхнийх Z0001; хамгийн их + 1 (ажлаас гарсныг ч тооцно — дахин ашиглахгүй); 9999 → 5 орон', () => {

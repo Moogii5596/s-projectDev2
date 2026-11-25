@@ -1,5 +1,5 @@
 import { CampMaintenanceStatus as S } from '@prisma/client';
-import { CAMP_PERMISSIONS as P, CampPermission } from '../common/camp-permissions';
+import { PERMISSIONS as P, Permission } from '../../core/permissions/permission-registry';
 
 /**
  * Засварын төлвийн машин (Шат 4.4) — цэвэр өгөгдөл, unit тестээр бүрэн хамрагдана.
@@ -18,7 +18,7 @@ export type MaintenanceAction = 'start' | 'complete' | 'reopen' | 'close' | 'can
 export interface TransitionRule {
   from: readonly S[];
   to: S;
-  perms: readonly CampPermission[];
+  perms: readonly Permission[];
   reporterMay: boolean;
   room: 'lock' | 'release' | 'none';
 }
