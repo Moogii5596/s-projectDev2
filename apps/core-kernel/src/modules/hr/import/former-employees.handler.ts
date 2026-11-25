@@ -68,8 +68,8 @@ async function loadRefs(tx: Tx, ctx: ImportCtx, codes: string[]) {
           select: { id: true, employeeCode: true, terminatedAt: true, dataIssues: true },
         })
       : Promise.resolve([]),
-    tx.hrDepartment.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, code: true } }),
-    tx.hrCrew.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, code: true } }),
+    tx.hrDepartment.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.scopeId }, select: { id: true, code: true } }),
+    tx.hrCrew.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.scopeId }, select: { id: true, code: true } }),
     tx.coreOrganization.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true, regNumber: true } }),
     tx.hrPosition.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true } }),
   ]);
@@ -222,7 +222,7 @@ export const formerEmployeesHandler: DataImportHandler = {
           select: { id: true },
         });
         const after = await tx.hrEmployee.findFirstOrThrow({ where: { id: row.targetId, tenantId: ctx.tenantId }, select: OUT_SELECT });
-        audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'employee', entityId: after.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before: beforeOut, after, summaryParams: { code: after.employeeCode, name: after.fullName } });
+        audits.push({ tenantId: ctx.tenantId, campId: ctx.scopeId, entityType: 'employee', entityId: after.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before: beforeOut, after, summaryParams: { code: after.employeeCode, name: after.fullName } });
         codes.push(after.employeeCode);
         updated++;
         continue;
@@ -236,7 +236,7 @@ export const formerEmployeesHandler: DataImportHandler = {
       }
       const e = await tx.hrEmployee.create({
         data: {
-          tenantId: ctx.tenantId, campId: ctx.campId,
+          tenantId: ctx.tenantId, campId: ctx.scopeId,
           organizationId: res.organizationId, departmentId: res.departmentId, crewId: res.crewId,
           employeeCode: String(v.employeeCode), ...res.names,
           position: pos?.name ?? null, positionId: pos?.id ?? null,
@@ -251,7 +251,7 @@ export const formerEmployeesHandler: DataImportHandler = {
       });
       if (res.extraPhones.length) await replaceExtraPhones(tx, ctx.tenantId, e.id, res.extraPhones);
       const after = await tx.hrEmployee.findFirstOrThrow({ where: { id: e.id, tenantId: ctx.tenantId }, select: OUT_SELECT });
-      audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'employee', entityId: e.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before: null, after, summaryParams: { code: after.employeeCode, name: after.fullName } });
+      audits.push({ tenantId: ctx.tenantId, campId: ctx.scopeId, entityType: 'employee', entityId: e.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before: null, after, summaryParams: { code: after.employeeCode, name: after.fullName } });
       codes.push(after.employeeCode);
       created++;
     }
@@ -262,7 +262,7 @@ export const formerEmployeesHandler: DataImportHandler = {
 
   async exportRows(tx, ctx) {
     const rows = await tx.hrEmployee.findMany({
-      where: { tenantId: ctx.tenantId, campId: ctx.campId, status: CampEmployeeStatus.TERMINATED },
+      where: { tenantId: ctx.tenantId, campId: ctx.scopeId, status: CampEmployeeStatus.TERMINATED },
       select: {
         employeeCode: true, lastName: true, firstName: true, familyName: true, position: true, phone: true, email: true,
         terminatedAt: true, terminationReason: true, terminationNote: true,

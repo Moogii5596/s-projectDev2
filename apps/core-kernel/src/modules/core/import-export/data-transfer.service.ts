@@ -12,12 +12,10 @@ import {
   parseTableRows,
   parseTableXlsx,
 } from '../../../common/xlsx/table-spec';
-import { CampAccessService } from '../../camp/common/camp-access.service';
 import { CampAuditService } from '../../camp/common/camp-audit.service';
-import { getCampOr404 } from '../../camp/common/camp-lookup';
 import { inTenantTx, Tx } from '../platform/tenant-tx';
 import { withAppErrors } from '../platform/db-errors';
-import type { DataImportHandler, PlannedRow } from './data-transfer.types';
+import type { DataImportHandler, DataTransferScope, PlannedRow } from './data-transfer.types';
 import { DataTransferRegistry } from './data-transfer.registry';
 
 /** Core owns the shared preview/confirm/export flow; business modules register typed handlers. */
@@ -62,7 +60,6 @@ const storable = (rows: ParsedTableRow[]) => rows.map(({ row, values, errors, is
 export class DataTransferService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
     private readonly audit: CampAuditService,
     private readonly transfers: DataTransferRegistry,
   ) {}
@@ -85,21 +82,36 @@ export class DataTransferService {
     return h;
   }
 
+  private anyScope(): DataTransferScope {
+    const first = this.types()[0];
+    const scope = first ? this.transfers.scopeOf(first) : undefined;
+    if (!scope) throw badRequest('import.unknown_type', { type: '' });
+    return scope;
+  }
+
+  /** CORE-10: хүрээний эрх шалгалтыг handler-ийг бүртгэсэн модуль өгнө */
+  private scopeOf(h: DataImportHandler): DataTransferScope {
+    const scope = this.transfers.scopeOf(h.spec.type);
+    if (!scope) throw badRequest('import.unknown_type', { type: h.spec.type });
+    return scope;
+  }
+
   template(type: string): Promise<Buffer> {
     return buildTemplate(this.handlerFor(type).spec, currentLang());
   }
 
-  async preview(tenantId: string, authId: string, campId: string, type: string, input: ImportInput) {
+  async preview(tenantId: string, authId: string, scopeId: string, type: string, input: ImportInput) {
     const h = this.handlerFor(type);
     const parsed = input.kind === 'xlsx' ? await parseTableXlsx(input.buffer, h.spec) : parseTableRows(input.rows, h.spec);
     return withAppErrors(() =>
       inTenantTx(this.prisma, tenantId, async (tx) => {
-        const actorId = await this.access.require(tx, tenantId, authId, campId, h.permission);
-        await getCampOr404(tx, tenantId, campId);
-        const plan = await h.plan(tx, { tenantId, campId }, parsed);
+        const scope = this.scopeOf(h);
+        const actorId = await scope.requirePermission(tx, tenantId, authId, scopeId, h.permission);
+        await scope.describe(tx, tenantId, scopeId);
+        const plan = await h.plan(tx, { tenantId, scopeId }, parsed);
         const imp = await tx.campDataImport.create({
           data: {
-            tenantId, campId, type: h.type,
+            tenantId, campId: scopeId, type: h.type,
             source: input.kind === 'xlsx' ? CampDataImportSource.XLSX : CampDataImportSource.GRID,
             fileName: input.kind === 'xlsx' ? input.fileName.slice(0, 200) || 'import.xlsx' : null,
             ...counts(plan),
@@ -113,12 +125,14 @@ export class DataTransferService {
     );
   }
 
-  async list(tenantId: string, authId: string, campId: string, type?: string) {
+  async list(tenantId: string, authId: string, scopeId: string, type?: string) {
     const h = type ? this.handlerFor(type) : null;
+    // Түүх нь хүрээгээр (ажлын байр) — төрөл заагаагүй бол аль ч бүртгэлтэй төрлийн хүрээний шалгалт (нэг хүрээнд ижил)
+    const scope = h ? this.scopeOf(h) : this.anyScope();
     return inTenantTx(this.prisma, tenantId, async (tx) => {
-      await this.access.requireAccess(tx, tenantId, authId, campId);
+      await scope.requireAccess(tx, tenantId, authId, scopeId);
       return tx.campDataImport.findMany({
-        where: { tenantId, campId, ...(h ? { type: h.type } : {}) },
+        where: { tenantId, campId: scopeId, ...(h ? { type: h.type } : {}) },
         select: IMPORT_SELECT,
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: 50,
@@ -127,43 +141,43 @@ export class DataTransferService {
   }
 
   /** Одоогийн DB-тэй дахин харьцуулсан харагдац (зөвхөн унших) */
-  async get(tenantId: string, authId: string, campId: string, id: string) {
+  async get(tenantId: string, authId: string, scopeId: string, id: string) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
-      const imp = await this.load(tx, tenantId, campId, id);
+      const imp = await this.load(tx, tenantId, scopeId, id);
       const h = this.handlerOf(imp.type);
-      await this.access.require(tx, tenantId, authId, campId, h.permission);
-      const plan = await h.plan(tx, { tenantId, campId }, imp.parsedRows as unknown as ParsedTableRow[]);
+      await this.scopeOf(h).requirePermission(tx, tenantId, authId, scopeId, h.permission);
+      const plan = await h.plan(tx, { tenantId, scopeId }, imp.parsedRows as unknown as ParsedTableRow[]);
       const { parsedRows: _omit, ...rest } = imp;
       return { import: rest, rows: viewRows(h, plan) };
     });
   }
 
-  private async load(tx: Tx, tenantId: string, campId: string, id: string) {
-    const imp = await tx.campDataImport.findFirst({ where: { id, tenantId, campId }, select: { ...IMPORT_SELECT, parsedRows: true } });
+  private async load(tx: Tx, tenantId: string, scopeId: string, id: string) {
+    const imp = await tx.campDataImport.findFirst({ where: { id, tenantId, campId: scopeId }, select: { ...IMPORT_SELECT, parsedRows: true } });
     if (!imp) throw notFound('import.not_found');
     return imp;
   }
 
-  async confirm(tenantId: string, authId: string, campId: string, id: string, skipErrors = false) {
+  async confirm(tenantId: string, authId: string, scopeId: string, id: string, skipErrors = false) {
     const result = await withAppErrors(() =>
       inTenantTx(
         this.prisma,
         tenantId,
         async (tx) => {
-          const peek = await this.load(tx, tenantId, campId, id);
+          const peek = await this.load(tx, tenantId, scopeId, id);
           const h = this.handlerOf(peek.type);
-          const actorUserId = await this.access.require(tx, tenantId, authId, campId, h.permission);
-          // Нэг кемпийн мастер өгөгдлийн импорт дараалан (зэрэгцээ confirm / давхар дарах)
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`camp-data-import:${campId}`}))`;
-          const imp = await this.load(tx, tenantId, campId, id);
+          const actorUserId = await this.scopeOf(h).requirePermission(tx, tenantId, authId, scopeId, h.permission);
+          // Нэг хүрээний мастер өгөгдлийн импорт дараалан (зэрэгцээ confirm / давхар дарах); түлхүүрийн нэр хуучнаараа
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`camp-data-import:${scopeId}`}))`;
+          const imp = await this.load(tx, tenantId, scopeId, id);
           if (imp.status !== CampDataImportStatus.PREVIEW) throw conflict('import.not_preview', { status: imp.status });
-          const plan = await h.plan(tx, { tenantId, campId }, imp.parsedRows as unknown as ParsedTableRow[]);
+          const plan = await h.plan(tx, { tenantId, scopeId }, imp.parsedRows as unknown as ParsedTableRow[]);
           const c = counts(plan);
           if (c.errorRows > 0 && !skipErrors) {
             await tx.campDataImport.update({ where: { id }, data: c });
             return { ok: false as const, h, plan, c };
           }
-          const applied = await h.apply(tx, { tenantId, campId, actorUserId, importId: id, audit: this.audit }, plan.filter((r) => r.op === 'create' || r.op === 'update'));
+          const applied = await h.apply(tx, { tenantId, scopeId, actorUserId, importId: id, audit: this.audit }, plan.filter((r) => r.op === 'create' || r.op === 'update'));
           await tx.campDataImport.update({
             where: { id },
             data: { ...c, status: CampDataImportStatus.CONFIRMED, confirmedBy: actorUserId, confirmedAt: new Date() },
@@ -179,28 +193,29 @@ export class DataTransferService {
     return { status: CampDataImportStatus.CONFIRMED, ...result.applied, skipped: result.c.errorRows, unchanged: result.c.unchangedRows };
   }
 
-  async cancel(tenantId: string, authId: string, campId: string, id: string) {
+  async cancel(tenantId: string, authId: string, scopeId: string, id: string) {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
-      const imp = await this.load(tx, tenantId, campId, id);
-      await this.access.require(tx, tenantId, authId, campId, this.handlerOf(imp.type).permission);
-      const res = await tx.campDataImport.updateMany({ where: { id, tenantId, campId, status: CampDataImportStatus.PREVIEW }, data: { status: CampDataImportStatus.CANCELLED } });
+      const imp = await this.load(tx, tenantId, scopeId, id);
+      const h = this.handlerOf(imp.type);
+      await this.scopeOf(h).requirePermission(tx, tenantId, authId, scopeId, h.permission);
+      const res = await tx.campDataImport.updateMany({ where: { id, tenantId, campId: scopeId, status: CampDataImportStatus.PREVIEW }, data: { status: CampDataImportStatus.CANCELLED } });
       if (res.count !== 1) throw conflict('import.not_preview', { status: imp.status });
       return { status: CampDataImportStatus.CANCELLED };
     });
   }
 
   /** Экспорт = импортын формат (хэрэглэгчийн хэлээр) */
-  async export(tenantId: string, authId: string, campId: string, type: string): Promise<{ buffer: Buffer; fileName: string }> {
+  async export(tenantId: string, authId: string, scopeId: string, type: string): Promise<{ buffer: Buffer; fileName: string }> {
     const handler = this.transfers.getExport(type);
     if (!handler) throw badRequest('import.unknown_type', { type });
     const lang = currentLang();
-    const { spec, rows, campCode } = await inTenantTx(this.prisma, tenantId, async (tx) => {
-      await this.access.requireAccess(tx, tenantId, authId, campId);
-      const camp = await getCampOr404(tx, tenantId, campId);
-      const ctx = { tenantId, campId };
-      return { spec: handler.spec, rows: await handler.exportRows(tx, ctx), campCode: camp.code };
+    const scope = this.scopeOf(handler);
+    const { spec, rows, scopeCode } = await inTenantTx(this.prisma, tenantId, async (tx) => {
+      await scope.requireAccess(tx, tenantId, authId, scopeId);
+      const { code } = await scope.describe(tx, tenantId, scopeId);
+      return { spec: handler.spec, rows: await handler.exportRows(tx, { tenantId, scopeId }), scopeCode: code };
     });
     const date = new Date().toISOString().slice(0, 10);
-    return { buffer: await buildExport(spec, rows, lang), fileName: `${campCode}-${type}-${date}.xlsx` };
+    return { buffer: await buildExport(spec, rows, lang), fileName: `${scopeCode}-${type}-${date}.xlsx` };
   }
 }

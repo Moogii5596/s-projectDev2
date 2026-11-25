@@ -61,7 +61,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/test/tenant-isolation-http.integration.spec.ts` | 8 | 🧱 MR — tenant тусгаарлалт · 🧱 Workflow definition — tenant тусгаарлалт [SEC-002] + эрх/validation [SEC-003] |
 | `core-kernel/test/v024-core-services.integration.spec.ts` | 5 | v0.2.4 core services (integration) |
 
-## Unit — core-kernel — 123 файл, ~914 тест
+## Unit — core-kernel — 124 файл, ~919 тест
 
 Команд: `pnpm --filter core-kernel test`
 
@@ -138,6 +138,7 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/core/debug/debug-storage-warning.spec.ts` | 4 | evaluateDebugStorageWarning |
 | `core-kernel/src/modules/core/feedback/tests/feedback-rules.test.ts` | 5 | v0.2.3 Блок F — санал хүсэлтийн дүрэм |
 | `core-kernel/src/modules/core/import-export/data-transfer.registry.spec.ts` | 2 | DataTransferRegistry |
+| `core-kernel/src/modules/core/import-export/data-transfer.service.spec.ts` | 5 | DataTransferService (CORE-10) |
 | `core-kernel/src/modules/core/modules/core-tenant-modules.service.spec.ts` | 8 | CoreTenantModulesService (SYS-02) |
 | `core-kernel/src/modules/core/notifications/notification-mail.scheduler.spec.ts` | 3 | NotificationMailScheduler (NTF-01) |
 | `core-kernel/src/modules/core/notifications/notification.service.spec.ts` | 10 | NotificationService (NTF-01) · renderNotificationMail (NTF-01) |

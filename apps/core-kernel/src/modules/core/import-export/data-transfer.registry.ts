@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { getModuleManifest } from '../modules/module-registry';
-import type { DataImportHandler } from './data-transfer.types';
+import type { DataImportHandler, DataTransferScope } from './data-transfer.types';
 
 export interface DataTransferRegistration {
   module: string;
   type: string;
   specType: string;
   handler: DataImportHandler;
+  /** CORE-10: хүрээний эрх шалгалт (модуль өгнө) */
+  scope: DataTransferScope;
 }
 
 @Injectable()
@@ -22,7 +24,7 @@ export class DataTransferRegistry {
     this.register(this.exports, 'exportTypes', registration);
   }
 
-  registerHandler(module: string, handler: DataImportHandler): void {
+  registerHandler(module: string, handler: DataImportHandler, scope: DataTransferScope): void {
     const type = handler.spec.type;
     const manifest = getModuleManifest(module);
     if (!manifest) throw new Error(`Data transfer module manifest-д байхгүй: ${module}`);
@@ -31,7 +33,7 @@ export class DataTransferRegistry {
       ...(manifest.exportTypes?.includes(type) ? ['export'] : []),
     ];
     if (capabilities.length === 0) throw new Error(`Data transfer төрөл manifest-д бүртгэгдээгүй: ${type}`);
-    const registration = { module, type, specType: handler.spec.type, handler };
+    const registration = { module, type, specType: handler.spec.type, handler, scope };
     if (capabilities.includes('import')) this.registerImport(registration);
     if (capabilities.includes('export')) this.registerExport(registration);
   }
@@ -42,6 +44,11 @@ export class DataTransferRegistry {
 
   getExport(type: string): DataImportHandler | undefined {
     return this.exports.get(type)?.handler;
+  }
+
+  /** Бүртгэлтэй төрлийн хүрээний шалгалт (импорт, экспортод ижил) */
+  scopeOf(type: string): DataTransferScope | undefined {
+    return (this.imports.get(type) ?? this.exports.get(type))?.scope;
   }
 
   importTypes(): string[] {

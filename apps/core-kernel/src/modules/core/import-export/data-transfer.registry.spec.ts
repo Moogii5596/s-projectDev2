@@ -1,17 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { CampDataImportType } from '@prisma/client';
 import { DataTransferRegistry } from './data-transfer.registry';
-import type { DataImportHandler } from './data-transfer.types';
+import type { DataImportHandler, DataTransferScope } from './data-transfer.types';
+
+const scope: DataTransferScope = {
+  requirePermission: async () => 'actor',
+  requireAccess: async () => undefined,
+  describe: async () => ({ code: 'S1' }),
+};
 
 describe('DataTransferRegistry', () => {
   it('registers manifest-declared import and export handlers', () => {
     const registry = new DataTransferRegistry();
     const handler = createHandler();
-    registry.registerHandler('hr', handler);
+    registry.registerHandler('hr', handler, scope);
 
     expect(registry.getImport('employees')).toBe(handler);
     expect(registry.getExport('employees')).toBe(handler);
     expect(registry.importTypes()).toEqual(['employees']);
+    expect(registry.scopeOf('employees')).toBe(scope);
+    expect(registry.scopeOf('unknown')).toBeUndefined();
   });
 
   it('rejects undeclared, mismatched and duplicate import registrations', () => {
@@ -19,15 +27,15 @@ describe('DataTransferRegistry', () => {
     const handler = createHandler();
 
     expect(() => registry.registerImport({
-      module: 'hr', type: 'unknown', specType: 'unknown', handler,
+      module: 'hr', type: 'unknown', specType: 'unknown', handler, scope,
     })).toThrow(/manifest/);
     expect(() => registry.registerImport({
-      module: 'hr', type: 'employees', specType: 'departments', handler,
+      module: 'hr', type: 'employees', specType: 'departments', handler, scope,
     })).toThrow(/зөрүүтэй/);
 
-    registry.registerImport({ module: 'hr', type: 'employees', specType: 'employees', handler });
+    registry.registerImport({ module: 'hr', type: 'employees', specType: 'employees', handler, scope });
     expect(() => registry.registerImport({
-      module: 'hr', type: 'employees', specType: 'employees', handler,
+      module: 'hr', type: 'employees', specType: 'employees', handler, scope,
     })).toThrow(/дахин бүртгэгдсэн/);
   });
 });

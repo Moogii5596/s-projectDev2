@@ -46,13 +46,13 @@ export const roomAllocationsHandler: DataImportHandler = {
     const [emps, buildings, rooms, settings] = await Promise.all([
       codes.length
         ? tx.hrEmployee.findMany({
-            where: { tenantId: ctx.tenantId, campId: ctx.campId, employeeCode: { in: codes, mode: 'insensitive' } },
+            where: { tenantId: ctx.tenantId, campId: ctx.scopeId, employeeCode: { in: codes, mode: 'insensitive' } },
             select: { id: true, employeeCode: true, status: true, terminatedAt: true, crew: { select: { rosterAnchorDate: true } } },
           })
         : Promise.resolve([]),
-      tx.campBuilding.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, code: true } }),
-      tx.campRoom.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, buildingId: true, roomNo: true, capacity: true, status: true } }),
-      getRosterSettings(tx, ctx.tenantId, ctx.campId),
+      tx.campBuilding.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.scopeId }, select: { id: true, code: true } }),
+      tx.campRoom.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.scopeId }, select: { id: true, buildingId: true, roomNo: true, capacity: true, status: true } }),
+      getRosterSettings(tx, ctx.tenantId, ctx.scopeId),
     ]);
     // Код → бүртгэл: идэвхтэй/идэвхгүй давуу, эс бөгөөс хамгийн сүүлд гарсан
     const empByCode = new Map<string, (typeof emps)[number]>();
@@ -170,7 +170,7 @@ export const roomAllocationsHandler: DataImportHandler = {
       if (!res) continue;
       if (row.op === 'create') {
         await tx.campRoomAllocation.create({
-          data: { tenantId: ctx.tenantId, campId: ctx.campId, roomId: res.roomId, employeeId: res.employeeId, startDate: toDbDate(res.start), endDate: res.end ? toDbDate(res.end) : null },
+          data: { tenantId: ctx.tenantId, campId: ctx.scopeId, roomId: res.roomId, employeeId: res.employeeId, startDate: toDbDate(res.start), endDate: res.end ? toDbDate(res.end) : null },
         });
         created++;
       } else if (row.op === 'update' && row.targetId) {
@@ -183,7 +183,7 @@ export const roomAllocationsHandler: DataImportHandler = {
 
   async exportRows(tx, ctx) {
     const rows = await tx.campRoomAllocation.findMany({
-      where: { tenantId: ctx.tenantId, campId: ctx.campId },
+      where: { tenantId: ctx.tenantId, campId: ctx.scopeId },
       select: { startDate: true, endDate: true, employee: { select: { employeeCode: true } }, room: { select: { roomNo: true, building: { select: { code: true } } } } },
       orderBy: [{ employee: { employeeCode: 'asc' } }, { startDate: 'asc' }],
     });
