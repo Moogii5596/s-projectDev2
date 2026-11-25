@@ -48,8 +48,8 @@ tags: [adr, architecture, core, modules, v0.2.4]
 |---|---|
 | Tenant / RLS / transaction (`inTenantTx`), алдаа (`code`+`params`), DTO туслах, огноо (tenant-ийн цагийн бүс) | ✅ `core/platform` (2026-11-25; огноо одоогоор УБ-ын бүсээр) |
 | Нэвтрэлт, хэрэглэгч, session, төхөөрөмж | ✅ `auth` |
-| Эрх: registry + шалгах service (scope: tenant / site) | 🔄 registry ✅ цөмд; access service `camp/common`-д |
-| Audit | 🔄 `camp_audit_log` → `core_audit_log` |
+| Эрх: registry + шалгах service (scope: tenant / site) | ✅ registry, `AccessService` (`core/platform`, 2026-11-25); scope-ийн нэршил `campId` хэвээр |
+| Audit | 🔄 `AuditService` ✅ `core/platform` (2026-11-25); хүснэгт `camp_audit_log` → `core_audit_log` үлдсэн (CORE-02) |
 | Байгууллагын тохиргоо, `/settings` registry, аюулгүй байдлын бодлого | ✅ (v0.2.4) |
 | Модулийн registry, runtime асаах | ✅ (v0.2.4) → manifest болгож өргөтгөнө |
 | Байгууллагууд (захиалагч, гүйцэтгэгч) | ✅ — Кемпийн `camp_service_types`-аас салгана |

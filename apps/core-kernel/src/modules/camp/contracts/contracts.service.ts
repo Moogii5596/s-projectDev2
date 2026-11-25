@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { fromDbDate, inTenantTx, toDbDate, type Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -215,7 +215,7 @@ const normTerms = (t: { percent: number; rule: string; n: number; note?: string 
 export class ContractsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
   ) {}
 
   // ── туслах ──

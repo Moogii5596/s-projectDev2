@@ -6,8 +6,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'crypto';
 import { BadRequestException } from '@nestjs/common';
 import { PrismaClient, UserRole } from '@prisma/client';
-import { CampAccessService } from '../src/modules/camp/common/camp-access.service';
-import { CampAuditService } from '../src/modules/camp/common/camp-audit.service';
+import { AccessService } from '../src/modules/core/platform/access.service';
+import { AuditService } from '../src/modules/core/platform/audit.service';
 import { CampRbacService } from '../src/modules/camp/rbac/camp-rbac.service';
 import {
   isAdminBypassExcluded,
@@ -28,8 +28,8 @@ const cache = {
 describe('v0.2.3 Блок 2 — ADR-007 core RBAC (integration)', () => {
   const admin = new PrismaClient({ datasources: { db: { url: ADMIN_DB_URL } } });
   const rls = new PrismaClient({ datasources: { db: { url: APP_USER_DB_URL } } });
-  const access = new CampAccessService(cache as never);
-  const audit = new CampAuditService(rls as never, access);
+  const access = new AccessService(cache as never);
+  const audit = new AuditService(rls as never, access);
   const svc = new CampRbacService(rls as never, access, audit);
 
   const sfx = randomUUID().slice(0, 8);

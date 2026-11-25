@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Prisma } from '@prisma/client';
-import { auditValue, buildAuditRow, computeAuditDiff, resolveAuditAction } from '../camp-audit.service';
+import { auditValue, buildAuditRow, computeAuditDiff, resolveAuditAction } from '../../../core/platform/audit.service';
 import { setActor, setup } from './camp-test-utils';
 
 describe('auditValue', () => {
@@ -47,7 +47,7 @@ describe('resolveAuditAction / buildAuditRow', () => {
   });
 });
 
-describe('CampAuditService.record/recordMany', () => {
+describe('AuditService.record/recordMany', () => {
   it('record: бизнесийн tx-ээр бичнэ; өөрчлөлтгүй бол бичихгүй; recordMany createMany нэг удаа', async () => {
     const s = setup();
     setActor(s.tx, {});

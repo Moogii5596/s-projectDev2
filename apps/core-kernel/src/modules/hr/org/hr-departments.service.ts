@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../../camp/common/camp-access.service';
-import { CampAuditService } from '../../camp/common/camp-audit.service';
+import { AccessService } from '../../core/platform/access.service';
+import { AuditService } from '../../core/platform/audit.service';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
 import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -32,8 +32,8 @@ const DEPT_AUDIT_FIELDS = ['code', 'name', 'nameI18n', 'isActive', 'shiftPattern
 export class HrDepartmentsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
   ) {}
 
   private async getDept(tx: Tx, tenantId: string, campId: string, id: string) {

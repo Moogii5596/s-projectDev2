@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { DataTransferScope } from '../../core/import-export/data-transfer.types';
 import type { Tx } from '../../core/platform/tenant-tx';
-import { CampAccessService } from './camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import type { CampPermission } from './camp-permissions';
 import { getCampOr404 } from './camp-lookup';
 
@@ -11,7 +11,7 @@ import { getCampOr404 } from './camp-lookup';
  */
 @Injectable()
 export class SiteDataTransferScope implements DataTransferScope {
-  constructor(private readonly access: CampAccessService) {}
+  constructor(private readonly access: AccessService) {}
 
   requirePermission(tx: Tx, tenantId: string, authId: string, scopeId: string, permission: string | string[]): Promise<string> {
     return this.access.require(tx, tenantId, authId, scopeId, permission as CampPermission | CampPermission[]);

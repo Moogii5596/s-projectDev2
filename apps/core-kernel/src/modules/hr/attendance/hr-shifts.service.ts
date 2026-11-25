@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CampEmployeeStatus, CampShiftAdjustmentReason } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../../camp/common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
 import { fromDbDate, inTenantTx, toDbDate } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -21,7 +21,7 @@ const MAX_CALENDAR_DAYS = 31;
 export class HrShiftsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
   ) {}
 
   async listAdjustments(tenantId: string, authId: string, campId: string, q: RangeQueryDto) {

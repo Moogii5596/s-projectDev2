@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -20,7 +20,7 @@ const CAMP_SELECT = { id: true, code: true, name: true, location: true, isActive
 export class CampsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
   ) {}
 
   async list(tenantId: string, authId: string, q: QueryActiveOnlyDto) {

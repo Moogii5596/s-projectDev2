@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { CacheService } from '../../../cache/cache.service';
-import { CampPermission } from './camp-permissions';
-import { Tx } from '../../core/platform/tenant-tx';
+import { Tx } from './tenant-tx';
 import { forbidden } from '../../../common/i18n/app-error';
-import { isAdminBypassExcluded } from '../../core/permissions/permission-registry';
+import { isAdminBypassExcluded, type Permission } from '../permissions/permission-registry';
+
+/** Эрхийн код (системийн түвшин, ADR-007). Хуучин нэр `CampPermission` — C1-ийн дараагийн алхамд дуудагчдад солигдоно */
+type CampPermission = Permission;
 
 /** Tenant-ийн эдгээр role бүх кемпийн бүх эрхтэй (анхны тохиргоо хийх боломж, ERD v4 §2.1) */
 const TENANT_ADMIN_ROLES: readonly UserRole[] = [UserRole.OWNER, UserRole.ADMIN];
@@ -32,7 +34,7 @@ export interface CampActor {
  *   - campId = null → tenant түвшний үйлдэл (байгууллага, роль): зөвхөн бүх кемпийн (global) эрх эсвэл tenant admin.
  */
 @Injectable()
-export class CampAccessService {
+export class AccessService {
   constructor(private readonly cache: CacheService) {}
 
   async resolve(tx: Tx, tenantId: string, authId: string): Promise<CampActor> {
@@ -84,7 +86,7 @@ export class CampAccessService {
   async require(tx: Tx, tenantId: string, authId: string, campId: string | null, codes: CampPermission | CampPermission[]): Promise<string> {
     const list = Array.isArray(codes) ? codes : [codes];
     const actor = await this.resolve(tx, tenantId, authId);
-    if (!list.some((c) => CampAccessService.has(actor.perms, campId, c))) {
+    if (!list.some((c) => AccessService.has(actor.perms, campId, c))) {
       throw forbidden('camp.err.access.2', { perms: list.join(' / ') });
     }
     return actor.userId;
@@ -108,19 +110,19 @@ export class CampAccessService {
 
   /** Тухайн эрх аль НЭГ кемпэд (эсвэл бүх кемпэд) байвал — tenant түвшний лавлах (жнь хөрөнгийн ангилал) */
   static hasInAnyCamp(perms: CampPermissionSet, code: CampPermission): boolean {
-    return CampAccessService.has(perms, null, code) || Object.values(perms.byCamp).some((p) => p.includes(code));
+    return AccessService.has(perms, null, code) || Object.values(perms.byCamp).some((p) => p.includes(code));
   }
 
   async requireInAnyCamp(tx: Tx, tenantId: string, authId: string, code: CampPermission): Promise<string> {
     const actor = await this.resolve(tx, tenantId, authId);
-    if (!CampAccessService.hasInAnyCamp(actor.perms, code)) throw forbidden('camp.err.access.3', { code });
+    if (!AccessService.hasInAnyCamp(actor.perms, code)) throw forbidden('camp.err.access.3', { code });
     return actor.userId;
   }
 
   /** Унших: тухайн кемпэд (null = аль нэг кемпэд) ямар нэг эрхтэй байх */
   async requireAccess(tx: Tx, tenantId: string, authId: string, campId: string | null): Promise<CampActor> {
     const actor = await this.resolve(tx, tenantId, authId);
-    if (!CampAccessService.hasAccess(actor.perms, campId)) {
+    if (!AccessService.hasAccess(actor.perms, campId)) {
       throw forbidden('camp.err.access.4');
     }
     return actor;

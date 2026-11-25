@@ -11,7 +11,7 @@ import { hasSiteAccess, hasSitePermission, loadUserPermissions } from '../../cor
 import { CampAssetCondition, CampMaintenanceStatus, CampPartSource, CampRoomStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
-import { CampAccessService } from '../common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -125,7 +125,7 @@ export function costPreview(parts: PartRow[], vatRate: Prisma.Decimal | number |
 export class CampMaintenanceService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
     private readonly sequences: SequenceService,
     @Optional() attachments?: AttachmentTypeRegistry,
     @Optional() private readonly feedLinks?: FeedLinksService,
@@ -412,8 +412,8 @@ export class CampMaintenanceService {
     reporterMay: boolean,
   ): Promise<RequestCore & { actorId: string }> {
     const actor = await this.access.resolve(tx, tenantId, authId);
-    const hasPerm = perms.some((c) => CampAccessService.has(actor.perms, campId, c));
-    const mayReport = reporterMay && CampAccessService.has(actor.perms, campId, P.MAINTENANCE_CREATE);
+    const hasPerm = perms.some((c) => AccessService.has(actor.perms, campId, c));
+    const mayReport = reporterMay && AccessService.has(actor.perms, campId, P.MAINTENANCE_CREATE);
     if (!hasPerm && !mayReport) throw forbidden('camp.err.access.2', { perms: perms.join(' / ') });
     const r = await this.loadCore(tx, tenantId, campId, id);
     if (!hasPerm && r.reportedBy !== actor.userId) {

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import { CAMP_PERMISSIONS, CAMP_PERMISSION_CODES, isCampPermission } from '../camp-permissions';
-import { CampAccessService, CampPermissionSet } from '../camp-access.service';
+import { AccessService, CampPermissionSet } from '../../../core/platform/access.service';
 import { toAppHttpError, withAppErrors } from '../../../core/platform/db-errors';
 import { fromDbDate, fromDbTime, inTenantTx, toDbDate, toDbTime } from '../../../core/platform/tenant-tx';
 import { expectTenantTx, setActor, setup } from './camp-test-utils';
@@ -23,7 +23,7 @@ describe('Camp permission каталог (Шат 2.1)', () => {
   });
 });
 
-describe('CampAccessService (Шат 2.1)', () => {
+describe('AccessService (Шат 2.1)', () => {
   let s: ReturnType<typeof setup>;
   beforeEach(() => {
     s = setup();
@@ -72,8 +72,8 @@ describe('CampAccessService (Шат 2.1)', () => {
       setActor(s.tx, { role });
       const { perms } = await s.access.resolve(s.tx as never, 't1', 'a1');
       expect(perms.isTenantAdmin).toBe(true);
-      expect(CampAccessService.has(perms, 'any-camp', P.SETTINGS_MANAGE)).toBe(true);
-      expect(CampAccessService.has(perms, null, P.MASTER_MANAGE)).toBe(true);
+      expect(AccessService.has(perms, 'any-camp', P.SETTINGS_MANAGE)).toBe(true);
+      expect(AccessService.has(perms, null, P.MASTER_MANAGE)).toBe(true);
     }
     setActor(s.tx, { role: UserRole.APPROVER });
     expect((await s.access.resolve(s.tx as never, 't1', 'a1')).perms.isTenantAdmin).toBe(false);
@@ -81,23 +81,23 @@ describe('CampAccessService (Шат 2.1)', () => {
 
   it('has: кемпийн эрх зөвхөн тэр кемпэд; global бүх кемпэд; tenant түвшинд (null) зөвхөн global', () => {
     const perms: CampPermissionSet = { isTenantAdmin: false, global: [P.REPORT_VIEW], byCamp: { c1: [P.MASTER_MANAGE] } };
-    expect(CampAccessService.has(perms, 'c1', P.MASTER_MANAGE)).toBe(true);
-    expect(CampAccessService.has(perms, 'c2', P.MASTER_MANAGE)).toBe(false);
-    expect(CampAccessService.has(perms, null, P.MASTER_MANAGE)).toBe(false);
-    expect(CampAccessService.has(perms, 'c2', P.REPORT_VIEW)).toBe(true);
-    expect(CampAccessService.has(perms, null, P.REPORT_VIEW)).toBe(true);
+    expect(AccessService.has(perms, 'c1', P.MASTER_MANAGE)).toBe(true);
+    expect(AccessService.has(perms, 'c2', P.MASTER_MANAGE)).toBe(false);
+    expect(AccessService.has(perms, null, P.MASTER_MANAGE)).toBe(false);
+    expect(AccessService.has(perms, 'c2', P.REPORT_VIEW)).toBe(true);
+    expect(AccessService.has(perms, null, P.REPORT_VIEW)).toBe(true);
   });
 
   it('hasAccess: тухайн кемпэд ямар нэг эрх; null = аль нэг кемпэд', () => {
     const none: CampPermissionSet = { isTenantAdmin: false, global: [], byCamp: {} };
     const c1: CampPermissionSet = { isTenantAdmin: false, global: [], byCamp: { c1: [P.MEAL_ORDER] } };
     const empty: CampPermissionSet = { isTenantAdmin: false, global: [], byCamp: { c1: [] } };
-    expect(CampAccessService.hasAccess(none, null)).toBe(false);
-    expect(CampAccessService.hasAccess(c1, null)).toBe(true);
-    expect(CampAccessService.hasAccess(c1, 'c1')).toBe(true);
-    expect(CampAccessService.hasAccess(c1, 'c2')).toBe(false);
-    expect(CampAccessService.hasAccess(empty, 'c1')).toBe(false);
-    expect(CampAccessService.hasAccess({ ...none, global: [P.REPORT_VIEW] }, 'c9')).toBe(true);
+    expect(AccessService.hasAccess(none, null)).toBe(false);
+    expect(AccessService.hasAccess(c1, null)).toBe(true);
+    expect(AccessService.hasAccess(c1, 'c1')).toBe(true);
+    expect(AccessService.hasAccess(c1, 'c2')).toBe(false);
+    expect(AccessService.hasAccess(empty, 'c1')).toBe(false);
+    expect(AccessService.hasAccess({ ...none, global: [P.REPORT_VIEW] }, 'c9')).toBe(true);
   });
 
   it('require: аль нэг эрх байхад хангалттай; үгүй бол 403 мессеж кодыг нэрлэнэ; core_users.id буцаана', async () => {

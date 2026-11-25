@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
-import { CampAuditService } from '../common/camp-audit.service';
+import { AccessService } from '../../core/platform/access.service';
+import { AuditService } from '../../core/platform/audit.service';
 import { inTenantTx } from '../../core/platform/tenant-tx';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { UserAdminService } from '../../../auth/user-admin.service';
@@ -21,8 +21,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export class CampUserAccessService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
     private readonly userAdmin: UserAdminService,
     private readonly invites: InviteService,
     private readonly login: CampEmployeeLoginService,

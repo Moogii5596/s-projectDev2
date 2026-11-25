@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../../camp/common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { CAMP_PERMISSIONS } from '../../camp/common/camp-permissions';
 import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -21,7 +21,7 @@ const ITEM = { id: true, name: true, nameI18n: true, code: true, isActive: true,
 export class HrPositionsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
   ) {}
 
   private async assertUniqueName(tx: Tx, tenantId: string, name: string, exceptId?: string) {

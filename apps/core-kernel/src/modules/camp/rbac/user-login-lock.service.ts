@@ -3,8 +3,8 @@ import { CampAuditAction } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { LoginLockService, NO_LOGIN_LOCK, type LoginLockStatus } from '../../../auth/login-lock.service';
 import { notFound } from '../../../common/i18n/app-error';
-import { CampAccessService } from '../common/camp-access.service';
-import { CampAuditService } from '../common/camp-audit.service';
+import { AccessService } from '../../core/platform/access.service';
+import { AuditService } from '../../core/platform/audit.service';
 import { inTenantTx } from '../../core/platform/tenant-tx';
 
 /**
@@ -16,8 +16,8 @@ import { inTenantTx } from '../../core/platform/tenant-tx';
 export class UserLoginLockService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
     private readonly loginLocks: LoginLockService,
   ) {}
 

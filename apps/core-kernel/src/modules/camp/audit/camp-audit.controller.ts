@@ -3,10 +3,10 @@ import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import type { FastifyRequest } from 'fastify';
 import { reqUser } from '../../core/platform/request';
-import { CAMP_AUDIT_ENTITIES, CampAuditService } from '../common/camp-audit.service';
+import { AUDIT_ENTITIES, AuditService } from '../../core/platform/audit.service';
 
 export class QueryAuditDto {
-  @IsOptional() @IsIn(CAMP_AUDIT_ENTITIES) entityType?: string;
+  @IsOptional() @IsIn(AUDIT_ENTITIES) entityType?: string;
   @IsOptional() @IsUUID() entityId?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(200) limit?: number;
   @IsOptional() @IsString() cursor?: string;
@@ -15,7 +15,7 @@ export class QueryAuditDto {
 /** v0.2.0 §0.4 — GET /api/v1/camp/camps/:campId/audit (харах UI: v0.2.2 FB-09) */
 @Controller('camp/camps/:campId/audit')
 export class CampAuditController {
-  constructor(private readonly audit: CampAuditService) {}
+  constructor(private readonly audit: AuditService) {}
 
   @Get()
   list(@Req() req: FastifyRequest, @Param('campId', new ParseUUIDPipe()) campId: string, @Query() q: QueryAuditDto) {

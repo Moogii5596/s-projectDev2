@@ -1,6 +1,6 @@
 import type { CampDataImportType } from '@prisma/client';
 import type { CellValue, ParsedTableRow, TableSpec } from '../../../common/xlsx/table-spec';
-import type { CampAuditService } from '../../camp/common/camp-audit.service';
+import type { AuditService } from '../platform/audit.service';
 import type { Tx } from '../platform/tenant-tx';
 
 type RowOp = 'create' | 'update' | 'unchanged' | 'error';
@@ -33,7 +33,7 @@ export interface DataTransferScope {
 export interface ApplyCtx extends ImportCtx {
   actorUserId: string;
   importId: string;
-  audit: CampAuditService;
+  audit: AuditService;
 }
 
 export interface DataImportHandler {

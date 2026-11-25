@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { fromDbDate, inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { getCampOr404, getRosterSettings } from '../common/camp-lookup';
 import { addDays } from '../../core/platform/date';
@@ -13,7 +13,7 @@ import { readCatalogNameI18n } from '../common/catalog-name-i18n';
 export class CampPresenceService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
   ) {}
 
   async presence(tenantId: string, authId: string, campId: string, date: string) {

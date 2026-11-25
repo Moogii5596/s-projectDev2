@@ -113,8 +113,8 @@ tags: [codebase, testing, generated]
 | `core-kernel/src/modules/camp/attendance/tests/presence-golden.test.ts` | 3 | Хоолны тооцоо — golden (§0.6) |
 | `core-kernel/src/modules/camp/attendance/tests/presence-v021.test.ts` | 5 | effectiveEmployee · computePresence — v0.2.1 |
 | `core-kernel/src/modules/camp/catalog/tests/camp-catalog.service.test.ts` | 4 | v0.2.1 CampCatalogService — байрны төрөл, кемп × албан тушаал |
-| `core-kernel/src/modules/camp/common/tests/camp-audit.test.ts` | 6 | auditValue · computeAuditDiff · resolveAuditAction / buildAuditRow · CampAuditService.record/recordMany |
-| `core-kernel/src/modules/camp/common/tests/camp-common.test.ts` | 20 | Camp permission каталог (Шат 2.1) · CampAccessService (Шат 2.1) · camp-errors (Шат 2.1) · camp-tx (Шат 2.1) |
+| `core-kernel/src/modules/camp/common/tests/camp-audit.test.ts` | 6 | auditValue · computeAuditDiff · resolveAuditAction / buildAuditRow · AuditService.record/recordMany |
+| `core-kernel/src/modules/camp/common/tests/camp-common.test.ts` | 20 | Camp permission каталог (Шат 2.1) · AccessService (Шат 2.1) · camp-errors (Шат 2.1) · camp-tx (Шат 2.1) |
 | `core-kernel/src/modules/camp/common/tests/catalog-name-i18n.test.ts` | 2 | catalog name translations |
 | `core-kernel/src/modules/camp/common/tests/module-audit-manifest.test.ts` | 1 | Camp audit manifest coverage |
 | `core-kernel/src/modules/camp/contracts/tests/contract-pricing.test.ts` | 15 | contract-pricing — хугацаа · contract-pricing — үнэ · contract-pricing — ханш · contract-pricing — хоолны тоо (G-3) · contract-pricing — төлбөрийн хуваарь |

@@ -5,8 +5,8 @@ import { EnvConfig } from '../../../config/env.config';
 import { REDIS_CLIENT } from '../../../db/redis.module';
 import { SystemPrismaService } from '../../../db/system-prisma.service';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../../camp/common/camp-access.service';
-import { CampAuditService } from '../../camp/common/camp-audit.service';
+import { AccessService } from '../platform/access.service';
+import { AuditService } from '../platform/audit.service';
 import { inTenantTx } from '../platform/tenant-tx';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
 import { PERMISSIONS } from '../permissions/permission-registry';
@@ -26,8 +26,8 @@ export class CoreTenantModulesService {
   constructor(
     private readonly system: SystemPrismaService,
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     private readonly env: EnvConfig,
   ) {}

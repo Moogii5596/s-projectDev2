@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../../camp/common/camp-access.service';
+import { AccessService } from '../platform/access.service';
 import { fromDbDate, inTenantTx, toDbDate } from '../platform/tenant-tx';
 import { withAppErrors } from '../platform/db-errors';
 import { badRequest, notFound } from '../../../common/i18n/app-error';
@@ -29,7 +29,7 @@ const toView = (r: Row): ExchangeRateView => ({
 export class ExchangeRatesService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
   ) {}
 
   async list(tenantId: string, authId: string, q: QueryExchangeRatesDto): Promise<ExchangeRateView[]> {

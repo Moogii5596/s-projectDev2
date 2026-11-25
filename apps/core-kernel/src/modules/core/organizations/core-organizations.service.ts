@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../../camp/common/camp-access.service';
+import { AccessService } from '../platform/access.service';
 import { inTenantTx, Tx } from '../platform/tenant-tx';
 import { withAppErrors } from '../platform/db-errors';
 import { CreateOrganizationDto, QueryOrganizationsDto, UpdateOrganizationDto } from './core-organizations.dto';
@@ -41,7 +41,7 @@ function present(row: OrganizationRow) {
 export class CoreOrganizationsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
   ) {}
 
   private async assertRegUnique(tx: Tx, tenantId: string, regNumber: string | null | undefined, exceptId?: string) {

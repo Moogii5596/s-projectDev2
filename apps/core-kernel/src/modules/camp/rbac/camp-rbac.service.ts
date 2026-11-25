@@ -1,7 +1,7 @@
 import { isAdminBypassExcluded } from '../../core/permissions/permission-registry';
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { CAMP_PERMISSION_CODES, campPermissionAvailableIn, isCampPermission } from '../common/camp-permissions';
 import { permissionModule } from '../../core/permissions/permission-registry';
 import { inTenantTx, Tx } from '../../core/platform/tenant-tx';
@@ -15,7 +15,7 @@ import {
   SetRolePermissionsDto,
   UpdateCampRoleDto,
 } from './camp-rbac.dto';
-import { CampAuditService } from '../common/camp-audit.service';
+import { AuditService } from '../../core/platform/audit.service';
 import { buildApplyPreview, diffTemplate } from './template-diff';
 import { buildUserRows } from './user-list';
 import { badRequest, conflict, notFound } from '../../../common/i18n/app-error';
@@ -64,8 +64,8 @@ const toRoleView = (r: RoleRow) => ({
 export class CampRbacService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
   ) {}
 
   /** Аудитын мөрөнд харагдах хэрэглэгчийн нэр (бүтэн нэр, эсвэл имэйл) */
@@ -114,8 +114,8 @@ export class CampRbacService {
     return inTenantTx(this.prisma, tenantId, async (tx) => {
       const actor = await this.access.resolve(tx, tenantId, authId);
       const effective = campId
-        ? CAMP_PERMISSION_CODES.filter((c) => CampAccessService.has(actor.perms, campId, c))
-        : CAMP_PERMISSION_CODES.filter((c) => CampAccessService.has(actor.perms, null, c));
+        ? CAMP_PERMISSION_CODES.filter((c) => AccessService.has(actor.perms, campId, c))
+        : CAMP_PERMISSION_CODES.filter((c) => AccessService.has(actor.perms, null, c));
       const byCamp = Object.fromEntries(Object.entries(actor.perms.byCamp).map(([k, v]) => [k, [...new Set(v)].sort()]));
       // v0.2.3 Блок 3 (PIL-19, B3-3): аль модульд (кодын угтвар) аль нэг ажлын байранд эрхтэй — дээд цэс нуухад
       const anyCodes = actor.perms.isTenantAdmin

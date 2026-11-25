@@ -16,8 +16,8 @@ import { I18nOverridesService } from '../../../common/i18n/i18n-overrides.servic
 import { MailerService } from '../../../auth/mailer.service';
 import { STORAGE_SERVICE, type StorageService } from '../../../storage/storage.service';
 import { storageDir } from '../../../storage/storage.module';
-import { CampAccessService } from '../../camp/common/camp-access.service';
-import { CampAuditService } from '../../camp/common/camp-audit.service';
+import { AccessService } from '../platform/access.service';
+import { AuditService } from '../platform/audit.service';
 import { CoreTenantModulesService } from '../modules/core-tenant-modules.service';
 import { PERMISSIONS } from '../permissions/permission-registry';
 import { ScheduledJobRegistry } from '../scheduler/scheduled-job.registry';
@@ -62,8 +62,8 @@ export class DebugService {
     @Inject(STORAGE_SERVICE) private readonly storage: StorageService,
     private readonly mailer: MailerService,
     private readonly jobs: ScheduledJobRegistry,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
     private readonly modules: CoreTenantModulesService,
     private readonly overrides: I18nOverridesService,
   ) {}

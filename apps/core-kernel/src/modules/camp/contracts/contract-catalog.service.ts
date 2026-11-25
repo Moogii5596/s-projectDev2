@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx, type Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -37,7 +37,7 @@ const toType = (r: Omit<ServiceTypeView, 'quantitySource'> & { quantitySource: s
 export class ContractCatalogService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
   ) {}
 
   private async ensureSeeded(tx: Tx, tenantId: string): Promise<void> {

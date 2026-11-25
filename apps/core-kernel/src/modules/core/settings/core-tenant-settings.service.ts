@@ -3,8 +3,8 @@ import { CampAuditAction } from '@prisma/client';
 import { badRequest, notFound } from '../../../common/i18n/app-error';
 import { SystemPrismaService } from '../../../db/system-prisma.service';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
-import { CampAccessService } from '../../camp/common/camp-access.service';
-import { CampAuditService } from '../../camp/common/camp-audit.service';
+import { AccessService } from '../platform/access.service';
+import { AuditService } from '../platform/audit.service';
 import { inTenantTx } from '../platform/tenant-tx';
 import { TenantSecurityPolicyService } from '../../../auth/tenant-security-policy.service';
 import { UpdateTenantProfileDto, UpdateTenantSecurityPolicyDto } from './core-tenant-settings.dto';
@@ -46,8 +46,8 @@ export class CoreTenantSettingsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
     private readonly system: SystemPrismaService,
-    private readonly access: CampAccessService,
-    private readonly audit: CampAuditService,
+    private readonly access: AccessService,
+    private readonly audit: AuditService,
     private readonly securityPolicy: TenantSecurityPolicyService,
   ) {}
 

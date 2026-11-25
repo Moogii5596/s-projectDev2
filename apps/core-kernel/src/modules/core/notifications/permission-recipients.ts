@@ -5,7 +5,7 @@ type Tx = Prisma.TransactionClient;
 /**
  * ADR-007: тухайн эрхтэй идэвхтэй хэрэглэгчид (core_users.id), эрэмбэлсэн.
  *   - эрх tenant даяар (site NULL) эсвэл тухайн ажлын байранд (siteId)
- *   - tenant admin (OWNER/ADMIN) — `includeTenantAdmins` (анхдагч true; CampAccessService.has-тай ижил)
+ *   - tenant admin (OWNER/ADMIN) — `includeTenantAdmins` (анхдагч true; AccessService.has-тай ижил)
  * Tenant transaction дотор (RLS) дуудна.
  */
 export async function usersWithPermission(

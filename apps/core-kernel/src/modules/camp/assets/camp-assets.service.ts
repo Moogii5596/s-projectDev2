@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CampAssetCondition, CampRoomStatus, Prisma } from '@prisma/client';
 import { PrismaTenantClientService } from '../../../db/prisma-tenant-client.service';
 import { decodeCursor, encodeCursor } from '../../../common/utils/cursor';
-import { CampAccessService } from '../common/camp-access.service';
+import { AccessService } from '../../core/platform/access.service';
 import { CAMP_PERMISSIONS } from '../common/camp-permissions';
 import { inTenantTx, toDbDate, Tx } from '../../core/platform/tenant-tx';
 import { withAppErrors } from '../../core/platform/db-errors';
@@ -65,7 +65,7 @@ const assetView = (a: AssetRow) => ({
 export class CampAssetsService {
   constructor(
     private readonly prisma: PrismaTenantClientService,
-    private readonly access: CampAccessService,
+    private readonly access: AccessService,
   ) {}
 
   // ── Ангилал ────────────────────────────────────────────────
