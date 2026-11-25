@@ -6,7 +6,7 @@ name: Backup
 # - Файл: R2 bucket → tar → age (R2_* secret байхгүй бол алгасна — H2 #17 хүртэл)
 # - Drive: rclone (`RCLONE_CONFIG_GDRIVE` secret); 30 хоногоос хуучныг `daily/`-оос устгана (`manual/`-д хүрэхгүй)
 # - Drive тохируулаагүй бол Actions artifact (5 хоног) — нөөц алдагдахгүй, гэхдээ workflow шар (warning)
-# - Амжилтгүй → issue нээнэ (label `backup-failed`) + GitHub-ийн имэйл мэдэгдэл (scheduled workflow-ийн эзэнд)
+# - Амжилтгүй → нэг issue (label `backup-failed`; давтагдвал comment) + GitHub-ийн имэйл; дараагийн амжилттай run issue-г хаана
 # - Supabase Free 7 хоног идэвхгүй бол зогсдог — өдөр бүрийн холболт сэрүүн байлгана
 on:
   schedule:
@@ -115,7 +115,9 @@ jobs:
   notify:
     name: Алдааны мэдэгдэл
     needs: backup
-    if: failure() && github.event_name == 'schedule'
+    # Амжилтгүй (хуваарьт) → нээлттэй `backup-failed` issue байвал түүнд comment, үгүй бол шинээр (өдөр бүр шинэ issue ✖ — #43–#57).
+    # Амжилттай (бүх орчин: хуваарьт эсвэл гараар `all`) → нээлттэй `backup-failed` issue-г хаана.
+    if: always() && (github.event_name == 'schedule' || (inputs.env || 'all') == 'all')
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -123,8 +125,22 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESULT: ${{ needs.backup.result }}
+          EVENT: ${{ github.event_name }}
         run: |
-          title="Backup failed $(date -u +%Y-%m-%d)"
+          open="$(gh issue list --repo "$GITHUB_REPOSITORY" --label backup-failed --state open --limit 100 --json number --jq '.[].number' | sort -n)"
+          if [ "$RESULT" = success ]; then
+            for n in $open; do
+              gh issue close "$n" --repo "$GITHUB_REPOSITORY" --reason completed --comment "Нөөц дахин амжилттай: $RUN_URL"
+            done
+            exit 0
+          fi
+          if [ "$RESULT" != failure ] || [ "$EVENT" != schedule ]; then exit 0; fi
+          first="$(printf '%s\n' $open | head -n 1)"
+          if [ -n "$first" ]; then
+            gh issue comment "$first" --repo "$GITHUB_REPOSITORY" --body "Дахин амжилтгүй ($(date -u +%Y-%m-%d)): $RUN_URL"
+            exit 0
+          fi
           gh label create backup-failed --repo "$GITHUB_REPOSITORY" --color B60205 --description "Daily backup workflow failed" 2>/dev/null || true
-          gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --label backup-failed,P1 \
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "Backup failed $(date -u +%Y-%m-%d)" --label backup-failed,P1 \
             --body "Өдөр бүрийн нөөц амжилтгүй: $RUN_URL — runbook 07_Cloud_Deploy.md §11. Засаад «Backup» workflow-г гараар дахин ажиллуулна."
