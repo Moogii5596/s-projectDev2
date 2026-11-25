@@ -98,9 +98,9 @@ export const buildingsHandler: DataImportHandler = {
 
   async plan(tx, ctx, rows) {
     const [buildings, types, rooms] = await Promise.all([
-      tx.campBuilding.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, code: true, name: true, isActive: true, typeId: true } }),
+      tx.campBuilding.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.scopeId }, select: { id: true, code: true, name: true, isActive: true, typeId: true } }),
       tx.campBuildingType.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true, isActive: true } }),
-      tx.campRoom.groupBy({ by: ['buildingId'], where: { tenantId: ctx.tenantId, campId: ctx.campId, status: { not: CampRoomStatus.INACTIVE } }, _count: { _all: true } }),
+      tx.campRoom.groupBy({ by: ['buildingId'], where: { tenantId: ctx.tenantId, campId: ctx.scopeId, status: { not: CampRoomStatus.INACTIVE } }, _count: { _all: true } }),
     ]);
     const byCode = new Map(buildings.map((b) => [b.code.toUpperCase(), b]));
     const typeByName = new Map(types.map((t) => [normalizeName(t.name), t]));
@@ -141,13 +141,13 @@ export const buildingsHandler: DataImportHandler = {
       const res = row[B_RES] ?? {};
       if (row.op === 'create') {
         const b = await tx.campBuilding.create({
-          data: { tenantId: ctx.tenantId, campId: ctx.campId, code: String(v.code), name: clean(v.name), typeId: res.typeId ?? null, isActive: v.active !== false },
+          data: { tenantId: ctx.tenantId, campId: ctx.scopeId, code: String(v.code), name: clean(v.name), typeId: res.typeId ?? null, isActive: v.active !== false },
           select: SEL,
         });
         created++;
-        audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'building', entityId: b.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: BUILDING_AUDIT_FIELDS, before: null, after: b, summaryParams: { code: b.code, name: b.name } });
+        audits.push({ tenantId: ctx.tenantId, campId: ctx.scopeId, entityType: 'building', entityId: b.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: BUILDING_AUDIT_FIELDS, before: null, after: b, summaryParams: { code: b.code, name: b.name } });
       } else if (row.op === 'update' && row.targetId) {
-        const before = await tx.campBuilding.findFirst({ where: { id: row.targetId, tenantId: ctx.tenantId, campId: ctx.campId }, select: SEL });
+        const before = await tx.campBuilding.findFirst({ where: { id: row.targetId, tenantId: ctx.tenantId, campId: ctx.scopeId }, select: SEL });
         if (!before) continue;
         const after = await tx.campBuilding.update({
           where: { id: row.targetId },
@@ -159,7 +159,7 @@ export const buildingsHandler: DataImportHandler = {
           select: SEL,
         });
         updated++;
-        audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'building', entityId: after.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: BUILDING_AUDIT_FIELDS, before, after, summaryParams: { code: after.code, name: after.name } });
+        audits.push({ tenantId: ctx.tenantId, campId: ctx.scopeId, entityType: 'building', entityId: after.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: BUILDING_AUDIT_FIELDS, before, after, summaryParams: { code: after.code, name: after.name } });
       }
     }
     await ctx.audit.recordMany(tx, audits);
@@ -168,7 +168,7 @@ export const buildingsHandler: DataImportHandler = {
 
   async exportRows(tx, ctx) {
     const rows = await tx.campBuilding.findMany({
-      where: { tenantId: ctx.tenantId, campId: ctx.campId },
+      where: { tenantId: ctx.tenantId, campId: ctx.scopeId },
       select: { code: true, name: true, isActive: true, type: { select: { name: true, nameI18n: true } } },
       orderBy: { code: 'asc' },
     });
@@ -195,9 +195,9 @@ export const roomsHandler: DataImportHandler = {
   async plan(tx, ctx, rows) {
     const today = toDbDate(todayUb());
     const [buildings, rooms, occ] = await Promise.all([
-      tx.campBuilding.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, code: true, isActive: true } }),
-      tx.campRoom.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, buildingId: true, roomNo: true, floor: true, capacity: true, status: true, note: true } }),
-      tx.campRoomAllocation.groupBy({ by: ['roomId'], where: { tenantId: ctx.tenantId, campId: ctx.campId, startDate: { lte: today }, OR: [{ endDate: null }, { endDate: { gte: today } }] }, _count: { _all: true } }),
+      tx.campBuilding.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.scopeId }, select: { id: true, code: true, isActive: true } }),
+      tx.campRoom.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.scopeId }, select: { id: true, buildingId: true, roomNo: true, floor: true, capacity: true, status: true, note: true } }),
+      tx.campRoomAllocation.groupBy({ by: ['roomId'], where: { tenantId: ctx.tenantId, campId: ctx.scopeId, startDate: { lte: today }, OR: [{ endDate: null }, { endDate: { gte: today } }] }, _count: { _all: true } }),
     ]);
     const bByCode = new Map(buildings.map((b) => [b.code.toUpperCase(), b]));
     const roomKey = (buildingId: string, roomNo: string) => `${buildingId}|${roomNo.trim().toUpperCase()}`;
@@ -242,22 +242,22 @@ export const roomsHandler: DataImportHandler = {
       if (row.op === 'create') {
         const room = await tx.campRoom.create({
           data: {
-            tenantId: ctx.tenantId, campId: ctx.campId, buildingId: row[R_RES]!.buildingId!, roomNo: clean(v.roomNo),
+            tenantId: ctx.tenantId, campId: ctx.scopeId, buildingId: row[R_RES]!.buildingId!, roomNo: clean(v.roomNo),
             floor: (v.floor as number | null) ?? null, capacity: Number(v.capacity), status: (v.status as CampRoomStatus | null) ?? CampRoomStatus.ACTIVE, note: (v.note as string | null) ?? null,
           },
           select: SEL,
         });
         created++;
-        audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'room', entityId: room.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: ROOM_AUDIT_FIELDS, before: null, after: room, summaryParams: { building: room.building.code, room: room.roomNo } });
+        audits.push({ tenantId: ctx.tenantId, campId: ctx.scopeId, entityType: 'room', entityId: room.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: ROOM_AUDIT_FIELDS, before: null, after: room, summaryParams: { building: room.building.code, room: room.roomNo } });
       } else if (row.op === 'update' && row.targetId) {
-        const before = await tx.campRoom.findFirst({ where: { id: row.targetId, tenantId: ctx.tenantId, campId: ctx.campId }, select: SEL });
+        const before = await tx.campRoom.findFirst({ where: { id: row.targetId, tenantId: ctx.tenantId, campId: ctx.scopeId }, select: SEL });
         if (!before) continue;
         const data: Record<string, unknown> = {};
         for (const k of ['floor', 'capacity', 'note'] as const) if (has(row, k) && (k !== 'capacity' || v.capacity !== null)) data[k] = v[k] ?? null;
         if (has(row, 'status') && v.status) data.status = v.status;
         const after = await tx.campRoom.update({ where: { id: row.targetId }, data, select: SEL });
         updated++;
-        audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'room', entityId: after.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: ROOM_AUDIT_FIELDS, before, after, summaryParams: { building: after.building.code, room: after.roomNo } });
+        audits.push({ tenantId: ctx.tenantId, campId: ctx.scopeId, entityType: 'room', entityId: after.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: ROOM_AUDIT_FIELDS, before, after, summaryParams: { building: after.building.code, room: after.roomNo } });
       }
     }
     await ctx.audit.recordMany(tx, audits);

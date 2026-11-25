@@ -116,7 +116,7 @@ tags: [codebase, backend, camp, hr, auth]
 
 ## core/import-export
 - `DataTransferService` preview → confirm → export урсгалыг, `DataTransferRegistry` typed handler-уудыг төвлөрүүлнэ; бүртгэсэн төрөл manifest-д яг нэг удаа байх ёстой. HR-ийн `HrDataTransferRegistration` болон Кемпийн `CampHrBridge` өөрсдийн handler-уудыг бүртгэдэг; HR-facing endpoint/хариу, `camp_data_imports` түүх хэвээр.
-- Regression: `camp-data-import`, `camp-v023-data-import`, `test/v024-core-services.integration.spec.ts`, HR import E2E. Одоогийн tenant/access/audit context нь C1 зөөлт хүртэл Camp helper-үүдийг ашиглана.
+- Regression: `camp-data-import`, `camp-v023-data-import`, `test/v024-core-services.integration.spec.ts`, HR import E2E. **CORE-10 (2026-11-25):** цөм хүрээг (`scopeId`) мэдэхгүй — эрх ба хүрээ байгаа эсэхийг handler-ийг бүртгэсэн модулийн `DataTransferScope` (`requirePermission` / `requireAccess` / `describe`) шалгана; HR, Кемп хоёул `camp/common/site-data-transfer.scope.ts` (хүрээ = ажлын байр)-ийг өгдөг. Цөмд үлдсэн Кемпийн нэр: `CampAuditService`, хүснэгт `camp_data_imports` / enum `CampDataImportType` (C1-ийн audit, CORE-02).
 
 ## core/attachments
 - `attachments/` — `AttachmentsService`, `AttachmentTypeRegistry`; `GET/PUT /core/attachments/patterns`, `POST /core/attachments/bulk/preview` ба `/bulk/commit`. Batch нь 20 хүртэл файл (тус бүр ≤10 MiB), `{object}`, `{type}`, `{date}` нэрийн токентой; preview-ийн дараа сервер дахин шалгаж commit хийнэ, дараагийн ижил төрлийн файл одоогийн хувилбарыг supersede хийнэ.

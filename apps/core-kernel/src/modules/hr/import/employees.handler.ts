@@ -72,12 +72,12 @@ async function loadRefs(tx: Tx, ctx: ImportCtx, codes: string[]) {
     codes.length
       ? tx.hrEmployee.findMany({ where: { tenantId: ctx.tenantId, employeeCode: { in: codes, mode: 'insensitive' } }, select: EMP_SELECT })
       : Promise.resolve([] as Current[]),
-    tx.hrDepartment.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, code: true, isActive: true } }),
-    tx.hrCrew.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, code: true, isActive: true } }),
+    tx.hrDepartment.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.scopeId }, select: { id: true, code: true, isActive: true } }),
+    tx.hrCrew.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.scopeId }, select: { id: true, code: true, isActive: true } }),
     tx.coreOrganization.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true, regNumber: true, isActive: true } }),
     tx.camp.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, code: true } }),
     tx.hrPosition.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true, isActive: true } }),
-    tx.campMealLocation.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: { id: true, name: true, isActive: true } }),
+    tx.campMealLocation.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.scopeId }, select: { id: true, name: true, isActive: true } }),
   ]);
   // v0.2.2 Блок 5 (Q-C2): ажлаас гарсан бүртгэлийн код дахин ашиглагдаж болно — шинэчлэх нь зөвхөн TERMINATED биш бүртгэл
   const live = existing.filter((e) => e.status !== CampEmployeeStatus.TERMINATED);
@@ -113,7 +113,7 @@ export const employeesHandler: DataImportHandler = {
       const v = r.values;
       const resolved: Resolved = {};
       const cur = refs.existing.get(upper(v.employeeCode));
-      if (cur && cur.campId !== ctx.campId) {
+      if (cur && cur.campId !== ctx.scopeId) {
         errors.push({ column: 'employeeCode', code: 'row.code_other_camp', params: { value: String(v.employeeCode), camp: refs.campCode.get(cur.campId) ?? '?' } });
       }
       // Ажлаас гарсан хүнийг Excel-ээр шинээр үүсгэхгүй — профайлаас «Дахин ажилд авах» (түүх холбогдоно, Q-C)
@@ -241,7 +241,7 @@ export const employeesHandler: DataImportHandler = {
       if (row.op === 'create') {
         const e = await tx.hrEmployee.create({
           data: {
-            tenantId: ctx.tenantId, campId: ctx.campId,
+            tenantId: ctx.tenantId, campId: ctx.scopeId,
             organizationId: res.organizationId!, departmentId: res.departmentId!, crewId: res.crewId ?? null,
             employeeCode: String(v.employeeCode), ...res.names!,
             position: pos?.name ?? null, positionId: pos?.id ?? null,
@@ -255,9 +255,9 @@ export const employeesHandler: DataImportHandler = {
         if (res.extraPhones?.length) await replaceExtraPhones(tx, ctx.tenantId, e.id, res.extraPhones);
         created++;
         const after = await tx.hrEmployee.findFirstOrThrow({ where: { id: e.id, tenantId: ctx.tenantId }, select: EMP_SELECT });
-        audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'employee', entityId: e.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before: null, after, summaryParams: { code: after.employeeCode, name: after.fullName } });
+        audits.push({ tenantId: ctx.tenantId, campId: ctx.scopeId, entityType: 'employee', entityId: e.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before: null, after, summaryParams: { code: after.employeeCode, name: after.fullName } });
       } else if (row.op === 'update' && row.targetId) {
-        const before = await tx.hrEmployee.findFirst({ where: { id: row.targetId, tenantId: ctx.tenantId, campId: ctx.campId }, select: EMP_SELECT });
+        const before = await tx.hrEmployee.findFirst({ where: { id: row.targetId, tenantId: ctx.tenantId, campId: ctx.scopeId }, select: EMP_SELECT });
         if (!before) continue;
         const data: Record<string, unknown> = {};
         for (const k of ['employeeCode', 'phone', 'email'] as const) if (has(row, k) && !(k !== 'employeeCode' && res.issues?.[k])) data[k] = v[k] ?? null;
@@ -277,7 +277,7 @@ export const employeesHandler: DataImportHandler = {
         if (res.extraPhones) await replaceExtraPhones(tx, ctx.tenantId, row.targetId, res.extraPhones);
         const after = await tx.hrEmployee.findFirstOrThrow({ where: { id: row.targetId, tenantId: ctx.tenantId }, select: EMP_SELECT });
         updated++;
-        audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'employee', entityId: after.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before, after, summaryParams: { code: after.employeeCode, name: after.fullName } });
+        audits.push({ tenantId: ctx.tenantId, campId: ctx.scopeId, entityType: 'employee', entityId: after.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: EMPLOYEE_AUDIT_FIELDS, before, after, summaryParams: { code: after.employeeCode, name: after.fullName } });
       }
     }
     await ctx.audit.recordMany(tx, audits);
@@ -286,7 +286,7 @@ export const employeesHandler: DataImportHandler = {
 
   async exportRows(tx, ctx) {
     const rows = await tx.hrEmployee.findMany({
-      where: { tenantId: ctx.tenantId, campId: ctx.campId, status: { not: CampEmployeeStatus.TERMINATED } },
+      where: { tenantId: ctx.tenantId, campId: ctx.scopeId, status: { not: CampEmployeeStatus.TERMINATED } },
       select: {
         employeeCode: true, lastName: true, firstName: true, familyName: true, position: true, phone: true, email: true, status: true, mealsIncluded: true,
         extraPhones: { select: { phone: true }, orderBy: { sortOrder: 'asc' } },

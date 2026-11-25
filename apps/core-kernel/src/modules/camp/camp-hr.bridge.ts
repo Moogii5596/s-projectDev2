@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { HrAttendanceHooks } from '../hr/attendance/stay-store';
 import { HrEmployeeHooks } from '../hr/employees/employee-hooks';
 import { DataTransferRegistry } from '../core/import-export/data-transfer.registry';
+import { SiteDataTransferScope } from './common/site-data-transfer.scope';
 import { CampStayStore } from './attendance/camp-stays.service';
 import { CampEmployeeSite } from './attendance/camp-employee-site';
 import { buildingsHandler, buildingTypesHandler, roomsHandler } from './data/facilities.handlers';
@@ -21,13 +22,14 @@ export class CampHrBridge implements OnModuleInit {
     private readonly stayStore: CampStayStore,
     private readonly employeeHooks: HrEmployeeHooks,
     private readonly employeeSite: CampEmployeeSite,
+    private readonly dataScope: SiteDataTransferScope,
   ) {}
 
   onModuleInit(): void {
     this.hooks.registerStayStore(this.stayStore);
     this.employeeHooks.registerSitePort(this.employeeSite);
     for (const handler of [buildingTypesHandler, buildingsHandler, roomsHandler, roomAllocationsHandler]) {
-      this.transfers.registerHandler('camp', handler);
+      this.transfers.registerHandler('camp', handler, this.dataScope);
     }
   }
 }

@@ -4,10 +4,12 @@ import { HrDataTransferRegistration } from './hr-data-transfer.registration';
 import { employeesHandler } from './employees.handler';
 
 /** v0.2.4 C4: устгасан `hr-data-import.service.spec.ts`-ийн manifest бүртгэлийн хамрах хүрээг шинэ registry-д хадгална */
+const scope = { requirePermission: async () => 'actor', requireAccess: async () => undefined, describe: async () => ({ code: 'S1' }) };
+
 describe('HrDataTransferRegistration', () => {
   function registered() {
     const registry = new DataTransferRegistry();
-    new HrDataTransferRegistration(registry).onModuleInit();
+    new HrDataTransferRegistration(registry, scope as never).onModuleInit();
     return registry;
   }
 
@@ -20,12 +22,13 @@ describe('HrDataTransferRegistration', () => {
       expect(registry.getExport(type)).toBe(registry.getImport(type));
     }
     expect(registry.getImport('employees')).toBe(employeesHandler);
+    expect(registry.scopeOf('employees')).toBe(scope); // CORE-10: хүрээний шалгалт handler-тай хамт бүртгэгдэнэ
   });
 
   it('rejects a second registration and an undeclared export type', () => {
     const registry = registered();
-    expect(() => registry.registerHandler('hr', employeesHandler)).toThrow(/дахин бүртгэгдсэн/);
-    expect(() => registry.registerExport({ module: 'hr', type: 'unknown', specType: 'unknown', handler: employeesHandler }))
+    expect(() => registry.registerHandler('hr', employeesHandler, scope)).toThrow(/дахин бүртгэгдсэн/);
+    expect(() => registry.registerExport({ module: 'hr', type: 'unknown', specType: 'unknown', handler: employeesHandler, scope }))
       .toThrow(/exportTypes manifest/);
   });
 });

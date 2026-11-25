@@ -21,7 +21,7 @@ export const ROOMS_SPEC: TableSpec = {
 
 export async function exportRooms(tx: Tx, ctx: ImportCtx) {
   const rows = await tx.campRoom.findMany({
-    where: { tenantId: ctx.tenantId, campId: ctx.campId },
+    where: { tenantId: ctx.tenantId, campId: ctx.scopeId },
     select: { roomNo: true, floor: true, capacity: true, status: true, note: true, building: { select: { code: true } } },
     orderBy: [{ building: { code: 'asc' } }, { roomNo: 'asc' }],
   });

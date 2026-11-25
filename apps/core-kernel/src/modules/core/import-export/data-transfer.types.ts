@@ -1,6 +1,5 @@
 import type { CampDataImportType } from '@prisma/client';
 import type { CellValue, ParsedTableRow, TableSpec } from '../../../common/xlsx/table-spec';
-import type { CampPermission } from '../../camp/common/camp-permissions';
 import type { CampAuditService } from '../../camp/common/camp-audit.service';
 import type { Tx } from '../platform/tenant-tx';
 
@@ -12,9 +11,23 @@ export interface PlannedRow extends ParsedTableRow {
   changes?: Record<string, { from: CellValue; to: CellValue }>;
 }
 
+/** Импорт/экспортын хүрээ (CORE-10): `scopeId` = модулийн тодорхойлсон хүрээ (одоогийн бүх handler-т ажлын байр / кемп) */
 export interface ImportCtx {
   tenantId: string;
-  campId: string;
+  scopeId: string;
+}
+
+/**
+ * Хүрээний эрх шалгалт — handler-ийг бүртгэж буй модуль өгнө (цөм нь хүрээ юу болохыг мэдэхгүй; ADR-009).
+ * Эрхгүй → 403; хүрээ байхгүй → 404 (эрх шалгасны ДАРАА — оршин буйг илчлэхгүй).
+ */
+export interface DataTransferScope {
+  /** Бичих/урьдчилан харах: handler-ийн эрхийн аль нэг. Буцаах = actor `core_users.id` */
+  requirePermission(tx: Tx, tenantId: string, authId: string, scopeId: string, permission: string | string[]): Promise<string>;
+  /** Унших (түүх, экспорт): хүрээнд хандах эрх */
+  requireAccess(tx: Tx, tenantId: string, authId: string, scopeId: string): Promise<void>;
+  /** Хүрээ байгаа эсэх (404) + экспортын файлын нэрд орох код */
+  describe(tx: Tx, tenantId: string, scopeId: string): Promise<{ code: string }>;
 }
 
 export interface ApplyCtx extends ImportCtx {
@@ -26,7 +39,8 @@ export interface ApplyCtx extends ImportCtx {
 export interface DataImportHandler {
   type: CampDataImportType;
   spec: TableSpec;
-  permission: CampPermission | CampPermission[];
+  /** Эрхийн код(ууд) — `DataTransferScope.requirePermission`-д дамжина */
+  permission: string | string[];
   plan(tx: Tx, ctx: ImportCtx, rows: ParsedTableRow[]): Promise<PlannedRow[]>;
   apply(tx: Tx, ctx: ApplyCtx, rows: PlannedRow[]): Promise<{ created: number; updated: number }>;
   exportRows(tx: Tx, ctx: ImportCtx): Promise<Record<string, CellValue>[]>;

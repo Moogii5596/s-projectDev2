@@ -31,8 +31,8 @@ export const departmentsHandler: DataImportHandler = {
 
   async plan(tx, ctx, rows) {
     const [depts, activeCounts] = await Promise.all([
-      tx.hrDepartment.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.campId }, select: SELECT }),
-      tx.hrEmployee.groupBy({ by: ['departmentId'], where: { tenantId: ctx.tenantId, campId: ctx.campId, status: 'ACTIVE' }, _count: { _all: true } }),
+      tx.hrDepartment.findMany({ where: { tenantId: ctx.tenantId, campId: ctx.scopeId }, select: SELECT }),
+      tx.hrEmployee.groupBy({ by: ['departmentId'], where: { tenantId: ctx.tenantId, campId: ctx.scopeId, status: 'ACTIVE' }, _count: { _all: true } }),
     ]);
     const byCode = new Map(depts.map((d) => [d.code.toUpperCase(), d]));
     const active = new Map(activeCounts.map((c) => [c.departmentId, c._count._all]));
@@ -61,13 +61,13 @@ export const departmentsHandler: DataImportHandler = {
       const v = row.values;
       if (row.op === 'create') {
         const d = await tx.hrDepartment.create({
-          data: { tenantId: ctx.tenantId, campId: ctx.campId, code: String(v.code), name: String(v.name), isActive: v.active !== false },
+          data: { tenantId: ctx.tenantId, campId: ctx.scopeId, code: String(v.code), name: String(v.name), isActive: v.active !== false },
           select: SELECT,
         });
         created++;
-        audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'department', entityId: d.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: DEPT_AUDIT_FIELDS, before: null, after: d, summaryParams: { code: d.code, name: d.name } });
+        audits.push({ tenantId: ctx.tenantId, campId: ctx.scopeId, entityType: 'department', entityId: d.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: DEPT_AUDIT_FIELDS, before: null, after: d, summaryParams: { code: d.code, name: d.name } });
       } else if (row.op === 'update' && row.targetId) {
-        const before = await tx.hrDepartment.findFirst({ where: { id: row.targetId, tenantId: ctx.tenantId, campId: ctx.campId }, select: SELECT });
+        const before = await tx.hrDepartment.findFirst({ where: { id: row.targetId, tenantId: ctx.tenantId, campId: ctx.scopeId }, select: SELECT });
         if (!before) continue;
         const after = await tx.hrDepartment.update({
           where: { id: row.targetId },
@@ -78,7 +78,7 @@ export const departmentsHandler: DataImportHandler = {
           select: SELECT,
         });
         updated++;
-        audits.push({ tenantId: ctx.tenantId, campId: ctx.campId, entityType: 'department', entityId: after.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: DEPT_AUDIT_FIELDS, before, after, summaryParams: { code: after.code, name: after.name } });
+        audits.push({ tenantId: ctx.tenantId, campId: ctx.scopeId, entityType: 'department', entityId: after.id, action: 'IMPORT', actorUserId: ctx.actorUserId, importId: ctx.importId, fields: DEPT_AUDIT_FIELDS, before, after, summaryParams: { code: after.code, name: after.name } });
       }
     }
     await ctx.audit.recordMany(tx, audits);
@@ -87,7 +87,7 @@ export const departmentsHandler: DataImportHandler = {
 
   async exportRows(tx, ctx) {
     const rows = await tx.hrDepartment.findMany({
-      where: { tenantId: ctx.tenantId, campId: ctx.campId },
+      where: { tenantId: ctx.tenantId, campId: ctx.scopeId },
       select: { code: true, name: true, isActive: true },
       orderBy: { code: 'asc' },
     });
