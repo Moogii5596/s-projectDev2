@@ -2,7 +2,8 @@
  * v0.2.5 H1 (#16) — бүртгэлийн нэвтрэлтийн түгжээ NestJS-д (integration, бодит PG + GoTrue).
  *   - 15 мин-д 5 буруу → 15 мин түгжинэ (зөв нууц үгтэй ч 429 `auth.account_locked`, mn/en/zh)
  *   - зөв нэвтрэлт тоолуурыг тэглэнэ
- *   - Debug: төлөв харах, тайлах (core.debug.manage + audit); өөр tenant-ийн хэрэглэгч 404; эрхгүй 404
+ *   - #28 (H-13): хэрэглэгчийн удирдлага — жагсаалтад төлөв, тайлах (системийн админ OWNER/ADMIN + audit);
+ *     эрхгүй 403; өөр tenant-ийн хэрэглэгч 404; ADMIN нь OWNER-ийн түгжээг тайлж чадна (тоолуур тэглэх = эрх олгохгүй)
  *   - Тоолуур = auth.users-ээр (tenant-аас хамааралгүй), `auth_guard` app_user-д хүрэхгүй
  */
 import { randomUUID } from 'crypto';
@@ -11,7 +12,6 @@ import { CampIt, createCampIt, IT_PASSWORD } from './helpers/camp-it-app';
 import { LoginLockService } from '../src/auth/login-lock.service';
 
 let it_: CampIt;
-const prevDebug = process.env.DEBUG_MENU_ENABLED;
 let otherTenantId: string | null = null;
 
 const signIn = (identifier: string, password: string, lang = 'mn') =>
@@ -27,20 +27,16 @@ async function user(who: 'manager' | 'nobody') {
 }
 
 beforeAll(async () => {
-  process.env.DEBUG_MENU_ENABLED = 'true'; // Debug API (D-1) — энэ файлын app-д л
   it_ = await createCampIt('h1lock');
-  await it_.prismaAdmin.coreUser.update({ where: { id: it_.coreIds.admin }, data: { role: 'OWNER' } }); // Debug view + manage
 }, 120_000);
 
 afterAll(async () => {
-  if (prevDebug === undefined) delete process.env.DEBUG_MENU_ENABLED;
-  else process.env.DEBUG_MENU_ENABLED = prevDebug;
   if (otherTenantId) await it_?.prismaAdmin.tenant.delete({ where: { id: otherTenantId } }).catch(() => undefined);
   await it_?.close();
 }, 30_000);
 
 describe('H1 — бүртгэлийн түгжээ', () => {
-  it('5 буруу → түгжинэ (5 дахь нь 429); зөв нууц үгтэй ч 429; мессеж 3 хэлээр; Debug-ээр тайлсны дараа нэвтэрнэ (audit)', async () => {
+  it('5 буруу → түгжинэ (5 дахь нь 429); зөв нууц үгтэй ч 429; мессеж 3 хэлээр; хэрэглэгчийн удирдлагаас тайлсны дараа нэвтэрнэ (audit)', async () => {
     const u = await user('nobody');
     for (let i = 0; i < 4; i++) expect((await signIn(u.email, 'wrong-password')).status).toBe(401);
     const fifth = await signIn(u.email, 'wrong-password');
@@ -59,17 +55,27 @@ describe('H1 — бүртгэлийн түгжээ', () => {
     expect(mins).toBeGreaterThan(14);
     expect(mins).toBeLessThanOrEqual(15);
 
-    // Debug: төлөв
-    const st = await it_.api().get(`/api/v1/core/debug/users/${u.id}/login-lock`).set(it_.as('admin')).expect(200);
-    expect(st.body).toMatchObject({ locked: true, failedCount: 5 });
-    // Debug эрхгүй → 404 (байгааг нь ил гаргахгүй)
-    await it_.api().post(`/api/v1/core/debug/actions/users/${u.id}/unlock`).set(it_.as('manager')).expect(404);
-    // Тайлах (OWNER) → audit
-    const un = await it_.api().post(`/api/v1/core/debug/actions/users/${u.id}/unlock`).set(it_.as('admin')).expect(201);
+    // Хэрэглэгчийн жагсаалт: мөрөнд төлөв (authId хариунд алга)
+    const list = await it_.api().get('/api/v1/core/rbac/users').set(it_.as('admin')).expect(200);
+    const mine = (list.body as { id: string; authId?: string; loginLock: unknown }[]).find((x) => x.id === u.id)!;
+    expect(mine.loginLock).toMatchObject({ locked: true, failedCount: 5 });
+    expect(mine.authId).toBeUndefined();
+    // Системийн админ биш → 403 (жагсаалт ч, тайлах ч)
+    await it_.api().get('/api/v1/core/rbac/users').set(it_.as('manager')).expect(403);
+    await it_.api().post(`/api/v1/core/rbac/users/${u.id}/login-unlock`).set(it_.as('manager')).expect(403);
+    expect((await failures(u.authId))[0].failed_count).toBe(5);
+    // Тайлах (ADMIN) → audit
+    const un = await it_.api().post(`/api/v1/core/rbac/users/${u.id}/login-unlock`).set(it_.as('admin')).expect(200);
     expect(un.body).toEqual({ ok: true, wasLocked: true });
     expect(await failures(u.authId)).toEqual([]);
-    const audit = await it_.prismaAdmin.campAuditLog.findFirst({ where: { tenantId: it_.tenantId, entityType: 'debug_action', entityId: u.id } });
-    expect(audit).toMatchObject({ actorUserId: it_.coreIds.admin, summaryParams: { action: 'login_unlock' } });
+    const audit = await it_.prismaAdmin.campAuditLog.findFirst({ where: { tenantId: it_.tenantId, entityType: 'user_login_lock', entityId: u.id } });
+    expect(audit).toMatchObject({ actorUserId: it_.coreIds.admin, summaryKey: 'audit.user_login_lock.update' });
+    // Давтан тайлах → идемпотент, шинэ audit мөргүй
+    const again = await it_.api().post(`/api/v1/core/rbac/users/${u.id}/login-unlock`).set(it_.as('admin')).expect(200);
+    expect(again.body).toEqual({ ok: true, wasLocked: false });
+    expect(await it_.prismaAdmin.campAuditLog.count({ where: { tenantId: it_.tenantId, entityType: 'user_login_lock', entityId: u.id } })).toBe(1);
+    // Хуучин Debug зам устсан (давхар код ✖)
+    await it_.api().post(`/api/v1/core/debug/actions/users/${u.id}/unlock`).set(it_.as('admin')).expect(404);
 
     expect((await signIn(u.email, IT_PASSWORD)).status).toBe(200);
   });
@@ -80,15 +86,29 @@ describe('H1 — бүртгэлийн түгжээ', () => {
     expect((await failures(u.authId))[0]?.failed_count).toBe(3);
     expect((await signIn(u.email, IT_PASSWORD)).status).toBe(200);
     expect(await failures(u.authId)).toEqual([]);
-    const st = await it_.api().get(`/api/v1/core/debug/users/${u.id}/login-lock`).set(it_.as('admin')).expect(200);
-    expect(st.body).toEqual({ locked: false, lockedUntil: null, failedCount: 0 });
+    const list = await it_.api().get('/api/v1/core/rbac/users').set(it_.as('admin')).expect(200);
+    expect((list.body as { id: string; loginLock: unknown }[]).find((x) => x.id === u.id)!.loginLock).toEqual({ locked: false, lockedUntil: null, failedCount: 0 });
   });
 
-  it('tenant тусгаарлалт: өөр tenant-ийн хэрэглэгчийн түгжээг харах/тайлах → 404', async () => {
+  it('өндөр эрхтэй зорилт: ADMIN нь OWNER-ийн түгжээг тайлна (тоолуур тэглэх — эрх, нууц үг өөрчлөхгүй)', async () => {
+    const owner = await user('manager');
+    await it_.prismaAdmin.coreUser.update({ where: { id: owner.id }, data: { role: 'OWNER' } });
+    try {
+      for (let i = 0; i < 2; i++) expect((await signIn(owner.email, 'wrong-password')).status).toBe(401);
+      const un = await it_.api().post(`/api/v1/core/rbac/users/${owner.id}/login-unlock`).set(it_.as('admin')).expect(200);
+      expect(un.body).toEqual({ ok: true, wasLocked: false });
+      expect(await failures(owner.authId)).toEqual([]);
+    } finally {
+      await it_.prismaAdmin.coreUser.update({ where: { id: owner.id }, data: { role: 'REQUESTER' } });
+    }
+  });
+
+  it('tenant тусгаарлалт: өөр tenant-ийн хэрэглэгчийн түгжээг тайлах → 404; жагсаалтад харагдахгүй', async () => {
     otherTenantId = (await it_.prismaAdmin.tenant.create({ data: { slug: `h1other-${randomUUID().slice(0, 8)}`, name: 'H1 other' } })).id;
     const other = await it_.prismaAdmin.coreUser.create({ data: { tenantId: otherTenantId, authId: randomUUID(), email: `h1-${randomUUID().slice(0, 8)}@it.test` } });
-    await it_.api().get(`/api/v1/core/debug/users/${other.id}/login-lock`).set(it_.as('admin')).expect(404);
-    await it_.api().post(`/api/v1/core/debug/actions/users/${other.id}/unlock`).set(it_.as('admin')).expect(404);
+    await it_.api().post(`/api/v1/core/rbac/users/${other.id}/login-unlock`).set(it_.as('admin')).expect(404);
+    const list = await it_.api().get('/api/v1/core/rbac/users').set(it_.as('admin')).expect(200);
+    expect((list.body as { id: string }[]).some((x) => x.id === other.id)).toBe(false);
   });
 
   it('SQL дүрэм: цонх дууссан → 1-ээс; идэвхтэй түгжээг зэрэг оролдлого өөрчлөхгүй; дууссан түгжээ → 1-ээс', async () => {

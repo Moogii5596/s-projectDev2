@@ -158,6 +158,8 @@ export interface CampUser {
   invite: { status: InviteStatus; channel: InviteChannel; expiresAt: string; createdAt: string } | null
   /** v0.2.3 Блок 4 (PIL-16) — null → «Хэзээ ч нэвтрээгүй» */
   lastSignInAt: string | null
+  /** #28 — нэвтрэлтийн түгжээ (= backend `LoginLockStatus`); failedCount = идэвхтэй цонхны буруу оролдлого */
+  loginLock: { locked: boolean; lockedUntil: string | null; failedCount: number }
 }
 
 /** v0.2.2 Блок 3–4: урилга */

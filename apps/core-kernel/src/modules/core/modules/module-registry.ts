@@ -42,7 +42,7 @@ export const TENANT_MODULES = [
     auditEntityTypes: [
       'tenant_settings', 'installed_module', 'holiday_calendar', 'calendar_holiday',
       'approval_definition', 'approval_delegation', 'site', 'attachment_name_pattern',
-      'debug_action', 'user_account', 'user_invite',
+      'debug_action', 'user_account', 'user_invite', 'user_login_lock',
     ],
     cronJobs: ['outbox-poller', 'notification-mail', 'approval-sla'],
   },

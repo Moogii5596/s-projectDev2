@@ -432,6 +432,7 @@ export const MESSAGES = {
   'audit.position_template.update': { mn: '"{name}" албан тушаалын эрхийн загварыг өөрчлөв', en: 'Changed the permission templates of position "{name}"', zh: '修改了职位"{name}"的权限模板' },
   'audit.user_account.create': { mn: '"{name}" ажилтанд нэвтрэх эрх үүсгэв', en: 'Created sign-in access for employee "{name}"', zh: '已为员工"{name}"创建登录权限' },
   'audit.user_account.update': { mn: '"{name}" хэрэглэгчийг идэвхжүүлэв', en: 'Reactivated user "{name}"', zh: '已重新启用用户"{name}"' },
+  'audit.user_login_lock.update': { mn: '"{name}" хэрэглэгчийн нэвтрэлтийн түгжээг тайлав', en: 'Unlocked sign-in for user "{name}"', zh: '已解除用户"{name}"的登录锁定' },
   'audit.user_account.deactivate': { mn: '"{name}" хэрэглэгчийг идэвхгүй болгов', en: 'Deactivated user "{name}"', zh: '已停用用户"{name}"' },
   'audit.user_invite.create': { mn: '"{name}" хэрэглэгчид урилга үүсгэв ({channel})', en: 'Created an invitation for user "{name}" ({channel})', zh: '已为用户"{name}"创建邀请（{channel}）' },
   'camp.err.catalog.building_type_inactive': { mn: '"{name}" байрны төрөл идэвхгүй', en: 'Building type "{name}" is inactive', zh: '楼栋类型"{name}"已停用' },

@@ -35,7 +35,7 @@ export default function DebugPage() {
       </div>
       {tab === 'system' && <SystemTab canManage={!!me.data?.canManage} />}
       {tab === 'health' && <HealthTab />}
-      {tab === 'permissions' && <PermissionsTab canManage={!!me.data?.canManage} />}
+      {tab === 'permissions' && <PermissionsTab />}
       {tab === 'logs' && <LogsTab />}
       {tab === 'audit' && <AuditTab />}
       {tab === 'i18n' && <I18nTab />}
@@ -180,35 +180,7 @@ function HealthTab() {
   )
 }
 
-/** v0.2.5 H1 (#16): сонгосон хэрэглэгчийн нэвтрэлтийн түгжээ + тайлах (core.debug.manage, audit) */
-function LoginLockCard({ userId, canManage }: { userId: string; canManage: boolean }) {
-  const { t } = useTranslation()
-  const qc = useQueryClient()
-  const key = ['core', 'debug', 'login-lock', userId]
-  const q = useQuery({ queryKey: key, queryFn: () => debugApi.loginLock(userId) })
-  const unlock = useMutation({ mutationFn: () => debugApi.unlockLogin(userId), onSuccess: () => qc.invalidateQueries({ queryKey: key }) })
-  const locale = INTL_LOCALE[currentLang()]
-  const l = q.data
-  return (
-    <Card title={t('debug.lock.title')} actions={canManage && l && (l.locked || l.failedCount > 0) && (
-      <Button size="sm" variant="secondary" loading={unlock.isPending} onClick={() => window.confirm(t('debug.lock.unlock_confirm')) && unlock.mutate()}>{t('debug.lock.unlock')}</Button>
-    )}>
-      {q.isLoading && <Loading />}
-      {(q.error || unlock.error) && <ErrorBox error={q.error ?? unlock.error} />}
-      {unlock.isSuccess && <p className="mb-2 text-xs text-green-700">{t('debug.done')}</p>}
-      {l && (
-        <p className="text-sm">
-          {l.locked
-            ? <><Badge tone="red">{t('debug.lock.locked')}</Badge> {t('debug.lock.until', { at: new Date(l.lockedUntil!).toLocaleString(locale) })}</>
-            : <Badge tone="green">{t('debug.lock.not_locked')}</Badge>}
-          {' '}<span className="text-xs text-gray-500">{t('debug.lock.failed', { n: l.failedCount })}</span>
-        </p>
-      )}
-    </Card>
-  )
-}
-
-function PermissionsTab({ canManage }: { canManage: boolean }) {
+function PermissionsTab() {
   const { t } = useTranslation()
   const [userId, setUserId] = useState('')
   const users = useQuery({ queryKey: ['core', 'debug', 'users'], queryFn: debugApi.users })
@@ -243,7 +215,6 @@ function PermissionsTab({ canManage }: { canManage: boolean }) {
           </>
         )}
       </Card>
-      {userId && <LoginLockCard userId={userId} canManage={canManage} />}
     </>
   )
 }

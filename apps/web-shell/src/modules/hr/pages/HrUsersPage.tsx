@@ -20,9 +20,12 @@ const STATES: UserState[] = ['ACTIVE', 'INVITED', 'NO_INVITE', 'INACTIVE']
 const fmtSignIn = (iso: string | null | undefined, neverLabel: string): string =>
   iso ? new Date(iso).toLocaleString(INTL_LOCALE[currentLang()], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : neverLabel
 
+/** #28: түгжээ дуусах цаг (өнөөдрийн цаг:минут) */
+const fmtTime = (iso: string): string => new Date(iso).toLocaleTimeString(INTL_LOCALE[currentLang()], { hour: '2-digit', minute: '2-digit' })
+
 /**
  * /hr/:campId/users — v0.2.2 Блок 4 (B4-Q1…Q4): байгууллагын бүх хэрэглэгч (tenant түвшин).
- * Нэвтрэх нэр, холбогдсон ажилтан, урилгын төлөв; эрх, шинэ линк, идэвхгүй болгох / сэргээх. Эрх: системийн админ (OWNER / ADMIN, SEC-009).
+ * Нэвтрэх нэр, холбогдсон ажилтан, урилгын төлөв; эрх, шинэ линк, идэвхгүй болгох / сэргээх; нэвтрэлтийн түгжээ + тайлах (#28). Эрх: системийн админ (OWNER / ADMIN, SEC-009).
  * Шинэ хэрэглэгч — «Ажилтан» → засах → «Нэвтрэх эрх».
  */
 export default function HrUsersPage() {
@@ -35,6 +38,7 @@ export default function HrUsersPage() {
   const [permsOf, setPermsOf] = useState<CampUser | null>(null)
   const [inviteOf, setInviteOf] = useState<CampUser | null>(null)
   const [toggling, setToggling] = useState<CampUser | null>(null)
+  const [unlocking, setUnlocking] = useState<CampUser | null>(null)
 
   if (perms.isLoading) return <Loading />
   if (!canManage) return <NoAccess what={t('hr.section.users')} />
@@ -79,6 +83,13 @@ export default function HrUsersPage() {
                 </td>
                 <td className={td}>
                   <Badge tone={STATE_TONE[s]}>{t(`hr.users.state.${s}`)}</Badge>
+                  {u.loginLock.locked && u.loginLock.lockedUntil ? (
+                    <div className="mt-1">
+                      <Badge tone="red">{t('hr.users.lock.locked', { at: fmtTime(u.loginLock.lockedUntil) })}</Badge>
+                    </div>
+                  ) : u.loginLock.failedCount > 0 ? (
+                    <div className="mt-1 text-[11px] text-gray-500">{t('hr.users.lock.failed', { n: u.loginLock.failedCount })}</div>
+                  ) : null}
                 </td>
                 <td className={`${td} text-gray-600 whitespace-nowrap`}>{fmtSignIn(u.lastSignInAt, t('hr.users.never_signin'))}</td>
                 <td className={`${td} text-right whitespace-nowrap space-x-3`}>
@@ -88,6 +99,11 @@ export default function HrUsersPage() {
                   {u.isActive && (
                     <Button variant="ghost" onClick={() => setInviteOf(u)}>
                       {t('hr.users.new_link')}
+                    </Button>
+                  )}
+                  {(u.loginLock.locked || u.loginLock.failedCount > 0) && (
+                    <Button variant="ghost" onClick={() => setUnlocking(u)}>
+                      {t('hr.users.lock.unlock')}
                     </Button>
                   )}
                   <Button variant="ghost" onClick={() => setToggling(u)}>
@@ -107,6 +123,7 @@ export default function HrUsersPage() {
         </Modal>
       )}
       {toggling && <ToggleActiveModal user={toggling} onClose={() => setToggling(null)} />}
+      {unlocking && <UnlockLoginModal user={unlocking} onClose={() => setUnlocking(null)} />}
     </Card>
   )
 }
@@ -131,6 +148,31 @@ function ToggleActiveModal({ user, onClose }: { user: CampUser; onClose: () => v
       }
     >
       <p className="text-sm text-gray-700">{t(next ? 'hr.users.activate_confirm' : 'hr.users.deactivate_confirm', { name: user.fullName ?? loginName(user) ?? '' })}</p>
+      <ErrorBox error={m.error} />
+    </Modal>
+  )
+}
+
+/** #28 (H-13): нэвтрэлтийн түгжээ тайлах — буруу оролдлогын тоолуурыг тэглэнэ, audit-д бичигдэнэ */
+function UnlockLoginModal({ user, onClose }: { user: CampUser; onClose: () => void }) {
+  const { t } = useTranslation()
+  const m = useAppMutation(() => campApi.unlockUserLogin(user.id), [campKeys.users], onClose)
+  return (
+    <Modal
+      title={t('hr.users.lock.unlock_title')}
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            {t('camp.common.cancel')}
+          </Button>
+          <Button onClick={() => m.mutate(undefined)} loading={m.isPending}>
+            {t('hr.users.lock.unlock')}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-gray-700">{t('hr.users.lock.unlock_confirm', { name: user.fullName ?? loginName(user) ?? '' })}</p>
       <ErrorBox error={m.error} />
     </Modal>
   )

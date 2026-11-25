@@ -25,6 +25,8 @@ export const CAMP_AUDIT_ENTITIES = [
   'attachment_name_pattern',
   // v0.2.4 DBG-01
   'debug_action',
+  // #28 (H-13)
+  'user_login_lock',
 ] as const;
 type CampAuditEntity = (typeof CAMP_AUDIT_ENTITIES)[number];
 

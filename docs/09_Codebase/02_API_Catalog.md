@@ -2,7 +2,7 @@
 title: "API каталог (core-kernel)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-11-11
+last_updated: 2026-11-25
 tags: [codebase, api, generated]
 ---
 
@@ -10,7 +10,7 @@ tags: [codebase, api, generated]
 
 > 🤖 **AUTO-GENERATED** — `pnpm docs:gen` (`scripts/docs/gen-codebase-docs.mjs`). Гараар бүү зас: кодыг засаад дахин үүсгэ. Зураглал: [[00_Codebase_Map]] · Дүрэм: RULE-21 ([[00_rules_and_context]]).
 
-Нийт **294** endpoint, 42 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
+Нийт **293** endpoint, 42 controller. Угтвар: `/api/v1`. Нэвтрэлт: бүх route анхдагчаар `TenantAuthGuard` (JWT → tenant) — 🌐 = `@SkipAuth()` (нэвтрэлтгүй).
 
 **Эрх** багана: controller-ийн дуудсан service метод (+ түүний дуудсан нэг түвшний `this.*` туслах метод) дахь `CAMP_PERMISSIONS.*` — олон код = аль нэг нь / нөхцөлтэй байж болно. `(TABLE)` = үйлдлийн хүснэгтээс яг тухайн үйлдлийн эрх (жишээ нь засварын `TRANSITIONS`). **OWNER·ADMIN** = зөвхөн системийн роль (`requireTenantAdmin` — хэрэглэгч / роль удирдах, SEC-009), `гишүүн` = зөвхөн кемпийн гишүүнчлэл (`requireAccess`), `—` = шууд олдсонгүй (core role / tenant л) → service-ийг шалга. Эрхийн жагсаалт: [[05_Permissions_Catalog]] · модулийн тайлбар: [[01_Backend_Modules]].
 
@@ -28,12 +28,12 @@ tags: [codebase, api, generated]
 - [[#modules/camp/maintenance]] — 13
 - [[#modules/camp/master]] — 11
 - [[#modules/camp/meal-orders]] — 15
-- [[#modules/camp/rbac]] — 25
+- [[#modules/camp/rbac]] — 26
 - [[#modules/camp/settings]] — 5
 - [[#modules/core/approvals]] — 11
 - [[#modules/core/attachments]] — 8
 - [[#modules/core/calendars]] — 5
-- [[#modules/core/debug]] — 13
+- [[#modules/core/debug]] — 11
 - [[#modules/core/exchange-rates]] — 3
 - [[#modules/core/feedback]] — 12
 - [[#modules/core/modules]] — 3
@@ -230,28 +230,29 @@ tags: [codebase, api, generated]
 | PUT | `/api/v1/camp/camps/:campId/employees/:id/user` | `CampRbacController.linkUser` → `CampEmployeeLoginService.link` | **OWNER·ADMIN** | `camp-rbac.controller.ts:22` |
 | GET | `/api/v1/camp/camps/:campId/employees/:id/position-preview` | `CampRbacController.positionPreview` → `CampEmployeeLoginService.positionPreview` | **OWNER·ADMIN** | `camp-rbac.controller.ts:33` |
 | POST | `/api/v1/camp/camps/:campId/employees/:id/create-user` | `CampRbacController.createEmployeeUser` → `CampUserAccessService.createUserForEmployee` | **OWNER·ADMIN** | `camp-rbac.controller.ts:46` |
-| GET | `/api/v1/core/rbac/permissions` | `CoreRbacController.permissions` → `CampRbacService.listPermissions` | — | `core-rbac.controller.ts:34` |
-| GET | `/api/v1/core/rbac/me/permissions` | `CoreRbacController.myPermissions` → `CampRbacService.myPermissions` | — | `core-rbac.controller.ts:39` |
-| GET | `/api/v1/core/rbac/users` | `CoreRbacController.users` → `CampRbacService.listUsers` | **OWNER·ADMIN** | `core-rbac.controller.ts:45` |
-| GET | `/api/v1/core/rbac/roles` | `CoreRbacController.roles` → `CampRbacService.listRoles` | **OWNER·ADMIN** | `core-rbac.controller.ts:51` |
-| POST | `/api/v1/core/rbac/roles` | `CoreRbacController.createRole` → `CampRbacService.createRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:58` |
-| PATCH | `/api/v1/core/rbac/roles/:id` | `CoreRbacController.updateRole` → `CampRbacService.updateRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:64` |
-| DELETE | `/api/v1/core/rbac/roles/:id` | `CoreRbacController.deleteRole` → `CampRbacService.deleteRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:70` |
-| PUT | `/api/v1/core/rbac/roles/:id/permissions` | `CoreRbacController.setPermissions` → `CampRbacService.setRolePermissions` | **OWNER·ADMIN** | `core-rbac.controller.ts:76` |
-| GET | `/api/v1/core/rbac/user-roles` | `CoreRbacController.userRoles` → `CampRbacService.listUserRoles` | **OWNER·ADMIN** | `core-rbac.controller.ts:82` |
-| POST | `/api/v1/core/rbac/user-roles` | `CoreRbacController.assign` → `CampRbacService.assignUserRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:89` |
-| DELETE | `/api/v1/core/rbac/user-roles/:id` | `CoreRbacController.remove` → `CampRbacService.removeUserRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:95` |
-| GET | `/api/v1/core/rbac/roles/:id/apply-preview` | `CoreRbacController.applyPreview` → `CampRbacService.previewRoleApply` | **OWNER·ADMIN** | `core-rbac.controller.ts:103` |
-| POST | `/api/v1/core/rbac/roles/:id/apply` | `CoreRbacController.apply` → `CampRbacService.applyRoleTemplate` | **OWNER·ADMIN** | `core-rbac.controller.ts:110` |
-| GET | `/api/v1/core/rbac/users/:userId/permissions` | `CoreRbacController.userPermissions` → `CampRbacService.listUserPermissions` | **OWNER·ADMIN** | `core-rbac.controller.ts:116` |
-| POST | `/api/v1/core/rbac/users/:userId/permissions` | `CoreRbacController.grantDirect` → `CampRbacService.grantDirectPermission` | **OWNER·ADMIN** | `core-rbac.controller.ts:123` |
-| DELETE | `/api/v1/core/rbac/user-permissions/:id` | `CoreRbacController.revokeDirect` → `CampRbacService.revokeDirectPermission` | **OWNER·ADMIN** | `core-rbac.controller.ts:129` |
-| GET | `/api/v1/core/rbac/positions/:positionId/role-templates` | `CoreRbacController.positionTemplates` → `CampRbacService.getPositionTemplates` | **OWNER·ADMIN** | `core-rbac.controller.ts:135` |
-| PUT | `/api/v1/core/rbac/positions/:positionId/role-templates` | `CoreRbacController.setPositionTemplates` → `CampRbacService.setPositionTemplates` | **OWNER·ADMIN** | `core-rbac.controller.ts:141` |
-| POST | `/api/v1/core/rbac/positions/:positionId/role-templates/apply` | `CoreRbacController.applyPositionTemplates` → `CampEmployeeLoginService.applyPositionTemplates` | **OWNER·ADMIN** | `core-rbac.controller.ts:148` |
-| POST | `/api/v1/core/rbac/users/:userId/invites` | `CoreRbacController.inviteUser` → `CampUserAccessService.invite` | **OWNER·ADMIN** | `core-rbac.controller.ts:155` |
-| PATCH | `/api/v1/core/rbac/users/:userId` | `CoreRbacController.setUserActive` → `CampUserAccessService.setActive` | **OWNER·ADMIN** | `core-rbac.controller.ts:162` |
-| GET | `/api/v1/core/rbac/invites/options` | `CoreRbacController.inviteOptions` → `CampUserAccessService.options` | **OWNER·ADMIN** | `core-rbac.controller.ts:168` |
+| GET | `/api/v1/core/rbac/permissions` | `CoreRbacController.permissions` → `CampRbacService.listPermissions` | — | `core-rbac.controller.ts:36` |
+| GET | `/api/v1/core/rbac/me/permissions` | `CoreRbacController.myPermissions` → `CampRbacService.myPermissions` | — | `core-rbac.controller.ts:41` |
+| GET | `/api/v1/core/rbac/users` | `CoreRbacController.users` → `UserLoginLockService.attach` | — | `core-rbac.controller.ts:47` |
+| GET | `/api/v1/core/rbac/roles` | `CoreRbacController.roles` → `CampRbacService.listRoles` | **OWNER·ADMIN** | `core-rbac.controller.ts:54` |
+| POST | `/api/v1/core/rbac/roles` | `CoreRbacController.createRole` → `CampRbacService.createRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:61` |
+| PATCH | `/api/v1/core/rbac/roles/:id` | `CoreRbacController.updateRole` → `CampRbacService.updateRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:67` |
+| DELETE | `/api/v1/core/rbac/roles/:id` | `CoreRbacController.deleteRole` → `CampRbacService.deleteRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:73` |
+| PUT | `/api/v1/core/rbac/roles/:id/permissions` | `CoreRbacController.setPermissions` → `CampRbacService.setRolePermissions` | **OWNER·ADMIN** | `core-rbac.controller.ts:79` |
+| GET | `/api/v1/core/rbac/user-roles` | `CoreRbacController.userRoles` → `CampRbacService.listUserRoles` | **OWNER·ADMIN** | `core-rbac.controller.ts:85` |
+| POST | `/api/v1/core/rbac/user-roles` | `CoreRbacController.assign` → `CampRbacService.assignUserRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:92` |
+| DELETE | `/api/v1/core/rbac/user-roles/:id` | `CoreRbacController.remove` → `CampRbacService.removeUserRole` | **OWNER·ADMIN** | `core-rbac.controller.ts:98` |
+| GET | `/api/v1/core/rbac/roles/:id/apply-preview` | `CoreRbacController.applyPreview` → `CampRbacService.previewRoleApply` | **OWNER·ADMIN** | `core-rbac.controller.ts:106` |
+| POST | `/api/v1/core/rbac/roles/:id/apply` | `CoreRbacController.apply` → `CampRbacService.applyRoleTemplate` | **OWNER·ADMIN** | `core-rbac.controller.ts:113` |
+| GET | `/api/v1/core/rbac/users/:userId/permissions` | `CoreRbacController.userPermissions` → `CampRbacService.listUserPermissions` | **OWNER·ADMIN** | `core-rbac.controller.ts:119` |
+| POST | `/api/v1/core/rbac/users/:userId/permissions` | `CoreRbacController.grantDirect` → `CampRbacService.grantDirectPermission` | **OWNER·ADMIN** | `core-rbac.controller.ts:126` |
+| DELETE | `/api/v1/core/rbac/user-permissions/:id` | `CoreRbacController.revokeDirect` → `CampRbacService.revokeDirectPermission` | **OWNER·ADMIN** | `core-rbac.controller.ts:132` |
+| GET | `/api/v1/core/rbac/positions/:positionId/role-templates` | `CoreRbacController.positionTemplates` → `CampRbacService.getPositionTemplates` | **OWNER·ADMIN** | `core-rbac.controller.ts:138` |
+| PUT | `/api/v1/core/rbac/positions/:positionId/role-templates` | `CoreRbacController.setPositionTemplates` → `CampRbacService.setPositionTemplates` | **OWNER·ADMIN** | `core-rbac.controller.ts:144` |
+| POST | `/api/v1/core/rbac/positions/:positionId/role-templates/apply` | `CoreRbacController.applyPositionTemplates` → `CampEmployeeLoginService.applyPositionTemplates` | **OWNER·ADMIN** | `core-rbac.controller.ts:151` |
+| POST | `/api/v1/core/rbac/users/:userId/invites` | `CoreRbacController.inviteUser` → `CampUserAccessService.invite` | **OWNER·ADMIN** | `core-rbac.controller.ts:158` |
+| PATCH | `/api/v1/core/rbac/users/:userId` | `CoreRbacController.setUserActive` → `CampUserAccessService.setActive` | **OWNER·ADMIN** | `core-rbac.controller.ts:165` |
+| POST | `/api/v1/core/rbac/users/:userId/login-unlock` | `CoreRbacController.unlockLogin` → `UserLoginLockService.unlock` | **OWNER·ADMIN** | `core-rbac.controller.ts:173` |
+| GET | `/api/v1/core/rbac/invites/options` | `CoreRbacController.inviteOptions` → `CampUserAccessService.options` | **OWNER·ADMIN** | `core-rbac.controller.ts:179` |
 
 ## modules/camp/settings
 
@@ -311,14 +312,12 @@ tags: [codebase, api, generated]
 | GET | `/api/v1/core/debug/health` | `DebugController.health` → `DebugService.health` | — | `debug.controller.ts:36` |
 | GET | `/api/v1/core/debug/users` | `DebugController.users` → `DebugService.users` | — | `debug.controller.ts:41` |
 | GET | `/api/v1/core/debug/permissions/:userId` | `DebugController.permissions` → `DebugService.permissions` | `core.debug.view` | `debug.controller.ts:46` |
-| GET | `/api/v1/core/debug/users/:userId/login-lock` | `DebugController.loginLock` → `DebugService.loginLock` | — | `debug.controller.ts:52` |
-| POST | `/api/v1/core/debug/actions/users/:userId/unlock` | `DebugController.unlockLogin` → `DebugService.unlockLogin` | гишүүн | `debug.controller.ts:57` |
-| GET | `/api/v1/core/debug/logs` | `DebugController.logs` → `DebugService.logs` | — | `debug.controller.ts:63` |
-| GET | `/api/v1/core/debug/audit` | `DebugController.audit` → `DebugService.auditLog` | — | `debug.controller.ts:69` |
-| GET | `/api/v1/core/debug/i18n-missing` | `DebugController.i18nMissing` → `DebugService.i18nMissing` | — | `debug.controller.ts:74` |
-| GET | `/api/v1/core/debug/outbox` | `DebugController.outbox` → `DebugService.outbox` | — | `debug.controller.ts:79` |
-| POST | `/api/v1/core/debug/actions/cache-clear` | `DebugController.clearCaches` → `DebugService.clearCaches` | гишүүн | `debug.controller.ts:84` |
-| POST | `/api/v1/core/debug/actions/outbox/:id/retry` | `DebugController.retryOutbox` → `DebugService.retryOutbox` | гишүүн | `debug.controller.ts:90` |
+| GET | `/api/v1/core/debug/logs` | `DebugController.logs` → `DebugService.logs` | — | `debug.controller.ts:51` |
+| GET | `/api/v1/core/debug/audit` | `DebugController.audit` → `DebugService.auditLog` | — | `debug.controller.ts:57` |
+| GET | `/api/v1/core/debug/i18n-missing` | `DebugController.i18nMissing` → `DebugService.i18nMissing` | — | `debug.controller.ts:62` |
+| GET | `/api/v1/core/debug/outbox` | `DebugController.outbox` → `DebugService.outbox` | — | `debug.controller.ts:67` |
+| POST | `/api/v1/core/debug/actions/cache-clear` | `DebugController.clearCaches` → `DebugService.clearCaches` | гишүүн | `debug.controller.ts:72` |
+| POST | `/api/v1/core/debug/actions/outbox/:id/retry` | `DebugController.retryOutbox` → `DebugService.retryOutbox` | гишүүн | `debug.controller.ts:78` |
 
 ## modules/core/exchange-rates
 

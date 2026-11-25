@@ -8,6 +8,7 @@ import { loginAsUser } from '../helpers/fixture';
  * албан тушаалын эрхийн загвар. Бэлтгэлийг шинэ `/hr`, `/core` API-аар (QA-11).
  * v0.2.2 Блок 6б (SEC-009): хэрэглэгч / роль удирдах = зөвхөн системийн админ → fixture `devUserAdmin` (ADMIN);
  * admin@test.mn (APPROVER + Кемп админ) «Хэрэглэгч» хэсэгт хандахгүй (сүүлийн тест).
+ * #28 (H-13): нэвтрэлтийн түгжээний төлөв + «Түгжээ тайлах».
  * Идэвхгүй болгох (GoTrue ban) — integration `camp-v022-users` (энд бодит хэрэглэгчийг хаахгүй).
  */
 const STAMP = Date.now().toString(36).toUpperCase();
@@ -55,6 +56,36 @@ test.describe.serial('v0.2.2 Блок 4 — хэрэглэгч удирдах', 
     await expect(row.getByText('Урилга хүлээгдэж байна')).toBeVisible();
     await row.getByRole('button', { name: 'Эрх' }).click();
     await expect(page.getByRole('dialog').getByRole('heading', { name: new RegExp(`Эрх — ${EMP}`) })).toBeVisible();
+  });
+
+  test('#28: буруу нууц үгээр түгжигдсэн хэрэглэгч → жагсаалтад төлөв → «Түгжээ тайлах»', async ({ page }) => {
+    await page.goto(`/hr/${campId}/users`);
+    // 5 буруу оролдлого → бүртгэл түгжигдэнэ (429). Нэмэлт оролдлого идэвхтэй түгжээг өөрчлөхгүй.
+    const statuses = await page.evaluate(async (identifier) => {
+      const out: number[] = [];
+      for (let i = 0; i < 6 && out.at(-1) !== 429; i++) {
+        const res = await fetch('/api/v1/auth/sign-in', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier, password: `wrong-${i}-password` }),
+        });
+        out.push(res.status);
+      }
+      return out;
+    }, PHONE);
+    expect(statuses.at(-1), `sign-in statuses: ${statuses.join(',')}`).toBe(429);
+
+    await page.reload();
+    await page.getByLabel('Хайх').fill(PHONE);
+    const row = page.getByRole('row', { name: new RegExp(EMP) });
+    await expect(row.getByText(/Нэвтрэлт түгжигдсэн/)).toBeVisible();
+    await row.getByRole('button', { name: 'Түгжээ тайлах' }).click();
+    const dlg = page.getByRole('dialog');
+    await expect(dlg.getByRole('heading', { name: 'Нэвтрэлтийн түгжээ тайлах' })).toBeVisible();
+    await dlg.getByRole('button', { name: 'Түгжээ тайлах' }).click();
+    await expect(dlg).toBeHidden();
+    await expect(row.getByText(/Нэвтрэлт түгжигдсэн/)).toBeHidden();
+    await expect(row.getByRole('button', { name: 'Түгжээ тайлах' })).toBeHidden();
   });
 
   test('албан тушаал → эрхийн загвар: роль нэмж хадгалах, хэрэгжүүлэх', async ({ page }) => {

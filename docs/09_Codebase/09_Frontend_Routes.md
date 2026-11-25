@@ -2,7 +2,7 @@
 title: "Frontend route-ууд (web-shell)"
 type: "Architecture"
 status: "Active"
-last_updated: 2026-11-11
+last_updated: 2026-11-25
 tags: [codebase, frontend, generated]
 ---
 
@@ -68,6 +68,6 @@ tags: [codebase, frontend, generated]
 | `terms.en.json` | 245 |
 | `terms.mn.json` | 245 |
 | `terms.zh.json` | 245 |
-| `web.en.json` | 1706 |
-| `web.mn.json` | 1706 |
-| `web.zh.json` | 1706 |
+| `web.en.json` | 1704 |
+| `web.mn.json` | 1704 |
+| `web.zh.json` | 1704 |

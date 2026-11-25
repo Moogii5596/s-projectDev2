@@ -76,6 +76,8 @@ export const campApi = {
   applyRole: (id: string) => post<{ roleId: string; affectedUsers: number; added: number; removed: number }>(`${RBAC}/roles/${id}/apply`, {}),
   /** v0.2.2 Блок 4 (B4-Q2): идэвхгүй болгох / сэргээх */
   setUserActive: (userId: string, isActive: boolean) => patch<{ id: string; isActive: boolean }>(`${RBAC}/users/${userId}`, { isActive }),
+  /** #28: нэвтрэлтийн түгжээ тайлах (системийн админ, audit) */
+  unlockUserLogin: (userId: string) => post<{ ok: true; wasLocked: boolean }>(`${RBAC}/users/${userId}/login-unlock`),
   /** Блок 3: ажилтны картаас нэвтрэх эрх (email: undefined = картынх, null = имэйлгүй) */
   createEmployeeUser: (campId: string, employeeId: string, email?: string | null) =>
     post<CreateEmployeeUserResult>(campUrl(campId, `/employees/${employeeId}/create-user`), email === undefined ? {} : { email }),
